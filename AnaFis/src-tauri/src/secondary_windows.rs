@@ -1,0 +1,123 @@
+// src-tauri/src/secondary_windows.rs
+
+use tauri::{AppHandle, Manager};
+
+#[tauri::command]
+pub fn close_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("uncertainty-calculator") {
+        window.close().map_err(|e| format!("Failed to close window: {}", e))?;
+        Ok(())
+    } else {
+        Err("Uncertainty calculator window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub fn resize_uncertainty_calculator_window(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("uncertainty-calculator") {
+        window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: width as u32,
+            height: height as u32,
+        })).map_err(|e| format!("Failed to resize window: {}", e))?;
+        Ok(())
+    } else {
+        Err("Uncertainty calculator window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
+    // First check if window already exists
+    if let Some(existing_window) = app.get_webview_window("uncertainty-calculator") {
+        println!("Window already exists, showing it");
+        existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        return Ok(());
+    }
+
+    println!("Creating new uncertainty calculator window");
+    let window = tauri::WebviewWindowBuilder::new(
+        &app,
+        "uncertainty-calculator",
+        tauri::WebviewUrl::App("uncertainty-calculator.html".into())
+    )
+    .title("Uncertainty Calculator")
+    .decorations(false)
+    // Make the window non-resizable so the native frame can't be interactively resized
+    .resizable(false)
+    // Match the content size exactly (slightly larger width to cover edge artifacts) and keep the WebView transparent to avoid a white flash
+    .inner_size(504.0_f64, 450.0_f64)
+    .transparent(true)
+    .closable(true)
+    .build()
+    .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    println!("Window created successfully, showing it");
+    // Show and focus the window
+    // Make the native background dark immediately to avoid any white flash on some platforms
+    let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
+    window.show().map_err(|e| format!("Failed to show window: {}", e))?;
+    window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn close_settings_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("settings") {
+        window.close().map_err(|e| format!("Failed to close window: {}", e))?;
+        Ok(())
+    } else {
+        Err("Settings window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub fn resize_settings_window(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("settings") {
+        window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: width as u32,
+            height: height as u32,
+        })).map_err(|e| format!("Failed to resize window: {}", e))?;
+        Ok(())
+    } else {
+        Err("Settings window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
+    // First check if window already exists
+    if let Some(existing_window) = app.get_webview_window("settings") {
+        println!("Settings window already exists, showing it");
+        existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        return Ok(());
+    }
+
+    println!("Creating new settings window");
+    let window = tauri::WebviewWindowBuilder::new(
+        &app,
+        "settings",
+        tauri::WebviewUrl::App("settings.html".into())
+    )
+    .title("AnaFis Settings")
+    .decorations(false)
+    // Make the window non-resizable so the native frame can't be interactively resized
+    .resizable(false)
+    // Match the content size exactly and keep the WebView transparent to avoid a white flash
+    .inner_size(650.0_f64, 700.0_f64)
+    .transparent(true)
+    .closable(true)
+    .build()
+    .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    println!("Settings window created successfully, showing it");
+    // Show and focus the window
+    // Make the native background dark immediately to avoid any white flash on some platforms
+    let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
+    window.show().map_err(|e| format!("Failed to show window: {}", e))?;
+    window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+
+    Ok(())
+}

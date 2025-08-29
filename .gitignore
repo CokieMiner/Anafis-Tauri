@@ -1,0 +1,87 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+GEMINI.md
+AnaFis/src-tauri/target
+AnaFis/src-tauri/gen/schemas
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+folder.ini
+*.stackdump
+*.dmp
+
+# IDE and Editor files
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Temporary and cache files
+*.tmp
+*.temp
+.cache/
+*.cache
+*.bak
+*.backup
+*.orig
+*.rej
+*.diff
+*.patch
+
+# Build artifacts
+build/
+release/
+debug/
+
+# Tauri specific
+AnaFis/src-tauri/Cargo.lock
+AnaFis/src-tauri/gen/
+

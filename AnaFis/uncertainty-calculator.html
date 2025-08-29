@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Uncertainty Calculator - AnaFis</title>
+    <style>
+      /* CRITICAL: Prevent white flash by setting dark background BEFORE anything loads */
+      html, body {
+        margin: 0;
+        padding: 0;
+  /* Fixed content width to match the native window width we use */
+  width: 504px;
+        height: auto;
+  min-width: 504px;
+  min-height: 450px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+  background-color: #0a0a0a;
+  color: #e0e0e0;
+  overflow: hidden; /* prevent page scrollbars; native window should be sized to fit */
+        border: none;
+        outline: none;
+      }
+
+      #root {
+        width: 504px;
+        height: auto;
+        min-width: 504px;
+        min-height: 450px;
+        background-color: #0a0a0a;
+        overflow: hidden;
+        box-sizing: border-box;
+  /* no border: the native window will be sized to match this content exactly */
+        border: none;
+        outline: none;
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        padding: 2px;
+      }
+
+      /* Keep component backgrounds intact — don't force global transparency here */
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/UncertaintyCalculatorWindow.tsx"></script>
+  </body>
+</html>
