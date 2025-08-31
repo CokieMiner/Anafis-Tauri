@@ -6,6 +6,12 @@ import FunctionsIcon from '@mui/icons-material/Functions'; // Solver
 import CasinoIcon from '@mui/icons-material/Casino'; // Monte Carlo
 import DescriptionIcon from '@mui/icons-material/Description'; // Generic file icon
 
+// Import actual tab components
+import SpreadsheetTab from './SpreadsheetTab';
+import FittingTab from './FittingTab';
+import SolverTab from './SolverTab';
+import MonteCarloTab from './MonteCarloTab';
+
 interface HomeTabProps {
   openNewTab: (id: string, title: string, content: React.ReactNode) => void;
 }
@@ -22,7 +28,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       description: 'Data analysis and manipulation',
       icon: <TableChartIcon sx={{ fontSize: 28 }} />,
       color: '#2196f3', // Vivid blue
-      content: <div>Spreadsheet Content</div>,
+      content: <SpreadsheetTab />,
       emoji: '📊'
     },
     {
@@ -31,7 +37,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       description: 'Curve fitting and regression',
       icon: <ShowChartIcon sx={{ fontSize: 28 }} />,
       color: '#ff9800', // Vivid orange
-      content: <div>Fitting Content</div>,
+      content: <FittingTab />,
       emoji: '📈'
     },
     {
@@ -40,7 +46,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       description: 'Mathematical equation solving',
       icon: <FunctionsIcon sx={{ fontSize: 28 }} />,
       color: '#4caf50', // Vivid green
-      content: <div>Solver Content</div>,
+      content: <SolverTab />,
       emoji: '🧮'
     },
     {
@@ -49,7 +55,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       description: 'Statistical simulations',
       icon: <CasinoIcon sx={{ fontSize: 28 }} />,
       color: '#e91e63', // Vivid pink
-      content: <div>Monte Carlo Content</div>,
+      content: <MonteCarloTab />,
       emoji: '🎲'
     }
   ];  return (
@@ -260,8 +266,10 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
                     <ListItemText
                       primary={file.name}
                       secondary={file.type}
-                      primaryTypographyProps={{ sx: { color: 'text.primary', fontWeight: 500 } }}
-                      secondaryTypographyProps={{ sx: { color: 'text.secondary' } }}
+                      slotProps={{
+                        primary: { sx: { color: 'text.primary', fontWeight: 500 } },
+                        secondary: { sx: { color: 'text.secondary' } }
+                      }}
                     />
                   </ListItemButton>
                 ))}

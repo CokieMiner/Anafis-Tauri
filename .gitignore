@@ -85,3 +85,4 @@ debug/
 AnaFis/src-tauri/Cargo.lock
 AnaFis/src-tauri/gen/
 
+AnaFis/package-lock.json

@@ -85,7 +85,7 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
         width: '100%',
         boxSizing: 'border-box',
   minWidth: '400px',
-  maxWidth: '504px',
+  maxWidth: '500px',
         '& *': { boxSizing: 'border-box' },
       }}
     >
@@ -109,7 +109,11 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
                 '&:hover fieldset': { borderColor: 'primary.light' },
                 '&.Mui-focused fieldset': { borderColor: 'primary.light' },
               },
-              '& .MuiInputLabel-root': { color: 'text.secondary', fontSize: '0.9rem' },
+              '& .MuiInputLabel-root': {
+                color: 'text.secondary',
+                fontSize: '0.9rem',
+                '&.Mui-focused': { color: '#ffffff !important' }
+              },
               '& .MuiOutlinedInput-input': { color: 'text.primary', fontSize: '0.9rem', padding: '8px 10px', lineHeight: 1.25 },
             }}
           />
@@ -134,7 +138,11 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
                 '&:hover fieldset': { borderColor: 'primary.light' },
                 '&.Mui-focused fieldset': { borderColor: 'primary.light' },
               },
-              '& .MuiInputLabel-root': { color: 'text.secondary', fontSize: '0.9rem' },
+              '& .MuiInputLabel-root': {
+                color: 'text.secondary',
+                fontSize: '0.9rem',
+                '&.Mui-focused': { color: '#ffffff !important' }
+              },
               '& .MuiOutlinedInput-input': { color: 'text.primary', fontSize: '0.9rem', padding: '8px 10px', lineHeight: 1.25 },
             }}
           />
@@ -233,12 +241,12 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
 
             <Paper elevation={0} sx={{ p: 1.5, mb: 1.5, backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
               <Typography variant="h6" sx={{ mb: 1.5, color: 'text.primary', fontWeight: 'bold', fontSize: '0.9rem' }}>String Representation</Typography>
-              <TextField value={stringRepresentation} InputProps={{ readOnly: true }} placeholder="String representation will appear here" variant="outlined" size="small" multiline minRows={2} sx={{ width: '100%', '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper', '& fieldset': { borderColor: 'divider' }, '&:hover fieldset': { borderColor: 'primary.light' }, '&.Mui-focused fieldset': { borderColor: 'primary.light' } }, '& .MuiOutlinedInput-input': { color: 'text.primary', fontSize: '0.8rem', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' } }} />
+              <TextField value={stringRepresentation} slotProps={{ input: { readOnly: true } }} placeholder="String representation will appear here" variant="outlined" size="small" multiline minRows={2} sx={{ width: '100%', '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper', '& fieldset': { borderColor: 'divider' }, '&:hover fieldset': { borderColor: 'primary.light' }, '&.Mui-focused fieldset': { borderColor: 'primary.light' } }, '& .MuiOutlinedInput-input': { color: 'text.primary', fontSize: '0.8rem', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' } }} />
             </Paper>
 
             <Paper elevation={0} sx={{ p: 1.5, mb: 1.5, backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, boxSizing: 'border-box' }}>
               <Typography variant="h6" sx={{ mb: 1.5, color: 'text.primary', fontWeight: 'bold', fontSize: '0.9rem' }}>Generated LaTeX Formula</Typography>
-              <TextField value={latexFormula} InputProps={{ readOnly: true }} placeholder="LaTeX formula will appear here" variant="outlined" size="small" multiline minRows={2} sx={{ width: '100%', '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper', '& fieldset': { borderColor: 'divider' }, '&:hover fieldset': { borderColor: 'primary.light' }, '&.Mui-focused fieldset': { borderColor: 'primary.light' } }, '& .MuiOutlinedInput-input': { color: 'text.primary', fontSize: '0.8rem', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' } }} />
+              <TextField value={latexFormula} slotProps={{ input: { readOnly: true } }} placeholder="LaTeX formula will appear here" variant="outlined" size="small" multiline minRows={2} sx={{ width: '100%', '& .MuiOutlinedInput-root': { backgroundColor: 'background.paper', '& fieldset': { borderColor: 'divider' }, '&:hover fieldset': { borderColor: 'primary.light' }, '&.Mui-focused fieldset': { borderColor: 'primary.light' } }, '& .MuiOutlinedInput-input': { color: 'text.primary', fontSize: '0.8rem', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' } }} />
             </Paper>
 
             <Paper elevation={0} sx={{ p: 1.5, backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>

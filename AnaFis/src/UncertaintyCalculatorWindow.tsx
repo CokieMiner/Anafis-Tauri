@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { useEffect, useRef } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider, createTheme } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import { Typography, IconButton } from '@mui/material';
@@ -149,7 +149,7 @@ function UncertaintyCalculatorWindow() {
       // Add padding so scrollbars never appear by accident
   // fixed width must match the container width above
   const width = 504;
-  const height = Math.max(Math.ceil(measuredHeight + 20), 450);
+  const height = Math.max(Math.ceil(measuredHeight - 10), 450);
 
       // Check if size actually changed significantly (more than 6px difference) to reduce chatter
       if (lastSizeRef.current &&
@@ -183,7 +183,7 @@ function UncertaintyCalculatorWindow() {
   const el = contentRef.current;
   const measuredHeight = Math.max(el.offsetHeight || 0, el.scrollHeight || 0);
   const width = 504; // fixed
-    const height = Math.max(Math.ceil(measuredHeight + 20 + extraHeight), 450);
+    const height = Math.max(Math.ceil(measuredHeight + 10 + extraHeight), 450);
 
     // Only send if size differs enough
     if (lastSizeRef.current && Math.abs(lastSizeRef.current.width - width) < 6 && Math.abs(lastSizeRef.current.height - height) < 6) {

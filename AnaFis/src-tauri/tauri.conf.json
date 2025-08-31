@@ -24,7 +24,8 @@
         "minimizable": true,
         "closable": true,
         "skipTaskbar": false,
-        "label": "main"
+        "label": "main",
+        "dragDropEnabled": false
       }
     ],
     "security": {

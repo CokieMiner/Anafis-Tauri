@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "Capability for all windows",
+  "identifier": "tabs",
+  "description": "Capability for tab windows",
   "windows": ["*"],
   "permissions": [
     "core:default",
@@ -15,7 +15,6 @@
     "core:window:allow-show",
     "core:window:allow-hide",
     "core:window:allow-set-size",
-    "core:window:allow-set-position",
-    "core:window:allow-start-dragging"
+    "core:window:allow-set-position"
   ]
 }

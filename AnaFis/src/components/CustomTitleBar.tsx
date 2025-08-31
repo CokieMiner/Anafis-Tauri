@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
-import { Close, Minimize, CropSquare } from '@mui/icons-material';
+import { Close, Minimize, CropSquare, Reply } from '@mui/icons-material';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface CustomTitleBarProps {
   title?: string;
+  isDetachedTabWindow?: boolean;
+  onReattach?: () => void;
 }
 
-const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis' }) => {
+const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDetachedTabWindow = false, onReattach }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [windowReady, setWindowReady] = useState(false);
   const [isTauri, setIsTauri] = useState(false);
@@ -261,7 +263,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis' }) => 
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
       }}
     >
-      {/* App Title */}
+      {/* App Title and Reattach Button */}
       <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
         <Typography
           variant="body2"
@@ -281,6 +283,34 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis' }) => 
         >
           {title}
         </Typography>
+
+        {/* Reattach Button - Only show for detached tab windows */}
+        {isDetachedTabWindow && onReattach && (
+          <IconButton
+            onClick={onReattach}
+            sx={{
+              ml: 1,
+              width: '24px',
+              height: '24px',
+              borderRadius: '4px',
+              color: 'rgba(255, 255, 255, 0.7)',
+              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+              border: '1px solid rgba(33, 150, 243, 0.3)',
+              WebkitAppRegion: 'no-drag',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                color: '#2196f3',
+                transform: 'scale(1.05)',
+                borderColor: 'rgba(33, 150, 243, 0.5)',
+              },
+            }}
+            title="Reattach tab to main window"
+          >
+            <Reply sx={{ fontSize: '14px' }} />
+          </IconButton>
+        )}
+
         {/* Status Indicator */}
         <Box
           sx={{
