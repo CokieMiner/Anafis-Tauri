@@ -1,0 +1,9 @@
+export { default as HomeIcon } from '@mui/icons-material/Home';
+export { default as TableChartIcon } from '@mui/icons-material/TableChart';
+export { default as TrendingUpIcon } from '@mui/icons-material/TrendingUp';
+export { default as CalculateIcon } from '@mui/icons-material/Calculate';
+export { default as CasinoIcon } from '@mui/icons-material/Casino';
+export { default as CloseIcon } from '@mui/icons-material/Close';
+export { default as AddIcon } from '@mui/icons-material/Add';
+export { default as SettingsIcon } from '@mui/icons-material/Settings';
+export { default as ArrowBackIcon } from '@mui/icons-material/ArrowBack';

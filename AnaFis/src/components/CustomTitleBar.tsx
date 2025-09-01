@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import { Close, Minimize, CropSquare, Reply } from '@mui/icons-material';
+import { Home, TableChart, TrendingUp, Calculate, Casino } from '@mui/icons-material';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface CustomTitleBarProps {
@@ -14,28 +15,43 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
   const [windowReady, setWindowReady] = useState(false);
   const [isTauri, setIsTauri] = useState(false);
 
+  // Get tab icon for detached windows
+  const getTabIcon = () => {
+    if (!isDetachedTabWindow) return null;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabType = urlParams.get('tabType');
+
+    switch (tabType) {
+      case 'home':
+        return <Home sx={{ fontSize: '1rem', mr: 0.5, color: '#ba68c8' }} />;
+      case 'spreadsheet':
+        return <TableChart sx={{ fontSize: '1rem', mr: 0.5, color: '#64b5f6' }} />;
+      case 'fitting':
+        return <TrendingUp sx={{ fontSize: '1rem', mr: 0.5, color: '#ffb74d' }} />;
+      case 'solver':
+        return <Calculate sx={{ fontSize: '1rem', mr: 0.5, color: '#81c784' }} />;
+      case 'montecarlo':
+        return <Casino sx={{ fontSize: '1rem', mr: 0.5, color: '#f06292' }} />;
+      default:
+        return <Home sx={{ fontSize: '1rem', mr: 0.5, color: '#ba68c8' }} />;
+    }
+  };
+
   useEffect(() => {
     const initializeWindow = async () => {
-      console.log('Starting window initialization...');
-
       try {
         // Try to get the current window - this will throw if not in Tauri
-        console.log('Attempting to get current window...');
         const currentWindow = getCurrentWindow();
-        console.log('Successfully got window object:', currentWindow);
 
         // If we get here, we're in Tauri
         setIsTauri(true);
-        console.log('Confirmed: Running in Tauri environment');
 
         // Test if window methods are available
         if (currentWindow && typeof currentWindow.isMaximized === 'function') {
-          console.log('Testing window.isMaximized()...');
           const maximized = await currentWindow.isMaximized();
-          console.log('Window maximized state:', maximized);
           setIsMaximized(maximized);
           setWindowReady(true);
-          console.log('Window initialization completed successfully');
         } else {
           console.error('Window object exists but methods are missing');
           setWindowReady(false);
@@ -46,20 +62,16 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
         setWindowReady(false);
 
         // Try alternative detection methods
-        console.log('Trying alternative Tauri detection...');
 
         // Check for Tauri global
         if (typeof window !== 'undefined') {
           const win = window as any;
           if (win.__TAURI__) {
-            console.log('Found __TAURI__ global, attempting direct access...');
             try {
               const tauriWindow = win.__TAURI__.window;
               if (tauriWindow) {
-                console.log('Found Tauri window via global, setting up controls...');
                 setIsTauri(true);
                 setWindowReady(true);
-                console.log('Alternative initialization successful');
                 return;
               }
             } catch (altError) {
@@ -67,8 +79,6 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
             }
           }
         }
-
-        console.log('All Tauri detection methods failed - running in web mode');
       }
     };
 
@@ -83,20 +93,17 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
       // Method 1: Standard Tauri API
       return getCurrentWindow();
     } catch (error) {
-      console.log('Standard API failed, trying alternatives...');
 
       // Method 2: Direct global access
       if (typeof window !== 'undefined') {
         const win = window as any;
         if (win.__TAURI__ && win.__TAURI__.window) {
-          console.log('Using direct global access');
           return win.__TAURI__.window;
         }
       }
 
       // Method 3: Check if window object has Tauri methods
       if (typeof window !== 'undefined' && (window as any).minimize) {
-        console.log('Using window object methods');
         return window as any;
       }
 
@@ -109,24 +116,18 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     event.stopPropagation();
 
     if (!isTauri) {
-      console.log('Not in Tauri environment, cannot minimize');
       return;
     }
 
     if (!windowReady) {
-      console.log('Window not ready yet, cannot minimize');
       return;
     }
 
-    console.log('Minimize button clicked');
-
     try {
       const currentWindow = getWindowInstance();
-      console.log('Got window instance, calling minimize...');
 
       if (currentWindow.minimize) {
         await currentWindow.minimize();
-        console.log('Minimize successful');
       } else {
         console.error('Minimize method not available');
       }
@@ -140,39 +141,30 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     event.stopPropagation();
 
     if (!isTauri) {
-      console.log('Not in Tauri environment, cannot maximize');
       return;
     }
 
     if (!windowReady) {
-      console.log('Window not ready yet, cannot maximize');
       return;
     }
 
-    console.log('Maximize button clicked');
-
     try {
       const currentWindow = getWindowInstance();
-      console.log('Got window instance, checking maximize state...');
 
       let currentlyMaximized = false;
       if (currentWindow.isMaximized) {
         currentlyMaximized = await currentWindow.isMaximized();
       }
 
-      console.log('Current maximized state:', currentlyMaximized);
-
       if (currentlyMaximized) {
         if (currentWindow.unmaximize) {
           await currentWindow.unmaximize();
           setIsMaximized(false);
-          console.log('Unmaximize successful');
         }
       } else {
         if (currentWindow.maximize) {
           await currentWindow.maximize();
           setIsMaximized(true);
-          console.log('Maximize successful');
         }
       }
     } catch (error) {
@@ -185,24 +177,18 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     event.stopPropagation();
 
     if (!isTauri) {
-      console.log('Not in Tauri environment, cannot close');
       return;
     }
 
     if (!windowReady) {
-      console.log('Window not ready yet, cannot close');
       return;
     }
 
-    console.log('Close button clicked');
-
     try {
       const currentWindow = getWindowInstance();
-      console.log('Got window instance, calling close...');
 
       if (currentWindow.close) {
         await currentWindow.close();
-        console.log('Close successful');
       } else {
         console.error('Close method not available');
       }
@@ -213,12 +199,10 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
 
   const handleDoubleClick = async () => {
     if (!isTauri || !windowReady) {
-      console.log('Cannot toggle maximize: Tauri not ready');
       return;
     }
 
     try {
-      console.log('Double-click detected, toggling maximize...');
       const currentWindow = getWindowInstance();
 
       let maximized = false;
@@ -230,13 +214,11 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
         if (currentWindow.unmaximize) {
           await currentWindow.unmaximize();
           setIsMaximized(false);
-          console.log('Window unmaximized via double-click');
         }
       } else {
         if (currentWindow.maximize) {
           await currentWindow.maximize();
           setIsMaximized(true);
-          console.log('Window maximized via double-click');
         }
       }
     } catch (error) {
@@ -265,24 +247,27 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     >
       {/* App Title and Reattach Button */}
       <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-        <Typography
-          variant="body2"
-          sx={{
-            color: '#ffffff',
-            fontWeight: 600,
-            fontSize: '0.875rem',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            WebkitAppRegion: 'no-drag', // Prevents title from interfering with drag
-            opacity: 0.9,
-            '&:hover': {
-              opacity: 1,
-            },
-          }}
-        >
-          {title}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          {getTabIcon()}
+          <Typography
+            variant="body2"
+            sx={{
+              color: '#ffffff',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              WebkitAppRegion: 'no-drag', // Prevents title from interfering with drag
+              opacity: 0.9,
+              '&:hover': {
+                opacity: 1,
+              },
+            }}
+          >
+            {title}
+          </Typography>
+        </Box>
 
         {/* Reattach Button - Only show for detached tab windows */}
         {isDetachedTabWindow && onReattach && (

@@ -46,8 +46,6 @@ export const useTabStore = create<TabState>()(
         ? newTabs[0]?.id || null
         : state.activeTabId;
 
-      console.log('removeTab called:', { id, newTabsLength: newTabs.length, currentTabs: state.tabs.length });
-
       set({ tabs: newTabs, activeTabId: newActiveId });
     },
 
@@ -77,7 +75,14 @@ export const useTabStore = create<TabState>()(
       await get().removeTab(id);
 
       try {
-        // Create detached window via Tauri with position
+        // Create detached window via Tauri with geometry
+        const geometry = position ? {
+          x: position.x,
+          y: position.y,
+          width: 800,
+          height: 600
+        } : undefined;
+
         await invoke('create_tab_window', {
           tabInfo: {
             id: tabToDetach.id,
@@ -86,7 +91,7 @@ export const useTabStore = create<TabState>()(
             state: {},
             icon: null
           },
-          position: position
+          geometry: geometry
         });
       } catch (error) {
         console.error('Failed to detach tab:', error);

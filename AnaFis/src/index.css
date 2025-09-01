@@ -16,7 +16,8 @@
   -webkit-touch-callout: none;
 }
 
-html, body {
+html,
+body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -29,9 +30,11 @@ html, body {
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark; /* Force dark mode only */
+  color-scheme: dark;
+  /* Force dark mode only */
   color: rgba(255, 255, 255, 0.87);
-  background-color: #0a0a0a !important; /* Force dark background */
+  background-color: #0a0a0a !important;
+  /* Force dark background */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -44,9 +47,11 @@ html {
   padding: 0;
   width: 100%;
   height: 100%;
-  background-color: #0a0a0a !important; /* Force dark background */
+  background-color: #0a0a0a !important;
+  /* Force dark background */
   color: #ffffff;
-  overflow: hidden; /* Prevent scrollbars during loading */
+  overflow: hidden;
+  /* Prevent scrollbars during loading */
 }
 
 body {
@@ -56,9 +61,11 @@ body {
   min-height: 100vh;
   width: 100vw;
   overflow-x: hidden;
-  background-color: #0a0a0a !important; /* Force dark background */
+  background-color: #0a0a0a !important;
+  /* Force dark background */
   color: #ffffff;
-  overflow: hidden; /* Prevent scrollbars during loading */
+  overflow: hidden;
+  /* Prevent scrollbars during loading */
 }
 
 #root {
@@ -66,8 +73,10 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #0a0a0a !important; /* Force dark background */
-  overflow: hidden; /* Prevent scrollbars during loading */
+  background-color: #0a0a0a !important;
+  /* Force dark background */
+  overflow: hidden;
+  /* Prevent scrollbars during loading */
 }
 
 /* Hide any loading spinners or default content */
@@ -92,7 +101,16 @@ body {
 }
 
 /* Keep the reset but allow component backgrounds (Paper, inputs) to define their own colors */
-div, span, p, h1, h2, h3, h4, h5, h6, button {
+div,
+span,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+button {
   background-color: transparent;
 }
 
@@ -123,9 +141,11 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -136,9 +156,11 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+
   a:hover {
     color: #747bff;
   }
+
   button {
     background-color: #f9f9f9;
   }

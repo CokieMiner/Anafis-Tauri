@@ -3,7 +3,7 @@ import { Box, Typography, Paper, List, ListItemButton, ListItemIcon, ListItemTex
 import TableChartIcon from '@mui/icons-material/TableChart'; // Spreadsheet
 import ShowChartIcon from '@mui/icons-material/ShowChart'; // Fitting
 import FunctionsIcon from '@mui/icons-material/Functions'; // Solver
-import CasinoIcon from '@mui/icons-material/Casino'; // Monte Carlo
+import CasinoIcon from '@mui/icons-material/Casino'; // Monte Carlo (die icon)
 import DescriptionIcon from '@mui/icons-material/Description'; // Generic file icon
 
 // Import actual tab components
@@ -17,8 +17,8 @@ interface HomeTabProps {
 }
 
 const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
-  const handleNewTabClick = (tabType: string, title: string, content: React.ReactNode, emoji: string) => {
-    openNewTab(`${tabType}-${Date.now()}`, `${emoji} ${title}`, content);
+  const handleNewTabClick = (tabType: string, title: string, content: React.ReactNode) => {
+    openNewTab(`${tabType}-${Date.now()}`, title, content);
   };
 
   const quickActions = [
@@ -176,7 +176,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
                     borderColor: action.color,
                   },
                 }}
-                onClick={() => handleNewTabClick(action.id, action.title.replace('New ', ''), action.content, action.emoji)}
+                onClick={() => handleNewTabClick(action.id, action.title.replace('New ', ''), action.content)}
               >
                 <CardContent sx={{ p: 3, textAlign: 'center' }}>
                   <Avatar

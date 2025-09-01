@@ -117,15 +117,12 @@ function TabPanel(props: TabPanelProps) {
 }
 
 function SettingsWindow() {
-  console.log('SettingsWindow component is being rendered');
-
   const [tabValue, setTabValue] = useState(0);
   const [language, setLanguage] = useState('en');
   const [autoUpdate, setAutoUpdate] = useState(true);
   const [updateFrequency, setUpdateFrequency] = useState('weekly');
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    console.log('Tab changed to:', newValue);
     setTabValue(newValue);
   };
 
@@ -139,7 +136,6 @@ function SettingsWindow() {
 
   const handleSave = () => {
     // Save settings logic would go here
-    console.log('Settings saved:', { language, autoUpdate, updateFrequency });
     handleClose();
   };
 
@@ -252,10 +248,6 @@ function SettingsWindow() {
           <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             {/* General Tab */}
             <TabPanel value={tabValue} index={0}>
-              {(() => {
-                console.log('Rendering General Tab');
-                return null;
-              })()}
               <Typography variant="h6" gutterBottom>
                 General Settings
               </Typography>
@@ -299,10 +291,6 @@ function SettingsWindow() {
 
             {/* Updates Tab */}
             <TabPanel value={tabValue} index={1}>
-              {(() => {
-                console.log('Rendering Updates Tab');
-                return null;
-              })()}
               <Typography variant="h6" gutterBottom>
                 Update Settings
               </Typography>
@@ -411,17 +399,13 @@ function SettingsWindow() {
 }
 
 // Auto-render immediately when this module loads
-console.log('SettingsWindow module loaded');
 
 const renderSettingsWindow = () => {
-  console.log('SettingsWindow: Attempting to render');
   const container = document.getElementById('root');
   if (container) {
-    console.log('SettingsWindow: Found root container, creating root');
     try {
       const root = createRoot(container);
       root.render(<SettingsWindow />);
-      console.log('SettingsWindow: Successfully rendered');
     } catch (error) {
       console.error('SettingsWindow: Error rendering:', error);
     }

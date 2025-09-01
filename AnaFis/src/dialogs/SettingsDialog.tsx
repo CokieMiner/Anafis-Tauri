@@ -76,7 +76,6 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({ isOpen, onClose }) => {
 
   const handleSave = () => {
     // Here you would typically save the settings
-    console.log('Settings saved:', { language, autoUpdate, updateFrequency });
     onClose();
   };
 

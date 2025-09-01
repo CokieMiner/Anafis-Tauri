@@ -29,13 +29,11 @@ pub fn resize_uncertainty_calculator_window(app: AppHandle, width: f64, height: 
 pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("uncertainty-calculator") {
-        println!("Window already exists, showing it");
         existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
         existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
         return Ok(());
     }
 
-    println!("Creating new uncertainty calculator window");
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         "uncertainty-calculator",
@@ -52,7 +50,6 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
     .build()
     .map_err(|e| format!("Failed to create window: {}", e))?;
 
-    println!("Window created successfully, showing it");
     // Show and focus the window
     // Make the native background dark immediately to avoid any white flash on some platforms
     let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
@@ -89,13 +86,11 @@ pub fn resize_settings_window(app: AppHandle, width: f64, height: f64) -> Result
 pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("settings") {
-        println!("Settings window already exists, showing it");
         existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
         existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
         return Ok(());
     }
 
-    println!("Creating new settings window");
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         "settings",
@@ -112,7 +107,6 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
     .build()
     .map_err(|e| format!("Failed to create window: {}", e))?;
 
-    println!("Settings window created successfully, showing it");
     // Show and focus the window
     // Make the native background dark immediately to avoid any white flash on some platforms
     let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));

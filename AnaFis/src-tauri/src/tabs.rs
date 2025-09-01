@@ -5,9 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, WebviewWindowBuilder, Emitter};
 use tokio::sync::Mutex;
-use tokio::net::TcpListener;
-use tokio::io::AsyncReadExt;
-use tokio::task;
+
 use once_cell::sync::Lazy;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -46,10 +44,6 @@ impl TabManager {
         }
     }
 
-    pub async fn start_ipc_server_static(app_handle: AppHandle) {
-        Self::handle_ipc_connections(app_handle).await;
-    }
-
     pub async fn ensure_home_tab(&self, app_handle: &AppHandle) -> Result<(), String> {
         let window_id = format!("tab_{}", self.home_tab_id);
 
@@ -69,58 +63,7 @@ impl TabManager {
         Ok(())
     }
 
-    async fn handle_ipc_connections(app_handle: AppHandle) {
-        let addr = "127.0.0.1:0"; // Let OS assign a port
-
-        match TcpListener::bind(addr).await {
-            Ok(listener) => {
-                let local_addr = listener.local_addr().unwrap();
-                println!("IPC server started on {}", local_addr);
-
-                // Store the port for clients to connect
-                // For simplicity, we'll use a fixed port
-                let port = 12345;
-                let addr = format!("127.0.0.1:{}", port);
-
-                match TcpListener::bind(&addr).await {
-                    Ok(listener) => {
-                        loop {
-                            match listener.accept().await {
-                                Ok((mut stream, _)) => {
-                                    let app_handle = app_handle.clone();
-                                    task::spawn(async move {
-                                        let mut buffer = [0; 1024];
-                                        match stream.read(&mut buffer).await {
-                                            Ok(n) if n > 0 => {
-                                                let data = &buffer[..n];
-                                                if let Ok(tab_info_str) = std::str::from_utf8(data) {
-                                                    if let Ok(tab_info) = serde_json::from_str::<TabInfo>(tab_info_str.trim()) {
-                                                        // Create new window with received tab
-                                                        let manager = TAB_MANAGER.lock().await;
-                                                        let _ = manager.create_tab_window(&app_handle, tab_info, None).await;
-                                                    }
-                                                }
-                                            }
-                                            _ => {}
-                                        }
-                                    });
-                                }
-                                Err(e) => {
-                                    println!("IPC connection error: {}", e);
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed to bind IPC socket: {}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                println!("Failed to bind IPC socket: {}", e);
-            }
-        }
-    }    pub async fn create_tab_window(
+    pub async fn create_tab_window(
         &self,
         app_handle: &AppHandle,
         tab_info: TabInfo,
@@ -133,13 +76,22 @@ impl TabManager {
             return Err("Window already exists".to_string());
         }
 
+        let title_with_icon = match tab_info.content_type.as_str() {
+            "home" => format!("🏠 {}", tab_info.title),
+            "spreadsheet" => format!("📊 {}", tab_info.title),
+            "fitting" => format!("📈 {}", tab_info.title),
+            "solver" => format!("🧮 {}", tab_info.title),
+            "montecarlo" => format!("🎲 {}", tab_info.title),
+            _ => format!("🏠 {}", tab_info.title),
+        };
+
         let mut builder = WebviewWindowBuilder::new(
             app_handle,
             &window_id,
             tauri::WebviewUrl::App(format!("index.html?detached=true&tabId={}&tabType={}&tabTitle={}",
                 tab_info.id, tab_info.content_type, urlencoding::encode(&tab_info.title)).into())
         )
-        .title(&tab_info.title)
+        .title(&title_with_icon)
         .decorations(false)  // Disable native decorations to use custom title bar
         .resizable(true)
         .closable(true)
@@ -176,105 +128,26 @@ impl TabManager {
         Ok(window_id)
     }
 
-    pub async fn close_tab_window(&self, app_handle: &AppHandle, window_id: &str) -> Result<(), String> {
-        if let Some(window) = app_handle.get_webview_window(window_id) {
-            window.close().map_err(|e| format!("Failed to close window: {}", e))?;
 
-            let mut windows = self.windows.lock().await;
-            windows.remove(window_id);
 
-            Ok(())
-        } else {
-            Err("Window not found".to_string())
-        }
-    }
 
-    pub async fn get_window_state(&self, window_id: &str) -> Option<WindowState> {
-        let windows = self.windows.lock().await;
-        windows.get(window_id).cloned()
-    }
-
-    pub async fn save_state(&self) -> Result<(), String> {
-        let windows = self.windows.lock().await;
-        let state_json = serde_json::to_string(&*windows)
-            .map_err(|e| format!("Failed to serialize state: {}", e))?;
-
-        // Save to file or use Tauri's store
-        std::fs::write("tab_state.json", state_json)
-            .map_err(|e| format!("Failed to save state: {}", e))?;
-
-        Ok(())
-    }
-
-    pub async fn load_state(&self) -> Result<(), String> {
-        if let Ok(state_json) = std::fs::read_to_string("tab_state.json") {
-            let windows: HashMap<String, WindowState> = serde_json::from_str(&state_json)
-                .map_err(|e| format!("Failed to deserialize state: {}", e))?;
-
-            let mut current_windows = self.windows.lock().await;
-            *current_windows = windows;
-        }
-
-        Ok(())
-    }
 }
 
 static TAB_MANAGER: Lazy<Arc<Mutex<TabManager>>> = Lazy::new(|| {
     Arc::new(Mutex::new(TabManager::new()))
 });
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct WindowPosition {
-    pub x: i32,
-    pub y: i32,
-}
-
 #[tauri::command]
 pub async fn create_tab_window(
     app_handle: AppHandle,
     tab_info: TabInfo,
     geometry: Option<WindowGeometry>,
-    position: Option<WindowPosition>,
 ) -> Result<String, String> {
     let manager = TAB_MANAGER.lock().await;
-    let final_geometry = if position.is_some() && geometry.is_none() {
-        Some(WindowGeometry {
-            x: position.as_ref().unwrap().x,
-            y: position.as_ref().unwrap().y,
-            width: 800,
-            height: 600,
-        })
-    } else {
-        geometry
-    };
-
-    manager.create_tab_window(&app_handle, tab_info, final_geometry).await
+    manager.create_tab_window(&app_handle, tab_info, geometry).await
 }
 
-#[tauri::command]
-pub async fn close_tab_window(app_handle: AppHandle, window_id: String) -> Result<(), String> {
-    let manager = TAB_MANAGER.lock().await;
-    manager.close_tab_window(&app_handle, &window_id).await
-}
 
-#[tauri::command]
-pub async fn get_window_state(window_id: String) -> Result<WindowState, String> {
-    let manager = TAB_MANAGER.lock().await;
-    manager.get_window_state(&window_id).await
-        .ok_or_else(|| "Window state not found".to_string())
-}
-
-#[tauri::command]
-pub async fn save_tab_state() -> Result<(), String> {
-    let manager = TAB_MANAGER.lock().await;
-    manager.save_state().await
-}
-
-#[tauri::command]
-pub async fn load_tab_state() -> Result<(), String> {
-    let manager = TAB_MANAGER.lock().await;
-    manager.load_state().await
-}
 
 #[tauri::command]
 pub async fn ensure_home_tab(app_handle: AppHandle) -> Result<(), String> {

@@ -360,18 +360,14 @@ function UncertaintyCalculatorWindow() {
     event.preventDefault();
     event.stopPropagation();
 
-    console.log('Close button clicked - using Tauri command');
-
     try {
       await invoke('close_uncertainty_calculator_window');
-      console.log('Close command sent successfully');
     } catch (error) {
       console.error('Failed to close window via command:', error);
 
       // Fallback to browser close
       try {
         window.close();
-        console.log('Browser close attempted as fallback');
       } catch (fallbackError) {
         console.error('Fallback close also failed:', fallbackError);
       }
@@ -380,7 +376,6 @@ function UncertaintyCalculatorWindow() {
 
   const handleDialogClose = () => {
     // This is called when the dialog wants to close (though we removed the close button)
-    console.log('Dialog close requested');
   };
 
   return (
@@ -510,17 +505,12 @@ function UncertaintyCalculatorWindow() {
 export default UncertaintyCalculatorWindow;
 
 // Auto-render immediately when this module loads
-console.log('UncertaintyCalculatorWindow module loaded');
-
 const renderUncertaintyCalculatorWindow = () => {
-  console.log('UncertaintyCalculatorWindow: Attempting to render');
   const container = document.getElementById('root');
   if (container) {
-    console.log('UncertaintyCalculatorWindow: Found root container, creating root');
     try {
       const root = createRoot(container);
       root.render(<UncertaintyCalculatorWindow />);
-      console.log('UncertaintyCalculatorWindow: Successfully rendered');
     } catch (error) {
       console.error('UncertaintyCalculatorWindow: Error rendering:', error);
     }

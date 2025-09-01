@@ -1,29 +1,22 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import {
-  SortableContext,
-  horizontalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
+import React, { useMemo, useState, useRef } from 'react';
+import { SortableContext, horizontalListSortingStrategy} from '@dnd-kit/sortable';
+import { useSortable} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTabStore } from '../hooks/useTabStore';
-import { bus } from '../utils/ipc';
-import { Box, IconButton, Typography, TextField } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import { Box, TextField, IconButton } from '@mui/material';
+import { CloseIcon, HomeIcon, TableChartIcon, TrendingUpIcon, CalculateIcon, CasinoIcon } from '../icons';
 import type { Tab } from '../types/tabs';
 
-interface DraggableTabProps {
+// Enhanced DraggableTab component with advanced features
+function DraggableTab({ tab, isActive, onActivate, onClose }: {
   tab: Tab;
   isActive: boolean;
   onActivate: () => void;
   onClose: () => void;
-  onRename: (newTitle: string) => void;
-}
-
-function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: DraggableTabProps) {
+}) {
+  const { renameTab } = useTabStore();
   const isHomeTab = tab.id === 'home';
+  const tabRef = useRef<HTMLDivElement>(null);
 
   const {
     attributes,
@@ -34,10 +27,7 @@ function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: Draggabl
     isDragging,
   } = useSortable({
     id: tab.id,
-    disabled: isHomeTab, // Disable dragging for home tab
-    data: {
-      tab: tab, // Pass the tab data for the drag layer
-    },
+    disabled: false, // Remove all drag restrictions for testing
   });
 
   // State for inline editing
@@ -45,8 +35,7 @@ function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: Draggabl
   const [editingTitle, setEditingTitle] = useState(tab.title);
 
   // Handle double-click to enter edit mode
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent default double-click behavior
+  const handleDoubleClick = () => {
     if (!isHomeTab && !isEditing) {
       setIsEditing(true);
       setEditingTitle(tab.title);
@@ -55,8 +44,9 @@ function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: Draggabl
 
   // Handle save (Enter key)
   const handleSave = () => {
-    if (editingTitle.trim() && editingTitle.trim() !== tab.title) {
-      onRename(editingTitle.trim());
+    const trimmedTitle = editingTitle.trim();
+    if (trimmedTitle && trimmedTitle !== tab.title) {
+      renameTab(tab.id, trimmedTitle);
     }
     setIsEditing(false);
   };
@@ -79,25 +69,43 @@ function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: Draggabl
   // Handle input blur (save on blur)
   const handleBlur = () => {
     handleSave();
-  };  // Memoize the style calculation
+  };
+
+  // Get tab icon based on type
+  const getTabIcon = () => {
+    if (tab.id === 'home') return <HomeIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
+    if (tab.id.includes('spreadsheet')) return <TableChartIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
+    if (tab.id.includes('fitting')) return <TrendingUpIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
+    if (tab.id.includes('solver')) return <CalculateIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
+    if (tab.id.includes('montecarlo')) return <CasinoIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
+    return <HomeIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
+  };
+
+  // Enhanced style calculation with tilt for phantom
   const style = useMemo(() => ({
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1, // More transparent when dragging
+    transform: isDragging
+      ? `${CSS.Transform.toString(transform)} scale(0.9) rotate(3deg)`
+      : CSS.Transform.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0.3 : 1,
+    zIndex: isDragging ? 1000 : 1,
   }), [transform, transition, isDragging]);
 
-  // Memoize color calculation
+  // Color calculation based on tab type
   const colors = useMemo(() => {
-    if (tab.id === 'home') return { primary: '#9c27b0', secondary: '#7b1fa2' };
-    if (tab.id.includes('spreadsheet')) return { primary: '#2196f3', secondary: '#1976d2' };
-    if (tab.id.includes('fitting')) return { primary: '#ff9800', secondary: '#f57c00' };
-    if (tab.id.includes('solver')) return { primary: '#4caf50', secondary: '#388e3c' };
-    if (tab.id.includes('montecarlo')) return { primary: '#e91e63', secondary: '#c2185b' };
-    return { primary: '#9c27b0', secondary: '#7b1fa2' };
+    if (tab.id === 'home') return { primary: '#9c27b0', secondary: '#7b1fa2', accent: '#ba68c8', icon: '#ba68c8' };
+    if (tab.id.includes('spreadsheet')) return { primary: '#2196f3', secondary: '#1976d2', accent: '#64b5f6', icon: '#64b5f6' };
+    if (tab.id.includes('fitting')) return { primary: '#ff9800', secondary: '#f57c00', accent: '#ffb74d', icon: '#ffb74d' };
+    if (tab.id.includes('solver')) return { primary: '#4caf50', secondary: '#388e3c', accent: '#81c784', icon: '#81c784' };
+    if (tab.id.includes('montecarlo')) return { primary: '#e91e63', secondary: '#c2185b', accent: '#f06292', icon: '#f06292' };
+    return { primary: '#9c27b0', secondary: '#7b1fa2', accent: '#ba68c8', icon: '#ba68c8' };
   }, [tab.id]);
 
   const attachDragRef = (element: HTMLDivElement | null) => {
     setNodeRef(element);
+    if (tabRef.current !== element) {
+      tabRef.current = element;
+    }
   };
 
   return (
@@ -105,87 +113,146 @@ function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: Draggabl
       ref={attachDragRef}
       style={style}
       {...attributes}
-      onClick={() => {
-        console.log('Tab clicked for activation:', tab.id);
-        onActivate();
+      onClick={(e) => {
+        // Only activate if not clicking on drag handle or close button
+        if (!e.defaultPrevented && !isEditing) {
+          onActivate();
+        }
       }}
       sx={{
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        width: '200px', // Fixed width to prevent expansion
-        height: '36px',
-        margin: '6px 0',
-        padding: '6px 12px',
-        borderRadius: '6px',
-        cursor: isHomeTab ? 'default' : 'pointer',
+        minWidth: '200px',
+        maxWidth: '200px',
+        height: '44px',
+        margin: '4px 2px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        cursor: 'default',
         userSelect: 'none',
-        transition: 'all 0.1s ease-out', // Even faster transition
-        backgroundColor: isActive
-          ? `${colors.primary}E0`
-          : 'rgba(255, 255, 255, 0.02)',
-        border: isActive
-          ? `2px solid ${colors.primary}80`
-          : '1px solid rgba(255, 255, 255, 0.15)',
-        color: isActive
+        transition: 'all 0.2s ease-in-out',
+        background: isActive
           ? colors.primary
-          : 'rgba(255, 255, 255, 0.6)',
-        zIndex: isDragging ? 1000 : 1,
-        '&::after': {
+          : isDragging
+            ? 'rgba(255, 255, 255, 0.03)'
+            : 'rgba(255, 255, 255, 0.02)',
+        border: `2px solid ${isActive ? colors.accent : 'rgba(255, 255, 255, 0.08)'}`,
+        color: isActive || isDragging
+          ? '#ffffff'
+          : 'rgba(255, 255, 255, 0.7)',
+        boxShadow: isActive
+          ? `0 2px 8px ${colors.primary}40`
+          : isDragging
+            ? `0 2px 8px rgba(255, 255, 255, 0.1)`
+            : 'none',
+        '&:hover': {
+          background: isActive
+            ? colors.primary
+            : isDragging
+              ? colors.secondary
+              : 'rgba(255, 255, 255, 0.08)',
+          borderColor: isActive
+            ? colors.accent
+            : colors.primary,
+          color: '#ffffff',
+          transform: isDragging ? 'none' : 'translateY(-1px)',
+          boxShadow: isActive
+            ? `0 4px 12px ${colors.primary}50`
+            : `0 2px 8px ${colors.primary}20`,
+        },
+        '&::before': isDragging ? {
           content: '""',
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: isActive
-            ? 'transparent'
-            : `${colors.primary}08`,
-          borderRadius: '5px',
-          pointerEvents: 'none',
-        },
-        '&:hover': {
-          backgroundColor: isActive
-            ? `${colors.primary}F0`
-            : `${colors.primary}15`,
-          borderColor: isActive
-            ? colors.primary
-            : `${colors.primary}40`,
-          color: isActive ? colors.primary : '#ffffff',
-          transform: 'translateY(-1px)',
-          boxShadow: `0 2px 8px ${colors.primary}20`,
-        },
+          borderRadius: '8px',
+          background: `rgba(255, 255, 255, 0.1)`,
+          zIndex: -1,
+        } : {},
       }}
     >
+      {/* Enhanced Drag Handle */}
       {!isHomeTab && (
         <Box
           {...listeners}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '20px',
-            height: '20px',
+            width: '24px',
+            height: '28px',
             marginRight: '6px',
             cursor: isDragging ? 'grabbing' : 'grab',
-            borderRadius: '3px',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            },
+            transition: 'all 0.15s ease-out',
+            position: 'relative',
+            flexShrink: 0,
           }}
+          title="Drag to reorder or detach tab"
         >
-          <DragIndicatorIcon
+          {/* Drag indicator - three fat horizontal lines */}
+          <Box
             sx={{
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.4)',
-              '&:hover': {
-                color: 'rgba(255, 255, 255, 0.6)',
-              },
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: '100%',
             }}
-          />
+          >
+            <Box sx={{
+              width: '18px',
+              height: '3px',
+              backgroundColor: `${colors.accent} !important`,
+              background: `${colors.accent} !important`,
+              color: `${colors.accent} !important`,
+              borderRadius: '2px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+              border: 'none',
+            }} />
+            <Box sx={{
+              width: '18px',
+              height: '3px',
+              backgroundColor: `${colors.accent} !important`,
+              background: `${colors.accent} !important`,
+              color: `${colors.accent} !important`,
+              borderRadius: '2px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+              border: 'none',
+            }} />
+            <Box sx={{
+              width: '18px',
+              height: '3px',
+              backgroundColor: `${colors.accent} !important`,
+              background: `${colors.accent} !important`,
+              color: `${colors.accent} !important`,
+              borderRadius: '2px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+              border: 'none',
+            }} />
+          </Box>
         </Box>
       )}
 
+      {/* Tab Icon */}
+      <Box sx={{
+        mr: 1,
+        display: 'flex',
+        alignItems: 'center',
+        flexShrink: 0
+      }}>
+        {getTabIcon()}
+      </Box>
+
+      {/* Editable Title */}
       {isEditing ? (
         <TextField
           autoFocus
@@ -198,66 +265,67 @@ function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: Draggabl
             flex: 1,
             mr: 1,
             '& .MuiInput-root': {
-              fontSize: '0.8rem',
-              fontWeight: isActive ? 600 : 400,
-              color: isActive ? colors.primary : 'rgba(255, 255, 255, 0.6)',
-              letterSpacing: '0.025em',
-            },
-            '& .MuiInput-underline:before': {
-              borderBottomColor: 'transparent',
-            },
-            '& .MuiInput-underline:hover:before': {
-              borderBottomColor: colors.primary,
-            },
-            '& .MuiInput-underline:after': {
-              borderBottomColor: colors.primary,
+              fontSize: '0.85rem',
+              fontWeight: isActive ? 600 : 500,
+              color: '#ffffff',
+              '&:before': { borderBottomColor: 'transparent' },
+              '&:hover:before': { borderBottomColor: colors.accent },
+              '&:after': { borderBottomColor: colors.accent },
+              '& .MuiInput-input': {
+                padding: '2px 0',
+              },
             },
           }}
         />
       ) : (
-        <Typography
-          variant="body2"
+        <Box
           onDoubleClick={handleDoubleClick}
           sx={{
             flex: 1,
-            fontWeight: isActive ? 600 : 400,
-            fontSize: '0.8rem',
+            fontWeight: isActive ? 600 : 500,
+            fontSize: '0.85rem',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             mr: 1,
             letterSpacing: '0.025em',
             cursor: isHomeTab ? 'default' : 'text',
+            display: 'flex',
+            alignItems: 'center',
+            minWidth: 0, // Allow text to shrink
           }}
+          title={tab.title}
         >
           {tab.title}
-        </Typography>
+        </Box>
       )}
 
-      {tab.id !== 'home' && (
+      {/* Close Button */}
+      {!isHomeTab && (
         <IconButton
-          size="small"
           onClick={(e) => {
-            console.log('Close button clicked for tab:', tab.id);
             e.stopPropagation();
             onClose();
           }}
+          size="small"
           sx={{
-            width: '18px',
-            height: '18px',
-            padding: '1px',
+            width: '20px',
+            height: '20px',
+            padding: '2px',
             marginLeft: '4px',
-            color: 'rgba(255, 255, 255, 0.4)',
+            color: 'rgba(255, 255, 255, 0.5)',
             borderRadius: '3px',
-            transition: 'all 0.1s ease-out', // Faster transition
+            transition: 'all 0.15s ease-out',
             '&:hover': {
+              backgroundColor: 'rgba(244, 67, 54, 0.15)',
               color: '#ff6b6b',
-              backgroundColor: 'rgba(255, 107, 107, 0.1)',
-              transform: 'scale(1.1)',
+            },
+            '&:active': {
+              transform: 'scale(0.95)',
             },
           }}
         >
-          <CloseIcon sx={{ fontSize: '12px' }} />
+          <CloseIcon sx={{ fontSize: '0.9rem' }} />
         </IconButton>
       )}
     </Box>
@@ -268,87 +336,127 @@ function DraggableTab({ tab, isActive, onActivate, onClose, onRename }: Draggabl
 const MemoizedDraggableTab = React.memo(DraggableTab);
 
 export function DraggableTabBar() {
-  const { tabs, activeTabId, setActiveTab, removeTab, renameTab } = useTabStore();
+  const { tabs, activeTabId, setActiveTab, removeTab } = useTabStore();
+  const tabBarRef = useRef<HTMLDivElement>(null);
 
-  console.log('DraggableTabBar render:', { tabs: tabs.map(t => t.id), activeTabId, tabsLength: tabs.length });
-  const tabBarRef = React.useRef<HTMLDivElement>(null);
+  // Ensure home tab is always first, then sort other tabs
+  const sortedTabs = useMemo(() => {
+    const homeTab = tabs.find(tab => tab.id === 'home');
+    const otherTabs = tabs.filter(tab => tab.id !== 'home');
+    const result = homeTab ? [homeTab, ...otherTabs] : tabs;
+    return result;
+  }, [tabs]);
 
-  // Check if this is a detached tab window
-  const [isDetachedTabWindow, setIsDetachedTabWindow] = useState(false);
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const detached = urlParams.get('detached') === 'true';
-    const tabId = urlParams.get('tabId');
-    const isDetached = detached && !!tabId;
-    console.log('DraggableTabBar: checking if detached window:', {
-      detached,
-      tabId,
-      isDetached,
-      fullUrl: window.location.search,
-      allParams: Object.fromEntries(urlParams.entries())
-    });
-    setIsDetachedTabWindow(isDetached);
-  }, []);
-
-  // Listen for cross-window tab drops
-  useEffect(() => {
-    const onExternalDrop = (tab: Tab) => {
-      // Another window dropped a tab on this tab bar
-      console.log('Received external tab drop:', tab);
-      // Add the tab to this window
-      const newTab: Tab = {
-        id: tab.id,
-        title: tab.title,
-        content: tab.content,
-      };
-      // Use the store's addTab function
-      const { addTab } = useTabStore.getState();
-      addTab(newTab);
-    };
-
-    bus.on('tab-drop', onExternalDrop);
-    return () => {
-      bus.off('tab-drop', onExternalDrop);
-    };
-  }, []);
-
-  // Memoize tab IDs for SortableContext, including home tab but it will be disabled
-  const tabIds = useMemo(() => tabs.map((t: Tab) => t.id), [tabs]);
+  // Memoize tab IDs for SortableContext (excluding home tab from sorting)
+  const sortableTabIds = useMemo(() => {
+    const ids = sortedTabs.filter(tab => tab.id !== 'home').map((t: Tab) => t.id);
+    return ids;
+  }, [sortedTabs]);
 
   return (
     <Box
       ref={tabBarRef}
+      data-testid="tab-bar"
       sx={{
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         backgroundColor: 'rgba(18, 18, 18, 0.95)',
         position: 'relative',
-        backdropFilter: 'blur(10px)',
+        width: '100%',
       }}
     >
-      <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
-            minHeight: '48px',
-            px: 2,
-            gap: 1,
-            overflow: 'auto',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255, 255, 255, 0.15) transparent',
-            '&::-webkit-scrollbar': {
-              height: '3px',
-            },
-            '&::-webkit-scrollbar-track': {
-              background: 'transparent',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              background: 'rgba(255, 255, 255, 0.15)',
-              borderRadius: '2px',
-            },
-          }}>
-            {/* Render all tabs in sortable context */}
-            {tabs.map((tab: Tab) => {
-              console.log('Rendering tab:', { id: tab.id, title: tab.title, isHome: tab.id === 'home' });
+          minHeight: '52px',
+          px: 2,
+          gap: 1,
+          overflow: 'auto',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(255, 255, 255, 0.15) transparent',
+          '&::-webkit-scrollbar': {
+            height: '3px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '2px',
+          },
+        }}>
+          {/* Render home tab first (not draggable) */}
+          {sortedTabs.filter(tab => tab.id === 'home').map((tab: Tab) => (
+            <Box
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              sx={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                minWidth: '160px',
+                maxWidth: '200px',
+                height: '44px',
+                margin: '4px 2px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.2s ease-in-out',
+                background: activeTabId === tab.id
+                  ? '#9c27b0'
+                  : 'rgba(255, 255, 255, 0.05)',
+                border: activeTabId === tab.id
+                  ? `2px solid #ba68c8`
+                  : '1px solid rgba(255, 255, 255, 0.12)',
+                color: activeTabId === tab.id
+                  ? '#ffffff'
+                  : 'rgba(255, 255, 255, 0.7)',
+                boxShadow: activeTabId === tab.id
+                  ? `0 2px 8px rgba(156, 39, 176, 0.4)`
+                  : 'none',
+                '&:hover': {
+                  background: activeTabId === tab.id
+                    ? '#9c27b0'
+                    : `rgba(255, 255, 255, 0.08)`,
+                  borderColor: activeTabId === tab.id
+                    ? '#ba68c8'
+                    : '#9c27b0',
+                  color: '#ffffff',
+                  transform: 'translateY(-1px)',
+                  boxShadow: activeTabId === tab.id
+                    ? `0 4px 12px rgba(156, 39, 176, 0.5)`
+                    : `0 2px 8px rgba(156, 39, 176, 0.2)`,
+                },
+              }}
+            >
+              {/* Home Icon */}
+              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <HomeIcon sx={{ fontSize: '1rem', color: '#ba68c8' }} />
+              </Box>
+
+              {/* Title */}
+              <Box sx={{
+                flex: 1,
+                fontWeight: activeTabId === tab.id ? 600 : 500,
+                fontSize: '0.85rem',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                mr: 1,
+                letterSpacing: '0.025em',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                minWidth: 0,
+              }}>
+                {tab.title}
+              </Box>
+            </Box>
+          ))}
+
+          {/* Render other tabs in sortable context */}
+          <SortableContext items={sortableTabIds} strategy={horizontalListSortingStrategy}>
+            {sortedTabs.filter(tab => tab.id !== 'home').map((tab: Tab) => {
               return (
                 <MemoizedDraggableTab
                   key={tab.id}
@@ -356,40 +464,13 @@ export function DraggableTabBar() {
                   isActive={activeTabId === tab.id}
                   onActivate={() => setActiveTab(tab.id)}
                   onClose={async () => {
-                    console.log('Close button clicked for tab:', tab.id, 'isDetachedTabWindow:', isDetachedTabWindow, 'tabs length:', tabs.length);
-                    console.log('Current tabs:', tabs.map(t => ({ id: t.id, title: t.title })));
-
-                    // If this is a detached tab window with only one tab, close the window
-                    if (isDetachedTabWindow && tabs.length === 1) {
-                      try {
-                        console.log('Closing detached window...');
-                        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-                        const currentWindow = getCurrentWindow();
-                        console.log('Got current window, attempting to close...');
-                        await currentWindow.close();
-                        console.log('Window close command completed');
-                      } catch (error) {
-                        console.error('Failed to close window:', error);
-                        // Fallback: try to remove the tab normally
-                        console.log('Falling back to normal tab removal...');
-                        await removeTab(tab.id);
-                      }
-                    } else {
-                      // Normal tab removal
-                      console.log('Normal tab removal for tab:', tab.id);
-                      await removeTab(tab.id);
-                    }
-                  }}
-                  onRename={(newTitle: string) => {
-                    console.log('Renaming tab:', tab.id, 'to:', newTitle);
-                    renameTab(tab.id, newTitle);
+                    await removeTab(tab.id);
                   }}
                 />
               );
-            })}
-          </Box>
+          })}
         </SortableContext>
-
+      </Box>
     </Box>
   );
 }
