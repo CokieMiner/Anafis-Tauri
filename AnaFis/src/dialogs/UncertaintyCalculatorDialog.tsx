@@ -343,8 +343,8 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
                         py: 0.5,
                         fontSize: '0.7rem',
                         backgroundColor: 'background.paper',
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
+                        borderColor: 'white',
+                        color: 'white',
                         '&:hover': {
                           backgroundColor: 'primary.main',
                           color: 'primary.contrastText',
