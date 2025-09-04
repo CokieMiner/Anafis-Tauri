@@ -12,6 +12,13 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 
+// Tauri imports
+import { invoke } from '@tauri-apps/api/core';
+
+// KaTeX imports
+import 'katex/dist/katex.min.css';
+import { BlockMath } from 'react-katex';
+
 interface UncertaintyCalculatorDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -25,6 +32,16 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
   const [calculationResult, setCalculationResult] = useState('Value: N/A\nUncertainty: N/A');
   const [stringRepresentation, setStringRepresentation] = useState('');
   const [latexFormula, setLatexFormula] = useState('');
+  const handleOpenLatexPreview = async () => {
+    try {
+      await invoke('open_latex_preview_window', {
+        latexFormula,
+        title: 'LaTeX Formula Preview'
+      });
+    } catch (error) {
+      console.error('Error opening LaTeX preview window:', error);
+    }
+  };
 
   // Effect to update dynamic variable inputs when variablesInput changes
   useEffect(() => {
@@ -39,7 +56,7 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
 
   if (!isOpen) return null;
 
-  const handleCalculate = () => {
+  const handleCalculate = async () => {
     if (!formula) {
       alert('Please enter a formula.');
       return;
@@ -49,13 +66,40 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
       return;
     }
 
-    // Simulate calculation
-    const simulatedValue = Math.random() * 100;
-    const simulatedUncertainty = Math.random() * 5;
-    setCalculationResult(`Value: ${simulatedValue.toPrecision(6)}\nUncertainty: ${simulatedUncertainty.toPrecision(6)}`);
+    // Validate that all variables have values and uncertainties
+    for (const [varName, values] of Object.entries(variableValues)) {
+      if (!values.value || !values.uncertainty) {
+        alert(`Please enter both value and uncertainty for variable ${varName}.`);
+        return;
+      }
+    }
+
+    try {
+      // Prepare variables for the backend
+      const variables = Object.entries(variableValues).map(([name, values]) => ({
+        name,
+        value: parseFloat(values.value),
+        uncertainty: parseFloat(values.uncertainty),
+      }));
+
+      // Call the calculation function
+      const result = await invoke('calculate_uncertainty', {
+        formula,
+        variables,
+      }) as { value: number; uncertainty: number; formula: string };
+
+      // Format and display the result
+      let displayValue: string;
+      // Since value is always a number from Rust, no need to check for complex numbers
+      displayValue = result.value.toPrecision(6);
+      setCalculationResult(`Value: ${displayValue}\nUncertainty: ${result.uncertainty.toPrecision(6)}`);
+    } catch (error) {
+      console.error('Calculation error:', error);
+      setCalculationResult(`Error: ${error}`);
+    }
   };
 
-  const handleGenerateLatex = () => {
+  const handleGenerateLatex = async () => {
     if (!formula) {
       alert('Please enter a formula.');
       return;
@@ -65,11 +109,24 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
       return;
     }
 
-    // Simulate LaTeX generation
-    const simulatedString = `Uncertainty[${formula}] = ...`;
-    const simulatedLatex = `\\Delta ${formula} = \\\sqrt{\\sum_{i} \\left( \\frac{\\partial f}{\\partial x_i} \\Delta x_i \\right)^2}`; // Generic formula
-    setStringRepresentation(simulatedString);
-    setLatexFormula(simulatedLatex);
+    try {
+      // Parse variable names
+      const variables = variablesInput.split(',').map(v => v.trim()).filter(Boolean);
+
+      // Call the backend to generate LaTeX
+      const result = await invoke('generate_latex', {
+        formula,
+        variables,
+      }) as { string: string; latex: string };
+
+      // Set the results
+      setStringRepresentation(result.string);
+      setLatexFormula(result.latex);
+    } catch (error) {
+      console.error('LaTeX generation error:', error);
+      setStringRepresentation(`Error: ${error}`);
+      setLatexFormula(`Error: ${error}`);
+    }
   };
 
   // Notify outer window that content changed so it can resize immediately
@@ -250,8 +307,60 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
             </Paper>
 
             <Paper elevation={0} sx={{ p: 1.5, backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <Typography variant="h6" sx={{ mb: 1.5, color: 'text.primary', fontWeight: 'bold', fontSize: '0.9rem' }}>Rendered Formula (Placeholder)</Typography>
-              <Typography sx={{ color: 'text.secondary', fontStyle: 'italic', fontSize: '0.8rem' }}>Rendered formula will appear here. (Requires LaTeX rendering library)</Typography>
+              <Typography variant="h6" sx={{ mb: 1.5, color: 'text.primary', fontWeight: 'bold', fontSize: '0.9rem' }}>Rendered Formula</Typography>
+              {latexFormula && latexFormula !== `Error: ${latexFormula}` ? (
+                <Box sx={{
+                  p: 2,
+                  backgroundColor: 'background.default',
+                  borderRadius: 1,
+                  minHeight: '60px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative'
+                }}>
+                  <Box sx={{
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    '& .katex': {
+                      fontSize: '0.8em',
+                      maxWidth: '100%'
+                    }
+                  }}>
+                    <BlockMath math={latexFormula} />
+                  </Box>
+                  {latexFormula.length > 200 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleOpenLatexPreview}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        minWidth: 'auto',
+                        px: 1,
+                        py: 0.5,
+                        fontSize: '0.7rem',
+                        backgroundColor: 'background.paper',
+                        borderColor: 'primary.main',
+                        color: 'primary.main',
+                        '&:hover': {
+                          backgroundColor: 'primary.main',
+                          color: 'primary.contrastText',
+                          borderColor: 'primary.main'
+                        }
+                      }}
+                    >
+                      Expand
+                    </Button>
+                  )}
+                </Box>
+              ) : (
+                <Typography sx={{ color: 'text.secondary', fontStyle: 'italic', fontSize: '0.8rem', textAlign: 'center', py: 2 }}>
+                  {latexFormula ? 'Error rendering LaTeX formula' : 'Generate a LaTeX formula to see the rendered result'}
+                </Typography>
+              )}
             </Paper>
           </Paper>
         )}

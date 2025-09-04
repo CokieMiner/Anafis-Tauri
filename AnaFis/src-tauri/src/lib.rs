@@ -1,14 +1,16 @@
 mod uncertainty;
 mod secondary_windows;
 mod tabs;
-
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
+    tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![
       uncertainty::calculate_uncertainty,
+      uncertainty::generate_latex,
+      secondary_windows::open_latex_preview_window,
+      secondary_windows::close_latex_preview_window,
       secondary_windows::open_uncertainty_calculator_window,
       secondary_windows::close_uncertainty_calculator_window,
       secondary_windows::resize_uncertainty_calculator_window,
@@ -17,7 +19,8 @@ pub fn run() {
       secondary_windows::resize_settings_window,
       tabs::create_tab_window,
       tabs::send_tab_to_main,
-      tabs::ensure_home_tab
+      tabs::ensure_home_tab,
+      set_window_size,
     ])
     .setup(|app| {
       // Ensure home tab exists
@@ -63,4 +66,17 @@ pub fn run() {
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
+}
+
+#[tauri::command]
+async fn set_window_size(app: tauri::AppHandle, width: f64, height: f64) -> Result<(), String> {
+    if let Some(window) = app.get_focused_window() {
+        window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: width as u32,
+            height: height as u32,
+        })).map_err(|e| format!("Failed to resize window: {}", e))?;
+        Ok(())
+    } else {
+        Err("No focused window found".to_string())
+    }
 }

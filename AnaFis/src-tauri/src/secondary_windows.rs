@@ -115,3 +115,51 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
 
     Ok(())
 }
+
+#[tauri::command]
+pub fn close_latex_preview_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("latex-preview") {
+        window.destroy().map_err(|e| format!("Failed to destroy window: {}", e))?;
+        Ok(())
+    } else {
+        Err("LaTeX preview window not found".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, title: String) -> Result<(), String> {
+    // First check if window already exists
+    if let Some(existing_window) = app.get_webview_window("latex-preview") {
+        existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        return Ok(());
+    }
+
+    // Encode the parameters for URL
+    let encoded_formula = urlencoding::encode(&latex_formula);
+    let encoded_title = urlencoding::encode(&title);
+    let url = format!("latex-preview.html?formula={}&title={}", encoded_formula, encoded_title);
+
+    let window = tauri::WebviewWindowBuilder::new(
+        &app,
+        "latex-preview",
+        tauri::WebviewUrl::App(url.into())
+    )
+    .title(&title)
+    .decorations(false)
+    .resizable(true)
+    .inner_size(500.0_f64, 225.0_f64)
+    .min_inner_size(400.0_f64, 225.0_f64)
+    .max_inner_size(1600.0_f64, 225.0_f64)
+    .transparent(true)
+    .closable(true)
+    .build()
+    .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    // Show and focus the window
+    let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
+    window.show().map_err(|e| format!("Failed to show window: {}", e))?;
+    window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+
+    Ok(())
+}

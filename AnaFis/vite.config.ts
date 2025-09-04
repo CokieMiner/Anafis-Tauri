@@ -36,6 +36,8 @@ export default defineConfig(async () => ({
         main: "./index.html",
         settings: "./settings.html",
         "uncertainty-calculator": "./uncertainty-calculator.html",
+        "latex-preview": "./latex-preview.html",
+        "main-latex": "./src/main-latex.tsx",
       },
     },
     outDir: "dist",
