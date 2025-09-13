@@ -27,7 +27,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Spreadsheet',
       description: 'Data analysis and manipulation',
       icon: <TableChartIcon sx={{ fontSize: 28 }} />,
-      color: '#2196f3', // Vivid blue
+      color: '#2196f3', // Light blue
       content: <SpreadsheetTab />,
       emoji: '📊'
     },
@@ -36,7 +36,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Fitting',
       description: 'Curve fitting and regression',
       icon: <ShowChartIcon sx={{ fontSize: 28 }} />,
-      color: '#ff9800', // Vivid orange
+      color: '#ff9800', // Orange
       content: <FittingTab />,
       emoji: '📈'
     },
@@ -45,7 +45,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Solver',
       description: 'Mathematical equation solving',
       icon: <FunctionsIcon sx={{ fontSize: 28 }} />,
-      color: '#4caf50', // Vivid green
+      color: '#4caf50', // Green
       content: <SolverTab />,
       emoji: '🧮'
     },
@@ -54,7 +54,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Monte Carlo',
       description: 'Statistical simulations',
       icon: <CasinoIcon sx={{ fontSize: 28 }} />,
-      color: '#e91e63', // Vivid pink
+      color: '#e91e63', // Pink
       content: <MonteCarloTab />,
       emoji: '🎲'
     }
@@ -244,10 +244,13 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
           }}>
               <List dense sx={{ p: 0 }}>
                 {[
-                  { name: 'pendulum_data.csv', type: 'Data File', icon: <TableChartIcon />, color: '#10b981' }, // Light green
-                  { name: 'g_measurement.anafis', type: 'Project', icon: <DescriptionIcon />, color: '#7c3aed' }, // Rich purple
-                  { name: 'transistor_curves.xlsx', type: 'Spreadsheet', icon: <TableChartIcon />, color: '#10b981' }, // Light green
-                  { name: 'circuit_analysis.fit', type: 'Fitting Result', icon: <ShowChartIcon />, color: '#f97316' }, // Orange
+// Spreadsheet files - light blue
+                  { name: 'pendulum_data.csv', type: 'Data File', icon: <TableChartIcon />, color: '#64b5f6' },
+                  { name: 'transistor_curves.xlsx', type: 'Spreadsheet', icon: <TableChartIcon />, color: '#64b5f6' },
+// Project files - purple
+                  { name: 'g_measurement.anafis', type: 'Project', icon: <DescriptionIcon />, color: '#ba68c8' },
+// Fitting files - orange
+                  { name: 'circuit_analysis.fit', type: 'Fitting Result', icon: <ShowChartIcon />, color: '#ffb74d' },
                 ].map((file, index) => (
                   <ListItemButton
                     key={index}

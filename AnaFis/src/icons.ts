@@ -7,3 +7,4 @@ export { default as CloseIcon } from '@mui/icons-material/Close';
 export { default as AddIcon } from '@mui/icons-material/Add';
 export { default as SettingsIcon } from '@mui/icons-material/Settings';
 export { default as ArrowBackIcon } from '@mui/icons-material/ArrowBack';
+export { default as SearchIcon } from '@mui/icons-material/Search';

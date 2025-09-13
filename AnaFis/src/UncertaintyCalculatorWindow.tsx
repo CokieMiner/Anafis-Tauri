@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { useEffect, useRef } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import { Typography, IconButton } from '@mui/material';
@@ -8,129 +8,10 @@ import { Close } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import UncertaintyCalculatorDialog from './dialogs/UncertaintyCalculatorDialog';
+import { createAnafisTheme } from './themes';
 
-// Create a dark theme consistent with the main app
-const theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#1e1b4b', // Deep dark blue-purple
-      light: '#3730a3',
-      dark: '#1e1b4b',
-    },
-    secondary: {
-      main: '#7f1d1d', // Deep dark red
-      light: '#991b1b',
-      dark: '#450a0a',
-    },
-    background: {
-      default: '#0a0a0a', // Pure black background
-      paper: '#111111', // Very dark gray for cards
-    },
-    text: {
-      primary: '#ffffff', // Pure white text
-      secondary: '#ffffff', // Pure white secondary text
-    },
-    success: {
-      main: '#166534', // Dark green
-    },
-    warning: {
-      main: '#92400e', // Dark orange
-    },
-    error: {
-      main: '#7f1d1d', // Deep dark red
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontWeight: 700,
-      fontSize: '2.5rem',
-      letterSpacing: '-0.02em',
-    },
-    h2: {
-      fontWeight: 600,
-      fontSize: '2rem',
-      letterSpacing: '-0.01em',
-    },
-    h5: {
-      fontWeight: 600,
-      fontSize: '1.25rem',
-    },
-    button: {
-      textTransform: 'none',
-      fontWeight: 500,
-    },
-  },
-  shape: {
-    borderRadius: 12,
-  },
-  components: {
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#111111',
-          backgroundImage: 'linear-gradient(135deg, rgba(30, 27, 75, 0.15) 0%, rgba(79, 29, 29, 0.15) 100%)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#111111',
-          backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          transition: 'all 0.3s ease-in-out',
-          '&:hover': {
-            boxShadow: '0 8px 32px rgba(30, 27, 75, 0.15)',
-            border: '1px solid rgba(30, 27, 75, 0.25)',
-          },
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          padding: '8px 16px',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            transform: 'translateY(-1px)',
-            boxShadow: '0 4px 12px rgba(30, 27, 75, 0.2)',
-          },
-        },
-        contained: {
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)',
-          '&:hover': {
-            background: 'linear-gradient(135deg, #3730a3 0%, #1e1b4b 100%)',
-          },
-        },
-      },
-    },
-    MuiCssBaseline: {
-      styleOverrides: {
-        body: {
-          scrollbarWidth: 'thin',
-          '&::-webkit-scrollbar': {
-            width: '8px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: '#111111',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: '#5a5a5a',
-            borderRadius: '4px',
-          },
-          '&::-webkit-scrollbar-thumb:hover': {
-            background: '#7a7a7a',
-          },
-        },
-      },
-    },
-  },
-});
+// Create theme using shared configuration
+const theme = createAnafisTheme();
 
 function UncertaintyCalculatorWindow() {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -168,7 +49,7 @@ function UncertaintyCalculatorWindow() {
             height: Math.round(height * window.devicePixelRatio),
           });
         } catch (error) {
-          console.error('Failed to resize window:', error);
+          // Failed to resize window
         } finally {
           resizeTimeoutRef.current = null;
         }
@@ -197,7 +78,7 @@ function UncertaintyCalculatorWindow() {
         height: Math.round(height * window.devicePixelRatio),
       });
     } catch (error) {
-      console.error('Failed to resize window (immediate):', error);
+      // Failed to resize window (immediate)
     }
   };
 
@@ -253,7 +134,7 @@ function UncertaintyCalculatorWindow() {
             restored = true;
             return true;
           } catch (err) {
-            console.warn('Could not set resizable(false) on attempt:', err);
+            // Could not set resizable(false)
           }
         }
       } catch (err) {
@@ -344,7 +225,7 @@ function UncertaintyCalculatorWindow() {
             try {
               await w.setResizable(true);
             } catch (err) {
-              console.warn('Could not restore resizable(true):', err);
+              // Could not restore resizable(true)
             }
           }
         } catch (err) {
@@ -363,13 +244,13 @@ function UncertaintyCalculatorWindow() {
     try {
       await invoke('close_uncertainty_calculator_window');
     } catch (error) {
-      console.error('Failed to close window via command:', error);
+      // Failed to close window via command
 
       // Fallback to browser close
       try {
         window.close();
       } catch (fallbackError) {
-        console.error('Fallback close also failed:', fallbackError);
+        // Fallback close also failed
       }
     }
   };
@@ -512,10 +393,10 @@ const renderUncertaintyCalculatorWindow = () => {
       const root = createRoot(container);
       root.render(<UncertaintyCalculatorWindow />);
     } catch (error) {
-      console.error('UncertaintyCalculatorWindow: Error rendering:', error);
+      // UncertaintyCalculatorWindow: Error rendering
     }
   } else {
-    console.error('UncertaintyCalculatorWindow: Root container not found');
+    // UncertaintyCalculatorWindow: Root container not found
   }
 };
 

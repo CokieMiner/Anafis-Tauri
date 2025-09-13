@@ -10,7 +10,7 @@ import MonteCarloTab from './pages/MonteCarloTab';
 import { useTabStore } from './hooks/useTabStore';
 
 // Material-UI Icons for drag overlay
-import { HomeIcon, TableChartIcon, TrendingUpIcon, CasinoIcon } from './icons';
+// Icons now handled by shared utility function
 
 import type { Tab } from './types/tabs'; // Import the Tab interface
 
@@ -48,14 +48,11 @@ import {
   closestCenter,
 } from '@dnd-kit/core';
 
+import { getTabIcon } from './utils/tabColors';
+
 // Helper function to get drag overlay icon
 const getDragOverlayIcon = (tabId: string) => {
-  if (tabId === 'home') return <HomeIcon sx={{ fontSize: '1rem', color: '#ba68c8' }} />;
-  if (tabId.includes('spreadsheet')) return <TableChartIcon sx={{ fontSize: '1rem', color: '#64b5f6' }} />;
-  if (tabId.includes('fitting')) return <TrendingUpIcon sx={{ fontSize: '1rem', color: '#ffb74d' }} />;
-  if (tabId.includes('solver')) return <CalculateIcon sx={{ fontSize: '1rem', color: '#81c784' }} />;
-  if (tabId.includes('montecarlo')) return <CasinoIcon sx={{ fontSize: '1rem', color: '#f06292' }} />;
-  return <HomeIcon sx={{ fontSize: '1rem', color: '#ba68c8' }} />;
+  return getTabIcon(tabId, '1rem');
 };
 
 
@@ -133,7 +130,7 @@ function App() {
     try {
       await invoke('open_uncertainty_calculator_window');
     } catch (error) {
-      console.error('Failed to open uncertainty calculator window:', error);
+      // Failed to open uncertainty calculator window
     }
   };
 
@@ -141,7 +138,7 @@ function App() {
     try {
       await invoke('open_settings_window');
     } catch (error) {
-      console.error('Failed to open settings window:', error);
+      // Failed to open settings window
     }
   };
 
@@ -175,7 +172,7 @@ function App() {
         await currentWindow.close();
       }
     } catch (error) {
-      console.error('Failed to reattach tab:', error);
+      // Failed to reattach tab
     }
   };
 
@@ -199,7 +196,7 @@ function App() {
           return;
         }
       } catch (error) {
-        console.warn('Failed to check window type:', error);
+        // Failed to check window type
       }
     };
 
@@ -291,7 +288,7 @@ function App() {
         const currentWindow = getCurrentWindow();
         currentWindow.listen('reattach-tab', handleReattachTabEvent);
       } catch (error) {
-        console.error('Failed to setup reattach listener:', error);
+        // Failed to setup reattach listener
       }
     };
 
@@ -342,12 +339,14 @@ function App() {
                 padding: '8px 12px',
                 borderRadius: '8px',
                 backgroundColor: draggedTab.id === 'home' ? '#9c27b0' :
+                  draggedTab.id.includes('optimized-spreadsheet') ? '#2196f3' :
                   draggedTab.id.includes('spreadsheet') ? '#2196f3' :
                   draggedTab.id.includes('fitting') ? '#ff9800' :
                   draggedTab.id.includes('solver') ? '#4caf50' :
                   draggedTab.id.includes('montecarlo') ? '#e91e63' : '#9c27b0',
                 border: `2px solid ${
                   draggedTab.id === 'home' ? '#ba68c8' :
+                  draggedTab.id.includes('optimized-spreadsheet') ? '#64b5f6' :
                   draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
                   draggedTab.id.includes('fitting') ? '#ffb74d' :
                   draggedTab.id.includes('solver') ? '#81c784' :
@@ -392,6 +391,7 @@ function App() {
                       width: '18px',
                       height: '3px',
                       backgroundColor: `${
+                        draggedTab.id === 'home' ? '#ba68c8' :
                         draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
                         draggedTab.id.includes('fitting') ? '#ffb74d' :
                         draggedTab.id.includes('solver') ? '#81c784' :
@@ -404,6 +404,7 @@ function App() {
                       width: '18px',
                       height: '3px',
                       backgroundColor: `${
+                        draggedTab.id === 'home' ? '#ba68c8' :
                         draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
                         draggedTab.id.includes('fitting') ? '#ffb74d' :
                         draggedTab.id.includes('solver') ? '#81c784' :
@@ -416,6 +417,7 @@ function App() {
                       width: '18px',
                       height: '3px',
                       backgroundColor: `${
+                        draggedTab.id === 'home' ? '#ba68c8' :
                         draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
                         draggedTab.id.includes('fitting') ? '#ffb74d' :
                         draggedTab.id.includes('solver') ? '#81c784' :
@@ -633,7 +635,7 @@ function App() {
                 <TabButton
                   label="Spreadsheet"
                   onClick={() => addTab('spreadsheet-' + Date.now(), 'Spreadsheet', <SpreadsheetTab />)}
-                  hoverColor="#42a5f5"
+                  hoverColor="#64b5f6"
                   hoverBackgroundColor="rgba(33, 150, 243, 0.12)"
                   hoverBorderColor="rgba(33, 150, 243, 0.2)"
                   hoverBoxShadowColor="rgba(33, 150, 243, 0.3)"

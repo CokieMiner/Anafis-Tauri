@@ -4,7 +4,8 @@ import { useSortable} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTabStore } from '../hooks/useTabStore';
 import { Box, TextField, IconButton } from '@mui/material';
-import { CloseIcon, HomeIcon, TableChartIcon, TrendingUpIcon, CalculateIcon, CasinoIcon } from '../icons';
+import { CloseIcon } from '../icons';
+import { getTabColors, getTabIcon } from '../utils/tabColors';
 import type { Tab } from '../types/tabs';
 
 // Enhanced DraggableTab component with advanced features
@@ -72,13 +73,8 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
   };
 
   // Get tab icon based on type
-  const getTabIcon = () => {
-    if (tab.id === 'home') return <HomeIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
-    if (tab.id.includes('spreadsheet')) return <TableChartIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
-    if (tab.id.includes('fitting')) return <TrendingUpIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
-    if (tab.id.includes('solver')) return <CalculateIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
-    if (tab.id.includes('montecarlo')) return <CasinoIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
-    return <HomeIcon sx={{ fontSize: '1rem', color: colors.icon }} />;
+  const renderTabIcon = () => {
+    return getTabIcon(tab.id, '1rem');
   };
 
   // Enhanced style calculation with tilt for phantom
@@ -91,15 +87,8 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
     zIndex: isDragging ? 1000 : 1,
   }), [transform, transition, isDragging]);
 
-  // Color calculation based on tab type
-  const colors = useMemo(() => {
-    if (tab.id === 'home') return { primary: '#9c27b0', secondary: '#7b1fa2', accent: '#ba68c8', icon: '#ba68c8' };
-    if (tab.id.includes('spreadsheet')) return { primary: '#2196f3', secondary: '#1976d2', accent: '#64b5f6', icon: '#64b5f6' };
-    if (tab.id.includes('fitting')) return { primary: '#ff9800', secondary: '#f57c00', accent: '#ffb74d', icon: '#ffb74d' };
-    if (tab.id.includes('solver')) return { primary: '#4caf50', secondary: '#388e3c', accent: '#81c784', icon: '#81c784' };
-    if (tab.id.includes('montecarlo')) return { primary: '#e91e63', secondary: '#c2185b', accent: '#f06292', icon: '#f06292' };
-    return { primary: '#9c27b0', secondary: '#7b1fa2', accent: '#ba68c8', icon: '#ba68c8' };
-  }, [tab.id]);
+  // Color calculation based on tab type using shared configuration
+  const colors = useMemo(() => getTabColors(tab.id), [tab.id]);
 
   const attachDragRef = (element: HTMLDivElement | null) => {
     setNodeRef(element);
@@ -249,7 +238,7 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
         alignItems: 'center',
         flexShrink: 0
       }}>
-        {getTabIcon()}
+        {renderTabIcon()}
       </Box>
 
       {/* Editable Title */}
@@ -431,7 +420,7 @@ export function DraggableTabBar() {
             >
               {/* Home Icon */}
               <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                <HomeIcon sx={{ fontSize: '1rem', color: '#ba68c8' }} />
+                {getTabIcon('home', '1rem')}
               </Box>
 
               {/* Title */}

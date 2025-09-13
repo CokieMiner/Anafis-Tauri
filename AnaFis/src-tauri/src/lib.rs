@@ -1,82 +1,111 @@
-mod uncertainty;
-mod secondary_windows;
-mod tabs;
+// Minimal modules - only what's actually used
+mod uncertainty_calculator;
+mod windows;
+mod utils;
+mod unit_conversion;
+
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+
     tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![
-      uncertainty::calculate_uncertainty,
-      uncertainty::generate_latex,
-      secondary_windows::open_latex_preview_window,
-      secondary_windows::close_latex_preview_window,
-      secondary_windows::open_uncertainty_calculator_window,
-      secondary_windows::close_uncertainty_calculator_window,
-      secondary_windows::resize_uncertainty_calculator_window,
-      secondary_windows::open_settings_window,
-      secondary_windows::close_settings_window,
-      secondary_windows::resize_settings_window,
-      tabs::create_tab_window,
-      tabs::send_tab_to_main,
-      tabs::ensure_home_tab,
-      set_window_size,
-    ])
-    .setup(|app| {
-      // Ensure home tab exists
-      let app_handle_home = app.handle().clone();
-      let _ = std::thread::spawn(|| {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-          let _ = tabs::ensure_home_tab(app_handle_home);
-        });
-      });
+        .invoke_handler(tauri::generate_handler![
+            // Uncertainty Calculator Commands (2 commands)
+            uncertainty_calculator::uncertainty::calculate_uncertainty,
+            uncertainty_calculator::uncertainty::generate_latex,
 
-      // Get main window for event handling
-      let main_window = app.get_webview_window("main").unwrap();
+            // Unit Conversion Commands (12 commands)
+            unit_conversion::commands::convert_value,
+            unit_conversion::commands::get_conversion_preview,
+            unit_conversion::commands::check_unit_compatibility,
+            unit_conversion::commands::get_available_units,
+            unit_conversion::commands::quick_convert_value,
+            unit_conversion::commands::get_conversion_factor,
+            unit_conversion::commands::parse_unit_formula,
+            unit_conversion::commands::analyze_dimensional_compatibility,
+            unit_conversion::commands::get_unit_dimensional_formula,
+            unit_conversion::commands::convert_spreadsheet_range,
+            unit_conversion::commands::validate_unit_string,
+            unit_conversion::commands::get_supported_categories,
 
-      // Listen for main window events
-      let app_handle = app.handle().clone();
-      main_window.on_window_event(move |event| {
-        match event {
-          tauri::WindowEvent::Focused(true) => {
-            // Main window gained focus, bring calculator and settings windows to front if they exist
-            if let Some(calc_window) = app_handle.get_webview_window("uncertainty-calculator") {
-              let _ = calc_window.set_focus();
-            }
-            if let Some(settings_window) = app_handle.get_webview_window("settings") {
-              let _ = settings_window.set_focus();
-            }
-          }
-          tauri::WindowEvent::Destroyed => {
-            // Main window is being destroyed, save state and close all child windows
-            if let Some(calc_window) = app_handle.get_webview_window("uncertainty-calculator") {
-              let _ = calc_window.close();
+            // Window Management Commands (8 commands)
+            windows::secondary_windows::open_latex_preview_window,
+            windows::secondary_windows::open_uncertainty_calculator_window,
+            windows::secondary_windows::close_uncertainty_calculator_window,
+            windows::secondary_windows::resize_uncertainty_calculator_window,
+            windows::secondary_windows::open_settings_window,
+            windows::secondary_windows::close_settings_window,
+            windows::secondary_windows::open_unit_conversion_window,
+            windows::tabs::send_tab_to_main,
+        ])        .setup(|app| {
+            // Initialize logging
+            if let Err(e) = utils::init_logging() {
+                eprintln!("Failed to initialize logging: {}", e);
             }
 
-            if let Some(settings_window) = app_handle.get_webview_window("settings") {
-              let _ = settings_window.close();
+            utils::log_info("Using system Python - no embedded Python setup needed");
+            utils::log_info(&format!("Dev mode: {}", cfg!(debug_assertions)));
+
+            // Check if Python is available in PATH
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let has_python = current_path.split(';').any(|path| {
+                let python_path = std::path::Path::new(path).join("python.exe");
+                python_path.exists()
+            });
+
+            if has_python {
+                utils::log_info("SUCCESS: Python found in system PATH");
+            } else {
+                utils::log_info("WARNING: Python not found in system PATH - PyO3 may fail");
             }
-          }
-          _ => {}
-        }
-      });
 
-      Ok(())
-    })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
-}
+            // Don't set PYTHONHOME or PYTHONPATH - let PyO3 use system Python
+            // Remove any existing Python environment variables that might interfere
+            std::env::remove_var("PYTHONHOME");
+            std::env::remove_var("PYTHONPATH");
+            std::env::remove_var("PYO3_PYTHON");
 
-#[tauri::command]
-async fn set_window_size(app: tauri::AppHandle, width: f64, height: f64) -> Result<(), String> {
-    if let Some(window) = app.get_focused_window() {
-        window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-            width: width as u32,
-            height: height as u32,
-        })).map_err(|e| format!("Failed to resize window: {}", e))?;
-        Ok(())
-    } else {
-        Err("No focused window found".to_string())
-    }
+            utils::log_info("Environment setup complete - using system Python");
+
+            // Listen for main window events
+            let app_handle = app.handle().clone();
+            if let Some(main_window) = app.get_window("main") {
+                main_window.on_window_event(move |event| {
+                    match event {
+                        tauri::WindowEvent::Focused(true) => {
+                            // Main window gained focus, bring calculator and settings windows to front if they exist
+                            let _ = app_handle.get_webview_window("uncertainty-calculator")
+                                .and_then(|w| w.set_focus().ok());
+                            let _ = app_handle.get_webview_window("settings")
+                                .and_then(|w| w.set_focus().ok());
+                            let _ = app_handle.get_webview_window("latex-preview")
+                                .and_then(|w| w.set_focus().ok());
+                        }
+                        tauri::WindowEvent::Destroyed => {
+                            // Main window is being destroyed, close all child windows
+                            let _ = app_handle.get_webview_window("uncertainty-calculator")
+                                .and_then(|w| w.close().ok());
+                            let _ = app_handle.get_webview_window("settings")
+                                .and_then(|w| w.close().ok());
+                            let _ = app_handle.get_webview_window("latex-preview")
+                                .and_then(|w| w.close().ok());
+
+                            // Close all detached tab windows (they start with "tab_")
+                            let windows = app_handle.webview_windows();
+                            for (label, window) in windows {
+                                if label.starts_with("tab_") {
+                                    let _ = window.close();
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                });
+            }
+
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }

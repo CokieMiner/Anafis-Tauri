@@ -2,7 +2,7 @@
 name = "AnaFis"
 version = "0.1.0"
 description = "Advanced Numerical Analysis and Fitting Interface System"
-authors = ["CokieMiner"]
+authors = ["CokieMiner <pedromamartins@live.com>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/CokieMiner/Anafis-Tauri"
@@ -20,37 +20,39 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-# ===== TAURI DEPENDENCIES =====
+# ===== CORE FRAMEWORK =====
 tauri = { version = "2.8.5", features = ["unstable"] }
 
-# ===== PYO3 DEPENDENCIES =====
+# ===== PYTHON INTEGRATION =====
 pyo3 = { version = "0.26.0", features = ["full", "auto-initialize"] }
 
-# ===== CURRENTLY USED DEPENDENCIES =====
+# ===== SERIALIZATION =====
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["full"] }
+bincode = { version = "2.0.1", features = ["serde"] }
+
+# ===== ERROR HANDLING =====
+thiserror = "2.0.16"
+anyhow = "1.0.99"
+
+# ===== LOGGING =====
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# ===== UTILITIES =====
+validator = { version = "0.20.0", features = ["derive"] }
+blake3 = "1.5"
+lru = "0.16.1"
 once_cell = "1.19"
+lazy_static = "1.4"
 urlencoding = "2.1"
-lru = "0.16.0"
 regex = "1.10"
 
+# ===== FILE I/O =====
+csv = "1.3"
 
-# ===== LINEAR ALGEBRA & MATH =====
-# nalgebra = "0.34.0"                    # Linear algebra
-# ndarray = "0.16.1"                     # N-dimensional arrays
-# argmin = "0.10"                        # Optimization algorithms
+# ===== DATA PROCESSING =====
+polars = { version = "0.49.1", features = ["lazy", "csv", "json", "strings", "dtype-date", "parquet"] }
 
-# ========= planned dependencies
-# rayon = "1.8"  # TODO: Not currently used - planned for parallel processing
-# twox-hash = "2.1.1"  # TODO: Not currently used - planned for hashing
-# lazy_static = "1.4"  # TODO: Not currently used - planned for static initialization
-# config = "0.15.15"  # TODO: Not currently used - planned for configuration management
-# plotters = "0.3"  # TODO: Not currently used - planned for plotting capabilities
-# log = "0.4.27"  # TODO: Not currently used - planned for logging
-
-#rug = "1.28.0"
-# ===== GMP-MPFR-SYS CONFIG =====
-#[dependencies.gmp-mpfr-sys]
-#version = "1.6.8"
-#features = ["use-system-libs"]
+# ===== UNIT CONVERSION =====
+uom = { version = "0.37.0", features = ["autoconvert", "f64", "si", "std"] }

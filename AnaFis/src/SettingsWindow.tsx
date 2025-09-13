@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -17,80 +17,10 @@ import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import { Close } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
+import { createAnafisTheme } from './themes';
 
-// Dark theme for the settings window
-const theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#9c27b0',
-      light: '#ba68c8',
-      dark: '#7b1fa2',
-    },
-    background: {
-      default: '#0a0a0a',
-      paper: '#111111',
-    },
-    text: {
-      primary: '#ffffff',
-      secondary: 'rgba(255, 255, 255, 0.7)',
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          textTransform: 'none',
-        },
-      },
-    },
-    MuiSwitch: {
-      styleOverrides: {
-        root: {
-          '& .MuiSwitch-switchBase.Mui-checked': {
-            color: '#9c27b0 !important',
-          },
-          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-            backgroundColor: '#9c27b0 !important',
-          },
-          '& .MuiSwitch-switchBase': {
-            color: 'rgba(255, 255, 255, 0.7)',
-          },
-          '& .MuiSwitch-track': {
-            backgroundColor: 'rgba(255, 255, 255, 0.3)',
-          },
-        },
-      },
-    },
-    MuiTab: {
-      styleOverrides: {
-        root: {
-          color: 'rgba(255, 255, 255, 0.7) !important',
-          '&.Mui-selected': {
-            color: '#9c27b0 !important',
-          },
-          '&:hover': {
-            color: 'rgba(255, 255, 255, 0.9) !important',
-          },
-          '&.Mui-selected:hover': {
-            color: '#9c27b0 !important',
-          },
-        },
-      },
-    },
-    MuiTypography: {
-      styleOverrides: {
-        root: {
-          color: '#ffffff !important',
-        },
-      },
-    },
-  },
-});
+// Create theme using shared configuration
+const theme = createAnafisTheme();
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -130,7 +60,7 @@ function SettingsWindow() {
     try {
       await invoke('close_settings_window');
     } catch (error) {
-      console.error('Failed to close settings window:', error);
+      // Failed to close settings window
     }
   };
 
@@ -407,10 +337,10 @@ const renderSettingsWindow = () => {
       const root = createRoot(container);
       root.render(<SettingsWindow />);
     } catch (error) {
-      console.error('SettingsWindow: Error rendering:', error);
+      // SettingsWindow: Error rendering
     }
   } else {
-    console.error('SettingsWindow: Root container not found');
+    // SettingsWindow: Root container not found
   }
 };
 

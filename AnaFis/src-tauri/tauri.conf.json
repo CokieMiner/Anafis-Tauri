@@ -39,11 +39,27 @@
       "icons/icon.png",
       "icons/icon.ico"
     ],
-    "resources": [],
+    "resources": [
+      "python/sympy_calls.py"
+    ],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": null
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "python3 (>= 3.13)",
+          "python3-sympy"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "python3 >= 3.13",
+          "python3-sympy"
+        ]
+      }
     }
   }
 }

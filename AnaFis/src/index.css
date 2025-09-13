@@ -79,6 +79,23 @@ body {
   /* Prevent scrollbars during loading */
 }
 
+/* Spreadsheet grid and cell styles for dark mode */
+.spreadsheet-grid {
+  background-color: #181818 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid #444 !important;
+}
+.spreadsheet-cell {
+  background-color: #222 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid #444 !important;
+}
+.spreadsheet-header {
+  background-color: #232323 !important;
+  color: #fafafa !important;
+  border: 1px solid #555 !important;
+}
+
 /* Hide any loading spinners or default content */
 #root:empty::before {
   content: '';
@@ -114,11 +131,16 @@ button {
   background-color: transparent;
 }
 
-/* Prevent any white backgrounds from CSS frameworks */
-* {
-  background-color: transparent !important;
+/* Allow Material UI components to have their own backgrounds - let the theme handle this */
+.MuiPaper-root,
+.MuiButton-root,
+.MuiTextField-root,
+.MuiDialog-root,
+.MuiAppBar-root {
+  background-color: unset !important;
 }
 
+/* Only set background for root elements */
 html,
 body,
 #root {
