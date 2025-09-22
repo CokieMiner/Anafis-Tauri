@@ -32,7 +32,7 @@ pub async fn send_tab_to_main(
 
     // Emit the event to the main window to add the tab
     main_window.emit("tab-from-detached", &tab_info)
-        .map_err(|e| format!("Failed to send tab to main: {}", e))?;
+        .map_err(|e| format!("Failed to send tab to main: {e}"))?;
 
     // Close the detached window
     if let Some(detached_window) = app_handle.get_webview_window(&window_id) {
@@ -71,7 +71,7 @@ pub async fn create_tab_window(
     };
 
     crate::windows::window_manager::create_or_focus_window(&app_handle, &window_label, config)
-        .map_err(|e| format!("Failed to create tab window: {}", e))?;
+        .map_err(|e| format!("Failed to create tab window: {e}"))?;
 
     // If geometry provided, set position
     if let Some(geom) = geometry {

@@ -67,7 +67,7 @@ pub fn initialize_python_module(py: Python, app: &AppHandle) -> PyResult<()> {
     let mut module_cache = PYTHON_MODULE.write().unwrap();
     if module_cache.is_none() {
         // Use Tauri's resource resolver
-        let resource_dir = app.path().resource_dir().map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to get resource dir: {}", e)))?;
+        let resource_dir = app.path().resource_dir().map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to get resource dir: {e}")))?;
 
         let python_file_path = if cfg!(debug_assertions) {
             // Dev mode: sympy_calls.py is in src-tauri/src directory
@@ -85,7 +85,7 @@ pub fn initialize_python_module(py: Python, app: &AppHandle) -> PyResult<()> {
         let clean_python_file_path = std::path::PathBuf::from(clean_python_file_path_str);
 
         let python_code = fs::read_to_string(&clean_python_file_path)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to read sympy_calls.py: {}", e)))?;
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to read sympy_calls.py: {e}")))?;
 
         let code_cstr = CString::new(python_code)?;
         let filename_cstr = CString::new("sympy_calls.py")?;
@@ -175,7 +175,7 @@ fn compute_symbolic_derivatives_py(app: &AppHandle, formula: &str, variables: &[
                 for (k, v) in d.iter() {
                     let key: String = k.extract().map_err(|e| e.to_string())?;
                     let val: f64 = v.extract().map_err(|e| e.to_string())?;
-                    if !val.is_finite() { return Err(format!("numerical_derivative for {} not finite", key)); }
+                    if !val.is_finite() { return Err(format!("numerical_derivative for {key} not finite")); }
                     numerical_derivatives.insert(key, val);
                 }
             }
@@ -229,13 +229,13 @@ fn compute_uncertainty_formula_py(app: &AppHandle, formula: &str, variables: &[S
 pub async fn calculate_uncertainty(app: AppHandle, formula: String, variables: Vec<Variable>) -> Result<CalculationResult, String> {
     // Input validation using centralized utilities
     if let Err(e) = crate::utils::validate_formula(&formula) {
-        return Err(format!("{:?}", e));
+        return Err(format!("{e:?}"));
     }
 
     // Convert variables to VariableInput for validation
     let variable_inputs: Vec<crate::utils::VariableInput> = variables.iter().map(|v| v.into()).collect();
     if let Err(e) = crate::utils::validate_variables(&variable_inputs) {
-        return Err(format!("{:?}", e));
+        return Err(format!("{e:?}"));
     }
 
     // Generate cache key using centralized utility
@@ -247,7 +247,7 @@ pub async fn calculate_uncertainty(app: AppHandle, formula: String, variables: V
         match cache_result {
             Ok(mut cache) => {
                 if let Some(result) = cache.get(&cache_key) {
-                    crate::utils::log_info(&format!("Cache hit for formula: {}", formula));
+                    crate::utils::log_info(&format!("Cache hit for formula: {formula}"));
                     return Ok(result.clone());
                 }
             }
@@ -264,7 +264,7 @@ pub async fn calculate_uncertainty(app: AppHandle, formula: String, variables: V
     let variables_clone = variables.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
         compute_uncertainty_sync(app_clone, formula_clone, variables_clone)
-    }).await.map_err(|e| format!("Async computation failed: {:?}", e))?;
+    }).await.map_err(|e| format!("Async computation failed: {e:?}"))?;
 
     match result {
         Ok(calc_result) => {
@@ -323,7 +323,7 @@ pub async fn generate_latex(app: AppHandle, formula: String, variables: Vec<Stri
             return Err("Variable names cannot be empty".into());
         }
         if !var.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            return Err(format!("Invalid variable name: {}", var));
+            return Err(format!("Invalid variable name: {var}"));
         }
     }
 
@@ -347,7 +347,7 @@ pub async fn generate_latex(app: AppHandle, formula: String, variables: Vec<Stri
     let variables_clone = variables.clone();
     let latex_result = tauri::async_runtime::spawn_blocking(move || {
         compute_uncertainty_formula_py(&app_clone, &formula_clone, &variables_clone)
-    }).await.map_err(|e| format!("Async LaTeX computation failed: {:?}", e))?;
+    }).await.map_err(|e| format!("Async LaTeX computation failed: {e:?}"))?;
 
     match latex_result {
         Ok(result) => {

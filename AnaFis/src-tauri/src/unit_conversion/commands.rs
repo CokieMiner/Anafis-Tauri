@@ -46,25 +46,25 @@ pub struct CompatibilityAnalysisResult {
 
 #[command]
 pub async fn convert_value(request: ConversionRequest) -> Result<ConversionResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
     converter.convert(&request)
 }
 
 #[command]
 pub async fn get_conversion_preview(from_unit: String, to_unit: String) -> Result<ConversionPreview, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
     Ok(converter.get_conversion_preview(&from_unit, &to_unit))
 }
 
 #[command]
 pub async fn check_unit_compatibility(from_unit: String, to_unit: String) -> Result<bool, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
     Ok(converter.check_unit_compatibility(&from_unit, &to_unit))
 }
 
 #[command]
 pub async fn get_available_units() -> Result<HashMap<String, UnitInfo>, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
     Ok(converter.get_available_units())
 }
 
@@ -72,7 +72,7 @@ pub async fn get_available_units() -> Result<HashMap<String, UnitInfo>, String> 
 
 #[command]
 pub async fn quick_convert_value(value: f64, from_unit: String, to_unit: String) -> Result<Option<f64>, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
     Ok(converter.quick_convert(value, &from_unit, &to_unit))
 }
 
@@ -84,7 +84,7 @@ pub async fn get_conversion_factor(from_unit: String, to_unit: String) -> Result
         to_unit,
     };
 
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
     match converter.convert(&dummy_request) {
         Ok(result) => Ok(result.conversion_factor),
         Err(e) => Err(e),
@@ -95,7 +95,7 @@ pub async fn get_conversion_factor(from_unit: String, to_unit: String) -> Result
 
 #[command]
 pub async fn parse_unit_formula(unit_formula: String) -> Result<DimensionalAnalysisResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
 
     match converter.parse_unit(&unit_formula) {
         Ok(parsed) => {
@@ -121,7 +121,7 @@ pub async fn parse_unit_formula(unit_formula: String) -> Result<DimensionalAnaly
 
 #[command]
 pub async fn analyze_dimensional_compatibility(unit1: String, unit2: String) -> Result<CompatibilityAnalysisResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
 
     let parse1 = converter.parse_unit(&unit1);
     let parse2 = converter.parse_unit(&unit2);
@@ -168,7 +168,7 @@ pub async fn analyze_dimensional_compatibility(unit1: String, unit2: String) -> 
                 unit1_formula: String::new(),
                 unit2_formula: String::new(),
                 conversion_factor: None,
-                analysis_details: format!("Error parsing {}: {}", unit1, e1),
+                analysis_details: format!("Error parsing {unit1}: {e1}"),
             })
         }
         (_, Err(e2)) => {
@@ -179,7 +179,7 @@ pub async fn analyze_dimensional_compatibility(unit1: String, unit2: String) -> 
                 unit1_formula: String::new(),
                 unit2_formula: String::new(),
                 conversion_factor: None,
-                analysis_details: format!("Error parsing {}: {}", unit2, e2),
+                analysis_details: format!("Error parsing {unit2}: {e2}"),
             })
         }
     }
@@ -187,7 +187,7 @@ pub async fn analyze_dimensional_compatibility(unit1: String, unit2: String) -> 
 
 #[command]
 pub async fn get_unit_dimensional_formula(unit: String) -> Result<String, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
 
     match converter.parse_unit(&unit) {
         Ok(parsed) => Ok(format_dimension(&parsed.dimension)),
@@ -199,7 +199,7 @@ pub async fn get_unit_dimensional_formula(unit: String) -> Result<String, String
 
 #[command]
 pub async fn convert_spreadsheet_range(request: RangeConversionRequest) -> Result<RangeConversionResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
 
     let preview = converter.get_conversion_preview(&request.from_unit, &request.to_unit);
 
@@ -219,7 +219,7 @@ pub async fn convert_spreadsheet_range(request: RangeConversionRequest) -> Resul
 
 #[command]
 pub async fn validate_unit_string(unit: String) -> Result<bool, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {}", e))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
 
     match converter.parse_unit(&unit) {
         Ok(_) => Ok(true),

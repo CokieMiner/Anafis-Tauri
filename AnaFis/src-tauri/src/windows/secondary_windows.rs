@@ -20,8 +20,8 @@ pub fn resize_uncertainty_calculator_window(app: AppHandle, width: f64, height: 
 pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("uncertainty-calculator") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
         return Ok(());
     }
 
@@ -59,8 +59,8 @@ pub fn close_settings_window(app: AppHandle) -> Result<(), String> {
 pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("settings") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
         return Ok(());
     }
 
@@ -83,8 +83,8 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
 pub async fn open_unit_conversion_window(app: AppHandle) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("unit-conversion") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
         return Ok(());
     }
 
@@ -107,15 +107,15 @@ pub async fn open_unit_conversion_window(app: AppHandle) -> Result<(), String> {
 pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, title: String) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("latex-preview") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {}", e))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
         return Ok(());
     }
 
     // Encode the parameters for URL
     let encoded_formula = urlencoding::encode(&latex_formula);
     let encoded_title = urlencoding::encode(&title);
-    let url = format!("latex-preview.html?formula={}&title={}", encoded_formula, encoded_title);
+    let url = format!("latex-preview.html?formula={encoded_formula}&title={encoded_title}");
 
     let window = tauri::WebviewWindowBuilder::new(
         &app,
@@ -131,12 +131,12 @@ pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, ti
     .transparent(true)
     .closable(true)
     .build()
-    .map_err(|e| format!("Failed to create window: {}", e))?;
+    .map_err(|e| format!("Failed to create window: {e}"))?;
 
     // Show and focus the window
     let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
-    window.show().map_err(|e| format!("Failed to show window: {}", e))?;
-    window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+    window.show().map_err(|e| format!("Failed to show window: {e}"))?;
+    window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
 
     Ok(())
 }
