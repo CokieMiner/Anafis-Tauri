@@ -66,7 +66,7 @@ pub fn close_window(app: &AppHandle, window_id: &str) -> Result<(), AnaFisError>
         window.close().map_err(|e| AnaFisError::Window(e.to_string()))?;
         Ok(())
     } else {
-        Err(AnaFisError::Window(format!("Window '{}' not found", window_id)))
+        Err(AnaFisError::Window(format!("Window '{window_id}' not found")))
     }
 }
 
@@ -80,6 +80,6 @@ pub fn resize_window(app: &AppHandle, window_id: &str, width: f64, height: f64) 
         )).map_err(|e| AnaFisError::Window(e.to_string()))?;
         Ok(())
     } else {
-        Err(AnaFisError::Window(format!("Window '{}' not found", window_id)))
+        Err(AnaFisError::Window(format!("Window '{window_id}' not found")))
     }
 }

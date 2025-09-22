@@ -37,7 +37,7 @@ pub fn validate_formula(formula: &str) -> Result<(), AnaFisError> {
 /// Validate a variable using the validator crate
 pub fn validate_variable(variable: &VariableInput) -> Result<(), AnaFisError> {
     variable.validate()
-        .map_err(|e| AnaFisError::Validation(format!("Variable validation failed: {}", e)))?;
+        .map_err(|e| AnaFisError::Validation(format!("Variable validation failed: {e}")))?;
     Ok(())
 }
 

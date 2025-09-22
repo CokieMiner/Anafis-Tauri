@@ -42,7 +42,7 @@ pub fn run() {
         ])        .setup(|app| {
             // Initialize logging
             if let Err(e) = utils::init_logging() {
-                eprintln!("Failed to initialize logging: {}", e);
+                eprintln!("Failed to initialize logging: {e}");
             }
 
             utils::log_info("Using system Python - no embedded Python setup needed");

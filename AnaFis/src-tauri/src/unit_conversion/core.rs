@@ -253,7 +253,7 @@ impl UnitConverter {
                     total_dimension = total_dimension.multiply(&unit.dimension.power(actual_power));
                     total_factor *= factor.powi(actual_power);
                 } else {
-                    return Err(format!("Unknown unit: {}", unit_part));
+                    return Err(format!("Unknown unit: {unit_part}"));
                 }
             }
         }
@@ -319,7 +319,7 @@ impl UnitConverter {
             _ => {}
         }
 
-        let conversion_key = format!("{}_to_{}", from, to);
+        let conversion_key = format!("{from}_to_{to}");
 
         for category_conversions in self.quick_conversions.values() {
             if let Some(&factor) = category_conversions.get(&conversion_key) {
@@ -367,7 +367,7 @@ impl UnitConverter {
     pub fn get_conversion_preview(&self, from_unit: &str, to_unit: &str) -> ConversionPreview {
         if from_unit == to_unit {
             return ConversionPreview {
-                preview_text: format!("1 {} = 1 {}", from_unit, to_unit),
+                preview_text: format!("1 {from_unit} = 1 {to_unit}"),
                 conversion_factor: 1.0,
                 is_valid: true,
             };
@@ -451,16 +451,16 @@ impl UnitConverter {
 
     fn format_result(&self, input_value: f64, from_unit: &str, output_value: f64, to_unit: &str) -> String {
         let formatted_output = if output_value.abs() >= 1000000.0 {
-            format!("{:.6e}", output_value)
+            format!("{output_value:.6e}")
         } else if output_value.abs() >= 1.0 {
-            format!("{:.6}", output_value).trim_end_matches('0').trim_end_matches('.').to_string()
+            format!("{output_value:.6}").trim_end_matches('0').trim_end_matches('.').to_string()
         } else if output_value.abs() >= 0.000001 {
-            format!("{:.8}", output_value).trim_end_matches('0').trim_end_matches('.').to_string()
+            format!("{output_value:.8}").trim_end_matches('0').trim_end_matches('.').to_string()
         } else {
-            format!("{:.6e}", output_value)
+            format!("{output_value:.6e}")
         };
 
-        format!("{} {} = {} {}", input_value, from_unit, formatted_output, to_unit)
+        format!("{input_value} {from_unit} = {formatted_output} {to_unit}")
     }
 }
 
