@@ -76,7 +76,6 @@ export const createAnafisTheme = () => {
             border: '1px solid rgba(255, 255, 255, 0.08)',
             transition: 'all 0.3s ease-in-out',
             '&:hover': {
-              boxShadow: '0 8px 32px rgba(156, 39, 176, 0.15)',
               border: '1px solid rgba(156, 39, 176, 0.25)',
             },
           },
@@ -90,7 +89,6 @@ export const createAnafisTheme = () => {
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-1px)',
-              boxShadow: '0 4px 12px rgba(156, 39, 176, 0.2)',
             },
           },
           contained: {

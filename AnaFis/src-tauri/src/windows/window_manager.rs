@@ -10,6 +10,7 @@ pub struct WindowConfig {
     pub resizable: bool,
     pub decorations: bool,
     pub transparent: bool,
+    pub always_on_top: bool,
 }
 
 impl Default for WindowConfig {
@@ -22,6 +23,7 @@ impl Default for WindowConfig {
             resizable: true,
             decorations: false,
             transparent: true,
+            always_on_top: false,
         }
     }
 }
@@ -45,6 +47,7 @@ pub fn create_or_focus_window(
         .resizable(config.resizable)
         .decorations(config.decorations)
         .transparent(config.transparent)
+        .always_on_top(config.always_on_top)
         .closable(true)
         .build()
         .map_err(|e| AnaFisError::Window(e.to_string()))?;

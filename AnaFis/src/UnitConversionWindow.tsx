@@ -77,6 +77,7 @@ interface UnitInfo {
   name: string;
   category: string;
   description: string;
+  icon?: string;
 }
 
 function UnitConversionWindow() {
@@ -109,6 +110,7 @@ function UnitConversionWindow() {
   // State for custom unit conversion
   const [availableUnits, setAvailableUnits] = useState<Record<string, UnitInfo>>({});
   const [loadingUnits, setLoadingUnits] = useState(true);
+  // Category icons are provided by the frontend mapping (single source here)
 
   const windowRef = useRef<any>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -120,6 +122,7 @@ function UnitConversionWindow() {
       try {
         setLoadingUnits(true);
         const units: Record<string, UnitInfo> = await invoke('get_available_units');
+        // No backend icon fetch: frontend keeps the canonical mapping
         setAvailableUnits(units);
         // Units loaded successfully
 
@@ -237,6 +240,9 @@ function UnitConversionWindow() {
       }
 
       const result: ConversionPreview = await invoke('get_conversion_preview', {
+        from_unit: from,
+        to_unit: to,
+        // compatibility: also send camelCase keys
         fromUnit: from,
         toUnit: to
       });
@@ -270,7 +276,7 @@ function UnitConversionWindow() {
 
   const parseUnitFormula = async (unitFormula: string): Promise<DimensionalAnalysisResult | null> => {
     try {
-      return await invoke('parse_unit_formula', { unitFormula });
+      return await invoke('parse_unit_formula', { unit_formula: unitFormula, unitFormula });
     } catch (error) {
       // Error parsing unit formula
       return null;
@@ -323,62 +329,79 @@ function UnitConversionWindow() {
 
   // Function to get category icons
   const getCategoryIcon = (category: string): string => {
-    const categoryLower = category.toLowerCase();
-    const categoryIcons: Record<string, string> = {
+    const key = category.toLowerCase().trim();
+
+    const icons: Record<string, string> = {
       'all': '🌐',
       'length': '📏',
+      'distance': '📏',
       'mass': '⚖️',
       'time': '⏱️',
       'temperature': '🌡️',
+      'current': '🔌',
+      'electric current': '🔌',
+      'amount': '🧪',
+      'luminous_intensity': '💡',
+      'luminous intensity': '💡',
+      'angle': '📐',
+      'area': '📐',
+      'volume': '🧴',
       'velocity': '🚀',
-      'acceleration': '⚡',
+      'speed': '🚀',
+      'acceleration': '🌀',
       'force': '💪',
-      'pressure': '📊',
+      'pressure': '🔧',
       'energy': '🔋',
       'power': '⚡',
-      'area': '📐',
-      'volume': '🥤',
       'frequency': '📶',
-      'angle': '📐',
-      'electric current': '🔌',
-      'current': '🔌',
-      'voltage': '⚡',
-      'resistance': '🔌',
-      'capacitance': '🔋',
-      'inductance': '🧲',
-      'magnetic field': '🧲',
-      'luminous intensity': '💡',
+      'voltage': '🔌',
+      'resistance': '🧲',
+      'capacitance': '🧪',
+      'inductance': '🔁',
+      'conductance': '📈',
+      'magnetic_flux_density': '🧲',
+      'magnetic flux density': '🧲',
+      'magnetic_flux': '🧲',
+      'magnetic flux': '🧲',
+      'electric_charge': '🔋',
+      'electric charge': '�',
+      'radiation_activity': '☢️',
+      'radiation activity': '☢️',
+      'radiation_dose': '☣️',
+      'radiation dose': '☣️',
+         'illuminance': '🔆',
+      'data_storage': '💾',
+      'data storage': '💾',
       'data': '💾',
+      'computing': '🖥️',
+      'textile': '🧵',
+      'other': '📊',
+      // synonyms
+      'storage': '💾',
       'currency': '💰',
       'density': '🧱',
       'momentum': '💨',
       'flow rate': '🌊',
-      'other': '⚙️'
+      'conductivity': '📈'
     };
-    return categoryIcons[categoryLower] || '📊';
+
+    // Try exact key
+    if (icons[key]) return icons[key];
+
+    // Try replacing spaces <-> underscores
+    const alt = key.replace(/\s+/g, '_');
+    if (icons[alt]) return icons[alt];
+    const alt2 = key.replace(/_/g, ' ');
+    if (icons[alt2]) return icons[alt2];
+
+    return '📊';
   };
 
   // Function to get unit icon based on category
   const getUnitIcon = (unit: UnitInfo): string => {
-    const category = unit.category.toLowerCase();
-    if (category.includes('length')) return '📏';
-    if (category.includes('mass')) return '⚖️';
-    if (category.includes('time')) return '⏱️';
-    if (category.includes('temperature')) return '🌡️';
-    if (category.includes('velocity') || category.includes('speed')) return '🚀';
-    if (category.includes('force')) return '💪';
-    if (category.includes('pressure')) return '📊';
-    if (category.includes('energy')) return '🔋';
-    if (category.includes('power')) return '⚡';
-    if (category.includes('area')) return '📐';
-    if (category.includes('volume')) return '🥤';
-    if (category.includes('frequency')) return '📶';
-    if (category.includes('angle')) return '📐';
-    if (category.includes('electric') || category.includes('voltage') || category.includes('current')) return '🔌';
-    if (category.includes('magnetic')) return '🧲';
-    if (category.includes('data')) return '💾';
-    if (category.includes('currency')) return '💰';
-    return '⚙️';
+    if (unit.icon && unit.icon.length > 0) return unit.icon;
+    // Defer to centralized category icon lookup (backend first, then minimal fallback)
+    return getCategoryIcon(unit.category);
   };
 
   // Function to capitalize unit names properly
@@ -557,18 +580,18 @@ function UnitConversionWindow() {
           {/* Unit Selection Mode */}
           <Paper sx={{ p: 2, mb: 2 }}>
             <Typography variant="h6" sx={{ mb: 1.5, color: '#ffffff' }}>
-              🔧 Unit Selection Mode
+              Unit Selection Mode
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Chip
-                label="🧪 Standard Units"
+                label="Standard Units"
                 icon={<Science />}
                 variant={unitMode === 'standard' ? 'filled' : 'outlined'}
                 onClick={() => setUnitMode('standard')}
                 sx={{ cursor: 'pointer' }}
               />
               <Chip
-                label="🔧 Custom Expressions"
+                label="Custom Expressions"
                 icon={<Calculate />}
                 variant={unitMode === 'custom' ? 'filled' : 'outlined'}
                 onClick={() => setUnitMode('custom')}
@@ -578,7 +601,7 @@ function UnitConversionWindow() {
           </Paper>          {/* Conversion Target */}
           <Paper sx={{ p: 2, mb: 2 }}>
             <Typography variant="h6" sx={{ mb: 1.5, color: '#ffffff' }}>
-              📊 Conversion Target
+              Conversion Target
             </Typography>
             <RadioGroup
               row

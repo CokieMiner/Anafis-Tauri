@@ -74,16 +74,28 @@ export const useTabStore = create<TabState>()(
       // Remove from current store
       await get().removeTab(id);
 
-      try {
-        // Create detached window via Tauri with geometry
-        const geometry = position ? {
-          x: position.x,
-          y: position.y,
-          width: 800,
-          height: 600
-        } : undefined;
+      // Prepare geometry in outer scope so errors can log it
+      const geometry = position ? {
+        x: position.x,
+        y: position.y,
+        width: 800,
+        height: 600
+      } : undefined;
 
+      try {
+        // Small delay to avoid race where the new webview loads before Vite injects the preamble
+        await new Promise((resolve) => setTimeout(resolve, 150));
+
+        // Create detached window via Tauri with geometry
+        // Provide both snake_case and camelCase keys to support different arg mappings
         await invoke('create_tab_window', {
+          tab_info: {
+            id: tabToDetach.id,
+            title: tabToDetach.title,
+            content_type: id.split('-')[0],
+            state: {},
+            icon: null
+          },
           tabInfo: {
             id: tabToDetach.id,
             title: tabToDetach.title,
@@ -94,7 +106,12 @@ export const useTabStore = create<TabState>()(
           geometry: geometry
         });
       } catch (error) {
-        console.error('Failed to detach tab:', error);
+        console.error('Failed to detach tab', {
+          id: tabToDetach?.id,
+          title: tabToDetach?.title,
+          geometry,
+          error
+        });
         // Restore tab on failure
         get().addTab(tabToDetach);
       }

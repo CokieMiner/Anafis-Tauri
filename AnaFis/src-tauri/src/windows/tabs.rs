@@ -41,3 +41,47 @@ pub async fn send_tab_to_main(
 
     Ok(())
 }
+
+#[tauri::command]
+pub async fn create_tab_window(
+    app_handle: AppHandle,
+    tab_info: TabInfo,
+    geometry: Option<WindowGeometry>,
+) -> Result<(), String> {
+    let window_label = format!("tab_{}", tab_info.id);
+    let url = format!(
+        "tab.html?tabId={}&tabTitle={}&tabType={}",
+        urlencoding::encode(&tab_info.id),
+        urlencoding::encode(&tab_info.title),
+        urlencoding::encode(&tab_info.content_type)
+    );
+
+    let width = geometry.as_ref().map(|g| g.width).unwrap_or(800);
+    let height = geometry.as_ref().map(|g| g.height).unwrap_or(600);
+
+    let config = crate::windows::window_manager::WindowConfig {
+        title: tab_info.title.clone(),
+        url,
+        width: width as f64,
+        height: height as f64,
+        resizable: true,
+        decorations: false,
+        transparent: false,
+        always_on_top: true,
+    };
+
+    crate::windows::window_manager::create_or_focus_window(&app_handle, &window_label, config)
+        .map_err(|e| format!("Failed to create tab window: {}", e))?;
+
+    // If geometry provided, set position
+    if let Some(geom) = geometry {
+        if let Some(window) = app_handle.get_webview_window(&window_label) {
+            let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+                x: geom.x,
+                y: geom.y,
+            }));
+        }
+    }
+
+    Ok(())
+}

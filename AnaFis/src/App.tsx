@@ -8,6 +8,7 @@ import FittingTab from './pages/FittingTab';
 import SolverTab from './pages/SolverTab';
 import MonteCarloTab from './pages/MonteCarloTab';
 import { useTabStore } from './hooks/useTabStore';
+import { DetachedTabWindow } from './components/DetachedTabWindow';
 
 // Material-UI Icons for drag overlay
 // Icons now handled by shared utility function
@@ -159,16 +160,30 @@ function App() {
       const tabTitle = urlParams.get('tabTitle');
 
       if (tabId && tabType && tabTitle) {
-        // Send tab back to main window
-        await invoke('send_tab_to_main', {
-          tabId,
-          tabType,
-          tabTitle: decodeURIComponent(tabTitle)
-        });
-
-        // Close this detached window
+        // Close this detached window: get instance first
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         const currentWindow = getCurrentWindow();
+
+        // Send tab back to main window (include both key styles for compatibility)
+        await invoke('send_tab_to_main', {
+          tab_info: {
+            id: tabId,
+            title: decodeURIComponent(tabTitle),
+            content_type: tabType,
+            state: {},
+            icon: null
+          },
+          tabInfo: {
+            id: tabId,
+            title: decodeURIComponent(tabTitle),
+            content_type: tabType,
+            state: {},
+            icon: null
+          },
+          window_id: currentWindow.label,
+          windowId: currentWindow.label
+        });
+
         await currentWindow.close();
       }
     } catch (error) {
@@ -176,13 +191,22 @@ function App() {
     }
   };
 
-  // Create a reference to the reattach function for conditional use
-  const reattachFunction = isDetachedTabWindow ? handleReattachTab : undefined;
+  // Use handleReattachTab directly when rendering CustomTitleBar for detached windows
 
   // Helper to render active tab content
-  const renderActiveTabContent = () => {
+    const renderActiveTabContent = () => {
     const activeTab = tabs.find(tab => tab.id === activeTabId);
-    return activeTab ? activeTab.content : null;
+    if (!activeTab) return null;
+
+    if (isDetachedTabWindow) {
+      return (
+        <DetachedTabWindow>
+          {activeTab.content}
+        </DetachedTabWindow>
+      );
+    }
+
+    return activeTab.content;
   };
 
   // Check if this is a detached window
@@ -207,49 +231,45 @@ function App() {
   useEffect(() => {
     // Only initialize if we have no tabs and haven't initialized yet
     if (tabs.length === 0) {
-      // Check if this is a detached window
-      const urlParams = new URLSearchParams(window.location.search);
-      const isDetached = urlParams.get('detached') === 'true';
-      const detachedTabId = urlParams.get('tabId');
-      const detachedTabType = urlParams.get('tabType');
-      const detachedTabTitle = urlParams.get('tabTitle');
+      // Check if this is a detached window by reading URL params
+      (async () => {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const tabId = urlParams.get('tabId');
+          const tabType = urlParams.get('tabType');
+          const tabTitle = urlParams.get('tabTitle');
 
-      if (isDetached && detachedTabType) {
-        setIsDetachedTabWindow(true);
+          if (tabId && tabType && tabTitle) {
+            setIsDetachedTabWindow(true);
 
-        // Create the appropriate tab based on type
-        let tabContent: React.ReactNode;
-        let tabTitle: string;
+            let tabContent: React.ReactNode;
+            switch (tabType) {
+              case 'spreadsheet':
+                tabContent = <SpreadsheetTab />;
+                break;
+              case 'fitting':
+                tabContent = <FittingTab />;
+                break;
+              case 'solver':
+                tabContent = <SolverTab />;
+                break;
+              case 'montecarlo':
+                tabContent = <MonteCarloTab />;
+                break;
+              default:
+                tabContent = <HomeTab openNewTab={addTab} />;
+            }
 
-        switch (detachedTabType) {
-          case 'spreadsheet':
-            tabContent = <SpreadsheetTab />;
-            tabTitle = detachedTabTitle ? decodeURIComponent(detachedTabTitle) : 'Spreadsheet';
-            break;
-          case 'fitting':
-            tabContent = <FittingTab />;
-            tabTitle = detachedTabTitle ? decodeURIComponent(detachedTabTitle) : 'Fitting';
-            break;
-          case 'solver':
-            tabContent = <SolverTab />;
-            tabTitle = detachedTabTitle ? decodeURIComponent(detachedTabTitle) : 'Solver';
-            break;
-          case 'montecarlo':
-            tabContent = <MonteCarloTab />;
-            tabTitle = detachedTabTitle ? decodeURIComponent(detachedTabTitle) : 'Monte Carlo';
-            break;
-          default:
-            tabContent = <HomeTab openNewTab={addTab} />;
-            tabTitle = 'Home';
+            addTab(tabId, decodeURIComponent(tabTitle), tabContent);
+          } else {
+            // Normal startup - add home tab
+            addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
+          }
+        } catch (error) {
+          // Fallback - add home tab
+          addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
         }
-
-        // Create the tab with the original ID if provided, otherwise generate new one
-        const finalTabId = detachedTabId || `${detachedTabType}-${Date.now()}`;
-        addTab(finalTabId, tabTitle, tabContent);
-      } else {
-        // Normal startup - add home tab
-        addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
-      }
+      })();
     }
   }, [addTab]); // Removed isDragPreviewWindow dependency
 
@@ -284,9 +304,9 @@ function App() {
     // Listen for the reattach event
     const setupListener = async () => {
       try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const currentWindow = getCurrentWindow();
-        currentWindow.listen('reattach-tab', handleReattachTabEvent);
+        const { listen } = await import('@tauri-apps/api/event');
+        // Listen for event emitted by Rust when a detached tab is sent back
+        await listen('tab-from-detached', handleReattachTabEvent);
       } catch (error) {
         // Failed to setup reattach listener
       }
@@ -472,7 +492,7 @@ function App() {
             <CustomTitleBar
               title={isDetachedTabWindow ? tabs[0]?.title : 'AnaFis'}
               isDetachedTabWindow={isDetachedTabWindow}
-              onReattach={reattachFunction}
+              onReattach={isDetachedTabWindow ? handleReattachTab : undefined}
             />
           )}
 
@@ -735,7 +755,7 @@ function App() {
             flexDirection: 'column',
             flexGrow: 1,
             width: '100%',
-            height: false ? '100vh' : (isDetachedTabWindow ? 'calc(100vh - 32px)' : 'calc(100vh - 96px)'), // Adjust height for detached windows
+            height: false ? '100vh' : (isDetachedTabWindow ? '100%' : 'calc(100vh - 96px)'), // Adjust height for detached windows
             overflow: 'hidden', // Prevent overflow
             margin: 0,
             padding: 0

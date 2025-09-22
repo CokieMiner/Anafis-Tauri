@@ -39,9 +39,10 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
         url: "uncertainty-calculator.html".to_string(),
         width: 504.0,
         height: 450.0,
-        resizable: false,
+        resizable: true,
         decorations: false,
         transparent: true,
+        always_on_top: false,
     };
 
     create_or_focus_window(&app, "uncertainty-calculator", config)
@@ -68,9 +69,10 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
         url: "settings.html".to_string(),
         width: 650.0,
         height: 700.0,
-        resizable: false,
+        resizable: true,
         decorations: false,
         transparent: true,
+        always_on_top: false,
     };
 
     create_or_focus_window(&app, "settings", config)
@@ -94,6 +96,7 @@ pub async fn open_unit_conversion_window(app: AppHandle) -> Result<(), String> {
         resizable: true,
         decorations: false,
         transparent: true,
+        always_on_top: false,
     };
 
     create_or_focus_window(&app, "unit-conversion", config)

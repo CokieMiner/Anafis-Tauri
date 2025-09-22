@@ -34,6 +34,7 @@ export default defineConfig(async () => ({
     rollupOptions: {
       input: {
         main: "./index.html",
+        tab: "./tab.html",
         settings: "./settings.html",
         "uncertainty-calculator": "./uncertainty-calculator.html",
         "latex-preview": "./latex-preview.html",

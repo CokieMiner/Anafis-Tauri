@@ -22,19 +22,20 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     const urlParams = new URLSearchParams(window.location.search);
     const tabType = urlParams.get('tabType');
 
+  const iconSx = { fontSize: '1.05rem', mr: 0.5, color: undefined, verticalAlign: 'middle', display: 'inline-flex', lineHeight: 1, transform: 'translateY(2px)' } as any;
     switch (tabType) {
       case 'home':
-        return <Home sx={{ fontSize: '1rem', mr: 0.5, color: '#ba68c8' }} />;
+        return <Home sx={{ ...iconSx, color: '#ba68c8' }} />;
       case 'spreadsheet':
-        return <TableChart sx={{ fontSize: '1rem', mr: 0.5, color: '#64b5f6' }} />;
+        return <TableChart sx={{ ...iconSx, color: '#64b5f6' }} />;
       case 'fitting':
-        return <TrendingUp sx={{ fontSize: '1rem', mr: 0.5, color: '#ffb74d' }} />;
+        return <TrendingUp sx={{ ...iconSx, color: '#ffb74d' }} />;
       case 'solver':
-        return <Calculate sx={{ fontSize: '1rem', mr: 0.5, color: '#81c784' }} />;
+        return <Calculate sx={{ ...iconSx, color: '#81c784' }} />;
       case 'montecarlo':
-        return <Casino sx={{ fontSize: '1rem', mr: 0.5, color: '#f06292' }} />;
+        return <Casino sx={{ ...iconSx, color: '#f06292' }} />;
       default:
-        return <Home sx={{ fontSize: '1rem', mr: 0.5, color: '#ba68c8' }} />;
+        return <Home sx={{ ...iconSx, color: '#ba68c8' }} />;
     }
   };
 
@@ -230,7 +231,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     <Box
       onDoubleClick={handleDoubleClick}
       sx={{
-        height: '32px',
+        height: '36px',
         background: 'linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         display: 'flex',
@@ -247,26 +248,32 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     >
       {/* App Title and Reattach Button */}
       <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-          {getTabIcon()}
-          <Typography
-            variant="body2"
-            sx={{
-              color: '#ffffff',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              WebkitAppRegion: 'no-drag', // Prevents title from interfering with drag
-              opacity: 0.9,
-              '&:hover': {
-                opacity: 1,
-              },
-            }}
-          >
-            {title}
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, height: '100%' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', mr: 0.75 }}>
+            {getTabIcon()}
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', minWidth: 0 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                lineHeight: '20px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                WebkitAppRegion: 'no-drag', // Prevents title from interfering with drag
+                opacity: 0.95,
+              }}
+            >
+              {title}
+            </Typography>
+          </Box>
+
         </Box>
 
         {/* Reattach Button - Only show for detached tab windows */}

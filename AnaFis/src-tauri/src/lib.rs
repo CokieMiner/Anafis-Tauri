@@ -38,6 +38,7 @@ pub fn run() {
             windows::secondary_windows::close_settings_window,
             windows::secondary_windows::open_unit_conversion_window,
             windows::tabs::send_tab_to_main,
+            windows::tabs::create_tab_window,
         ])        .setup(|app| {
             // Initialize logging
             if let Err(e) = utils::init_logging() {
@@ -74,13 +75,7 @@ pub fn run() {
                 main_window.on_window_event(move |event| {
                     match event {
                         tauri::WindowEvent::Focused(true) => {
-                            // Main window gained focus, bring calculator and settings windows to front if they exist
-                            let _ = app_handle.get_webview_window("uncertainty-calculator")
-                                .and_then(|w| w.set_focus().ok());
-                            let _ = app_handle.get_webview_window("settings")
-                                .and_then(|w| w.set_focus().ok());
-                            let _ = app_handle.get_webview_window("latex-preview")
-                                .and_then(|w| w.set_focus().ok());
+                            // Main window gained focus - no action needed
                         }
                         tauri::WindowEvent::Destroyed => {
                             // Main window is being destroyed, close all child windows

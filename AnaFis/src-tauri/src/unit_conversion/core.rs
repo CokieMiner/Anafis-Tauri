@@ -417,7 +417,6 @@ impl UnitConverter {
 
         self.base_units.iter().map(|(symbol, unit)| {
             let category = category_map.get(symbol).unwrap_or(&"other".to_string()).clone();
-
             (symbol.clone(), UnitInfo {
                 symbol: symbol.clone(),
                 name: unit.name.clone(),

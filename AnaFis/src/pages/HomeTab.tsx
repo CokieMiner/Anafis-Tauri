@@ -202,7 +202,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
                     {action.icon}
                   </Avatar>
                   <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                    {action.emoji} {action.title.replace('New ', '')}
+                    {action.title.replace('New ', '')}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {action.description}
