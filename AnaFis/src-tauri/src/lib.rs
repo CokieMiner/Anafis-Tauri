@@ -1,10 +1,12 @@
 // Minimal modules - only what's actually used
 mod uncertainty_calculator;
 mod windows;
+mod spreadsheet;
 mod utils;
 mod unit_conversion;
 
 use tauri::Manager;
+use spreadsheet::state::SpreadsheetState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,6 +16,13 @@ pub fn run() {
             // Uncertainty Calculator Commands (2 commands)
             uncertainty_calculator::uncertainty::calculate_uncertainty,
             uncertainty_calculator::uncertainty::generate_latex,
+
+            // Spreadsheet Commands
+            spreadsheet::commands::get_spreadsheet_data,
+            spreadsheet::commands::update_cell,
+            spreadsheet::commands::save_spreadsheet,
+            spreadsheet::commands::load_spreadsheet,
+            spreadsheet::commands::add_rows,
 
             // Unit Conversion Commands (12 commands)
             unit_conversion::commands::convert_value,
@@ -39,7 +48,9 @@ pub fn run() {
             windows::secondary_windows::open_unit_conversion_window,
             windows::tabs::send_tab_to_main,
             windows::tabs::create_tab_window,
-        ])        .setup(|app| {
+        ])
+        .manage(SpreadsheetState::new())
+        .setup(|app| {
             // Initialize logging
             if let Err(e) = utils::init_logging() {
                 eprintln!("Failed to initialize logging: {e}");
