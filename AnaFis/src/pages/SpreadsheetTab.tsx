@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { DataSheetGrid, textColumn, keyColumn } from '@wasback/react-datasheet-grid';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import { uncertaintyColumn } from '../components/spreadsheet/UncertaintyColumn';
 import {
   Box,
   Typography,
@@ -30,7 +33,24 @@ const SpreadsheetTab: React.FC = () => {
   const [sheets] = useState(['Sheet1', 'Sheet2', 'Sheet3']); // Placeholder sheets
 
   // Active cell for formula bar
-  const [activeCell] = useState<{ row: number; col: number } | null>({ row: 0, col: 0 });  // Handlers
+  const [activeCell] = useState<{ row: number; col: number } | null>({ row: 0, col: 0 });
+
+  const [data, setData] = useState<any[]>(
+    [...Array(100)].map(() => ({}))
+  );
+
+  const columns = [
+    {
+      ...keyColumn('A', uncertaintyColumn),
+      title: 'A',
+    },
+    ...[...Array(99)].map((_, i) => ({
+      ...keyColumn(String.fromCharCode(66 + i), textColumn),
+      title: String.fromCharCode(66 + i),
+    })),
+  ];
+
+  // Handlers
   const handleOpenFunctionLibrary = () => {
     setShowFunctionLibrary(true);
   };
@@ -166,21 +186,18 @@ const SpreadsheetTab: React.FC = () => {
           </Box>
 
           {/* Grid Content Area */}
-          <Box sx={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#fafafa',
-            minHeight: 0
-          }}>
-            <Typography variant="h6" color="text.secondary">
-              Spreadsheet Grid Component
-              <br />
-              <Typography variant="body2" color="text.disabled">
-                Grid implementation will be added here
-              </Typography>
-            </Typography>
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <AutoSizer>
+              {({ height, width }) => (
+                <DataSheetGrid
+                  value={data}
+                  onChange={setData}
+                  columns={columns}
+                  height={height}
+                  width={width}
+                />
+              )}
+            </AutoSizer>
           </Box>
         </Paper>
 

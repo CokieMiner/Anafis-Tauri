@@ -21,6 +21,7 @@
     "@mui/material": "^7.3.2",
     "@tauri-apps/api": "2.8.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
+    "@wasback/react-datasheet-grid": "^4.13.1",
     "katex": "^0.16.22",
     "react": "19.1.1",
     "react-dom": "19.1.1",
