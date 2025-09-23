@@ -5,3 +5,9 @@ export interface Tab {
   title: string;
   content: React.ReactNode;
 }
+
+export interface TabFromDetachedPayload {
+  id: string;
+  title: string;
+  content_type: string;
+}
