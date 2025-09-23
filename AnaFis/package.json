@@ -19,6 +19,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
+    "@sdziadkowiec/react-datasheet-grid": "^4.13.1",
     "@tauri-apps/api": "2.8.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
     "katex": "^0.16.22",
