@@ -83,7 +83,7 @@ pub fn get_unit_categories() -> HashMap<String, Vec<String>> {
     ]);
 
     categories.insert("luminous_intensity".to_string(), vec![
-        "cd".to_string(), "mcd".to_string(), "kcd".to_string(), "Mcd".to_string()
+        "cd".to_string(), "mcd".to_string(), "kcd".to_string(), "Mcd".to_string(), "cp".to_string(), "hk".to_string()
     ]);
 
     categories.insert("angle".to_string(), vec![
@@ -134,7 +134,7 @@ pub fn get_unit_categories() -> HashMap<String, Vec<String>> {
 
     categories.insert("power".to_string(), vec![
         "W".to_string(), "kW".to_string(), "MW".to_string(), "GW".to_string(),
-        "mW".to_string(), "hp".to_string(), "PS".to_string()
+        "mW".to_string(), "hp".to_string(), "PS".to_string(), "erg/s".to_string(), "ft.lbf/min".to_string(), "BTU/h".to_string()
     ]);
 
     categories.insert("frequency".to_string(), vec![
@@ -162,11 +162,11 @@ pub fn get_unit_categories() -> HashMap<String, Vec<String>> {
     ]);
 
     categories.insert("magnetic_flux_density".to_string(), vec![
-        "T".to_string(), "mT".to_string(), "μT".to_string(), "G".to_string()
+        "T".to_string(), "mT".to_string(), "μT".to_string(), "G".to_string(), "gamma".to_string()
     ]);
 
     categories.insert("magnetic_flux".to_string(), vec![
-        "Wb".to_string(), "mWb".to_string()
+        "Wb".to_string(), "mWb".to_string(), "Mx".to_string(), "unit_pole".to_string(), "statWb".to_string()
     ]);
 
     categories.insert("electric_charge".to_string(), vec![
@@ -183,7 +183,7 @@ pub fn get_unit_categories() -> HashMap<String, Vec<String>> {
     ]);
 
     categories.insert("illuminance".to_string(), vec![
-        "lx".to_string(), "fc".to_string()
+        "lx".to_string(), "fc".to_string(), "ph".to_string()
     ]);
 
     categories.insert("data_storage".to_string(), vec![
@@ -1223,6 +1223,27 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
         dimension: Dimension { mass: 1, length: 2, time: -3, ..Dimension::new() },
         si_factor: 735.5,
     });
+
+    units.insert("erg/s".to_string(), BaseUnit {
+        symbol: "erg/s".to_string(),
+        name: "erg per second".to_string(),
+        dimension: Dimension { mass: 1, length: 2, time: -3, ..Dimension::new() },
+        si_factor: 1e-7,
+    });
+
+    units.insert("ft.lbf/min".to_string(), BaseUnit {
+        symbol: "ft.lbf/min".to_string(),
+        name: "foot-pound per minute".to_string(),
+        dimension: Dimension { mass: 1, length: 2, time: -3, ..Dimension::new() },
+        si_factor: 0.0225969667,
+    });
+
+    units.insert("BTU/h".to_string(), BaseUnit {
+        symbol: "BTU/h".to_string(),
+        name: "BTU per hour".to_string(),
+        dimension: Dimension { mass: 1, length: 2, time: -3, ..Dimension::new() },
+        si_factor: 0.29307107,
+    });
 }
 
 // === CURRENT UNITS ===
@@ -1301,6 +1322,20 @@ fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
         name: "megacandela".to_string(),
         dimension: Dimension { luminosity: 1, ..Dimension::new() },
         si_factor: 1e6,
+    });
+
+    units.insert("cp".to_string(), BaseUnit {
+        symbol: "cp".to_string(),
+        name: "candlepower".to_string(),
+        dimension: Dimension { luminosity: 1, ..Dimension::new() },
+        si_factor: 0.981,
+    });
+
+    units.insert("hk".to_string(), BaseUnit {
+        symbol: "hk".to_string(),
+        name: "Hefnerkerze".to_string(),
+        dimension: Dimension { luminosity: 1, ..Dimension::new() },
+        si_factor: 0.903,
     });
 }
 
@@ -1519,6 +1554,13 @@ fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
         dimension: Dimension { mass: 1, time: -2, current: -1, ..Dimension::new() },
         si_factor: 1e-4,
     });
+
+    units.insert("gamma".to_string(), BaseUnit {
+        symbol: "gamma".to_string(),
+        name: "gamma".to_string(),
+        dimension: Dimension { mass: 1, time: -2, current: -1, ..Dimension::new() },
+        si_factor: 1e-9,
+    });
 }
 
 // === MAGNETIC FLUX UNITS ===
@@ -1535,6 +1577,27 @@ fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
         name: "milliweber".to_string(),
         dimension: Dimension { mass: 1, length: 2, time: -2, current: -1, ..Dimension::new() },
         si_factor: 1e-3,
+    });
+
+    units.insert("Mx".to_string(), BaseUnit {
+        symbol: "Mx".to_string(),
+        name: "maxwell".to_string(),
+        dimension: Dimension { mass: 1, length: 2, time: -2, current: -1, ..Dimension::new() },
+        si_factor: 1e-8,
+    });
+
+    units.insert("unit_pole".to_string(), BaseUnit {
+        symbol: "unit_pole".to_string(),
+        name: "unit pole".to_string(),
+        dimension: Dimension { mass: 1, length: 2, time: -2, current: -1, ..Dimension::new() },
+        si_factor: 1e-8,
+    });
+
+    units.insert("statWb".to_string(), BaseUnit {
+        symbol: "statWb".to_string(),
+        name: "statweber".to_string(),
+        dimension: Dimension { mass: 1, length: 2, time: -2, current: -1, ..Dimension::new() },
+        si_factor: 2.99792458e10,
     });
 }
 
@@ -1652,6 +1715,13 @@ fn register_illuminance_units(units: &mut HashMap<String, BaseUnit>) {
         name: "foot-candle".to_string(),
         dimension: Dimension { luminosity: 1, length: -2, ..Dimension::new() },
         si_factor: 10.764,
+    });
+
+    units.insert("ph".to_string(), BaseUnit {
+        symbol: "ph".to_string(),
+        name: "phot".to_string(),
+        dimension: Dimension { luminosity: 1, length: -2, ..Dimension::new() },
+        si_factor: 10000.0,
     });
 }
 
