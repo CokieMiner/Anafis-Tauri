@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { Box, TextField, Typography, IconButton } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, Typography, IconButton, Chip } from '@mui/material';
 import { Functions as FunctionsIcon } from '@mui/icons-material';
+import { invoke } from '@tauri-apps/api/core';
 
 interface FormulaBarProps {
   activeCell: { row: number; col: number } | null;
+  currentValue?: string;
+  cellReference?: string;
   onFormulaSubmit?: (formula: string) => void;
+  onMultiCellFill?: (value: string) => void;
   onCancel?: () => void;
   onEditingChange?: (editing: boolean, value?: string) => void;
   onValueChange?: (value: string) => void;
@@ -12,21 +16,68 @@ interface FormulaBarProps {
 
 const FormulaBar: React.FC<FormulaBarProps> = ({
   activeCell,
+  currentValue = '',
+  cellReference: propCellReference,
   onFormulaSubmit,
+  onMultiCellFill,
   onCancel,
   onValueChange,
 }) => {
-  const [formulaValue, setFormulaValue] = useState('');
+  const [formulaValue, setFormulaValue] = useState(currentValue);
+  const [isUncertaintyMode, setIsUncertaintyMode] = useState(false);
 
-  // Generate cell reference from activeCell (visual only)
-  const cellReference = activeCell
+  // Update formula value when current value changes
+  useEffect(() => {
+    setFormulaValue(currentValue);
+    
+    // Check if current value contains uncertainty notation
+    const checkUncertaintyMode = async () => {
+      if (currentValue) {
+        try {
+          const hasUncertainty = await invoke<boolean>('detect_uncertainty_mode', {
+            input: currentValue
+          });
+          setIsUncertaintyMode(hasUncertainty);
+        } catch (error) {
+          console.error('Failed to detect uncertainty mode:', error);
+          setIsUncertaintyMode(false);
+        }
+      } else {
+        setIsUncertaintyMode(false);
+      }
+    };
+    
+    checkUncertaintyMode();
+  }, [currentValue]);
+
+  // Use provided cell reference or generate from activeCell
+  const cellReference = propCellReference || (activeCell
     ? `${String.fromCharCode(65 + activeCell.col)}${activeCell.row + 1}`
-    : 'A1';
+    : 'A1');
 
-  const handleFormulaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFormulaChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.value;
     setFormulaValue(newValue);
     onValueChange?.(newValue);
+    
+    // Check for uncertainty notation in real-time
+    try {
+      const hasUncertainty = await invoke<boolean>('detect_uncertainty_mode', {
+        input: newValue
+      });
+      setIsUncertaintyMode(hasUncertainty);
+      
+      // If uncertainty notation is detected and we have an active cell, enable uncertainty mode
+      if (hasUncertainty && activeCell) {
+        const cellRef = `${String.fromCharCode(65 + activeCell.col)}${activeCell.row + 1}`;
+        await invoke('toggle_uncertainty_cell_mode', {
+          cellRef,
+          enable: true
+        });
+      }
+    } catch (error) {
+      console.error('Failed to detect uncertainty mode:', error);
+    }
   };
 
   const handleSubmit = () => {
@@ -36,7 +87,18 @@ const FormulaBar: React.FC<FormulaBarProps> = ({
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      handleSubmit();
+      
+      // Check for multi-cell fill shortcuts
+      if (event.ctrlKey && event.shiftKey) {
+        // Ctrl+Shift+Enter - Array formula (for now, same as multi-fill)
+        onMultiCellFill?.(formulaValue);
+      } else if (event.ctrlKey) {
+        // Ctrl+Enter - Fill all selected cells
+        onMultiCellFill?.(formulaValue);
+      } else {
+        // Regular Enter - Single cell submit
+        handleSubmit();
+      }
     } else if (event.key === 'Escape') {
       event.preventDefault();
       onCancel?.();
@@ -86,11 +148,37 @@ const FormulaBar: React.FC<FormulaBarProps> = ({
         <FunctionsIcon fontSize="small" />
       </IconButton>
 
+      {/* Uncertainty Mode Indicator */}
+      {isUncertaintyMode && (
+        <Chip
+          icon={<span style={{ fontSize: '12px' }}>±</span>}
+          label="Uncertainty"
+          size="small"
+          variant="outlined"
+          sx={{
+            height: 24,
+            fontSize: '10px',
+            color: '#64b5f6',
+            borderColor: '#64b5f6',
+            '& .MuiChip-label': { 
+              color: '#64b5f6',
+              paddingLeft: '4px',
+              paddingRight: '8px'
+            },
+            '& .MuiChip-icon': {
+              color: '#64b5f6',
+              marginLeft: '4px'
+            }
+          }}
+        />
+      )}
+
       {/* Formula Input */}
       <TextField
         value={formulaValue}
         onChange={handleFormulaChange}
         onKeyDown={handleKeyDown}
+
         placeholder="Enter value or formula..."
         variant="outlined"
         size="small"

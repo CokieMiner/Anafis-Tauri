@@ -194,7 +194,7 @@ function App() {
   // Use handleReattachTab directly when rendering CustomTitleBar for detached windows
 
   // Helper to render active tab content
-    const renderActiveTabContent = () => {
+  const renderActiveTabContent = () => {
     const activeTab = tabs.find(tab => tab.id === activeTabId);
     if (!activeTab) return null;
 
@@ -360,18 +360,17 @@ function App() {
                 borderRadius: '8px',
                 backgroundColor: draggedTab.id === 'home' ? '#9c27b0' :
                   draggedTab.id.includes('optimized-spreadsheet') ? '#2196f3' :
-                  draggedTab.id.includes('spreadsheet') ? '#2196f3' :
-                  draggedTab.id.includes('fitting') ? '#ff9800' :
-                  draggedTab.id.includes('solver') ? '#4caf50' :
-                  draggedTab.id.includes('montecarlo') ? '#e91e63' : '#9c27b0',
-                border: `2px solid ${
-                  draggedTab.id === 'home' ? '#ba68c8' :
+                    draggedTab.id.includes('spreadsheet') ? '#2196f3' :
+                      draggedTab.id.includes('fitting') ? '#ff9800' :
+                        draggedTab.id.includes('solver') ? '#4caf50' :
+                          draggedTab.id.includes('montecarlo') ? '#e91e63' : '#9c27b0',
+                border: `2px solid ${draggedTab.id === 'home' ? '#ba68c8' :
                   draggedTab.id.includes('optimized-spreadsheet') ? '#64b5f6' :
-                  draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
-                  draggedTab.id.includes('fitting') ? '#ffb74d' :
-                  draggedTab.id.includes('solver') ? '#81c784' :
-                  draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
-                }`,
+                    draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
+                      draggedTab.id.includes('fitting') ? '#ffb74d' :
+                        draggedTab.id.includes('solver') ? '#81c784' :
+                          draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
+                  }`,
                 color: '#ffffff',
                 boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
                 cursor: 'grabbing',
@@ -410,39 +409,36 @@ function App() {
                     <Box sx={{
                       width: '18px',
                       height: '3px',
-                      backgroundColor: `${
-                        draggedTab.id === 'home' ? '#ba68c8' :
+                      backgroundColor: `${draggedTab.id === 'home' ? '#ba68c8' :
                         draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
-                        draggedTab.id.includes('fitting') ? '#ffb74d' :
-                        draggedTab.id.includes('solver') ? '#81c784' :
-                        draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
-                      } !important`,
+                          draggedTab.id.includes('fitting') ? '#ffb74d' :
+                            draggedTab.id.includes('solver') ? '#81c784' :
+                              draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
+                        } !important`,
                       borderRadius: '2px',
                       boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
                     }} />
                     <Box sx={{
                       width: '18px',
                       height: '3px',
-                      backgroundColor: `${
-                        draggedTab.id === 'home' ? '#ba68c8' :
+                      backgroundColor: `${draggedTab.id === 'home' ? '#ba68c8' :
                         draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
-                        draggedTab.id.includes('fitting') ? '#ffb74d' :
-                        draggedTab.id.includes('solver') ? '#81c784' :
-                        draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
-                      } !important`,
+                          draggedTab.id.includes('fitting') ? '#ffb74d' :
+                            draggedTab.id.includes('solver') ? '#81c784' :
+                              draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
+                        } !important`,
                       borderRadius: '2px',
                       boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
                     }} />
                     <Box sx={{
                       width: '18px',
                       height: '3px',
-                      backgroundColor: `${
-                        draggedTab.id === 'home' ? '#ba68c8' :
+                      backgroundColor: `${draggedTab.id === 'home' ? '#ba68c8' :
                         draggedTab.id.includes('spreadsheet') ? '#64b5f6' :
-                        draggedTab.id.includes('fitting') ? '#ffb74d' :
-                        draggedTab.id.includes('solver') ? '#81c784' :
-                        draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
-                      } !important`,
+                          draggedTab.id.includes('fitting') ? '#ffb74d' :
+                            draggedTab.id.includes('solver') ? '#81c784' :
+                              draggedTab.id.includes('montecarlo') ? '#f06292' : '#ba68c8'
+                        } !important`,
                       borderRadius: '2px',
                       boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
                     }} />

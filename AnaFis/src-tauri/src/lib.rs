@@ -3,6 +3,7 @@ mod uncertainty_calculator;
 mod windows;
 mod utils;
 mod unit_conversion;
+mod spreadsheet;
 
 use tauri::Manager;
 
@@ -39,6 +40,29 @@ pub fn run() {
             windows::secondary_windows::open_unit_conversion_window,
             windows::tabs::send_tab_to_main,
             windows::tabs::create_tab_window,
+
+            // Spreadsheet Commands (17 commands)
+            spreadsheet::commands::set_spreadsheet_cell_value,
+            spreadsheet::commands::get_spreadsheet_cell_value,
+            spreadsheet::commands::set_spreadsheet_active_cell,
+            spreadsheet::commands::get_spreadsheet_active_cell,
+            spreadsheet::commands::get_spreadsheet_state,
+            
+            // Uncertainty Cell Commands
+            spreadsheet::commands::detect_uncertainty_mode,
+            spreadsheet::commands::toggle_uncertainty_cell_mode,
+            spreadsheet::commands::set_uncertainty_cell_value,
+            spreadsheet::commands::get_uncertainty_cell_components,
+            spreadsheet::commands::convert_uncertainty_type,
+            spreadsheet::commands::handle_uncertainty_cell_click,
+            
+            // Additional Spreadsheet Commands
+            spreadsheet::commands::set_spreadsheet_selection,
+            spreadsheet::commands::get_spreadsheet_selection,
+            spreadsheet::commands::clear_spreadsheet_selection,
+            spreadsheet::commands::apply_formula_to_range,
+            spreadsheet::commands::get_range_cells,
+            spreadsheet::commands::clear_range,
         ])        .setup(|app| {
             // Initialize logging
             if let Err(e) = utils::init_logging() {
