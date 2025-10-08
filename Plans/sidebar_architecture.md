@@ -217,13 +217,13 @@ export class UniverService {
 
 ### Phase 1: Foundation (Week 1-2)
 - ✅ Uncertainty Propagation sidebar (current - nearly complete)
-- [ ] Create `univerService.ts` wrapper
-- [ ] Document Univer API methods we need
-- [ ] Create sidebar component template
+- [x] Create `univerService.ts` wrapper
+- [x] Document Univer API methods we need
+- [x] Create sidebar component template
 
 ### Phase 2: Core Scientific Tools (Week 3-4)
-- [ ] Unit Converter sidebar
-- [ ] Formula Builder dialog
+- [x] Unit Converter sidebar
+- [x] Formula Builder dialog
 - [ ] Statistical Analysis sidebar
 
 ### Phase 3: Data Quality (Week 5-6)
