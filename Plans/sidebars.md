@@ -24,7 +24,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    Univer Spreadsheet                     │
+│                    Univer Spreadsheet                    │
 │  (stores all cell values, formulas, formatting)          │
 └──────────────────┬───────────────────────┬───────────────┘
                    │                       │
