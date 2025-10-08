@@ -80,30 +80,6 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn open_unit_conversion_window(app: AppHandle) -> Result<(), String> {
-    // First check if window already exists
-    if let Some(existing_window) = app.get_webview_window("unit-conversion") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
-        return Ok(());
-    }
-
-    let config = WindowConfig {
-        title: "Unit Conversion".to_string(),
-        url: "unit-conversion.html".to_string(),
-        width: 800.0,
-        height: 700.0,
-        resizable: true,
-        decorations: false,
-        transparent: true,
-        always_on_top: false,
-    };
-
-    create_or_focus_window(&app, "unit-conversion", config)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, title: String) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("latex-preview") {

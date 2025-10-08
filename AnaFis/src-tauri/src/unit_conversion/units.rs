@@ -931,9 +931,17 @@ fn register_acceleration_units(units: &mut HashMap<String, BaseUnit>) {
         si_factor: 0.3048,
     });
 
-    // Note: 'g' for gravity acceleration, different from gram
-    units.insert("g".to_string(), BaseUnit {
-        symbol: "g".to_string(),
+    // Note: 'g₀' for standard gravity acceleration (to avoid conflict with gram 'g')
+    units.insert("g₀".to_string(), BaseUnit {
+        symbol: "g₀".to_string(),
+        name: "standard gravity".to_string(),
+        dimension: Dimension { length: 1, time: -2, ..Dimension::new() },
+        si_factor: 9.80665,
+    });
+    
+    // Alternative notation for standard gravity
+    units.insert("g_0".to_string(), BaseUnit {
+        symbol: "g_0".to_string(),
         name: "standard gravity".to_string(),
         dimension: Dimension { length: 1, time: -2, ..Dimension::new() },
         si_factor: 9.80665,

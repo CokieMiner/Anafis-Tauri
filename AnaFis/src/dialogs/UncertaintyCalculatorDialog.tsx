@@ -89,9 +89,8 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
       }) as { value: number; uncertainty: number; formula: string };
 
       // Format and display the result
-      let displayValue: string;
+      const displayValue: string = result.value.toPrecision(6);
       // Since value is always a number from Rust, no need to check for complex numbers
-      displayValue = result.value.toPrecision(6);
       setCalculationResult(`Value: ${displayValue}\nUncertainty: ${result.uncertainty.toPrecision(6)}`);
     } catch (error) {
       console.error('Calculation error:', error);

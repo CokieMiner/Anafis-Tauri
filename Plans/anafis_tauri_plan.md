@@ -132,11 +132,11 @@ ANAFIS must fulfill the following core requirements:
 
 This section outlines the phased implementation plan for the Tauri-based ANAFIS application:
 
--   [ ] 1. Project Setup and Basic Tauri Application Initialization
--   [ ] 2. Frontend Framework Integration (React/TypeScript) and initial UI scaffolding
--   [ ] 3. Data Bus Communication System (Tauri IPC) establishment
--   [ ] 4. Basic Tab Management and Detachable Windows implementation
--   [ ] 5. Spreadsheet Tab Core Functionality (Frontend) development
+-   [x] 1. Project Setup and Basic Tauri Application Initialization
+-   [x] 2. Frontend Framework Integration (React/TypeScript) and initial UI scaffolding
+-   [x] 3. Data Bus Communication System (Tauri IPC) establishment
+-   [x] 4. Basic Tab Management and Detachable Windows implementation
+-   [x] 5. Spreadsheet Tab Core Functionality (Frontend) development
 -   [ ] 6. Spreadsheet Advanced Features and Testing
 -   [ ] 7. Curve Fitting Tab Foundation (Frontend & Rust integration)
 -   [ ] 8. Fitting Algorithms Implementation (Rust backend)

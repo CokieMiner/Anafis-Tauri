@@ -20,7 +20,7 @@ interface TabInfo {
   id: string;
   title: string;
   content_type: string;
-  state: any;
+  state: Record<string, unknown>;
   icon?: string;
 }
 
@@ -130,7 +130,7 @@ function App() {
   const openUncertaintyCalculator = async () => {
     try {
       await invoke('open_uncertainty_calculator_window');
-    } catch (error) {
+    } catch {
       // Failed to open uncertainty calculator window
     }
   };
@@ -138,7 +138,7 @@ function App() {
   const openSettings = async () => {
     try {
       await invoke('open_settings_window');
-    } catch (error) {
+    } catch {
       // Failed to open settings window
     }
   };
@@ -186,7 +186,7 @@ function App() {
 
         await currentWindow.close();
       }
-    } catch (error) {
+    } catch {
       // Failed to reattach tab
     }
   };
@@ -194,11 +194,12 @@ function App() {
   // Use handleReattachTab directly when rendering CustomTitleBar for detached windows
 
   // Helper to render active tab content
-    const renderActiveTabContent = () => {
-    const activeTab = tabs.find(tab => tab.id === activeTabId);
-    if (!activeTab) return null;
+  const renderActiveTabContent = () => {
+    if (tabs.length === 0) return null;
 
     if (isDetachedTabWindow) {
+      const activeTab = tabs.find(tab => tab.id === activeTabId);
+      if (!activeTab) return null;
       return (
         <DetachedTabWindow>
           {activeTab.content}
@@ -206,7 +207,24 @@ function App() {
       );
     }
 
-    return activeTab.content;
+    // Render all tabs but only show the active one
+    // This keeps components mounted and preserves their state
+    return (
+      <>
+        {tabs.map(tab => (
+          <Box
+            key={tab.id}
+            sx={{
+              display: tab.id === activeTabId ? 'block' : 'none',
+              width: '100%',
+              height: '100%'
+            }}
+          >
+            {tab.content}
+          </Box>
+        ))}
+      </>
+    );
   };
 
   // Check if this is a detached window
@@ -219,7 +237,7 @@ function App() {
           // Skip drag preview window logic - not needed
           return;
         }
-      } catch (error) {
+      } catch {
         // Failed to check window type
       }
     };
@@ -265,7 +283,7 @@ function App() {
             // Normal startup - add home tab
             addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
           }
-        } catch (error) {
+        } catch {
           // Fallback - add home tab
           addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
         }
@@ -275,7 +293,7 @@ function App() {
 
   // Listen for reattach tab events from detached windows
   useEffect(() => {
-    const handleReattachTabEvent = (event: any) => {
+    const handleReattachTabEvent = (event: { payload: TabInfo }) => {
       const tabInfo = event.payload as TabInfo;
 
       // Create the appropriate tab content
@@ -307,7 +325,7 @@ function App() {
         const { listen } = await import('@tauri-apps/api/event');
         // Listen for event emitted by Rust when a detached tab is sent back
         await listen('tab-from-detached', handleReattachTabEvent);
-      } catch (error) {
+      } catch {
         // Failed to setup reattach listener
       }
     };
@@ -488,16 +506,14 @@ function App() {
           }}
         >
           {/* Custom Title Bar - Show for main window and detached tab windows */}
-          {(!false || isDetachedTabWindow) && (
-            <CustomTitleBar
-              title={isDetachedTabWindow ? tabs[0]?.title : 'AnaFis'}
-              isDetachedTabWindow={isDetachedTabWindow}
-              onReattach={isDetachedTabWindow ? handleReattachTab : undefined}
-            />
-          )}
+          <CustomTitleBar
+            title={isDetachedTabWindow ? tabs[0]?.title : 'AnaFis'}
+            isDetachedTabWindow={isDetachedTabWindow}
+            onReattach={isDetachedTabWindow ? handleReattachTab : undefined}
+          />
 
           {/* Top Menu Bar / Toolbar - Show only for main window */}
-          {!false && !isDetachedTabWindow && (
+          {!isDetachedTabWindow && (
             <AppBar
               position="static"
               sx={{
@@ -523,7 +539,7 @@ function App() {
                         alignItems: 'center',
                         ml: 0.5,
                         transition: 'transform 0.2s ease-in-out',
-                        transform: Boolean(anchorEl) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transform: anchorEl ? 'rotate(180deg)' : 'rotate(0deg)',
                         fontSize: '0.9rem',
                         lineHeight: 1,
                         fontWeight: 'bold',
@@ -755,7 +771,7 @@ function App() {
             flexDirection: 'column',
             flexGrow: 1,
             width: '100%',
-            height: false ? '100vh' : (isDetachedTabWindow ? '100%' : 'calc(100vh - 96px)'), // Adjust height for detached windows
+            height: isDetachedTabWindow ? '100%' : 'calc(100vh - 96px)', // Adjust height for detached windows
             overflow: 'hidden', // Prevent overflow
             margin: 0,
             padding: 0

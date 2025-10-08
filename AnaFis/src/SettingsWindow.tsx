@@ -59,7 +59,7 @@ function SettingsWindow() {
   const handleClose = async () => {
     try {
       await invoke('close_settings_window');
-    } catch (error) {
+    } catch {
       // Failed to close settings window
     }
   };
@@ -336,7 +336,7 @@ const renderSettingsWindow = () => {
     try {
       const root = createRoot(container);
       root.render(<SettingsWindow />);
-    } catch (error) {
+    } catch {
       // SettingsWindow: Error rendering
     }
   } else {

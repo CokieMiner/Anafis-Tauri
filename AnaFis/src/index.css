@@ -52,6 +52,8 @@ html {
   color: #ffffff;
   overflow: hidden;
   /* Prevent scrollbars during loading */
+  /* Disable pinch-to-zoom */
+  touch-action: manipulation;
 }
 
 body {
@@ -66,6 +68,8 @@ body {
   color: #ffffff;
   overflow: hidden;
   /* Prevent scrollbars during loading */
+  /* Disable pinch-to-zoom */
+  touch-action: manipulation;
 }
 
 #root {
@@ -81,19 +85,19 @@ body {
 
 /* Spreadsheet grid and cell styles for dark mode */
 .spreadsheet-grid {
-  background-color: #181818 !important;
-  color: #e0e0e0 !important;
-  border: 1px solid #444 !important;
+  background-color: #111111 !important;
+  color: #ffffff !important;
+  border: 1px solid #333 !important;
 }
 .spreadsheet-cell {
-  background-color: #222 !important;
-  color: #e0e0e0 !important;
-  border: 1px solid #444 !important;
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border: 1px solid #333 !important;
 }
 .spreadsheet-header {
-  background-color: #232323 !important;
-  color: #fafafa !important;
-  border: 1px solid #555 !important;
+  background-color: #222 !important;
+  color: #ffffff !important;
+  border: 1px solid #444 !important;
 }
 
 /* Hide any loading spinners or default content */
@@ -164,23 +168,20 @@ button {
   transition: border-color 0.25s;
 }
 
-button:hover {
-  border-color: #646cff;
-}
-
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: none;
+}
+
+*:focus,
+*:focus-visible {
+  outline: none !important;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color: #213547;
     background-color: #ffffff;
-  }
-
-  a:hover {
-    color: #747bff;
   }
 
   button {

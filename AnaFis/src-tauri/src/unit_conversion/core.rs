@@ -183,7 +183,7 @@ impl UnitConverter {
     pub fn parse_unit(&self, unit_str: &str) -> Result<ParsedUnit, String> {
         // Updated regex to support: ^ (caret), ** (double asterisk), and Unicode superscript (⁻, ⁰-⁹)
         static UNIT_REGEX: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(r"([a-zA-Zμ°]+)([\^\*]*[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+|[\^\*]*-?\d+)?").unwrap()
+            Regex::new(r"([a-zA-Zμ°]+)((?:\*\*|\^)[⁻⁰¹²³⁴⁵⁶⁷⁸⁹\-\d]+|[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?").unwrap()
         });
 
         let mut total_dimension = Dimension::new();
@@ -200,11 +200,14 @@ impl UnitConverter {
 
         // Parse complex units like "m/s^2", "kg*m/s^2", "m·kg/s^2", "m**2", "m⁻²", "(kg·m⁻²)/(s⁴·A⁻¹)", etc.
         // First, remove parentheses and handle them as grouping only
+        // Replace ** with a temporary placeholder to protect it, then replace single * and restore **
         let normalized = unit_str
             .replace("(", "")
             .replace(")", "")
+            .replace("**", "§§")  // Temporary placeholder for **
             .replace("*", " ")
             .replace("·", " ")
+            .replace("§§", "**")  // Restore **
             .replace("/", " / ");
         let parts: Vec<&str> = normalized.split_whitespace().collect();
 
@@ -221,11 +224,10 @@ impl UnitConverter {
                 let power_part = captures.get(2).map(|m| m.as_str());
 
                 let power = if let Some(pow_str) = power_part {
-                    // Handle different exponent formats
+                    // Handle different exponent formats: ^, **, or Unicode superscript
                     let clean_pow = pow_str
-                        .trim_start_matches('^')
-                        .trim_start_matches('*')
-                        .replace("**", ""); // Remove ** prefix
+                        .trim_start_matches("**")  // Handle ** first (two chars)
+                        .trim_start_matches('^');   // Then handle ^
 
                     // Convert Unicode superscript to regular digits
                     let normalized_pow = clean_pow

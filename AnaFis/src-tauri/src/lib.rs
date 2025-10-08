@@ -3,6 +3,7 @@ mod uncertainty_calculator;
 mod windows;
 mod utils;
 mod unit_conversion;
+mod scientific;
 
 use tauri::Manager;
 
@@ -29,16 +30,18 @@ pub fn run() {
             unit_conversion::commands::validate_unit_string,
             unit_conversion::commands::get_supported_categories,
 
-            // Window Management Commands (8 commands)
+            // Window Management Commands (7 commands)
             windows::secondary_windows::open_latex_preview_window,
             windows::secondary_windows::open_uncertainty_calculator_window,
             windows::secondary_windows::close_uncertainty_calculator_window,
             windows::secondary_windows::resize_uncertainty_calculator_window,
             windows::secondary_windows::open_settings_window,
             windows::secondary_windows::close_settings_window,
-            windows::secondary_windows::open_unit_conversion_window,
             windows::tabs::send_tab_to_main,
             windows::tabs::create_tab_window,
+
+            // Scientific Computation Commands (Sidebar tools)
+            scientific::uncertainty_propagation::generate_uncertainty_formulas,
         ])        .setup(|app| {
             // Initialize logging
             if let Err(e) = utils::init_logging() {

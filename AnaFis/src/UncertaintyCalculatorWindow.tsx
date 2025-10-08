@@ -48,7 +48,7 @@ function UncertaintyCalculatorWindow() {
             width: Math.round(width * window.devicePixelRatio),
             height: Math.round(height * window.devicePixelRatio),
           });
-        } catch (error) {
+        } catch {
           // Failed to resize window
         } finally {
           resizeTimeoutRef.current = null;
@@ -77,7 +77,7 @@ function UncertaintyCalculatorWindow() {
         width: Math.round(width * window.devicePixelRatio),
         height: Math.round(height * window.devicePixelRatio),
       });
-    } catch (error) {
+    } catch {
       // Failed to resize window (immediate)
     }
   };
@@ -90,7 +90,7 @@ function UncertaintyCalculatorWindow() {
     try {
       overflowPrevRef.current = document.documentElement.style.overflow || null;
       document.documentElement.style.overflow = 'hidden';
-    } catch (e) {
+    } catch {
       // ignore
     }
 
@@ -98,7 +98,7 @@ function UncertaintyCalculatorWindow() {
     (async () => {
       try {
         await resizeNow(60);
-      } catch (e) {
+      } catch {
         // ignore
       }
       // schedule a short follow-up to fine-tune and restore overflow
@@ -113,7 +113,7 @@ function UncertaintyCalculatorWindow() {
           } else {
             document.documentElement.style.overflow = '';
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
 
@@ -128,16 +128,18 @@ function UncertaintyCalculatorWindow() {
     const tryDisableResizable = async () => {
       try {
         const w = getCurrentWindow();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (w && typeof (w as any).setResizable === 'function') {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (w as any).setResizable(false);
             restored = true;
             return true;
-          } catch (err) {
+          } catch {
             // Could not set resizable(false)
           }
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
       return false;
@@ -174,7 +176,7 @@ function UncertaintyCalculatorWindow() {
       try {
         overflowPrevRef.current = document.documentElement.style.overflow || null;
         document.documentElement.style.overflow = 'hidden';
-      } catch (e) {
+      } catch {
         // ignore any DOM access errors in exotic environments
       }
 
@@ -194,7 +196,7 @@ function UncertaintyCalculatorWindow() {
           } else {
             document.documentElement.style.overflow = '';
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
 
@@ -214,7 +216,7 @@ function UncertaintyCalculatorWindow() {
         if (overflowPrevRef.current !== null) {
           document.documentElement.style.overflow = overflowPrevRef.current;
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
       // restore manual resizing if we disabled it earlier
@@ -224,11 +226,11 @@ function UncertaintyCalculatorWindow() {
           if (w && restored && typeof w.setResizable === 'function') {
             try {
               await w.setResizable(true);
-            } catch (err) {
+            } catch {
               // Could not restore resizable(true)
             }
           }
-        } catch (err) {
+        } catch {
           // ignore
         }
       })();
@@ -243,13 +245,13 @@ function UncertaintyCalculatorWindow() {
 
     try {
       await invoke('close_uncertainty_calculator_window');
-    } catch (error) {
+    } catch {
       // Failed to close window via command
 
       // Fallback to browser close
       try {
         window.close();
-      } catch (fallbackError) {
+      } catch {
         // Fallback close also failed
       }
     }
@@ -280,8 +282,8 @@ function UncertaintyCalculatorWindow() {
       >
         {/* Custom Title Bar */}
         <Box
-          // vendor property cast to any to satisfy React.CSSProperties typing
-          style={{ WebkitAppRegion: 'drag' } as any}
+          // vendor property cast to React.CSSProperties with WebkitAppRegion
+          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties & { WebkitAppRegion: string }}
           sx={{
             width: '100%',
             minWidth: '400px',
@@ -307,7 +309,7 @@ function UncertaintyCalculatorWindow() {
           {/* Left spacer to balance the right controls and keep title centered */}
           <Box sx={{ width: '40px', WebkitAppRegion: 'no-drag' }} />
 
-          <Box style={{ WebkitAppRegion: 'drag' } as any} sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, justifyContent: 'center' }}>
+          <Box style={{ WebkitAppRegion: 'drag' } as React.CSSProperties & { WebkitAppRegion: string }} sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, justifyContent: 'center' }}>
             <Typography
               variant="body2"
               sx={{
@@ -328,7 +330,7 @@ function UncertaintyCalculatorWindow() {
 
           {/* Close Button */}
           <Box
-            style={{ WebkitAppRegion: 'no-drag' } as any}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties & { WebkitAppRegion: string }}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -392,7 +394,7 @@ const renderUncertaintyCalculatorWindow = () => {
     try {
       const root = createRoot(container);
       root.render(<UncertaintyCalculatorWindow />);
-    } catch (error) {
+    } catch {
       // UncertaintyCalculatorWindow: Error rendering
     }
   } else {

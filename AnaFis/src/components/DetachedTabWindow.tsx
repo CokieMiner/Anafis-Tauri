@@ -1,11 +1,13 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 
 interface DetachedTabWindowProps {
   children: React.ReactNode;
 }
 
 export function DetachedTabWindow({ children }: DetachedTabWindowProps) {
+  const theme = useTheme();
+  
   // Detached window actions (reattach/close) are provided by `CustomTitleBar`.
 
   return (
@@ -17,7 +19,7 @@ export function DetachedTabWindow({ children }: DetachedTabWindowProps) {
       margin: 0,
       padding: 0,
       overflow: 'hidden',
-      backgroundColor: '#0a0a0a',
+      backgroundColor: theme.palette.background.default,
     }}>
       {/* Top bar is provided by `CustomTitleBar` from App.tsx; removed duplicate AppBar here */}
 
@@ -25,7 +27,7 @@ export function DetachedTabWindow({ children }: DetachedTabWindowProps) {
       <Box sx={{
         flex: 1,
         overflow: 'auto',
-        backgroundColor: '#0a0a0a',
+        backgroundColor: theme.palette.background.default,
       }}>
         {children}
       </Box>

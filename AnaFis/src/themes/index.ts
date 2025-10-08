@@ -62,7 +62,7 @@ export const createAnafisTheme = () => {
         styleOverrides: {
           root: {
             backgroundColor: '#111111',
-            backgroundImage: 'linear-gradient(135deg, rgba(156, 39, 176, 0.15) 0%, rgba(79, 29, 29, 0.15) 100%)',
+            backgroundImage: 'linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%)',
             backdropFilter: 'blur(10px)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           },
@@ -75,9 +75,6 @@ export const createAnafisTheme = () => {
             backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             transition: 'all 0.3s ease-in-out',
-            '&:hover': {
-              border: '1px solid rgba(156, 39, 176, 0.25)',
-            },
           },
         },
       },
@@ -89,12 +86,6 @@ export const createAnafisTheme = () => {
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-1px)',
-            },
-          },
-          contained: {
-            background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #ba68c8 0%, #9c27b0 100%)',
             },
           },
         },

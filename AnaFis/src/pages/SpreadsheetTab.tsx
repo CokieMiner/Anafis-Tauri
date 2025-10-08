@@ -1,50 +1,117 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Typography,
   Button,
   Toolbar,
-  Paper,
-  Tabs,
-  Tab,
-  Chip,
-  Divider
+  Paper
 } from '@mui/material';
 import {
-  Functions as FunctionsIcon,
   Transform as UnitConverterIcon,
-  Memory as MemoryIcon,
-  Speed as SpeedIcon,
-  Storage as StorageIcon
+  AutoFixHigh as UncertaintyIcon
 } from '@mui/icons-material';
-import { invoke } from '@tauri-apps/api/core';
-import FormulaBar from '../components/spreadsheet/FormulaBar.tsx';
-import { FunctionLibrary } from '../components/spreadsheet/FunctionLibrary.tsx';
+import { LocaleType, IWorkbookData, ICellData } from '@univerjs/core';
+import UniverSpreadsheet, { UniverSpreadsheetRef } from '../components/spreadsheet/UniverSpreadsheet';
+import UncertaintySidebar from '../components/spreadsheet/UncertaintySidebar';
+import UnitConversionSidebar from '../components/spreadsheet/UnitConversionSidebar';
+
+interface Variable {
+  name: string;
+  valueRange: string;
+  uncertaintyRange: string;
+}
 
 const SpreadsheetTab: React.FC = () => {
-  // Panel visibility
-  const [showFunctionLibrary, setShowFunctionLibrary] = useState(false);
+  // Sidebar state management
+  type SidebarType = 'uncertainty' | 'unitConvert' | null;
+  const [activeSidebar, setActiveSidebar] = useState<SidebarType>(null);
+  
+  // Uncertainty sidebar state - persisted across sidebar switches
+  const [uncertaintyVariables, setUncertaintyVariables] = useState<Variable[]>([
+    { name: 'a', valueRange: 'A1:A10', uncertaintyRange: 'B1:B10' }
+  ]);
+  const [uncertaintyFormula, setUncertaintyFormula] = useState<string>('');
+  const [uncertaintyOutputValueRange, setUncertaintyOutputValueRange] = useState<string>('C1:C10');
+  const [uncertaintyOutputUncertaintyRange, setUncertaintyOutputUncertaintyRange] = useState<string>('D1:D10');
+  
+  // Unit conversion sidebar state - persisted across sidebar switches
+  const [unitConversionCategory, setUnitConversionCategory] = useState<string>('');
+  const [unitConversionFromUnit, setUnitConversionFromUnit] = useState<string>('');
+  const [unitConversionToUnit, setUnitConversionToUnit] = useState<string>('');
+  const [unitConversionValue, setUnitConversionValue] = useState<string>('1');
+  
+  // Spreadsheet state
+  const [spreadsheetData, setSpreadsheetData] = useState<IWorkbookData | undefined>(undefined);
+  const univerSpreadsheetRef = useRef<UniverSpreadsheetRef>(null);
 
-  // Workbook tabs state
-  const [activeSheetTab, setActiveSheetTab] = useState(0);
-  const [sheets] = useState(['Sheet1', 'Sheet2', 'Sheet3']); // Placeholder sheets
-
-  // Active cell for formula bar
-  const [activeCell] = useState<{ row: number; col: number } | null>({ row: 0, col: 0 });  // Handlers
-  const handleOpenFunctionLibrary = () => {
-    setShowFunctionLibrary(true);
+  // Initialize empty Univer workbook
+  const createEmptyWorkbook = (): IWorkbookData => {
+    const sheetId = 'sheet-01';
+    
+    return {
+      id: 'spreadsheet-workbook',
+      name: 'AnaFis Spreadsheet',
+      appVersion: '1.0.0',
+      locale: LocaleType.EN_US,
+      styles: {},
+      sheets: {
+        [sheetId]: {
+          id: sheetId,
+          name: 'Sheet1',
+          cellData: {}, // Start with empty cells - Univer handles everything
+          rowCount: 1000,
+          columnCount: 26,
+        }
+      },
+      sheetOrder: [sheetId],
+    };
   };
 
-  const handleOpenUnitConverter = async () => {
-    try {
-      await invoke('open_unit_conversion_window');
-    } catch (error) {
-      console.error('Failed to open unit conversion window:', error);
+  const handleCellChange = useCallback((cellRef: string, value: ICellData) => {
+    // Univer handles all data storage now - no backend sync needed
+    console.log('Cell changed:', cellRef, value);
+  }, []);
+
+  const handleFormulaIntercept = useCallback((cellRef: string, formula: string) => {
+    // Univer handles formulas - no backend sync needed
+    console.log('Formula set:', cellRef, formula);
+  }, []);
+
+  const handleSelectionChange = useCallback((cellRef: string) => {
+    // Selection change handling - pass to active sidebar
+    
+    // Call uncertainty sidebar handler if it exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (window as any).__uncertaintySidebarSelectionHandler === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__uncertaintySidebarSelectionHandler(cellRef);
     }
+    
+    // Call unit converter sidebar handler if it exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (window as any).__unitConverterSelectionHandler === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__unitConverterSelectionHandler(cellRef);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initialize with empty spreadsheet - Univer handles all data
+    const initializeSpreadsheet = () => {
+      setSpreadsheetData(createEmptyWorkbook());
+    };
+
+    initializeSpreadsheet();
+  }, []);
+
+  // Handlers
+  const handleOpenUnitConverter = () => {
+    // Toggle sidebar - if already open, close it; otherwise open it
+    setActiveSidebar(prev => prev === 'unitConvert' ? null : 'unitConvert');
   };
 
-  const handleSheetTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveSheetTab(newValue);
+  const handleOpenUncertaintyPropagation = () => {
+    // Toggle sidebar - if already open, close it; otherwise open it
+    setActiveSidebar(prev => prev === 'uncertainty' ? null : 'uncertainty');
   };
 
   return (
@@ -55,19 +122,34 @@ const SpreadsheetTab: React.FC = () => {
           <Button
             variant="outlined"
             size="small"
-            startIcon={<FunctionsIcon />}
-            onClick={handleOpenFunctionLibrary}
+            startIcon={<UncertaintyIcon />}
+            onClick={handleOpenUncertaintyPropagation}
             sx={{
               mr: 1,
-              color: 'white',
-              borderColor: '#64b5f6',
+              color: activeSidebar === 'uncertainty' ? '#2196f3' : 'white',
+              borderColor: activeSidebar === 'uncertainty' ? '#2196f3' : '#64b5f6',
+              backgroundColor: activeSidebar === 'uncertainty' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
+              outline: 'none',
               '&:hover': {
-                borderColor: '#42a5f5',
-                backgroundColor: 'rgba(100, 181, 246, 0.1)'
+                borderColor: '#2196f3',
+                backgroundColor: activeSidebar === 'uncertainty' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
+              },
+              '&:focus': {
+                borderColor: '#2196f3',
+                outline: 'none',
+              },
+              '&:focus-visible': {
+                borderColor: '#2196f3',
+                outline: 'none',
+                boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
+              },
+              '&:active': {
+                borderColor: '#2196f3',
+                outline: 'none',
               }
             }}
           >
-            Functions
+            Uncertainty Propagation
           </Button>
 
           <Button
@@ -77,11 +159,26 @@ const SpreadsheetTab: React.FC = () => {
             onClick={handleOpenUnitConverter}
             sx={{
               mr: 1,
-              color: 'white',
-              borderColor: '#64b5f6',
+              color: activeSidebar === 'unitConvert' ? '#2196f3' : 'white',
+              borderColor: activeSidebar === 'unitConvert' ? '#2196f3' : '#64b5f6',
+              backgroundColor: activeSidebar === 'unitConvert' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
+              outline: 'none',
               '&:hover': {
-                borderColor: '#42a5f5',
-                backgroundColor: 'rgba(100, 181, 246, 0.1)'
+                borderColor: '#2196f3',
+                backgroundColor: activeSidebar === 'unitConvert' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
+              },
+              '&:focus': {
+                borderColor: '#2196f3',
+                outline: 'none',
+              },
+              '&:focus-visible': {
+                borderColor: '#2196f3',
+                outline: 'none',
+                boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
+              },
+              '&:active': {
+                borderColor: '#2196f3',
+                outline: 'none',
               }
             }}
           >
@@ -90,57 +187,6 @@ const SpreadsheetTab: React.FC = () => {
 
           <Box sx={{ flexGrow: 1 }} />
         </Toolbar>
-      </Paper>
-
-      {/* Formula Bar */}
-      <FormulaBar
-        activeCell={activeCell}
-        onFormulaSubmit={(_formula: string) => {
-          // Handle formula submission
-        }}
-        onCancel={() => {
-          // Handle formula cancellation
-        }}
-        onValueChange={(_value: string) => {
-          // Handle value changes
-        }}
-      />      {/* Workbook Tabs */}
-      <Paper sx={{ mb: 1, bgcolor: '#0a0a0a' }}>
-        <Tabs
-          value={activeSheetTab}
-          onChange={handleSheetTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            minHeight: 36,
-            '& .MuiTab-root': {
-              color: 'white',
-              '&.Mui-selected': {
-                color: '#64b5f6'
-              }
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#64b5f6'
-            }
-          }}
-        >
-          {sheets.map((sheet, index) => (
-            <Tab
-              key={index}
-              label={sheet}
-              sx={{ minHeight: 36, fontSize: '0.875rem' }}
-            />
-          ))}
-          <Tab
-            label="+"
-            sx={{
-              minHeight: 36,
-              minWidth: 40,
-              fontSize: '1rem',
-              fontWeight: 'bold'
-            }}
-          />
-        </Tabs>
       </Paper>
 
       {/* Main Content Area */}
@@ -153,120 +199,79 @@ const SpreadsheetTab: React.FC = () => {
           overflow: 'hidden',
           minHeight: 0
         }}>
-          {/* Grid Header */}
-          <Box sx={{
-            p: 1,
-            borderBottom: 1,
-            borderColor: 'divider',
-            backgroundColor: 'grey.50'
-          }}>
-            <Typography variant="subtitle2">
-              Spreadsheet Grid - {sheets[activeSheetTab]}
-            </Typography>
-          </Box>
 
           {/* Grid Content Area */}
           <Box sx={{
             flex: 1,
+            overflow: 'hidden',
+            minHeight: 0,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#fafafa',
-            minHeight: 0
+            position: 'relative',
+            '& .dsg-container': {
+              height: '100%',
+              fontFamily: 'monospace',
+            },
+            '& .dsg-cell': {
+              fontSize: '14px',
+            },
+            '& .dsg-cell-header': {
+              backgroundColor: '#f5f5f5',
+              fontWeight: 'bold',
+            }
           }}>
-            <Typography variant="h6" color="text.secondary">
-              Spreadsheet Grid Component
-              <br />
-              <Typography variant="body2" color="text.disabled">
-                Grid implementation will be added here
-              </Typography>
-            </Typography>
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
+              {spreadsheetData && (
+                <UniverSpreadsheet
+                  ref={univerSpreadsheetRef}
+                  initialData={spreadsheetData}
+                  onCellChange={handleCellChange}
+                  onFormulaIntercept={handleFormulaIntercept}
+                  onSelectionChange={handleSelectionChange}
+                />
+              )}
+            </Box>
+            {/* Uncertainty Propagation Sidebar - positioned within spreadsheet */}
+            {activeSidebar === 'uncertainty' && (
+              <UncertaintySidebar
+                open={true}
+                onClose={() => setActiveSidebar(null)}
+                univerRef={univerSpreadsheetRef}
+                onSelectionChange={handleSelectionChange}
+                onPropagationComplete={(resultRange: string) => {
+                  console.log('Propagation complete, results in:', resultRange);
+                  // Could refresh spreadsheet or show notification here
+                }}
+                variables={uncertaintyVariables}
+                setVariables={setUncertaintyVariables}
+                formula={uncertaintyFormula}
+                setFormula={setUncertaintyFormula}
+                outputValueRange={uncertaintyOutputValueRange}
+                setOutputValueRange={setUncertaintyOutputValueRange}
+                outputUncertaintyRange={uncertaintyOutputUncertaintyRange}
+                setOutputUncertaintyRange={setUncertaintyOutputUncertaintyRange}
+              />
+            )}
+            {/* Unit Conversion Sidebar - positioned within spreadsheet */}
+            {activeSidebar === 'unitConvert' && (
+              <UnitConversionSidebar
+                open={true}
+                onClose={() => setActiveSidebar(null)}
+                univerRef={univerSpreadsheetRef}
+                onSelectionChange={handleSelectionChange}
+                category={unitConversionCategory}
+                setCategory={setUnitConversionCategory}
+                fromUnit={unitConversionFromUnit}
+                setFromUnit={setUnitConversionFromUnit}
+                toUnit={unitConversionToUnit}
+                setToUnit={setUnitConversionToUnit}
+                value={unitConversionValue}
+                setValue={setUnitConversionValue}
+              />
+            )}
           </Box>
         </Paper>
 
-        {/* Function Library Side Panel */}
-        {showFunctionLibrary && (
-          <Paper sx={{
-            width: 361,
-            minWidth: 361,
-            maxWidth: 361,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <FunctionLibrary
-              onClose={() => setShowFunctionLibrary(false)}
-              onFunctionSelect={(func: any) => {
-                console.log('Function selected:', func);
-                // Function will be inserted into formula bar in future
-              }}
-            />
-          </Paper>
-        )}
       </Box>
-
-      {/* Bottom Status Bar */}
-      <Paper sx={{
-        mt: 1,
-        p: 1,
-        borderTop: 1,
-        borderColor: 'divider',
-        backgroundColor: '#0a0a0a'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Left side - Spreadsheet info */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="caption" sx={{ color: 'white' }}>
-              Sheet: {sheets[activeSheetTab]}
-            </Typography>
-            <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.3)' }} />
-            <Typography variant="caption" sx={{ color: 'white' }}>
-              Cell: {activeCell ? `${String.fromCharCode(65 + activeCell.col)}${activeCell.row + 1}` : 'A1'}
-            </Typography>
-            <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.3)' }} />
-            <Typography variant="caption" sx={{ color: 'white' }}>
-              Ready
-            </Typography>
-          </Box>
-
-          {/* Right side - System utilization */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Chip
-              icon={<MemoryIcon sx={{ color: 'white' }} />}
-              label="RAM: 45%"
-              size="small"
-              variant="outlined"
-              sx={{
-                color: 'white',
-                borderColor: '#64b5f6',
-                '& .MuiChip-label': { color: 'white' }
-              }}
-            />
-            <Chip
-              icon={<SpeedIcon sx={{ color: 'white' }} />}
-              label="CPU: 12%"
-              size="small"
-              variant="outlined"
-              sx={{
-                color: 'white',
-                borderColor: '#64b5f6',
-                '& .MuiChip-label': { color: 'white' }
-              }}
-            />
-            <Chip
-              icon={<StorageIcon sx={{ color: 'white' }} />}
-              label="Cache: 2.1MB"
-              size="small"
-              variant="outlined"
-              sx={{
-                color: 'white',
-                borderColor: '#64b5f6',
-                '& .MuiChip-label': { color: 'white' }
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
     </Box>
   );
 };
