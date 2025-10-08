@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.CokieMiner.AnaFis</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>AnaFis</name>
+  <summary>Advanced Numerical Analysis and Fitting Interface System</summary>
+  
+  <description>
+    <p>
+      AnaFis is a powerful desktop application for scientific data analysis and numerical computing.
+      It combines the performance of Rust with modern web technologies to provide a comprehensive
+      suite of tools for scientists, engineers, and researchers.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Advanced spreadsheet with formula evaluation and unit support</li>
+      <li>Uncertainty propagation with symbolic mathematics (Python/SymPy)</li>
+      <li>Unit conversion with dimensional analysis</li>
+      <li>Curve fitting algorithms with visualization</li>
+      <li>Monte Carlo simulations for statistical analysis</li>
+      <li>Detachable tabs for multi-monitor workflows</li>
+      <li>LaTeX rendering for mathematical expressions</li>
+    </ul>
+  </description>
+  
+  <launchable type="desktop-id">com.CokieMiner.AnaFis.desktop</launchable>
+  
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main spreadsheet interface with uncertainty sidebar</caption>
+      <image>https://raw.githubusercontent.com/CokieMiner/Anafis-Tauri/main/screenshots/main.png</image>
+    </screenshot>
+  </screenshots>
+  
+  <url type="homepage">https://github.com/CokieMiner/Anafis-Tauri</url>
+  <url type="bugtracker">https://github.com/CokieMiner/Anafis-Tauri/issues</url>
+  <url type="help">https://github.com/CokieMiner/Anafis-Tauri/wiki</url>
+  
+  <developer_name>CokieMiner</developer_name>
+  <update_contact>pedromamartins@live.com</update_contact>
+  
+  <releases>
+    <release version="0.1.0" date="2025-01-15">
+      <description>
+        <p>Initial release</p>
+        <ul>
+          <li>Basic spreadsheet functionality</li>
+          <li>Uncertainty propagation sidebar</li>
+          <li>Unit conversion sidebar</li>
+          <li>Uncertainty calculator window</li>
+          <li>LaTeX preview window</li>
+          <li>Detachable tab interface</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  
+  <content_rating type="oars-1.1" />
+  
+  <categories>
+    <category>Science</category>
+    <category>Education</category>
+    <category>Math</category>
+  </categories>
+  
+  <keywords>
+    <keyword>science</keyword>
+    <keyword>data</keyword>
+    <keyword>analysis</keyword>
+    <keyword>statistics</keyword>
+    <keyword>fitting</keyword>
+    <keyword>numerical</keyword>
+    <keyword>spreadsheet</keyword>
+    <keyword>uncertainty</keyword>
+    <keyword>propagation</keyword>
+  </keywords>
+</component>

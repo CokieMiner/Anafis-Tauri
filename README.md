@@ -48,15 +48,64 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
 
 ### Python Integration
 - **SymPy**: Symbolic mathematics library for equation solving and manipulation
-- **Embedded Python**: Bundled Python runtime for offline operation
+- **System Python**: Uses system Python installation (Python 3.8+ with SymPy required)
 
 ## Prerequisites
 
-Before building AnaFis, ensure you have the following installed:
+Before building and running AnaFis, ensure you have the following installed:
 
+### Required for All Platforms
 - **Rust**: Install via [rustup.rs](https://rustup.rs/)
 - **Node.js & npm**: Download from [nodejs.org](https://nodejs.org/) (LTS version recommended)
-- **Python 3.8+**: Required for the embedded Python runtime (automatically bundled in releases)
+
+### Python Dependencies (Platform-Specific)
+
+#### Linux
+AnaFis is distributed through standard Linux package managers, which handle Python dependencies automatically:
+
+**Flatpak** (Universal - Recommended)
+```bash
+flatpak install flathub com.cokieminer.anafis
+```
+
+**Arch Linux (AUR)**
+```bash
+yay -S anafis
+# or
+paru -S anafis
+```
+
+**Debian/Ubuntu (.deb)**
+```bash
+sudo dpkg -i anafis_*.deb
+sudo apt install -f  # Install dependencies
+```
+
+**Fedora/RHEL (.rpm)**
+```bash
+sudo dnf install anafis-*.rpm
+```
+
+All Linux packages include Python 3.8+ and SymPy as dependencies, so no manual installation is required.
+
+#### Windows
+For Windows users, we provide a dedicated installer application that handles all dependencies including Python and SymPy automatically.
+
+**Manual installation** (for development):
+1. Download Python 3.8+ from [python.org](https://www.python.org/downloads/)
+2. During installation, check "Add Python to PATH"
+3. Open Command Prompt and run: `pip install sympy`
+
+#### macOS
+Python 3 can be installed via Homebrew:
+```bash
+brew install python3
+pip3 install sympy
+```
+
+**Note**: AnaFis requires Python with SymPy for uncertainty propagation and symbolic mathematics. Production packages handle this automatically on all platforms.
+
+---
 
 ## Installation & Development
 
@@ -102,13 +151,33 @@ The built application will be available in `src-tauri/target/release/` (platform
 
 ## Architecture
 
-AnaFis follows a modern architecture separating concerns:
+AnaFis follows a **Rust-first architecture** with clear separation of concerns:
 
-- **Frontend**: React/TypeScript application handling UI and user interactions
-- **Backend**: Rust application managing system operations, Python integration, and IPC
-- **State Management**: Zustand store for tab management and application state
-- **Communication**: Tauri's IPC system for secure frontend-backend communication
-- **Python Runtime**: Embedded Python environment for mathematical computations
+### Core Principles
+- **Rust Backend**: ALL business logic, calculations, data processing, and system operations
+- **TypeScript Frontend**: UI rendering, user input handling, and visual feedback ONLY
+- **Python Integration**: Symbolic mathematics via system Python + SymPy (for uncertainty propagation)
+
+### Component Structure
+- **Frontend (React/TypeScript)**: Modern React application with Material-UI components
+  - No calculation logic in TypeScript
+  - All data processing via Tauri `invoke()` commands to Rust
+- **Backend (Rust)**: High-performance native application
+  - Unit conversions (custom dimensional analysis)
+  - Uncertainty calculations (via PyO3/SymPy)
+  - Window management and IPC
+  - Future: Statistical analysis, curve fitting, data smoothing, SQLite database
+- **State Management**: Zustand for tab management and UI state
+- **Communication**: Tauri's secure IPC system between frontend and backend
+- **Python Runtime**: System Python with SymPy for symbolic derivative calculations
+
+### Performance Benefits
+- **10-100x faster** calculations compared to JavaScript implementations
+- Type-safe operations with Rust's type system
+- Consistent numeric precision across platforms
+- Efficient memory usage with Rust's ownership model
+
+---
 
 ## Contributing
 
