@@ -21,7 +21,7 @@ type FocusedInputType =
 interface UncertaintySidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef: React.RefObject<UniverSpreadsheetRef> | null;
+  univerRef: React.RefObject<UniverSpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   onPropagationComplete?: (resultRange: string) => void;
   // Lifted state

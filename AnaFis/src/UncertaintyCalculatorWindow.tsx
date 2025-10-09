@@ -6,7 +6,6 @@ import Box from '@mui/material/Box';
 import { Typography, IconButton } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import UncertaintyCalculatorDialog from './dialogs/UncertaintyCalculatorDialog';
 import { createAnafisTheme } from './themes';
 
@@ -122,36 +121,6 @@ function UncertaintyCalculatorWindow() {
       }, 300);
     })();
 
-    // Try to disable manual resizing for this native window while this component is mounted.
-    // Some environments initialize the window API slightly later, so try a few times.
-    let restored = false;
-    const tryDisableResizable = async () => {
-      try {
-        const w = getCurrentWindow();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (w && typeof (w as any).setResizable === 'function') {
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (w as any).setResizable(false);
-            restored = true;
-            return true;
-          } catch {
-            // Could not set resizable(false)
-          }
-        }
-      } catch {
-        // ignore
-      }
-      return false;
-    };
-
-    (async () => {
-      // Try immediately, then with small backoffs in case the API isn't ready.
-      if (await tryDisableResizable()) return;
-      setTimeout(async () => { if (await tryDisableResizable()) return; }, 200);
-      setTimeout(async () => { await tryDisableResizable(); }, 600);
-    })();
-
     // Resize when window content changes (but less frequently)
     const resizeObserver = new ResizeObserver(() => {
       // Only resize if not already resizing
@@ -219,21 +188,6 @@ function UncertaintyCalculatorWindow() {
       } catch {
         // ignore
       }
-      // restore manual resizing if we disabled it earlier
-      (async () => {
-        try {
-          const w = getCurrentWindow();
-          if (w && restored && typeof w.setResizable === 'function') {
-            try {
-              await w.setResizable(true);
-            } catch {
-              // Could not restore resizable(true)
-            }
-          }
-        } catch {
-          // ignore
-        }
-      })();
       resizeObserver.disconnect();
       document.removeEventListener('anafis_content_change', onContentChange);
     };

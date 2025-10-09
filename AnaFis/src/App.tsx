@@ -32,7 +32,7 @@ import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
-import { AddIcon, SettingsIcon, CalculateIcon } from './icons';
+import { AddIcon, SettingsIcon, CalculateIcon, StorageIcon } from './icons';
 
 // Tauri imports
 import { invoke } from '@tauri-apps/api/core';
@@ -132,6 +132,14 @@ function App() {
       await invoke('open_uncertainty_calculator_window');
     } catch {
       // Failed to open uncertainty calculator window
+    }
+  };
+
+  const openDataLibrary = async () => {
+    try {
+      await invoke('open_data_library_window');
+    } catch {
+      // Failed to open data library window
     }
   };
 
@@ -700,6 +708,38 @@ function App() {
                   hoverBorderColor="rgba(233, 30, 99, 0.2)"
                   hoverBoxShadowColor="rgba(233, 30, 99, 0.3)"
                 />
+
+                {/* Data Library Action */}
+                <IconButton
+                  color="inherit"
+                  onClick={openDataLibrary}
+                  title="Data Library"
+                  disableRipple
+                  disableFocusRipple
+                  sx={{
+                    color: '#ffffff',
+                    backgroundColor: 'rgba(76, 175, 80, 0.06)',
+                    border: 'none',
+                    borderRadius: 2,
+                    mr: 1,
+                    transition: 'all 0.18s ease-in-out',
+                    '&:hover': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.12)',
+                      color: '#4caf50',
+                      transform: 'scale(1.05)',
+                    },
+                    '&:focus': {
+                      outline: '2px solid rgba(255, 255, 255, 0.8)',
+                      outlineOffset: '2px',
+                    },
+                    '&.Mui-focusVisible': {
+                      outline: '2px solid rgba(255, 255, 255, 0.8)',
+                      outlineOffset: '2px',
+                    }
+                  }}
+                >
+                  <StorageIcon />
+                </IconButton>
 
                 {/* Uncertainty Calculator Action */}
                 <IconButton

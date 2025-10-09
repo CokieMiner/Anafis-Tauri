@@ -68,6 +68,10 @@ pub async fn create_tab_window(
         decorations: false,
         transparent: false,
         always_on_top: true,
+        skip_taskbar: false,
+        parent: None,
+        min_width: Some(600.0),
+        min_height: Some(400.0),
     };
 
     crate::windows::window_manager::create_or_focus_window(&app_handle, &window_label, config)

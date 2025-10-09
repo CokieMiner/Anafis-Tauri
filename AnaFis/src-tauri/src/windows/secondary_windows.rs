@@ -42,7 +42,11 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
         resizable: true,
         decorations: false,
         transparent: true,
-        always_on_top: false,
+        always_on_top: true,
+        skip_taskbar: true,
+        parent: Some("main".to_string()),
+        min_width: Some(400.0),
+        min_height: None, // No minimum height to allow auto-resize
     };
 
     create_or_focus_window(&app, "uncertainty-calculator", config)
@@ -72,10 +76,48 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
         resizable: true,
         decorations: false,
         transparent: true,
-        always_on_top: false,
+        always_on_top: true,
+        skip_taskbar: true,
+        parent: Some("main".to_string()),
+        min_width: Some(500.0),
+        min_height: Some(500.0),
     };
 
     create_or_focus_window(&app, "settings", config)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn close_data_library_window(app: AppHandle) -> Result<(), String> {
+    crate::windows::window_manager::close_window(&app, "data-library")
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
+    // First check if window already exists
+    if let Some(existing_window) = app.get_webview_window("data-library") {
+        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
+        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
+        return Ok(());
+    }
+
+    let config = WindowConfig {
+        title: "Data Library".to_string(),
+        url: "data-library.html".to_string(),
+        width: 1000.0,
+        height: 700.0,
+        resizable: true,
+        decorations: false,
+        transparent: true,
+        always_on_top: true,
+        skip_taskbar: true,
+        parent: Some("main".to_string()),
+        min_width: Some(700.0),
+        min_height: Some(500.0),
+    };
+
+    create_or_focus_window(&app, "data-library", config)
         .map_err(|e| e.to_string())
 }
 
@@ -105,6 +147,7 @@ pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, ti
     .min_inner_size(400.0_f64, 225.0_f64)
     .max_inner_size(1600.0_f64, 225.0_f64)
     .transparent(true)
+    .skip_taskbar(true)
     .closable(true)
     .build()
     .map_err(|e| format!("Failed to create window: {e}"))?;

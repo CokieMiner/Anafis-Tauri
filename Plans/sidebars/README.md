@@ -17,6 +17,7 @@ This directory contains detailed implementation plans for all sidebars, tabs, an
 ### ✅ Already Implemented
 - **Uncertainty Propagation Sidebar** - Propagate uncertainties through formulas
 - **Unit Conversion Sidebar** - Convert between different units
+- **Data Library Window** - 🗄️ SQLite-based persistent storage with FTS5 search, statistics, preview, CSV/JSON export (Phase 0 - Core Infrastructure COMPLETE)
 
 ### 📋 Planned Implementations
 
@@ -79,10 +80,10 @@ This directory contains detailed implementation plans for all sidebars, tabs, an
    - **File**: `07_export_system.md`
 
 8. **[Data Library Sidebar](./08_data_library_sidebar.md)** 📚
-   - **Priority**: CRITICAL (Core Infrastructure)
-   - **Complexity**: Medium
+   - **Priority**: HIGH (Quick save from spreadsheet)
+   - **Complexity**: Low (shares backend with Window)
    - **Features**: Quick export FROM spreadsheet TO library with metadata, tags, uncertainties
-   - **Dependencies**: SQLite (rusqlite), chrono, uuid - shares backend with Data Library Window
+   - **Dependencies**: ✅ SQLite backend already exists (shares with Data Library Window)
    - **File**: `08_data_library_sidebar.md`
    - **Note**: Sidebar for SAVING data, Window for MANAGING stored data, tabs for IMPORTING data
 
@@ -92,29 +93,27 @@ This directory contains detailed implementation plans for all sidebars, tabs, an
    - **Priority**: High
    - **Complexity**: High
    - **Features**: Advanced 2D/3D plotting from Data Library, n-dimensional curve fitting, fit comparison, residuals
-   - **Dependencies**: Plotly.js, Data Library, nalgebra, levenberg-marquardt
+   - **Dependencies**: Plotly.js, ✅ Data Library (DONE!), nalgebra, levenberg-marquardt
    - **File**: `09_graphs_and_fitting_tab.md`
 
 #### Windows
 
-10. **[Data Library Window](./10_data_library_window.md)** 🗄️
-   - **Priority**: CRITICAL (Core Infrastructure)
-   - **Complexity**: High
-   - **Features**: Standalone window for data management, search/filter, statistics, preview, export/import, batch operations
-   - **Dependencies**: SQLite (rusqlite), chrono, uuid, Tauri State, Plotly.js (preview only)
-   - **File**: `10_data_library_window.md`
-   - **Note**: All logic in Rust (SQLite + FTS5), TypeScript only for UI rendering
+10. **Data Library Window** - ✅ FULLY IMPLEMENTED
+   - **Status**: ✅ COMPLETE
+   - **Features**: SQLite storage, FTS5 search, statistics, preview, multi-select, CSV/JSON export with metadata
+   - **Documentation**: Removed (implementation complete)
 
 ---
 
 ## Implementation Order
 
-### Phase 0: Core Infrastructure (Week 1) 🔧
-**MUST BE IMPLEMENTED FIRST**
-1. ✅ **Data Library Window** (or Sidebar) - Persistent data storage with SQLite, required by all other components
-   - Window approach recommended for better UX and multitasking
-   - All logic in Rust (database, search, statistics)
-   - See files: `10_data_library_window.md` (window) or `08_data_library_sidebar.md` (sidebar)
+### Phase 0: Core Infrastructure ✅ COMPLETE
+**IMPLEMENTED**
+1. ✅ **Data Library Window** - Persistent SQLite storage, FTS5 search, CSV/JSON export, multi-select
+   - All Rust backend logic complete (database, search, statistics, export)
+   - Full TypeScript UI with Material-UI
+   - Global toolbar integration
+   - See implementation: `src-tauri/src/data_library/`, `src/DataLibraryWindow.tsx`
 
 ### Phase 1: Quick Visualization & Advanced Analysis (Weeks 2-3)
 2. **Quick Plot Sidebar** - Simple 2D previews for rapid feedback
@@ -269,15 +268,16 @@ Each sidebar must:
 ## Next Steps
 
 1. ✅ Complete all sidebar and tab specification files
-2. **CRITICAL**: Implement Data Library (10 - window or 08 - sidebar) first - all other components depend on it
-   - Use Rust + SQLite for all data logic
-   - TypeScript only for UI rendering
-3. Install dependencies (plotly.js, nalgebra, levenberg-marquardt, rusqlite)
-4. Implement Quick Plot Sidebar (01) - simple, independent
-5. Implement Graphs & Fitting Tab (09) - requires Data Library
+2. ✅ **Data Library Window** - FULLY IMPLEMENTED
+   - ✅ Rust + SQLite backend with FTS5
+   - ✅ TypeScript UI with Material-UI
+   - ✅ Multi-select and CSV/JSON export with metadata
+3. ✅ Dependencies installed (plotly.js, react-plotly.js, rusqlite, chrono, uuid)
+4. **NEXT**: Implement Quick Plot Sidebar (01) - simple, depends on Data Library ✅
+5. **THEN**: Implement Graphs & Fitting Tab (09) - requires Data Library ✅
 6. Implement remaining sidebars following the phase order (02-07)
-7. Update SpreadsheetTab UI with toolbar buttons for all sidebars
-8. Implement Rust backend commands for fitting and statistics
+7. ✅ Update SpreadsheetTab UI - already has toolbar buttons for Uncertainty & Unit Conversion
+8. ~~Implement Rust backend commands for fitting and statistics~~ (partial - statistics done in Data Library)
 9. Write tests for each component
 
 ---

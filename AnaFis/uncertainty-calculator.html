@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background-color: #0a0a0a !important;">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
@@ -10,19 +10,19 @@
       html, body {
         margin: 0;
         padding: 0;
-  /* Fixed content width to match the native window width we use */
-  width: 504px;
+        /* Fixed content width to match the native window width we use */
+        width: 504px;
         height: auto;
-  min-width: 504px;
-  min-height: 450px;
+        min-width: 504px;
+        min-height: 450px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
           'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
           sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-  background-color: #0a0a0a;
-  color: #e0e0e0;
-  overflow: hidden; /* prevent page scrollbars; native window should be sized to fit */
+        background-color: #0a0a0a !important;
+        color: #e0e0e0;
+        overflow: hidden; /* prevent page scrollbars; native window should be sized to fit */
         border: none;
         outline: none;
       }
@@ -32,10 +32,10 @@
         height: auto;
         min-width: 504px;
         min-height: 450px;
-        background-color: #0a0a0a;
+        background-color: #0a0a0a !important;
         overflow: hidden;
         box-sizing: border-box;
-  /* no border: the native window will be sized to match this content exactly */
+        /* no border: the native window will be sized to match this content exactly */
         border: none;
         outline: none;
         position: absolute;
@@ -50,10 +50,15 @@
       *, *::before, *::after {
         box-sizing: border-box;
       }
+
+      /* Override any default white backgrounds */
+      html, body, #root {
+        background-color: #0a0a0a !important;
+      }
     </style>
   </head>
-  <body>
-    <div id="root"></div>
+  <body style="background-color: #0a0a0a !important;">
+    <div id="root" style="background-color: #0a0a0a !important;"></div>
     <script type="module" src="/src/UncertaintyCalculatorWindow.tsx"></script>
   </body>
 </html>

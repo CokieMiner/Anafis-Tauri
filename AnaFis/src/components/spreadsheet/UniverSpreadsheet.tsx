@@ -55,6 +55,7 @@ interface Props {
 export interface UniverSpreadsheetRef {
     updateCell: (cellRef: string, value: { v?: string | number; f?: string }) => void;
     getCellValue: (cellRef: string) => string | number | null;
+    getRange: (rangeRef: string) => Promise<(string | number)[][]>;
 }
 
 const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
@@ -147,6 +148,63 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                 } catch (error) {
                     console.error('Failed to get cell value:', error);
                     return null;
+                }
+            },
+            getRange: async (rangeRef: string): Promise<(string | number)[][]> => {
+                if (!univerRef.current) return [];
+
+                try {
+                    const injector = univerRef.current.univer.__getInjector();
+                    const instanceService = injector.get(IUniverInstanceService);
+                    const workbook = instanceService.getFocusedUnit() as Workbook;
+                    if (!workbook) return [];
+
+                    const activeSheet = workbook.getActiveSheet();
+                    if (!activeSheet) return [];
+
+                    // Parse range: A1:B10 or A1 (single cell)
+                    const rangeMatch = rangeRef.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+                    const singleMatch = rangeRef.match(/^([A-Z]+)(\d+)$/);
+
+                    let startCol: string, startRow: number, endCol: string, endRow: number;
+
+                    if (rangeMatch) {
+                        [, startCol, startRow, endCol, endRow] = rangeMatch.map((v, i) => i === 2 || i === 4 ? parseInt(v) - 1 : v) as [string, string, number, string, number];
+                    } else if (singleMatch) {
+                        startCol = endCol = singleMatch[1];
+                        startRow = endRow = parseInt(singleMatch[2]) - 1;
+                    } else {
+                        return [];
+                    }
+
+                    // Convert column letters to indices
+                    const colToIndex = (col: string): number => {
+                        let index = 0;
+                        for (let i = 0; i < col.length; i++) {
+                            index = index * 26 + (col.charCodeAt(i) - 65 + 1);
+                        }
+                        return index - 1;
+                    };
+
+                    const startColIndex = colToIndex(startCol);
+                    const endColIndex = colToIndex(endCol);
+
+                    // Extract values row by row
+                    const result: (string | number)[][] = [];
+                    for (let row = startRow; row <= endRow; row++) {
+                        const rowValues: (string | number)[] = [];
+                        for (let col = startColIndex; col <= endColIndex; col++) {
+                            const cellData = activeSheet.getCellRaw(row, col);
+                            const value = cellData?.v !== undefined ? cellData.v as string | number : '';
+                            rowValues.push(value);
+                        }
+                        result.push(rowValues);
+                    }
+
+                    return result;
+                } catch (error) {
+                    console.error('Failed to get range:', error);
+                    return [];
                 }
             }
         }));

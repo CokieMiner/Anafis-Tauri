@@ -31,7 +31,7 @@ import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
 interface UnitConversionSidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef?: React.RefObject<UniverSpreadsheetRef> | null;
+  univerRef?: React.RefObject<UniverSpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   // Lifted state for persistence
   category: string;

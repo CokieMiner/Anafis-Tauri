@@ -7,12 +7,14 @@ import {
 } from '@mui/material';
 import {
   Transform as UnitConverterIcon,
-  AutoFixHigh as UncertaintyIcon
+  AutoFixHigh as UncertaintyIcon,
+  BarChart as QuickPlotIcon
 } from '@mui/icons-material';
 import { LocaleType, IWorkbookData, ICellData } from '@univerjs/core';
 import UniverSpreadsheet, { UniverSpreadsheetRef } from '../components/spreadsheet/UniverSpreadsheet';
 import UncertaintySidebar from '../components/spreadsheet/UncertaintySidebar';
 import UnitConversionSidebar from '../components/spreadsheet/UnitConversionSidebar';
+import QuickPlotSidebar from '../components/spreadsheet/QuickPlotSidebar';
 
 interface Variable {
   name: string;
@@ -22,7 +24,7 @@ interface Variable {
 
 const SpreadsheetTab: React.FC = () => {
   // Sidebar state management
-  type SidebarType = 'uncertainty' | 'unitConvert' | null;
+  type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | null;
   const [activeSidebar, setActiveSidebar] = useState<SidebarType>(null);
   
   // Uncertainty sidebar state - persisted across sidebar switches
@@ -38,6 +40,15 @@ const SpreadsheetTab: React.FC = () => {
   const [unitConversionFromUnit, setUnitConversionFromUnit] = useState<string>('');
   const [unitConversionToUnit, setUnitConversionToUnit] = useState<string>('');
   const [unitConversionValue, setUnitConversionValue] = useState<string>('1');
+  
+  // Quick Plot sidebar state - persisted across sidebar switches
+  const [quickPlotXRange, setQuickPlotXRange] = useState<string>('');
+  const [quickPlotYRange, setQuickPlotYRange] = useState<string>('');
+  const [quickPlotErrorRange, setQuickPlotErrorRange] = useState<string>('');
+  const [quickPlotXLabel, setQuickPlotXLabel] = useState<string>('');
+  const [quickPlotYLabel, setQuickPlotYLabel] = useState<string>('');
+  const [quickPlotType, setQuickPlotType] = useState<'scatter' | 'line' | 'both'>('scatter');
+  const [quickPlotShowErrorBars, setQuickPlotShowErrorBars] = useState<boolean>(false);
   
   // Spreadsheet state
   const [spreadsheetData, setSpreadsheetData] = useState<IWorkbookData | undefined>(undefined);
@@ -92,6 +103,13 @@ const SpreadsheetTab: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__unitConverterSelectionHandler(cellRef);
     }
+    
+    // Call quick plot sidebar handler if it exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (window as any).__quickPlotSelectionHandler === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__quickPlotSelectionHandler(cellRef);
+    }
   }, []);
 
   useEffect(() => {
@@ -114,11 +132,49 @@ const SpreadsheetTab: React.FC = () => {
     setActiveSidebar(prev => prev === 'uncertainty' ? null : 'uncertainty');
   };
 
+  const handleOpenQuickPlot = () => {
+    // Toggle sidebar - if already open, close it; otherwise open it
+    setActiveSidebar(prev => prev === 'quickPlot' ? null : 'quickPlot');
+  };
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Main Toolbar */}
       <Paper sx={{ mb: 1, bgcolor: '#0a0a0a' }}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<QuickPlotIcon />}
+            onClick={handleOpenQuickPlot}
+            sx={{
+              mr: 1,
+              color: activeSidebar === 'quickPlot' ? '#2196f3' : 'white',
+              borderColor: activeSidebar === 'quickPlot' ? '#2196f3' : '#64b5f6',
+              backgroundColor: activeSidebar === 'quickPlot' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
+              outline: 'none',
+              '&:hover': {
+                borderColor: '#2196f3',
+                backgroundColor: activeSidebar === 'quickPlot' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
+              },
+              '&:focus': {
+                borderColor: '#2196f3',
+                outline: 'none',
+              },
+              '&:focus-visible': {
+                borderColor: '#2196f3',
+                outline: 'none',
+                boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
+              },
+              '&:active': {
+                borderColor: '#2196f3',
+                outline: 'none',
+              }
+            }}
+          >
+            Quick Plot
+          </Button>
+          
           <Button
             variant="outlined"
             size="small"
@@ -266,6 +322,29 @@ const SpreadsheetTab: React.FC = () => {
                 setToUnit={setUnitConversionToUnit}
                 value={unitConversionValue}
                 setValue={setUnitConversionValue}
+              />
+            )}
+            {/* Quick Plot Sidebar - positioned within spreadsheet */}
+            {activeSidebar === 'quickPlot' && (
+              <QuickPlotSidebar
+                open={true}
+                onClose={() => setActiveSidebar(null)}
+                univerRef={univerSpreadsheetRef}
+                onSelectionChange={handleSelectionChange}
+                xRange={quickPlotXRange}
+                setXRange={setQuickPlotXRange}
+                yRange={quickPlotYRange}
+                setYRange={setQuickPlotYRange}
+                errorRange={quickPlotErrorRange}
+                setErrorRange={setQuickPlotErrorRange}
+                xLabel={quickPlotXLabel}
+                setXLabel={setQuickPlotXLabel}
+                yLabel={quickPlotYLabel}
+                setYLabel={setQuickPlotYLabel}
+                plotType={quickPlotType}
+                setPlotType={setQuickPlotType}
+                showErrorBars={quickPlotShowErrorBars}
+                setShowErrorBars={setQuickPlotShowErrorBars}
               />
             )}
           </Box>
