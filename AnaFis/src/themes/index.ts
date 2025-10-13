@@ -90,6 +90,20 @@ export const createAnafisTheme = () => {
           },
         },
       },
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            '& .MuiOutlinedInput-root': {
+              '&.Mui-focused fieldset': {
+                borderColor: '#2196f3',
+              },
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: '#2196f3',
+            },
+          },
+        },
+      },
       MuiCssBaseline: {
         styleOverrides: {
           body: {

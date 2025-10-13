@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Paper, List, ListItemButton, ListItemText, TextField, Button, Divider } from '@mui/material';
+import { Box, Typography, IconButton, List, ListItemButton, ListItemText, TextField, Button } from '@mui/material';
 import { Close as CloseIcon, Add as AddIcon, Delete as DeleteIcon, PlayArrow as RunIcon } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
 import { UniverSpreadsheetRef } from './UniverSpreadsheet';
 import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
+import { sidebarStyles } from '../../utils/sidebarStyles';
+import SidebarCard from '../ui/SidebarCard';
 
 interface Variable {
   name: string;
@@ -199,161 +201,241 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
   const currentVariable = variables[selectedVariable];
 
   return (
-    <Paper elevation={3} sx={{ 
-      width: 420, 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      bgcolor: 'rgba(10, 25, 45, 0.98)', 
-      border: '1px solid rgba(33, 150, 243, 0.2)', 
-      borderLeft: '2px solid rgba(33, 150, 243, 0.5)',
-      borderRadius: 0,
-      overflow: 'hidden'
-    }}
-    data-uncertainty-sidebar
+    <Box
+      data-uncertainty-sidebar
+      sx={{ ...sidebarStyles.container, px: 1, pt: 2 }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2.5, bgcolor: 'rgba(33, 150, 243, 0.08)', borderBottom: '1px solid rgba(33, 150, 243, 0.2)' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2196f3', fontSize: '1.1rem' }}>Uncertainty Propagation</Typography>
-        <IconButton onClick={onClose} size="small" sx={{ color: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.2)', color: 'rgba(255, 255, 255, 0.9)', transform: 'scale(1.1)' } }}>
+      {/* Header */}
+      <Box sx={sidebarStyles.header}>
+        <Typography sx={sidebarStyles.text.header}>
+          Uncertainty Propagation
+        </Typography>
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={sidebarStyles.iconButton}
+        >
           <CloseIcon />
         </IconButton>
       </Box>
-      <Box sx={{ p: 2, bgcolor: 'rgba(33, 150, 243, 0.08)', borderBottom: '1px solid rgba(33, 150, 243, 0.15)' }}>
-        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, lineHeight: 1.4 }}>💡 Define variables with ranges. Formula evaluates row-by-row.</Typography>
-      </Box>
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <Box sx={{ width: 120, borderRight: '1px solid rgba(33, 150, 243, 0.2)', bgcolor: 'rgba(33, 150, 243, 0.03)', height: '100%', overflow: 'auto' }}>
-          <Box sx={{ p: 1.5 }}>
-            <Button fullWidth size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addVariable} sx={{ mb: 1.5, fontSize: 12, fontWeight: 600, py: 1, borderRadius: '8px', border: '1px solid rgba(76, 175, 80, 0.3)', bgcolor: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', '&:hover': { bgcolor: 'rgba(76, 175, 80, 0.2)', borderColor: '#4caf50' } }}>Add Variable</Button>
-          </Box>
-          <List dense sx={{ px: 1 }}>
+
+      {/* Main Content */}
+      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', gap: 1.5, p: 1.5 }}>
+        {/* Variables List */}
+        <SidebarCard title="Variables" sx={{ width: 140, flexShrink: 0, mx: 0.5 }}>
+          <Button
+            fullWidth
+            size="small"
+            startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+            onClick={addVariable}
+            sx={sidebarStyles.button.secondary}
+          >
+            Add Variable
+          </Button>
+
+          <List dense sx={{ mt: 1.5 }}>
             {variables.map((variable, index) => (
-              <ListItemButton key={index} selected={selectedVariable === index} onClick={() => setSelectedVariable(index)} sx={{ px: 1.5, py: 1, mb: 0.5, borderRadius: '8px', border: '1px solid rgba(33, 150, 243, 0.2)', bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.05)', color: selectedVariable === index ? '#2196f3' : 'rgba(255, 255, 255, 0.7)', transition: 'all 0.2s', '&:hover': { bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.25)' : 'rgba(33, 150, 243, 0.15)', borderColor: '#2196f3', color: '#ffffff', transform: 'translateY(-1px)', boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)' } }}>
-                <ListItemText primary={<Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}><Typography component="span" sx={{ fontSize: 20, fontFamily: 'monospace', fontWeight: 600 }}>{variable.name}</Typography><Typography variant="body2" sx={{ fontSize: 10, fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>variable</Typography></Box>} />
+              <ListItemButton
+                key={index}
+                selected={selectedVariable === index}
+                onClick={() => setSelectedVariable(index)}
+                sx={{
+                  px: 1,
+                  py: 0.75,
+                  mb: 0.5,
+                  borderRadius: '6px',
+                  border: '1px solid rgba(33, 150, 243, 0.2)',
+                  bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.05)',
+                  color: selectedVariable === index ? '#2196f3' : 'rgba(255, 255, 255, 0.7)',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.25)' : 'rgba(33, 150, 243, 0.15)',
+                    borderColor: '#2196f3',
+                    color: '#ffffff',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
+                  }
+                }}
+              >
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+                      <Typography component="span" sx={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 600 }}>
+                        {variable.name}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontSize: 9, fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>
+                        variable
+                      </Typography>
+                    </Box>
+                  }
+                />
               </ListItemButton>
             ))}
           </List>
-        </Box>
-        <Box sx={{ flex: 1, p: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-              <Typography variant="subtitle2" sx={{ mb: 0, fontWeight: 600, color: '#2196f3', minWidth: 'fit-content', fontSize: '0.9rem' }}>
-                Variable:
-              </Typography>
+        </SidebarCard>
+        {/* Variable Configuration */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {/* Variable Details */}
+          <SidebarCard title={`Variable ${currentVariable.name}`} sx={{ mx: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                <Typography sx={{ ...sidebarStyles.text.label, minWidth: 'fit-content' }}>
+                  Name:
+                </Typography>
+                <TextField
+                  value={currentVariable.name}
+                  onChange={(e) => updateVariable(selectedVariable, 'name', e.target.value)}
+                  size="small"
+                  placeholder="a"
+                  sx={{
+                    maxWidth: 80,
+                    ...sidebarStyles.input
+                  }}
+                  inputProps={{
+                    style: {
+                      color: '#2196f3',
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      padding: '4px 8px'
+                    }
+                  }}
+                />
+              </Box>
+              {variables.length > 1 && (
+                <IconButton
+                  onClick={() => removeVariable(selectedVariable)}
+                  size="small"
+                  sx={{
+                    color: '#f44336',
+                    borderRadius: '6px',
+                    '&:hover': {
+                      bgcolor: 'rgba(244, 67, 54, 0.1)',
+                      transform: 'scale(1.1)'
+                    }
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <TextField
-                value={currentVariable.name}
-                onChange={(e) => updateVariable(selectedVariable, 'name', e.target.value)}
+                label="Value Range"
+                value={currentVariable.valueRange}
+                onChange={(e) => updateVariable(selectedVariable, 'valueRange', e.target.value)}
+                onFocus={() => handleInputFocus({ type: 'valueRange', varIndex: selectedVariable })}
+                onBlur={handleInputBlur}
+                placeholder="A1:A10"
                 size="small"
-                placeholder="a"
-                sx={{
-                  maxWidth: 100,
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
-                    borderRadius: '8px',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
-                    '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                    '&.Mui-focused fieldset': { borderColor: '#2196f3' }
-                  },
-                  '& .MuiOutlinedInput-input': {
-                    color: '#2196f3',
-                    fontFamily: 'monospace',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    padding: '6px 12px',
-                    textAlign: 'center'
-                  }
+                fullWidth
+                sx={sidebarStyles.input}
+                slotProps={{
+                  input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
+                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
+                }}
+              />
+              <TextField
+                label="Uncertainty Range (optional)"
+                value={currentVariable.uncertaintyRange}
+                onChange={(e) => updateVariable(selectedVariable, 'uncertaintyRange', e.target.value)}
+                onFocus={() => handleInputFocus({ type: 'uncertaintyRange', varIndex: selectedVariable })}
+                onBlur={handleInputBlur}
+                placeholder="B1:B10 or leave empty for zero"
+                size="small"
+                fullWidth
+                sx={sidebarStyles.input}
+                slotProps={{
+                  input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
+                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
                 }}
               />
             </Box>
-            {variables.length > 1 && (
-              <IconButton onClick={() => removeVariable(selectedVariable)} size="small" sx={{ color: '#f44336', borderRadius: '6px', '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)', transform: 'scale(1.1)' } }}>
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-          <Box sx={{ flex: 1, overflow: 'auto', mb: 1.5, height: '100%' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <TextField 
-                label="Value Range" 
-                value={currentVariable.valueRange} 
-                onChange={(e) => updateVariable(selectedVariable, 'valueRange', e.target.value)} 
-                onFocus={() => handleInputFocus({ type: 'valueRange', varIndex: selectedVariable })}
-                onBlur={handleInputBlur}
-                placeholder="A1:A10" 
-                size="small" 
-                fullWidth 
-                slotProps={{ 
-                  input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
-                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
-                }} 
-                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(33, 150, 243, 0.05)', borderRadius: '6px', '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#2196f3' } } }} 
-              />
-              <TextField 
-                label="Uncertainty Range (optional)" 
-                value={currentVariable.uncertaintyRange} 
-                onChange={(e) => updateVariable(selectedVariable, 'uncertaintyRange', e.target.value)} 
-                onFocus={() => handleInputFocus({ type: 'uncertaintyRange', varIndex: selectedVariable })}
-                onBlur={handleInputBlur}
-                placeholder="B1:B10 or leave empty for zero" 
-                size="small" 
-                fullWidth 
-                slotProps={{ 
-                  input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
-                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
-                }} 
-                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(33, 150, 243, 0.05)', borderRadius: '6px', '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#2196f3' } } }} 
-              />
-            </Box>
-            <Divider sx={{ my: 1.5, borderColor: 'rgba(33, 150, 243, 0.2)' }} />
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)', fontSize: 12 }}>Formula</Typography>
-            <TextField value={formula} onChange={(e) => setFormula(e.target.value)} placeholder={`Variables: ${variables.map(v => v.name).join(', ')}`} multiline rows={2} fullWidth slotProps={{ input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 13 } } }} sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(33, 150, 243, 0.05)', borderRadius: '6px', '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#2196f3' } } }} />
-            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 10, mt: 0.5, display: 'block' }}>Examples: x+y, x*y^2, sqrt(x^2+y^2)</Typography>
-            <Divider sx={{ my: 1.5, borderColor: 'rgba(33, 150, 243, 0.2)' }} />
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)', fontSize: 12 }}>Output</Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <TextField 
-                label="Result Values" 
-                value={outputValueRange} 
-                onChange={(e) => setOutputValueRange(e.target.value)} 
+          </SidebarCard>
+
+          {/* Formula */}
+          <SidebarCard title="Formula" sx={{ mx: 0.5 }}>
+            <TextField
+              value={formula}
+              onChange={(e) => setFormula(e.target.value)}
+              placeholder={`Variables: ${variables.map(v => v.name).join(', ')}`}
+              multiline
+              rows={2}
+              fullWidth
+              sx={sidebarStyles.input}
+              slotProps={{
+                input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 13 } }
+              }}
+            />
+            <Typography sx={{ ...sidebarStyles.text.caption, mt: 0.5 }}>
+              Examples: x+y, x*y^2, sqrt(x^2+y^2)
+            </Typography>
+          </SidebarCard>
+
+          {/* Output */}
+          <SidebarCard title="Output" sx={{ mx: 0.5 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <TextField
+                label="Result Values"
+                value={outputValueRange}
+                onChange={(e) => setOutputValueRange(e.target.value)}
                 onFocus={() => handleInputFocus({ type: 'outputValueRange' })}
                 onBlur={handleInputBlur}
-                placeholder="C1:C10" 
-                size="small" 
-                fullWidth 
-                slotProps={{ 
+                placeholder="C1:C10"
+                size="small"
+                fullWidth
+                sx={sidebarStyles.input}
+                slotProps={{
                   input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
                   inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
-                }} 
-                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(33, 150, 243, 0.05)', borderRadius: '6px', '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#2196f3' } } }} 
+                }}
               />
-              <TextField 
-                label="Result Uncertainties" 
-                value={outputUncertaintyRange} 
-                onChange={(e) => setOutputUncertaintyRange(e.target.value)} 
+              <TextField
+                label="Result Uncertainties"
+                value={outputUncertaintyRange}
+                onChange={(e) => setOutputUncertaintyRange(e.target.value)}
                 onFocus={() => handleInputFocus({ type: 'outputUncertaintyRange' })}
                 onBlur={handleInputBlur}
-                placeholder="D1:D10" 
-                size="small" 
-                fullWidth 
-                slotProps={{ 
+                placeholder="D1:D10"
+                size="small"
+                fullWidth
+                sx={sidebarStyles.input}
+                slotProps={{
                   input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
                   inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
-                }} 
-                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(33, 150, 243, 0.05)', borderRadius: '6px', '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#2196f3' } } }} 
+                }}
               />
-              <Button fullWidth variant="contained" startIcon={<RunIcon />} onClick={handlePropagate} disabled={isProcessing} sx={{ mt: 1, bgcolor: '#2196f3', fontWeight: 600, fontSize: 12, py: 1, outline: 'none', '&:hover': { bgcolor: '#2196f3' }, '&:disabled': { bgcolor: '#424242' }, '&:focus': { bgcolor: '#2196f3', outline: 'none' }, '&:focus-visible': { bgcolor: '#2196f3', outline: 'none', boxShadow: 'none' }, '&:active': { bgcolor: '#2196f3' } }}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<RunIcon />}
+                onClick={handlePropagate}
+                disabled={isProcessing}
+                sx={sidebarStyles.button.primary}
+              >
                 {isProcessing ? 'Processing...' : 'Propagate'}
               </Button>
             </Box>
+
             {error && (
-              <Box sx={{ mt: 1.5, p: 1, bgcolor: 'rgba(244, 67, 54, 0.1)', borderRadius: '6px', border: '1px solid rgba(244, 67, 54, 0.3)' }}>
-                <Typography variant="caption" sx={{ color: '#f44336', fontSize: 11 }}>{error}</Typography>
+              <Box sx={{
+                mt: 1.5,
+                p: 1,
+                bgcolor: 'rgba(244, 67, 54, 0.1)',
+                borderRadius: '6px',
+                border: '1px solid rgba(244, 67, 54, 0.3)'
+              }}>
+                <Typography sx={{ ...sidebarStyles.text.caption, color: '#f44336' }}>
+                  {error}
+                </Typography>
               </Box>
             )}
-          </Box>
+          </SidebarCard>
         </Box>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 

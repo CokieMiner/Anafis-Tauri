@@ -8,15 +8,35 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
 
 ### Core Tabs
 - **🏠 Home Tab**: Central hub for creating new analysis tabs and accessing quick actions
-- **📊 Spreadsheet Tab**: Advanced spreadsheet with formula evaluation, unit support, and data manipulation
-- **📈 Fitting Tab**: Robust curve fitting algorithms with interactive visualization and regression analysis
-- **🧮 Solver Tab**: Intelligent equation solver providing step-by-step mathematical solutions
-- **🎲 Monte Carlo Tab**: Complex simulation capabilities for statistical analysis and probabilistic modeling
+- **📊 Spreadsheet Tab**: Advanced spreadsheet powered by Univer.js with formula evaluation, unit support, and data manipulation
+  - ✅ **Unit Conversion Sidebar**: Convert between different physical units
+  - ✅ **Uncertainty Propagation Sidebar**: Calculate error propagation through formulas
+  - ✅ **Quick Plot Sidebar**: Instant 2D visualization with ECharts (scatter, line, error bars)
+- **📈 Fitting Tab**: Robust curve fitting algorithms with interactive visualization and regression analysis *(Coming Soon)*
+- **🧮 Solver Tab**: Intelligent equation solver providing step-by-step mathematical solutions *(Coming Soon)*
+- **🎲 Monte Carlo Tab**: Complex simulation capabilities for statistical analysis and probabilistic modeling *(Coming Soon)*
+
+### Data Management
+- **🗄️ Data Library Window**: Persistent SQLite-based storage system
+  - Full-text search (FTS5) across sequences
+  - Descriptive statistics (mean, std dev, min, max, median)
+  - Visual preview with ECharts
+  - Multi-select export (CSV/JSON with metadata)
+  - Tag-based organization and filtering
 
 ### Additional Tools
 - **🔢 Uncertainty Calculator**: Floating utility window for quick uncertainty calculations and error propagation
 - **📝 LaTeX Preview**: Real-time LaTeX rendering for mathematical expressions and documentation
 - **⚙️ Settings**: Customizable application preferences and configuration
+
+### Visualization
+- **Apache ECharts**: Primary plotting library (500KB, reliable PNG/SVG export)
+  - Interactive 2D scatter and line plots
+  - Error bars with symmetric uncertainties
+  - Auto-scaling axes with configurable margins
+  - Dark/Light theme support
+  - High-DPI PNG export and vector SVG export
+  - Future support for 3D plots (echarts-gl) and timeline animations
 
 ### Key Features
 - **Detachable Tabs**: Drag tabs outside the main window for multi-monitor workflows
@@ -35,16 +55,22 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
 - **PyO3**: Python integration for advanced mathematical computations
 - **Tokio**: Asynchronous runtime for concurrent operations
 - **Serde**: Serialization framework for data interchange
+- **SQLite (rusqlite)**: Embedded database for Data Library with FTS5 full-text search
+- **Statrs**: Statistical computations (mean, std dev, variance, etc.)
 - **Optimized Code**: Clippy-compliant with modern Rust idioms and performance improvements
+- **Zero Warnings**: Clean codebase with all linting issues resolved
 
 ### Frontend (TypeScript/React)
 - **React 19**: Modern React with hooks and concurrent features
-- **TypeScript**: Type-safe JavaScript development
+- **TypeScript**: Type-safe JavaScript development with 100% type coverage
 - **Material-UI (MUI)**: Component library following Material Design principles
+- **Univer.js**: Advanced spreadsheet engine with formula evaluation
+- **Apache ECharts**: Interactive data visualization (migrated from Plotly)
 - **Vite**: Fast build tool and development server
 - **Zustand**: Lightweight state management
 - **@dnd-kit**: Drag and drop functionality for tab management
 - **KaTeX**: High-quality mathematical typesetting
+- **ESLint Clean**: Zero errors, zero warnings, fully type-safe
 
 ### Python Integration
 - **SymPy**: Symbolic mathematics library for equation solving and manipulation

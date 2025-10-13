@@ -130,11 +130,18 @@ Export spreadsheet data to two destinations:
 
 ---
 
-## UI Layout
+## UI Design
+
+**Location**: **Right Sidebar** (opens next to spreadsheet, like Unit Conversion and Quick Plot)  
+**Access**: Toolbar button with FileDownload/SaveAlt icon  
+**Width**: ~400px  
+**Behavior**: Slides in from right, overlays spreadsheet, closes on button click or X
+
+### Main Export Sidebar Interface
 
 ```
 ┌─────────────────────────────────────┐
-│ Export Data                     [X] │
+│ Export Data              [X Close] │
 ├─────────────────────────────────────┤
 │ Export Range:                       │
 │  ⦿ Current Selection [A1:D100]     │
@@ -269,10 +276,28 @@ Spreadsheet → Export to Data Library → [Data Library] → Select in Target T
 ### TypeScript Interfaces
 
 ```typescript
-interface ExportSystemProps {
+// Sidebar props - follows existing sidebar pattern
+interface ExportSidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef: UniverSpreadsheetRef;
+  univerRef?: React.RefObject<UniverSpreadsheetRef | null>;
+  onSelectionChange?: (selection: string) => void;
+  // Lifted state for persistence across sidebar switches
+  exportFormat: ExportFormat;
+  setExportFormat: (format: ExportFormat) => void;
+  rangeMode: 'selection' | 'sheet' | 'all' | 'custom';
+  setRangeMode: (mode: 'selection' | 'sheet' | 'all' | 'custom') => void;
+  customRange: string;
+  setCustomRange: (range: string) => void;
+  // Data Library export state
+  dataLibraryName: string;
+  setDataLibraryName: (name: string) => void;
+  dataLibraryXColumn: string;
+  setDataLibraryXColumn: (column: string) => void;
+  dataLibraryYColumn: string;
+  setDataLibraryYColumn: (column: string) => void;
+  dataLibraryUncertaintyColumn: string;
+  setDataLibraryUncertaintyColumn: (column: string) => void;
   // Note: No Data Library store needed - uses Tauri invoke() directly
 }
 
@@ -822,7 +847,8 @@ npm install idb  # For Data Library integration
 
 ## File Location
 
-- **Component**: `AnaFis/src/dialogs/ExportDialog.tsx`
+- **Component**: `AnaFis/src/components/spreadsheet/ExportSidebar.tsx` (follows sidebar naming convention)
+- **Integration**: `AnaFis/src/pages/SpreadsheetTab.tsx` (add to toolbar and sidebar management)
 - **Rust Modules**: 
   - `AnaFis/src-tauri/src/export/mod.rs` (main)
   - `AnaFis/src-tauri/src/export/excel.rs`
@@ -838,6 +864,17 @@ npm install idb  # For Data Library integration
   - `AnaFis/src-tauri/src/export/anafispread.rs`
 - **Types**: `AnaFis/src/types/export.ts`
 - **Data Library Integration**: Uses Rust `save_sequence` command (same backend as Sidebar and Window - see `08_data_library_sidebar.md` and `10_data_library_window.md`)
+
+## Integration with SpreadsheetTab
+
+Following the existing sidebar pattern, the Export Sidebar will be:
+
+1. **Toolbar Button**: Added to SpreadsheetTab toolbar with FileDownload icon
+2. **Sidebar Type**: Added to `SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | null`
+3. **State Management**: Lifted state in SpreadsheetTab for persistence across sidebar switches
+4. **Selection Handling**: Uses `handleSelectionChange` callback like other sidebars
+5. **Positioning**: Rendered inside spreadsheet Box, slides from right
+6. **Toggle Behavior**: Button toggles sidebar open/closed
 
 ---
 

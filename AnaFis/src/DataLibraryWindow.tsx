@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import {
@@ -48,7 +48,7 @@ import {
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
-import Plot from 'react-plotly.js';
+import * as echarts from 'echarts';
 import CustomTitleBar from './components/CustomTitleBar';
 import type {
   DataSequence,
@@ -58,7 +58,7 @@ import type {
   UpdateSequenceRequest,
 } from './types/dataLibrary';
 
-const DataLibraryWindowContent: React.FC = () => {
+export const DataLibraryWindowContent: React.FC = () => {
   // State management
   const [sequences, setSequences] = useState<DataSequence[]>([]);
   const [selectedSequence, setSelectedSequence] = useState<DataSequence | null>(null);
@@ -84,20 +84,12 @@ const DataLibraryWindowContent: React.FC = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
 
-  // Load sequences on mount and when search/filter changes
-  useEffect(() => {
-    loadSequences();
-    loadAllTags();
-  }, [searchQuery, selectedTags, sortBy, sortOrder]);
+  // Chart ref for ECharts preview
+  const chartRef = React.useRef<HTMLDivElement>(null);
+  const chartInstanceRef = React.useRef<echarts.ECharts | null>(null);
 
-  // Load statistics when a sequence is selected
-  useEffect(() => {
-    if (selectedSequence) {
-      loadStatistics(selectedSequence.id);
-    }
-  }, [selectedSequence]);
-
-  const loadSequences = async () => {
+  // Define loadSequences before it's used in useEffect
+  const loadSequences = useCallback(async () => {
     try {
       const searchRequest: SearchRequest = {
         query: searchQuery || undefined,
@@ -113,7 +105,7 @@ const DataLibraryWindowContent: React.FC = () => {
       console.error('Failed to load sequences:', err);
       setError(`Failed to load sequences: ${err}`);
     }
-  };
+  }, [searchQuery, selectedTags, sortBy, sortOrder]);
 
   const loadAllTags = async () => {
     try {
@@ -132,6 +124,141 @@ const DataLibraryWindowContent: React.FC = () => {
       console.error('Failed to load statistics:', err);
     }
   };
+
+  // Load sequences on mount and when search/filter changes
+  useEffect(() => {
+    loadSequences();
+    loadAllTags();
+  }, [loadSequences]); // loadSequences now includes all dependencies via useCallback
+
+  // Load statistics when a sequence is selected
+  useEffect(() => {
+    if (selectedSequence) {
+      loadStatistics(selectedSequence.id);
+    }
+  }, [selectedSequence]);
+
+  // Initialize and update ECharts preview
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    // Initialize chart if not already done
+    if (!chartInstanceRef.current) {
+      chartInstanceRef.current = echarts.init(chartRef.current, null, {
+        renderer: 'canvas',
+        devicePixelRatio: 2,
+      });
+    }
+
+    // Update chart with sequence data
+    if (selectedSequence) {
+      const xData = Array.from({ length: selectedSequence.data.length }, (_, i) => i);
+      const yData = selectedSequence.data;
+      const errorData = selectedSequence.uncertainties;
+
+      const series: echarts.SeriesOption[] = [
+        {
+          name: selectedSequence.name,
+          type: 'line',
+          data: xData.map((x, i) => [x, yData[i]]),
+          showSymbol: true,
+          symbolSize: 4,
+          itemStyle: { color: '#90caf9' },
+          lineStyle: { color: '#90caf9', width: 2 },
+        },
+      ];
+
+      // Add error bars if uncertainties exist
+      if (errorData && errorData.length > 0) {
+        series.push({
+          name: 'Uncertainties',
+          type: 'custom',
+          renderItem: (_params: echarts.CustomSeriesRenderItemParams, api: echarts.CustomSeriesRenderItemAPI) => {
+            const point = api.coord([api.value(0), api.value(1)]);
+            const errorValue = api.value(2) as number;
+            const yTop = api.coord([api.value(0), (api.value(1) as number) + errorValue]);
+            const yBottom = api.coord([api.value(0), (api.value(1) as number) - errorValue]);
+            
+            return {
+              type: 'group',
+              children: [
+                {
+                  type: 'line',
+                  shape: { x1: point[0], y1: yTop[1], x2: point[0], y2: yBottom[1] },
+                  style: { stroke: '#f44336', lineWidth: 1.5 },
+                },
+                {
+                  type: 'line',
+                  shape: { x1: point[0] - 4, y1: yTop[1], x2: point[0] + 4, y2: yTop[1] },
+                  style: { stroke: '#f44336', lineWidth: 1.5 },
+                },
+                {
+                  type: 'line',
+                  shape: { x1: point[0] - 4, y1: yBottom[1], x2: point[0] + 4, y2: yBottom[1] },
+                  style: { stroke: '#f44336', lineWidth: 1.5 },
+                },
+              ],
+            };
+          },
+          data: xData.map((x, i) => [x, yData[i], errorData[i]]),
+          z: 1,
+          silent: true,
+        });
+      }
+
+      const option: echarts.EChartsOption = {
+        backgroundColor: 'transparent',
+        grid: {
+          left: 60,
+          right: 20,
+          top: 20,
+          bottom: 40,
+          containLabel: false,
+        },
+        xAxis: {
+          type: 'value',
+          name: 'Index',
+          nameLocation: 'middle',
+          nameGap: 30,
+          nameTextStyle: { color: '#ffffff', fontSize: 11 },
+          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.3)' } },
+          axisLabel: { color: '#ffffff', fontSize: 10 },
+          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+        },
+        yAxis: {
+          type: 'value',
+          name: `${selectedSequence.name} (${selectedSequence.unit})`,
+          nameLocation: 'middle',
+          nameGap: 45,
+          nameTextStyle: { color: '#ffffff', fontSize: 11 },
+          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.3)' } },
+          axisLabel: { color: '#ffffff', fontSize: 10 },
+          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+        },
+        series,
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'cross' },
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          borderColor: '#90caf9',
+          textStyle: { color: '#ffffff' },
+        },
+      };
+
+      chartInstanceRef.current.setOption(option, true);
+    } else {
+      // Clear chart if no sequence selected
+      chartInstanceRef.current.clear();
+    }
+
+    return () => {
+      // Cleanup on unmount
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.dispose();
+        chartInstanceRef.current = null;
+      }
+    };
+  }, [selectedSequence]);
 
   const handlePinSequence = async (id: string, isPinned: boolean) => {
     try {
@@ -318,7 +445,7 @@ const DataLibraryWindowContent: React.FC = () => {
             <Select
               value={sortBy}
               label="Sort By"
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'name' | 'date_created' | 'date_modified' | 'size')}
             >
               <MenuItem value="name">Name</MenuItem>
               <MenuItem value="date_created">Date Created</MenuItem>
@@ -332,7 +459,7 @@ const DataLibraryWindowContent: React.FC = () => {
             <Select
               value={sortOrder}
               label="Order"
-              onChange={(e) => setSortOrder(e.target.value as any)}
+              onChange={(e) => setSortOrder(e.target.value as 'ascending' | 'descending')}
             >
               <MenuItem value="ascending">Ascending</MenuItem>
               <MenuItem value="descending">Descending</MenuItem>
@@ -595,36 +722,12 @@ const DataLibraryWindowContent: React.FC = () => {
               {/* Mini chart */}
               <Typography variant="h6" gutterBottom>Chart Preview</Typography>
               <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1 }}>
-                <Plot
-                  data={[
-                    {
-                      x: Array.from({ length: selectedSequence.data.length }, (_, i) => i),
-                      y: selectedSequence.data,
-                      error_y: selectedSequence.uncertainties ? {
-                        type: 'data',
-                        array: selectedSequence.uncertainties,
-                        visible: true,
-                      } : undefined,
-                      type: 'scatter',
-                      mode: 'lines+markers',
-                      marker: { size: 4, color: '#90caf9' },
-                      line: { color: '#90caf9' },
-                      name: selectedSequence.name,
-                    },
-                  ]}
-                  layout={{
-                    width: undefined,
+                <Box
+                  ref={chartRef}
+                  sx={{
+                    width: '100%',
                     height: 300,
-                    autosize: true,
-                    paper_bgcolor: 'transparent',
-                    plot_bgcolor: 'transparent',
-                    font: { color: '#fff' },
-                    xaxis: { title: { text: 'Index' }, gridcolor: '#333' },
-                    yaxis: { title: { text: `${selectedSequence.name} (${selectedSequence.unit})` }, gridcolor: '#333' },
-                    margin: { l: 60, r: 20, t: 20, b: 40 },
                   }}
-                  config={{ responsive: true, displayModeBar: false }}
-                  style={{ width: '100%' }}
                 />
               </Box>
             </>

@@ -4,7 +4,6 @@ import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import FormControl from '@mui/material/FormControl';
@@ -15,9 +14,9 @@ import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
-import { Close } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
 import { createAnafisTheme } from './themes';
+import CustomTitleBar from './components/CustomTitleBar';
 
 // Create theme using shared configuration
 const theme = createAnafisTheme();
@@ -89,80 +88,7 @@ function SettingsWindow() {
         }}
       >
         {/* Custom Title Bar */}
-        <Box
-          sx={{
-            height: '40px',
-            background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: 2,
-            WebkitAppRegion: 'drag',
-            flexShrink: 0,
-            isolation: 'isolate',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-            },
-          }}
-        >
-          <Typography
-            variant="body2"
-            sx={{
-              color: '#ffffff !important',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              WebkitAppRegion: 'no-drag',
-            }}
-          >
-            AnaFis Settings
-          </Typography>
-
-          <Box sx={{ isolation: 'isolate' }}>
-            <IconButton
-              onClick={handleClose}
-              sx={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 0,
-                color: 'rgba(255, 255, 255, 0.8)',
-                backgroundColor: 'transparent',
-                border: 'none',
-                outline: 'none',
-                boxShadow: 'none',
-                transition: 'all 0.2s ease-in-out',
-                WebkitAppRegion: 'no-drag',
-                '&:hover': {
-                  backgroundColor: '#f44336 !important',
-                  color: '#ffffff',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 2px 8px rgba(244, 67, 54, 0.4)',
-                  outline: 'none !important',
-                  border: 'none !important',
-                },
-                '&:active': {
-                  backgroundColor: '#d32f2f !important',
-                  transform: 'scale(0.95)',
-                  outline: 'none !important',
-                  border: 'none !important',
-                  boxShadow: 'none !important',
-                },
-                '&:focus': {
-                  outline: 'none !important',
-                  border: 'none !important',
-                  boxShadow: 'none !important',
-                },
-                '&.Mui-focusVisible': {
-                  outline: 'none !important',
-                  border: 'none !important',
-                  boxShadow: 'none !important',
-                },
-              }}
-            >
-              <Close sx={{ fontSize: '16px' }} />
-            </IconButton>
-          </Box>
-        </Box>
+        <CustomTitleBar title="AnaFis Settings" />
 
         {/* Main Content */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>

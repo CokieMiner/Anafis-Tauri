@@ -3,11 +3,10 @@ import { useEffect, useRef } from 'react';
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
-import { Typography, IconButton } from '@mui/material';
-import { Close } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
 import UncertaintyCalculatorDialog from './dialogs/UncertaintyCalculatorDialog';
 import { createAnafisTheme } from './themes';
+import CustomTitleBar from './components/CustomTitleBar';
 
 // Create theme using shared configuration
 const theme = createAnafisTheme();
@@ -193,28 +192,6 @@ function UncertaintyCalculatorWindow() {
     };
   }, []);
 
-  const handleClose = async (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    try {
-      await invoke('close_uncertainty_calculator_window');
-    } catch {
-      // Failed to close window via command
-
-      // Fallback to browser close
-      try {
-        window.close();
-      } catch {
-        // Fallback close also failed
-      }
-    }
-  };
-
-  const handleDialogClose = () => {
-    // This is called when the dialog wants to close (though we removed the close button)
-  };
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -235,86 +212,7 @@ function UncertaintyCalculatorWindow() {
         }}
       >
         {/* Custom Title Bar */}
-        <Box
-          // vendor property cast to React.CSSProperties with WebkitAppRegion
-          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties & { WebkitAppRegion: string }}
-          sx={{
-            width: '100%',
-            minWidth: '400px',
-            height: '32px',
-            background: 'linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: 2,
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            // Ensure the raw CSS property is present for Tauri/Chromium
-            '-webkit-app-region': 'drag',
-            position: 'sticky',
-            top: 0,
-            zIndex: 1200,
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
-            flexShrink: 0,
-          }}
-        >
-          {/* Window Title */}
-          {/* Left spacer to balance the right controls and keep title centered */}
-          <Box sx={{ width: '40px', WebkitAppRegion: 'no-drag' }} />
-
-          <Box style={{ WebkitAppRegion: 'drag' } as React.CSSProperties & { WebkitAppRegion: string }} sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, justifyContent: 'center' }}>
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#ffffff',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                opacity: 0.95,
-                pointerEvents: 'none', // avoid capturing clicks so drag works reliably
-                textAlign: 'center',
-              }}
-            >
-              Uncertainty Calculator
-            </Typography>
-          </Box>
-
-          {/* Close Button */}
-          <Box
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties & { WebkitAppRegion: string }}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              width: '32px',
-              justifyContent: 'center',
-            }}
-          >
-            <IconButton
-              onClick={handleClose}
-              sx={{
-                // ensure the button itself does not claim the drag region
-                // vendor property omitted from sx due to typing; using wrapper Box style above
-                width: '32px',
-                height: '32px',
-                borderRadius: 0,
-                color: 'rgba(255, 255, 255, 0.8)',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  backgroundColor: '#ff4444',
-                  color: '#ffffff',
-                },
-                '&:active': {
-                  backgroundColor: '#cc0000',
-                },
-              }}
-            >
-              <Close sx={{ fontSize: '16px' }} />
-            </IconButton>
-          </Box>
-        </Box>
+        <CustomTitleBar title="Uncertainty Calculator" />
 
         {/* Main Content */}
     <Box
@@ -329,10 +227,7 @@ function UncertaintyCalculatorWindow() {
             minHeight: 0,
           }}
         >
-          <UncertaintyCalculatorDialog
-            isOpen={true}
-            onClose={handleDialogClose}
-          />
+          <UncertaintyCalculatorDialog />
         </Box>
       </Box>
     </ThemeProvider>

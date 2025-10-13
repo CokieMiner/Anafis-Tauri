@@ -38,7 +38,7 @@ pub fn calculate_statistics(sequence: &DataSequence) -> SequenceStatistics {
     // Calculate median
     let mut sorted_data = data.clone();
     sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    let median = if count % 2 == 0 {
+    let median = if count.is_multiple_of(2) {
         (sorted_data[count / 2 - 1] + sorted_data[count / 2]) / 2.0
     } else {
         sorted_data[count / 2]
@@ -80,7 +80,7 @@ mod tests {
         
         assert_eq!(stats.count, 5);
         assert!((stats.mean - 3.0).abs() < 1e-10);
-        assert!((stats.std_dev - 1.4142135623730951).abs() < 1e-10);
+        assert!((stats.std_dev - std::f64::consts::SQRT_2).abs() < 1e-10);
         assert_eq!(stats.min, 1.0);
         assert_eq!(stats.max, 5.0);
         assert_eq!(stats.median, 3.0);

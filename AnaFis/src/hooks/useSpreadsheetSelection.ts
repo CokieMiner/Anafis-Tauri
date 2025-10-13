@@ -78,8 +78,8 @@ export function useSpreadsheetSelection<T>({
   handlerName,
 }: UseSpreadsheetSelectionOptions<T>): UseSpreadsheetSelectionReturn<T> {
   const [focusedInput, setFocusedInput] = useState<T | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
   const lastSelectionRef = useRef<string>('');
-  const selectionModeRef = useRef<boolean>(false);
   const anchorCellRef = useRef<string>(''); // Store the first cell clicked
 
   // Listen to selection changes and update focused input
@@ -88,7 +88,7 @@ export function useSpreadsheetSelection<T>({
 
     const handleSelection = (selection: string) => {
       // Skip if no input is focused or not in selection mode
-      if (!focusedInput || !selectionModeRef.current) {
+      if (!focusedInput || !isSelectionMode) {
         return;
       }
 
@@ -103,7 +103,7 @@ export function useSpreadsheetSelection<T>({
 
       // If clicking a different single cell (not the anchor), exit selection mode
       if (isSingleCell && currentCell !== anchorCellRef.current) {
-        selectionModeRef.current = false;
+        setIsSelectionMode(false);
         setFocusedInput(null);
         anchorCellRef.current = '';
         lastSelectionRef.current = '';
@@ -123,7 +123,7 @@ export function useSpreadsheetSelection<T>({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any)[handlerName];
     };
-  }, [focusedInput, onSelectionChange, updateField, handlerName]);
+  }, [focusedInput, isSelectionMode, onSelectionChange, updateField, handlerName]);
 
   // Exit selection mode when clicking on sidebar elements (buttons, etc.)
   useEffect(() => {
@@ -135,7 +135,7 @@ export function useSpreadsheetSelection<T>({
       if (sidebar && sidebar.contains(target)) {
         const isInteractiveElement = target.closest('button, select, .MuiAutocomplete-root');
         if (isInteractiveElement) {
-          selectionModeRef.current = false;
+          setIsSelectionMode(false);
           setFocusedInput(null);
           lastSelectionRef.current = '';
           anchorCellRef.current = '';
@@ -152,7 +152,7 @@ export function useSpreadsheetSelection<T>({
   // Input focus handler - enter selection mode
   const handleInputFocus = useCallback((inputType: T) => {
     setFocusedInput(inputType);
-    selectionModeRef.current = true;
+    setIsSelectionMode(true);
     // Reset tracking refs when entering selection mode
     lastSelectionRef.current = '';
     anchorCellRef.current = '';
@@ -168,6 +168,6 @@ export function useSpreadsheetSelection<T>({
     focusedInput,
     handleInputFocus,
     handleInputBlur,
-    isSelectionMode: selectionModeRef.current,
+    isSelectionMode,
   };
 }

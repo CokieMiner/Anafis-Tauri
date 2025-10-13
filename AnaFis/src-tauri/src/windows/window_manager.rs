@@ -86,9 +86,6 @@ pub fn create_or_focus_window(
     // Ensure dark background is set (redundant but safe)
     let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
 
-    // Small delay to ensure webview has loaded with dark background
-    std::thread::sleep(std::time::Duration::from_millis(50));
-
     // Now show and focus the window
     window.show().map_err(|e| AnaFisError::Window(e.to_string()))?;
     window.set_focus().map_err(|e| AnaFisError::Window(e.to_string()))?;

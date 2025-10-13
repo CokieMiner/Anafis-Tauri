@@ -77,7 +77,7 @@ impl DataLibraryDatabase {
         let data_json = serde_json::to_string(&request.data)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         let uncertainties_json = request.uncertainties.as_ref()
-            .map(|u| serde_json::to_string(u))
+            .map(serde_json::to_string)
             .transpose()
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         let tags_json = serde_json::to_string(&request.tags)
@@ -130,12 +130,10 @@ impl DataLibraryDatabase {
         // Add full-text search if query provided
         if let Some(q) = &search.query {
             if !q.is_empty() {
-                query = format!(
-                    "SELECT s.id, s.name, s.description, s.tags, s.unit, s.source, s.data, s.uncertainties, s.is_pinned, s.created_at, s.modified_at 
+                query = "SELECT s.id, s.name, s.description, s.tags, s.unit, s.source, s.data, s.uncertainties, s.is_pinned, s.created_at, s.modified_at 
                      FROM sequences s
                      JOIN sequences_fts fts ON s.id = fts.id
-                     WHERE sequences_fts MATCH ?1"
-                );
+                     WHERE sequences_fts MATCH ?1".to_string();
             }
         }
         

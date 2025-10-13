@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Paper,
   Box,
   Typography,
   IconButton,
@@ -27,6 +26,8 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { UniverSpreadsheetRef } from './UniverSpreadsheet';
 import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
+import { sidebarStyles } from '../../utils/sidebarStyles';
+import SidebarCard from '../ui/SidebarCard';
 
 interface UnitConversionSidebarProps {
   open: boolean;
@@ -101,9 +102,24 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
     sidebarDataAttribute: 'data-unit-converter-sidebar',
     handlerName: '__unitConverterSelectionHandler'
   });
+  
   const [error, setError] = useState<string>('');
   const [isConverting, setIsConverting] = useState<boolean>(false);
   const [compatibilityError, setCompatibilityError] = useState<string>('');
+
+  // Define loadCategories before it's used in useEffect
+  const loadCategories = useCallback(async () => {
+    try {
+      const cats: string[] = await invoke('get_supported_categories');
+      setCategories(cats);
+      if (cats.length > 0 && !category) {
+        setCategory(cats[0]);
+      }
+    } catch (err) {
+      setError('Failed to load categories');
+      console.error(err);
+    }
+  }, [category, setCategory]);
 
   // Category icons mapping (blue theme)
   const categoryIcons: Record<string, string> = {
@@ -138,7 +154,7 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
     if (open) {
       loadCategories();
     }
-  }, [open]);
+  }, [open, loadCategories]);
 
   // Load units when category changes
   useEffect(() => {
@@ -168,19 +184,6 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
       setFilteredUnits(filtered);
     }
   }, [searchQuery, availableUnits, category]);
-
-  const loadCategories = async () => {
-    try {
-      const cats: string[] = await invoke('get_supported_categories');
-      setCategories(cats);
-      if (cats.length > 0 && !category) {
-        setCategory(cats[0]);
-      }
-    } catch (err) {
-      setError('Failed to load categories');
-      console.error(err);
-    }
-  };
 
   const loadUnits = async () => {
     try {
@@ -442,72 +445,295 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
   if (!open) return null;
 
   return (
-    <Paper data-unit-converter-sidebar elevation={3} sx={{ 
-      width: 420, 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      bgcolor: 'rgba(10, 25, 45, 0.98)', 
-      border: '1px solid rgba(33, 150, 243, 0.2)', 
-      borderLeft: '2px solid rgba(33, 150, 243, 0.5)',
-      borderRadius: 0,
-      overflow: 'hidden'
-    }}>
+    <Box
+      data-unit-converter-sidebar
+      sx={{ ...sidebarStyles.container, px: 1, pt: 2 }}
+    >
       {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        p: 2, 
-        bgcolor: 'rgba(33, 150, 243, 0.08)', 
-        borderBottom: '1px solid rgba(33, 150, 243, 0.2)' 
-      }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#2196f3' }}>
+      <Box sx={sidebarStyles.header}>
+        <Typography sx={sidebarStyles.text.header}>
           Unit Converter
         </Typography>
-        <IconButton 
-          onClick={onClose} 
-          size="small" 
-          sx={{ 
-            color: 'rgba(255, 255, 255, 0.7)', 
-            borderRadius: '6px', 
-            '&:hover': { 
-              bgcolor: 'rgba(33, 150, 243, 0.2)', 
-              color: 'rgba(255, 255, 255, 0.9)' 
-            } 
-          }}
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={sidebarStyles.iconButton}
         >
           <CloseIcon />
         </IconButton>
       </Box>
 
-      {/* Tip */}
-      <Box sx={{ 
-        p: 1.5, 
-        bgcolor: 'rgba(33, 150, 243, 0.08)', 
-        borderBottom: '1px solid rgba(33, 150, 243, 0.15)' 
-      }}>
-        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, lineHeight: 1.4 }}>
-          💡 Browse units, enter manually with symbols, convert numbers or cells
-        </Typography>
-      </Box>
+      {/* Main Content - stacked layout */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: 2, p: 1.5 }}>
+        {/* Converter Panel */}
+        <Box>
+          {/* Result Display */}
+          {result && (
+            <SidebarCard title="Result" sx={{ mx: 0.5 }}>
+              <Typography sx={{ ...sidebarStyles.text.body, fontFamily: 'monospace', fontSize: '1.1rem' }}>
+                {result}
+              </Typography>
+            </SidebarCard>
+          )}
 
-      {/* Main Content */}
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Unit Browser Sidebar */}
-        <Box sx={{ 
-          width: 140, 
-          borderRight: '1px solid rgba(33, 150, 243, 0.2)', 
-          bgcolor: 'rgba(33, 150, 243, 0.03)', 
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-          {/* Category Selection */}
-          <Box sx={{ p: 1, borderBottom: '1px solid rgba(33, 150, 243, 0.2)' }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: 600, mb: 0.5, display: 'block' }}>
-              CATEGORY
-            </Typography>
+          {/* Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ mt: 1, mx: 0.5 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Conversion Panel */}
+          <SidebarCard title="Unit Conversion" sx={{ mx: 0.5 }}>
+            {/* From Unit */}
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: 600 }}>
+                  FROM UNIT {activeUnitInput === 'from' && '← click unit'}
+                </Typography>
+              </Box>
+              <TextField
+                fullWidth
+                size="small"
+                value={fromUnit}
+                onChange={(e) => setFromUnit(e.target.value)}
+                onFocus={() => setActiveUnitInput('from')}
+                placeholder="Enter unit (e.g., m, kg, °C)"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: activeUnitInput === 'from' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                    borderRadius: '6px',
+                    '& fieldset': { borderColor: activeUnitInput === 'from' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+                  }
+                }}
+              />
+              {/* Symbol Buttons for From Unit */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                {specialSymbols.map((sym) => (
+                  <Button
+                    key={sym.symbol}
+                    size="small"
+                    onClick={() => insertSymbol(sym.symbol, 'from')}
+                    sx={{
+                      minWidth: 32,
+                      height: 24,
+                      fontSize: 12,
+                      padding: '2px 6px',
+                      bgcolor: 'rgba(33, 150, 243, 0.1)',
+                      color: '#2196f3',
+                      border: '1px solid rgba(33, 150, 243, 0.3)',
+                      '&:hover': {
+                        bgcolor: 'rgba(33, 150, 243, 0.2)',
+                        borderColor: '#2196f3'
+                      }
+                    }}
+                    title={sym.label}
+                  >
+                    {sym.symbol}
+                  </Button>
+                ))}
+              </Box>
+            </Box>
+
+            {/* Swap Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 1 }}>
+              <IconButton
+                onClick={handleSwapUnits}
+                sx={{
+                  bgcolor: 'rgba(33, 150, 243, 0.1)',
+                  border: '1px solid rgba(33, 150, 243, 0.3)',
+                  '&:hover': {
+                    bgcolor: 'rgba(33, 150, 243, 0.2)',
+                    borderColor: '#2196f3',
+                    transform: 'rotate(180deg)',
+                    transition: 'transform 0.3s'
+                  }
+                }}
+              >
+                <SwapIcon sx={{ color: '#2196f3' }} />
+              </IconButton>
+            </Box>
+
+            {/* To Unit */}
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: 600 }}>
+                  TO UNIT {activeUnitInput === 'to' && '← click unit'}
+                </Typography>
+              </Box>
+              <TextField
+                fullWidth
+                size="small"
+                value={toUnit}
+                onChange={(e) => setToUnit(e.target.value)}
+                onFocus={() => setActiveUnitInput('to')}
+                placeholder="Enter unit (e.g., km, g, °F)"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: activeUnitInput === 'to' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                    borderRadius: '6px',
+                    '& fieldset': { borderColor: activeUnitInput === 'to' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+                  }
+                }}
+              />
+              {/* Symbol Buttons for To Unit */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                {specialSymbols.map((sym) => (
+                  <Button
+                    key={sym.symbol}
+                    size="small"
+                    onClick={() => insertSymbol(sym.symbol, 'to')}
+                    sx={{
+                      minWidth: 32,
+                      height: 24,
+                      fontSize: 12,
+                      padding: '2px 6px',
+                      bgcolor: 'rgba(33, 150, 243, 0.1)',
+                      color: '#2196f3',
+                      border: '1px solid rgba(33, 150, 243, 0.3)',
+                      '&:hover': {
+                        bgcolor: 'rgba(33, 150, 243, 0.2)',
+                        borderColor: '#2196f3'
+                      }
+                    }}
+                    title={sym.label}
+                  >
+                    {sym.symbol}
+                  </Button>
+                ))}
+              </Box>
+            </Box>
+
+            <Box sx={{ height: '1px', bgcolor: 'rgba(33, 150, 243, 0.2)', my: 1 }} />
+
+            {/* Value Input */}
+            <Box>
+              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: 600, mb: 0.5, display: 'block' }}>
+                VALUE (number, cell, or range) {focusedInput === 'value' && '← select on spreadsheet'}
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onFocus={() => handleInputFocus('value')}
+                onBlur={handleInputBlur}
+                placeholder="1 or A1 or A1:A10"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: focusedInput === 'value' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                    borderRadius: '6px',
+                    '& fieldset': { borderColor: focusedInput === 'value' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+                  }
+                }}
+              />
+            </Box>
+
+            {/* Output Mode */}
+            <Box sx={{ mt: 1 }}>
+              <FormControl component="fieldset" size="small">
+                <FormLabel component="legend" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: 600, mb: 0.5 }}>
+                  OUTPUT
+                </FormLabel>
+                <RadioGroup
+                  value={outputMode}
+                  onChange={(e) => setOutputMode(e.target.value as OutputMode)}
+                  sx={{ gap: 0.5 }}
+                >
+                  <FormControlLabel
+                    value="cell"
+                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    label={<Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.9)' }}>To specific cell</Typography>}
+                    sx={{ height: 28 }}
+                  />
+                  <FormControlLabel
+                    value="range"
+                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    label={<Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.9)' }}>To range</Typography>}
+                    sx={{ height: 28 }}
+                  />
+                  <FormControlLabel
+                    value="inPlace"
+                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    label={<Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.9)' }}>Replace in-place</Typography>}
+                    sx={{ height: 28 }}
+                  />
+                </RadioGroup>
+              </FormControl>
+              
+              {(outputMode === 'cell' || outputMode === 'range') && (
+                <Box sx={{ mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: 600, mb: 0.5, display: 'block' }}>
+                    {focusedInput === 'outputTarget' && '← select on spreadsheet'}
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    value={outputTarget}
+                    onChange={(e) => setOutputTarget(e.target.value)}
+                    onFocus={() => handleInputFocus('outputTarget')}
+                    onBlur={handleInputBlur}
+                    placeholder={outputMode === 'cell' ? 'e.g., B1' : 'e.g., B1:B10'}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: focusedInput === 'outputTarget' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                        borderRadius: '6px',
+                        '& fieldset': { borderColor: focusedInput === 'outputTarget' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                        '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                        '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                        '& input': { color: 'white', fontFamily: 'monospace', fontSize: 12 }
+                      }
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
+
+            {/* Convert Button */}
+            <Button
+              fullWidth
+              variant="contained"
+              startIcon={isConverting ? <CircularProgress size={16} /> : <ConvertIcon />}
+              onClick={handleConvert}
+              disabled={isConverting || !!compatibilityError}
+              sx={{
+                mt: 2,
+                bgcolor: '#2196f3',
+                fontWeight: 600,
+                fontSize: 14,
+                py: 1.5,
+                outline: 'none',
+                '&:hover': { bgcolor: '#1976d2' },
+                '&:disabled': { bgcolor: '#424242' },
+                '&:focus': { bgcolor: '#2196f3', outline: 'none' },
+                '&:focus-visible': { bgcolor: '#2196f3', outline: 'none', boxShadow: 'none' },
+                '&:active': { bgcolor: '#2196f3' }
+              }}
+            >
+              {isConverting ? 'Converting...' : 'Convert'}
+            </Button>
+
+            {/* Compatibility Error Display */}
+            {compatibilityError && (
+              <Alert severity="error" onClose={() => setCompatibilityError('')} sx={{ mt: 1, py: 0.5, fontSize: 12 }}>
+                {compatibilityError}
+              </Alert>
+            )}
+          </SidebarCard>
+        </Box>
+
+        {/* Category Selection, Search, and Units List below */}
+        <Box>
+          <SidebarCard variant="compact" title="Category" sx={{ mx: 0.5 }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
               {categories.map((cat) => (
                 <Chip
@@ -530,13 +756,12 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                 />
               ))}
             </Box>
-            <Typography variant="caption" sx={{ color: '#2196f3', fontSize: 9, mt: 0.5, display: 'block', textAlign: 'center', textTransform: 'capitalize' }}>
+            <Typography sx={{ ...sidebarStyles.text.caption, textAlign: 'center', textTransform: 'capitalize', mt: 1 }}>
               {category}
             </Typography>
-          </Box>
+          </SidebarCard>
 
-          {/* Unit Search */}
-          <Box sx={{ p: 1, borderBottom: '1px solid rgba(33, 150, 243, 0.2)' }}>
+          <SidebarCard variant="compact" title="Search" sx={{ mx: 0.5 }}>
             <TextField
               fullWidth
               size="small"
@@ -549,22 +774,12 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                   style: { fontSize: 11 }
                 }
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'rgba(33, 150, 243, 0.05)',
-                  borderRadius: '6px',
-                  '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
-                  '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
-                  '& input': { color: 'white', padding: '6px 8px' }
-                }
-              }}
+              sx={sidebarStyles.input}
             />
-          </Box>
+          </SidebarCard>
 
-          {/* Unit List - Browse Only */}
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
-            <List dense sx={{ px: 0.5, py: 0.5 }}>
+          <SidebarCard title="Units" sx={{ flex: 1, display: 'flex', flexDirection: 'column', mx: 0.5 }}>
+            <List dense sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 0.5, py: 0.5, maxHeight: '200px' }}>
               {filteredUnits.map((symbol) => {
                 const unitInfo = availableUnits[symbol];
                 return (
@@ -605,281 +820,10 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                 );
               })}
             </List>
-          </Box>
-        </Box>
-
-        {/* Conversion Panel */}
-        <Box sx={{ flex: 1, p: 1.5, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {/* From Unit */}
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: 600 }}>
-                FROM UNIT {activeUnitInput === 'from' && '← click unit'}
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              size="small"
-              value={fromUnit}
-              onChange={(e) => setFromUnit(e.target.value)}
-              onFocus={() => setActiveUnitInput('from')}
-              placeholder="Enter unit (e.g., m, kg, °C)"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: activeUnitInput === 'from' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
-                  borderRadius: '6px',
-                  '& fieldset': { borderColor: activeUnitInput === 'from' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
-                  '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
-                  '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
-                }
-              }}
-            />
-            {/* Symbol Buttons for From Unit */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-              {specialSymbols.map((sym) => (
-                <Button
-                  key={sym.symbol}
-                  size="small"
-                  onClick={() => insertSymbol(sym.symbol, 'from')}
-                  sx={{
-                    minWidth: 32,
-                    height: 24,
-                    fontSize: 12,
-                    padding: '2px 6px',
-                    bgcolor: 'rgba(33, 150, 243, 0.1)',
-                    color: '#2196f3',
-                    border: '1px solid rgba(33, 150, 243, 0.3)',
-                    '&:hover': {
-                      bgcolor: 'rgba(33, 150, 243, 0.2)',
-                      borderColor: '#2196f3'
-                    }
-                  }}
-                  title={sym.label}
-                >
-                  {sym.symbol}
-                </Button>
-              ))}
-            </Box>
-          </Box>
-
-          {/* Swap Button */}
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <IconButton
-              onClick={handleSwapUnits}
-              sx={{
-                bgcolor: 'rgba(33, 150, 243, 0.1)',
-                border: '1px solid rgba(33, 150, 243, 0.3)',
-                '&:hover': {
-                  bgcolor: 'rgba(33, 150, 243, 0.2)',
-                  borderColor: '#2196f3',
-                  transform: 'rotate(180deg)',
-                  transition: 'transform 0.3s'
-                }
-              }}
-            >
-              <SwapIcon sx={{ color: '#2196f3' }} />
-            </IconButton>
-          </Box>
-
-          {/* To Unit */}
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: 600 }}>
-                TO UNIT {activeUnitInput === 'to' && '← click unit'}
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              size="small"
-              value={toUnit}
-              onChange={(e) => setToUnit(e.target.value)}
-              onFocus={() => setActiveUnitInput('to')}
-              placeholder="Enter unit (e.g., km, g, °F)"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: activeUnitInput === 'to' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
-                  borderRadius: '6px',
-                  '& fieldset': { borderColor: activeUnitInput === 'to' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
-                  '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
-                  '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
-                }
-              }}
-            />
-            {/* Symbol Buttons for To Unit */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-              {specialSymbols.map((sym) => (
-                <Button
-                  key={sym.symbol}
-                  size="small"
-                  onClick={() => insertSymbol(sym.symbol, 'to')}
-                  sx={{
-                    minWidth: 32,
-                    height: 24,
-                    fontSize: 12,
-                    padding: '2px 6px',
-                    bgcolor: 'rgba(33, 150, 243, 0.1)',
-                    color: '#2196f3',
-                    border: '1px solid rgba(33, 150, 243, 0.3)',
-                    '&:hover': {
-                      bgcolor: 'rgba(33, 150, 243, 0.2)',
-                      borderColor: '#2196f3'
-                    }
-                  }}
-                  title={sym.label}
-                >
-                  {sym.symbol}
-                </Button>
-              ))}
-            </Box>
-          </Box>
-
-          <Box sx={{ height: '1px', bgcolor: 'rgba(33, 150, 243, 0.2)', my: 0.5 }} />
-
-          {/* Value Input */}
-          <Box>
-            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: 600, mb: 0.5, display: 'block' }}>
-              VALUE (number, cell, or range) {focusedInput === 'value' && '← select on spreadsheet'}
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onFocus={() => handleInputFocus('value')}
-              onBlur={handleInputBlur}
-              placeholder="1 or A1 or A1:A10"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: focusedInput === 'value' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
-                  borderRadius: '6px',
-                  '& fieldset': { borderColor: focusedInput === 'value' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
-                  '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
-                  '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
-                }
-              }}
-            />
-          </Box>
-
-          {/* Output Mode */}
-          <Box>
-            <FormControl component="fieldset" size="small">
-              <FormLabel component="legend" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: 600, mb: 0.5 }}>
-                OUTPUT
-              </FormLabel>
-              <RadioGroup
-                value={outputMode}
-                onChange={(e) => setOutputMode(e.target.value as OutputMode)}
-                sx={{ gap: 0.5 }}
-              >
-                <FormControlLabel
-                  value="cell"
-                  control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
-                  label={<Typography sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.9)' }}>To specific cell</Typography>}
-                  sx={{ height: 28 }}
-                />
-                <FormControlLabel
-                  value="range"
-                  control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
-                  label={<Typography sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.9)' }}>To range</Typography>}
-                  sx={{ height: 28 }}
-                />
-                <FormControlLabel
-                  value="inPlace"
-                  control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
-                  label={<Typography sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.9)' }}>Replace in-place</Typography>}
-                  sx={{ height: 28 }}
-                />
-              </RadioGroup>
-            </FormControl>
-            
-            {(outputMode === 'cell' || outputMode === 'range') && (
-              <Box>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: 600, mb: 0.5, display: 'block' }}>
-                  {focusedInput === 'outputTarget' && '← select on spreadsheet'}
-                </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  value={outputTarget}
-                  onChange={(e) => setOutputTarget(e.target.value)}
-                  onFocus={() => handleInputFocus('outputTarget')}
-                  onBlur={handleInputBlur}
-                  placeholder={outputMode === 'cell' ? 'e.g., B1' : 'e.g., B1:B10'}
-                  sx={{
-                    mt: 0.5,
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: focusedInput === 'outputTarget' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
-                      borderRadius: '6px',
-                      '& fieldset': { borderColor: focusedInput === 'outputTarget' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
-                      '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                      '&.Mui-focused fieldset': { borderColor: '#2196f3' },
-                      '& input': { color: 'white', fontFamily: 'monospace', fontSize: 12 }
-                    }
-                  }}
-                />
-              </Box>
-            )}
-          </Box>
-
-          {/* Convert Button */}
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={isConverting ? <CircularProgress size={16} /> : <ConvertIcon />}
-            onClick={handleConvert}
-            disabled={isConverting || !!compatibilityError}
-            sx={{
-              bgcolor: '#2196f3',
-              fontWeight: 600,
-              fontSize: 12,
-              py: 1,
-              outline: 'none',
-              '&:hover': { bgcolor: '#2196f3' },
-              '&:disabled': { bgcolor: '#424242' },
-              '&:focus': { bgcolor: '#2196f3', outline: 'none' },
-              '&:focus-visible': { bgcolor: '#2196f3', outline: 'none', boxShadow: 'none' },
-              '&:active': { bgcolor: '#2196f3' }
-            }}
-          >
-            {isConverting ? 'Converting...' : 'Convert'}
-          </Button>
-
-          {/* Compatibility Error Display */}
-          {compatibilityError && (
-            <Alert severity="error" onClose={() => setCompatibilityError('')} sx={{ py: 0.5, fontSize: 11 }}>
-              {compatibilityError}
-            </Alert>
-          )}
-
-          {/* Result Display */}
-          {result && (
-            <Paper sx={{
-              p: 1.5,
-              bgcolor: 'rgba(33, 150, 243, 0.08)',
-              border: '1px solid rgba(33, 150, 243, 0.3)',
-              borderRadius: '6px'
-            }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 10, fontWeight: 600, display: 'block', mb: 0.5 }}>
-                RESULT
-              </Typography>
-              <Typography sx={{ color: '#2196f3', fontFamily: 'monospace', fontSize: 14, fontWeight: 600 }}>
-                {result}
-              </Typography>
-            </Paper>
-          )}
-
-          {/* Error Display */}
-          {error && (
-            <Alert severity="error" onClose={() => setError('')} sx={{ py: 0.5, fontSize: 11 }}>
-              {error}
-            </Alert>
-          )}
+          </SidebarCard>
         </Box>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 

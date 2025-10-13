@@ -2,13 +2,27 @@
 
 **Date**: January 2025  
 **Branch**: univer-spreadsheet  
-**Status**: Planning Complete
+**Status**: Phase 0 Complete, Phase 1 In Progress
+
+**Latest Update**: 2025-10-11 - Migrating from Plotly to ECharts for all plotting
 
 ---
 
 ## Overview
 
 This directory contains detailed implementation plans for all sidebars, tabs, and global UI components in the AnaFis application. Each component follows the established architecture pattern where **Univer.js** is the single source of truth and sidebars extract, process, and write back data.
+
+### 🎯 Key Decision: ECharts Migration
+
+**Why**: Plotly export failures, WebKit errors, and 6x larger bundle size led to migration to Apache ECharts.
+
+**Benefits**:
+- ✅ Reliable PNG/SVG export via `getDataURL()` and `renderToSVGString()`
+- ✅ Native timeline animation component for time-variable graphs
+- ✅ 500KB vs Plotly's 3MB (6x smaller, no WebKit issues)
+- ✅ Future 3D support via echarts-gl plugin
+
+See **[ECHARTS_MIGRATION.md](./ECHARTS_MIGRATION.md)** for detailed rationale and implementation guide.
 
 ---
 
@@ -18,17 +32,15 @@ This directory contains detailed implementation plans for all sidebars, tabs, an
 - **Uncertainty Propagation Sidebar** - Propagate uncertainties through formulas
 - **Unit Conversion Sidebar** - Convert between different units
 - **Data Library Window** - 🗄️ SQLite-based persistent storage with FTS5 search, statistics, preview, CSV/JSON export (Phase 0 - Core Infrastructure COMPLETE)
+- **Quick Plot Sidebar** - ✅ COMPLETE - Simple 2D scatter/line plots with ECharts, error bars, PNG/SVG export, save to Data Library
+
+### 📋 In Progress
+
+None - Phase 1 Complete!
 
 ### 📋 Planned Implementations
 
 #### Sidebars
-
-1. **[Quick Plot Sidebar](./01_quick_plot_sidebar.md)** 📊
-   - **Priority**: High
-   - **Complexity**: Low (Simplified)
-   - **Features**: Simple 2D scatter/line plots, error bars, quick preview
-   - **Dependencies**: Plotly.js, Data Library
-   - **File**: `01_quick_plot_sidebar.md`
 
 2. **[Statistical Analysis Sidebar](./02_statistical_analysis_sidebar.md)** 📈
    - **Priority**: High
@@ -115,22 +127,38 @@ This directory contains detailed implementation plans for all sidebars, tabs, an
    - Global toolbar integration
    - See implementation: `src-tauri/src/data_library/`, `src/DataLibraryWindow.tsx`
 
-### Phase 1: Quick Visualization & Advanced Analysis (Weeks 2-3)
-2. **Quick Plot Sidebar** - Simple 2D previews for rapid feedback
+### Phase 1: Quick Visualization ✅ COMPLETE
+2. ✅ **Quick Plot Sidebar** - Simple 2D previews for rapid feedback
+   - Apache ECharts integration (500KB, reliable PNG/SVG export)
+   - Scatter, line, and error bar plots
+   - Dark/light theme support with auto-scaling axes
+   - Save to Data Library integration
+   - See implementation: `src/components/spreadsheet/QuickPlotSidebar.tsx`
+
+### Phase 2: Code Quality & Linting ✅ COMPLETE
+- ✅ **All ESLint errors fixed** (0 errors)
+- ✅ **All runtime-affecting warnings fixed**
+- ✅ **All TypeScript compilation errors resolved**
+- ✅ **Rust Clippy warnings fixed** (3 issues resolved)
+- ✅ **Type safety improved** (removed all `any` types)
+- ✅ **React hooks dependencies corrected** (useCallback, useEffect)
+- ✅ **Proper ECharts types** (CustomSeriesRenderItemParams, SeriesOption[])
+
+### Phase 3: Advanced Analysis (NEXT - Weeks 2-3)
 3. **Graphs & Fitting Tab** - Advanced plotting and curve fitting (depends on Data Library)
 
-### Phase 2: Statistical Analysis (Week 4)
+### Phase 4: Statistical Analysis (Week 4)
 4. **Statistical Analysis Sidebar** - Complements plotting, essential for data analysis
 
-### Phase 3: Data Quality (Weeks 5-6)
+### Phase 5: Data Quality (Weeks 5-6)
 5. **Data Smoothing Sidebar** - Prepare data for analysis
 6. **Outlier Detection Sidebar** - Data quality control
 
-### Phase 4: Data Management (Weeks 7-8)
+### Phase 6: Data Management (Weeks 7-8)
 7. **Data Validation Sidebar** - Prevent bad data entry
 8. **Metadata Manager Sidebar** - Track experimental context
 
-### Phase 5: Export & Integration (Week 9)
+### Phase 7: Export & Integration (Week 9)
 9. **Export System** - Complete the workflow
 
 ---
@@ -272,11 +300,20 @@ Each sidebar must:
    - ✅ Rust + SQLite backend with FTS5
    - ✅ TypeScript UI with Material-UI
    - ✅ Multi-select and CSV/JSON export with metadata
-3. ✅ Dependencies installed (plotly.js, react-plotly.js, rusqlite, chrono, uuid)
-4. **NEXT**: Implement Quick Plot Sidebar (01) - simple, depends on Data Library ✅
-5. **THEN**: Implement Graphs & Fitting Tab (09) - requires Data Library ✅
+3. ✅ **Quick Plot Sidebar** - FULLY IMPLEMENTED
+   - ✅ Apache ECharts integration (migrated from Plotly)
+   - ✅ Scatter/Line/Error bar plots with auto-scaling
+   - ✅ PNG/SVG export with dark/light themes
+   - ✅ Save to Data Library integration
+4. ✅ **Code Quality** - COMPLETE
+   - ✅ All ESLint errors fixed (0 errors, 0 warnings)
+   - ✅ All TypeScript compilation errors resolved
+   - ✅ Rust Clippy warnings fixed
+   - ✅ Removed all `any` types, added proper ECharts types
+   - ✅ Fixed React hooks dependencies
+5. **NEXT**: Implement Graphs & Fitting Tab (09) - requires Data Library ✅
 6. Implement remaining sidebars following the phase order (02-07)
-7. ✅ Update SpreadsheetTab UI - already has toolbar buttons for Uncertainty & Unit Conversion
+7. ✅ Update SpreadsheetTab UI - already has toolbar buttons for Uncertainty, Unit Conversion, and Quick Plot
 8. ~~Implement Rust backend commands for fitting and statistics~~ (partial - statistics done in Data Library)
 9. Write tests for each component
 

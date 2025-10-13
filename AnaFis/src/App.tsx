@@ -1,19 +1,54 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { DraggableTabBar } from './components/DraggableTabBar';
 import CustomTitleBar from './components/CustomTitleBar';
 import TabButton from './components/TabButton';
-import HomeTab from './pages/HomeTab';
-import SpreadsheetTab from './pages/SpreadsheetTab';
-import FittingTab from './pages/FittingTab';
-import SolverTab from './pages/SolverTab';
-import MonteCarloTab from './pages/MonteCarloTab';
 import { useTabStore } from './hooks/useTabStore';
 import { DetachedTabWindow } from './components/DetachedTabWindow';
+
+// Lazy load tab components for code splitting
+const HomeTab = lazy(() => import('./pages/HomeTab').then(module => ({ default: module.default })));
+const SpreadsheetTab = lazy(() => import('./pages/SpreadsheetTab').then(module => ({ default: module.default })));
+const FittingTab = lazy(() => import('./pages/FittingTab').then(module => ({ default: module.default })));
+const SolverTab = lazy(() => import('./pages/SolverTab').then(module => ({ default: module.default })));
+const MonteCarloTab = lazy(() => import('./pages/MonteCarloTab').then(module => ({ default: module.default })));
+
+// Loading component for lazy-loaded tabs
+const TabLoadingFallback = () => (
+  <Box sx={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    width: '100%',
+    backgroundColor: '#0a0a0a'
+  }}>
+    <CircularProgress sx={{ color: '#2196f3' }} />
+  </Box>
+);
 
 // Material-UI Icons for drag overlay
 // Icons now handled by shared utility function
 
 import type { Tab } from './types/tabs'; // Import the Tab interface
+
+// Helper function to create tab content based on type
+const createTabContent = (tabType: string, openNewTab?: (id: string, title: string, content: React.ReactNode) => void) => {
+  const safeOpenNewTab = openNewTab || (() => {});
+  switch (tabType) {
+    case 'home':
+      return <HomeTab openNewTab={safeOpenNewTab} />;
+    case 'spreadsheet':
+      return <SpreadsheetTab />;
+    case 'fitting':
+      return <FittingTab />;
+    case 'solver':
+      return <SolverTab />;
+    case 'montecarlo':
+      return <MonteCarloTab />;
+    default:
+      return <HomeTab openNewTab={safeOpenNewTab} />;
+  }
+};
 
 // TabInfo interface matching the Rust TabInfo struct
 interface TabInfo {
@@ -32,6 +67,7 @@ import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
 import { AddIcon, SettingsIcon, CalculateIcon, StorageIcon } from './icons';
 
 // Tauri imports
@@ -228,7 +264,9 @@ function App() {
               height: '100%'
             }}
           >
-            {tab.content}
+            <Suspense fallback={<TabLoadingFallback />}>
+              {tab.content}
+            </Suspense>
           </Box>
         ))}
       </>
@@ -271,25 +309,25 @@ function App() {
             let tabContent: React.ReactNode;
             switch (tabType) {
               case 'spreadsheet':
-                tabContent = <SpreadsheetTab />;
+                tabContent = createTabContent('spreadsheet');
                 break;
               case 'fitting':
-                tabContent = <FittingTab />;
+                tabContent = createTabContent('fitting');
                 break;
               case 'solver':
-                tabContent = <SolverTab />;
+                tabContent = createTabContent('solver');
                 break;
               case 'montecarlo':
-                tabContent = <MonteCarloTab />;
+                tabContent = createTabContent('montecarlo');
                 break;
               default:
-                tabContent = <HomeTab openNewTab={addTab} />;
+                tabContent = createTabContent('home', addTab);
             }
 
             addTab(tabId, decodeURIComponent(tabTitle), tabContent);
           } else {
             // Normal startup - add home tab
-            addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
+            addTab('home', 'Home', createTabContent('home', addTab));
           }
         } catch {
           // Fallback - add home tab
@@ -297,7 +335,7 @@ function App() {
         }
       })();
     }
-  }, [addTab]); // Removed isDragPreviewWindow dependency
+  }, [addTab, tabs.length]); // Added tabs.length dependency
 
   // Listen for reattach tab events from detached windows
   useEffect(() => {
@@ -308,19 +346,19 @@ function App() {
       let tabContent: React.ReactNode;
       switch (tabInfo.content_type) {
         case 'spreadsheet':
-          tabContent = <SpreadsheetTab />;
+          tabContent = createTabContent('spreadsheet');
           break;
         case 'fitting':
-          tabContent = <FittingTab />;
+          tabContent = createTabContent('fitting');
           break;
         case 'solver':
-          tabContent = <SolverTab />;
+          tabContent = createTabContent('solver');
           break;
         case 'montecarlo':
-          tabContent = <MonteCarloTab />;
+          tabContent = createTabContent('montecarlo');
           break;
         default:
-          tabContent = <HomeTab openNewTab={addTab} />;
+          tabContent = createTabContent('home', addTab);
       }
 
       // Add the tab back to the main window
@@ -678,7 +716,7 @@ function App() {
 
                 <TabButton
                   label="Spreadsheet"
-                  onClick={() => addTab('spreadsheet-' + Date.now(), 'Spreadsheet', <SpreadsheetTab />)}
+                  onClick={() => addTab('spreadsheet-' + Date.now(), 'Spreadsheet', createTabContent('spreadsheet'))}
                   hoverColor="#64b5f6"
                   hoverBackgroundColor="rgba(33, 150, 243, 0.12)"
                   hoverBorderColor="rgba(33, 150, 243, 0.2)"
@@ -686,7 +724,7 @@ function App() {
                 />
                 <TabButton
                   label="Fitting"
-                  onClick={() => addTab('fitting-' + Date.now(), 'Fitting', <FittingTab />)}
+                  onClick={() => addTab('fitting-' + Date.now(), 'Fitting', createTabContent('fitting'))}
                   hoverColor="#ffb74d"
                   hoverBackgroundColor="rgba(255, 152, 0, 0.12)"
                   hoverBorderColor="rgba(255, 152, 0, 0.2)"
@@ -694,7 +732,7 @@ function App() {
                 />
                 <TabButton
                   label="Solver"
-                  onClick={() => addTab('solver-' + Date.now(), 'Solver', <SolverTab />)}
+                  onClick={() => addTab('solver-' + Date.now(), 'Solver', createTabContent('solver'))}
                   hoverColor="#81c784"
                   hoverBackgroundColor="rgba(76, 175, 80, 0.12)"
                   hoverBorderColor="rgba(76, 175, 80, 0.2)"
@@ -702,7 +740,7 @@ function App() {
                 />
                 <TabButton
                   label="Monte Carlo"
-                  onClick={() => addTab('montecarlo-' + Date.now(), 'Monte Carlo', <MonteCarloTab />)}
+                  onClick={() => addTab('montecarlo-' + Date.now(), 'Monte Carlo', createTabContent('montecarlo'))}
                   hoverColor="#f06292"
                   hoverBackgroundColor="rgba(233, 30, 99, 0.12)"
                   hoverBorderColor="rgba(233, 30, 99, 0.2)"

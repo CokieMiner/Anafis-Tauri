@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef} from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -8,13 +8,16 @@ import {
 import {
   Transform as UnitConverterIcon,
   AutoFixHigh as UncertaintyIcon,
-  BarChart as QuickPlotIcon
+  BarChart as QuickPlotIcon,
+  FileDownload as ExportIcon
 } from '@mui/icons-material';
 import { LocaleType, IWorkbookData, ICellData } from '@univerjs/core';
 import UniverSpreadsheet, { UniverSpreadsheetRef } from '../components/spreadsheet/UniverSpreadsheet';
 import UncertaintySidebar from '../components/spreadsheet/UncertaintySidebar';
 import UnitConversionSidebar from '../components/spreadsheet/UnitConversionSidebar';
 import QuickPlotSidebar from '../components/spreadsheet/QuickPlotSidebar';
+import ExportSidebar from '../components/spreadsheet/ExportSidebar';
+import { ExportFormat, ExportRangeMode, JsonFormat } from '../types/export';
 
 interface Variable {
   name: string;
@@ -24,7 +27,7 @@ interface Variable {
 
 const SpreadsheetTab: React.FC = () => {
   // Sidebar state management
-  type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | null;
+  type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | null;
   const [activeSidebar, setActiveSidebar] = useState<SidebarType>(null);
   
   // Uncertainty sidebar state - persisted across sidebar switches
@@ -50,12 +53,21 @@ const SpreadsheetTab: React.FC = () => {
   const [quickPlotType, setQuickPlotType] = useState<'scatter' | 'line' | 'both'>('scatter');
   const [quickPlotShowErrorBars, setQuickPlotShowErrorBars] = useState<boolean>(false);
   
+  // Export sidebar state - persisted across sidebar switches
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
+  const [exportRangeMode, setExportRangeMode] = useState<ExportRangeMode>('selection');
+  const [exportCustomRange, setExportCustomRange] = useState<string>('');
+  const [exportIncludeHeaders, setExportIncludeHeaders] = useState<boolean>(true);
+  const [exportJsonFormat, setExportJsonFormat] = useState<JsonFormat>('records');
+  const [exportPrettyPrint, setExportPrettyPrint] = useState<boolean>(true);
+  const [exportCustomDelimiter, setExportCustomDelimiter] = useState<string>('|');
+  
   // Spreadsheet state
   const [spreadsheetData, setSpreadsheetData] = useState<IWorkbookData | undefined>(undefined);
   const univerSpreadsheetRef = useRef<UniverSpreadsheetRef>(null);
 
-  // Initialize empty Univer workbook
-  const createEmptyWorkbook = (): IWorkbookData => {
+  // Initialize empty Univer workbook - memoized to prevent recreation
+  const emptyWorkbook = useMemo((): IWorkbookData => {
     const sheetId = 'sheet-01';
     
     return {
@@ -75,7 +87,11 @@ const SpreadsheetTab: React.FC = () => {
       },
       sheetOrder: [sheetId],
     };
-  };
+  }, []); // Empty dependency array - only create once
+
+  const createEmptyWorkbook = useCallback((): IWorkbookData => {
+    return emptyWorkbook;
+  }, [emptyWorkbook]);
 
   const handleCellChange = useCallback((cellRef: string, value: ICellData) => {
     // Univer handles all data storage now - no backend sync needed
@@ -110,6 +126,13 @@ const SpreadsheetTab: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__quickPlotSelectionHandler(cellRef);
     }
+    
+    // Call export sidebar handler if it exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (window as any).__exportSelectionHandler === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__exportSelectionHandler(cellRef);
+    }
   }, []);
 
   useEffect(() => {
@@ -119,7 +142,7 @@ const SpreadsheetTab: React.FC = () => {
     };
 
     initializeSpreadsheet();
-  }, []);
+  }, [createEmptyWorkbook]);
 
   // Handlers
   const handleOpenUnitConverter = () => {
@@ -135,6 +158,11 @@ const SpreadsheetTab: React.FC = () => {
   const handleOpenQuickPlot = () => {
     // Toggle sidebar - if already open, close it; otherwise open it
     setActiveSidebar(prev => prev === 'quickPlot' ? null : 'quickPlot');
+  };
+
+  const handleOpenExport = () => {
+    // Toggle sidebar - if already open, close it; otherwise open it
+    setActiveSidebar(prev => prev === 'export' ? null : 'export');
   };
 
   return (
@@ -241,6 +269,39 @@ const SpreadsheetTab: React.FC = () => {
             Unit Converter
           </Button>
 
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<ExportIcon />}
+            onClick={handleOpenExport}
+            sx={{
+              mr: 1,
+              color: activeSidebar === 'export' ? '#2196f3' : 'white',
+              borderColor: activeSidebar === 'export' ? '#2196f3' : '#64b5f6',
+              backgroundColor: activeSidebar === 'export' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
+              outline: 'none',
+              '&:hover': {
+                borderColor: '#2196f3',
+                backgroundColor: activeSidebar === 'export' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
+              },
+              '&:focus': {
+                borderColor: '#2196f3',
+                outline: 'none',
+              },
+              '&:focus-visible': {
+                borderColor: '#2196f3',
+                outline: 'none',
+                boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
+              },
+              '&:active': {
+                borderColor: '#2196f3',
+                outline: 'none',
+              }
+            }}
+          >
+            Export
+          </Button>
+
           <Box sx={{ flexGrow: 1 }} />
         </Toolbar>
       </Paper>
@@ -345,6 +406,29 @@ const SpreadsheetTab: React.FC = () => {
                 setPlotType={setQuickPlotType}
                 showErrorBars={quickPlotShowErrorBars}
                 setShowErrorBars={setQuickPlotShowErrorBars}
+              />
+            )}
+            {/* Export Sidebar - positioned within spreadsheet */}
+            {activeSidebar === 'export' && (
+              <ExportSidebar
+                open={true}
+                onClose={() => setActiveSidebar(null)}
+                univerRef={univerSpreadsheetRef}
+                onSelectionChange={handleSelectionChange}
+                exportFormat={exportFormat}
+                setExportFormat={setExportFormat}
+                rangeMode={exportRangeMode}
+                setRangeMode={setExportRangeMode}
+                customRange={exportCustomRange}
+                setCustomRange={setExportCustomRange}
+                includeHeaders={exportIncludeHeaders}
+                setIncludeHeaders={setExportIncludeHeaders}
+                jsonFormat={exportJsonFormat}
+                setJsonFormat={setExportJsonFormat}
+                prettyPrint={exportPrettyPrint}
+                setPrettyPrint={setExportPrettyPrint}
+                customDelimiter={exportCustomDelimiter}
+                setCustomDelimiter={setExportCustomDelimiter}
               />
             )}
           </Box>

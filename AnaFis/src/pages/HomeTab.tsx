@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Box, Typography, Paper, List, ListItemButton, ListItemIcon, ListItemText, Card, CardContent, Avatar } from '@mui/material'; // Updated import
 import TableChartIcon from '@mui/icons-material/TableChart'; // Spreadsheet
 import ShowChartIcon from '@mui/icons-material/ShowChart'; // Fitting
@@ -20,9 +20,11 @@ interface HomeTabProps {
 }
 
 const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
-  const handleNewTabClick = (tabType: string, title: string, content: React.ReactNode) => {
-    openNewTab(`${tabType}-${Date.now()}`, title, content);
-  };
+  const handleNewTabClick = useCallback((tabType: string, title: string, content: React.ReactNode) => {
+    // Generate unique ID at call time (event handler, not during render)
+    const uniqueId = `${tabType}-${Date.now()}`;
+    openNewTab(uniqueId, title, content);
+  }, [openNewTab]);
 
   const quickActions = [
     {

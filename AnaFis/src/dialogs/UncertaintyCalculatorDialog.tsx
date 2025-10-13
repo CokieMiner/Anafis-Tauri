@@ -20,11 +20,10 @@ import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 
 interface UncertaintyCalculatorDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  // Dialog now takes full viewport, close handled by window
 }
 
-const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = ({ isOpen, onClose: _onClose }) => {
+const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = () => {
   const [formula, setFormula] = useState('');
   const [variablesInput, setVariablesInput] = useState('');
   const [mode, setMode] = useState<'calculate' | 'propagate'>('calculate');
@@ -44,17 +43,27 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
   };
 
   // Effect to update dynamic variable inputs when variablesInput changes
+  // This is intentional: we need to derive state from the variables input
   useEffect(() => {
     const newVariables = variablesInput.split(',').map(v => v.trim()).filter(Boolean);
-    const updatedVariableValues: Record<string, { value: string; uncertainty: string }> = {};
-
-    newVariables.forEach(v => {
-      updatedVariableValues[v] = variableValues[v] || { value: '', uncertainty: '' };
+    
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVariableValues(prevValues => {
+      const updatedVariableValues: Record<string, { value: string; uncertainty: string }> = {};
+      newVariables.forEach(v => {
+        updatedVariableValues[v] = prevValues[v] || { value: '', uncertainty: '' };
+      });
+      return updatedVariableValues;
     });
-    setVariableValues(updatedVariableValues);
   }, [variablesInput]);
 
-  if (!isOpen) return null;
+  // Auto-resize the window based on content
+  useEffect(() => {
+    const event = new CustomEvent('anafis_content_change', {
+      detail: { content: 'uncertainty_calculator', height: 'auto' }
+    });
+    window.dispatchEvent(event);
+  }, [formula, mode, variableValues, calculationResult, latexFormula, stringRepresentation]);
 
   const handleCalculate = async () => {
     if (!formula) {
@@ -128,24 +137,27 @@ const UncertaintyCalculatorDialog: React.FC<UncertaintyCalculatorDialogProps> = 
     }
   };
 
-  // Notify outer window that content changed so it can resize immediately
-  // Note: do NOT dispatch on simple mode toggles (to avoid immediate resize on Mode change)
-  useEffect(() => {
-    const ev = new Event('anafis_content_change');
-    document.dispatchEvent(ev);
-  }, [stringRepresentation, latexFormula, Object.keys(variableValues).length]);
-
   return (
     <Box
       sx={{
-        width: '100%',
-        boxSizing: 'border-box',
-  minWidth: '400px',
-  maxWidth: '500px',
-        '& *': { boxSizing: 'border-box' },
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh', // Full viewport height
+        width: '100vw', // Full viewport width
+        backgroundColor: 'background.default',
+        overflow: 'hidden'
       }}
     >
-      <Box sx={{ p: 1, boxSizing: 'border-box' }}>
+      
+      {/* Scrollable Content Area */}
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          p: 2,
+          boxSizing: 'border-box'
+        }}
+      >
         {/* Formula Input */}
         <Box sx={{ mb: 1.5 }}>
           <TextField

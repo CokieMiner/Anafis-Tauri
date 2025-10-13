@@ -5,6 +5,7 @@ mod utils;
 mod unit_conversion;
 mod scientific;
 mod data_library;
+mod export;
 
 use tauri::Manager;
 
@@ -58,7 +59,17 @@ pub fn run() {
             data_library::commands::get_all_tags,
             data_library::commands::export_sequences_csv,
             data_library::commands::export_sequences_json,
+            
+            // Export Commands (2 commands)
+            export::text::export_to_text,
+            export::json::export_to_json,
+            
+            // Utility Commands (File Operations)
+            utils::file_operations::save_png_file,
+            utils::file_operations::save_image_from_data_url,
+            utils::file_operations::save_svg_file,
         ])
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize logging
             if let Err(e) = utils::init_logging() {
