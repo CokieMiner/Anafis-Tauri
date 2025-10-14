@@ -67,7 +67,7 @@ const SpreadsheetTab: React.FC = () => {
   
   // Spreadsheet state
   const [spreadsheetData, setSpreadsheetData] = useState<WorkbookData | undefined>(undefined);
-  const univerSpreadsheetRef = useRef<SpreadsheetRef>(null);
+  const spreadsheetRef = useRef<SpreadsheetRef>(null);
 
   // Initialize empty workbook - memoized to prevent recreation
   const emptyWorkbook = useMemo((): WorkbookData => {
@@ -340,7 +340,7 @@ const SpreadsheetTab: React.FC = () => {
             <Box sx={{ flex: 1, overflow: 'hidden' }}>
               {spreadsheetData && (
                 <UniverAdapter
-                  ref={univerSpreadsheetRef}
+                  ref={spreadsheetRef}
                   initialData={spreadsheetData}
                   onCellChange={handleCellChange}
                   onFormulaIntercept={handleFormulaIntercept}
@@ -353,7 +353,7 @@ const SpreadsheetTab: React.FC = () => {
               <UncertaintySidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={univerSpreadsheetRef}
+                univerRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
                 onPropagationComplete={(resultRange: string) => {
                   console.log('Propagation complete, results in:', resultRange);
@@ -374,7 +374,7 @@ const SpreadsheetTab: React.FC = () => {
               <UnitConversionSidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={univerSpreadsheetRef}
+                univerRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
                 category={unitConversionCategory}
                 setCategory={setUnitConversionCategory}
@@ -391,7 +391,7 @@ const SpreadsheetTab: React.FC = () => {
               <QuickPlotSidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={univerSpreadsheetRef}
+                univerRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
                 xRange={quickPlotXRange}
                 setXRange={setQuickPlotXRange}
@@ -414,7 +414,7 @@ const SpreadsheetTab: React.FC = () => {
               <ExportSidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={univerSpreadsheetRef}
+                univerRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
                 exportFormat={exportFormat}
                 setExportFormat={setExportFormat}

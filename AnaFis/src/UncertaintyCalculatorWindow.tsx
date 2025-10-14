@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 // Material-UI Imports
 import { ThemeProvider } from '@mui/material';
@@ -50,6 +50,9 @@ function UncertaintyCalculatorWindow() {
   const [stringRepresentation, setStringRepresentation] = useState('');
   const [latexFormula, setLatexFormula] = useState('');
 
+  // Ref to store current variables for preserving values
+  const variablesRef = useRef<Variable[]>(defaultVariables);
+
   const handleOpenLatexPreview = async () => {
     try {
       await invoke('open_latex_preview_window', {
@@ -61,13 +64,16 @@ function UncertaintyCalculatorWindow() {
     }
   };
 
-  useEffect(() => {
-    const newVariableNames = variablesInput.split(',').map(v => v.trim()).filter(Boolean);
+  // Handle variables input change
+  const handleVariablesInputChange = (value: string) => {
+    setVariablesInput(value);
+    
+    const newVariableNames = value.split(',').map(v => v.trim()).filter(Boolean);
     const updatedVariables: Variable[] = [];
     const existingValues: Record<string, { value: string; uncertainty: string }> = {};
 
     // Preserve existing values for variables that still exist
-    variables.forEach(v => {
+    variablesRef.current.forEach(v => {
       existingValues[v.name] = { value: v.value, uncertainty: v.uncertainty };
     });
 
@@ -81,12 +87,13 @@ function UncertaintyCalculatorWindow() {
     });
 
     setVariables(updatedVariables);
+    variablesRef.current = updatedVariables;
 
     // Adjust selected index if it's out of bounds
     if (selectedVariableIndex >= updatedVariables.length) {
       setSelectedVariableIndex(Math.max(0, updatedVariables.length - 1));
     }
-  }, [variablesInput]);
+  };
 
   const updateVariable = (index: number, field: keyof Variable, value: string) => {
     const updated = [...variables];
@@ -244,7 +251,7 @@ function UncertaintyCalculatorWindow() {
                   label="Variables (comma-separated)"
                   placeholder="Enter variable names separated by commas (e.g., x, y, z)"
                   value={variablesInput}
-                  onChange={(e) => setVariablesInput(e.target.value)}
+                  onChange={(e) => handleVariablesInputChange(e.target.value)}
                   variant="outlined"
                   size="small"
                   fullWidth

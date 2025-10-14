@@ -61,7 +61,7 @@ export default defineConfig(() => ({
           'vendor-math': ['katex', 'react-katex'],
           'vendor-tauri': ['@tauri-apps/api', '@tauri-apps/plugin-dialog'],
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
-          'vendor-utils': ['zustand', 'react-virtualized-auto-sizer', 'react-window', 'react-window-infinite-loader'],
+          'vendor-utils': ['zustand'],
         },
         // Optimize chunk file names
         chunkFileNames: (chunkInfo) => {
