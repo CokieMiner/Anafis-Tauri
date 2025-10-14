@@ -50,8 +50,8 @@ html {
   background-color: #0a0a0a !important;
   /* Force dark background */
   color: #ffffff;
-  overflow: hidden;
-  /* Prevent scrollbars during loading */
+  /* Allow overflow so individual windows can control scroll behaviour */
+  overflow: visible;
   /* Disable pinch-to-zoom */
   touch-action: manipulation;
 }
@@ -62,12 +62,12 @@ body {
   min-width: 320px;
   min-height: 100vh;
   width: 100vw;
-  overflow-x: hidden;
+  overflow-x: visible;
   background-color: #0a0a0a !important;
   /* Force dark background */
   color: #ffffff;
-  overflow: hidden;
-  /* Prevent scrollbars during loading */
+  /* Allow overflow so windows can be measured and resized */
+  overflow: visible;
   /* Disable pinch-to-zoom */
   touch-action: manipulation;
 }
@@ -79,8 +79,7 @@ body {
   padding: 0;
   background-color: #0a0a0a !important;
   /* Force dark background */
-  overflow: hidden;
-  /* Prevent scrollbars during loading */
+  overflow: visible;
 }
 
 /* Spreadsheet grid and cell styles for dark mode */

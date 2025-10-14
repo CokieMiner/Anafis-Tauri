@@ -17,7 +17,7 @@
         "height": 600,
         "maximized": true,
         "decorations": false,
-        "transparent": true,
+        "transparent": false,
         "center": true,
         "resizable": true,
         "maximizable": true,

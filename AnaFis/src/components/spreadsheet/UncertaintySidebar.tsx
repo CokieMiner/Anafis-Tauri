@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Box, Typography, IconButton, List, ListItemButton, ListItemText, TextField, Button } from '@mui/material';
 import { Close as CloseIcon, Add as AddIcon, Delete as DeleteIcon, PlayArrow as RunIcon } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
-import { UniverSpreadsheetRef } from './UniverSpreadsheet';
+import { SpreadsheetRef } from './SpreadsheetInterface';
 import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
 import { sidebarStyles } from '../../utils/sidebarStyles';
 import SidebarCard from '../ui/SidebarCard';
+import { anafisColors } from '../../themes';
 
 interface Variable {
   name: string;
@@ -23,7 +24,7 @@ type FocusedInputType =
 interface UncertaintySidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef: React.RefObject<UniverSpreadsheetRef | null>;
+  univerRef: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   onPropagationComplete?: (resultRange: string) => void;
   // Lifted state
@@ -246,11 +247,11 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                   borderRadius: '6px',
                   border: '1px solid rgba(33, 150, 243, 0.2)',
                   bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.05)',
-                  color: selectedVariable === index ? '#2196f3' : 'rgba(255, 255, 255, 0.7)',
+                  color: selectedVariable === index ? anafisColors.spreadsheet : 'rgba(255, 255, 255, 0.7)',
                   transition: 'all 0.2s',
                   '&:hover': {
                     bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.25)' : 'rgba(33, 150, 243, 0.15)',
-                    borderColor: '#2196f3',
+                    borderColor: anafisColors.spreadsheet,
                     color: '#ffffff',
                     transform: 'translateY(-1px)',
                     boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
@@ -293,7 +294,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                   }}
                   inputProps={{
                     style: {
-                      color: '#2196f3',
+                      color: anafisColors.spreadsheet,
                       fontFamily: 'monospace',
                       fontSize: 14,
                       fontWeight: 600,

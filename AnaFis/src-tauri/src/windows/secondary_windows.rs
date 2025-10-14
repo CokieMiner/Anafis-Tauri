@@ -37,16 +37,16 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
     let config = WindowConfig {
         title: "Uncertainty Calculator".to_string(),
         url: "uncertainty-calculator.html".to_string(),
-        width: 504.0,
-        height: 450.0,
+        width: 600.0, // Wider default to accommodate two-column layout properly
+        height: 670.0, // Increased default height for more content
         resizable: true,
         decorations: false,
-        transparent: true,
+        transparent: false,
         always_on_top: true,
         skip_taskbar: true,
         parent: Some("main".to_string()),
-        min_width: Some(400.0),
-        min_height: None, // No minimum height to allow auto-resize
+        min_width: Some(600.0), // More reasonable minimum width for two columns
+        min_height: Some(670.0), // Increased minimum height to ensure rendered formula section is always visible
     };
 
     create_or_focus_window(&app, "uncertainty-calculator", config)
@@ -153,7 +153,7 @@ pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, ti
     .map_err(|e| format!("Failed to create window: {e}"))?;
 
     // Show and focus the window
-    let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
+    let _ = window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0)));
     window.show().map_err(|e| format!("Failed to show window: {e}"))?;
     window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
 

@@ -394,15 +394,15 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
             boxShadow: 'none',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : '#2196f3 !important',
+              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.secondary.main} !important`,
               color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : '#ffffff',
               transform: (!isTauri || !windowReady) ? 'none' : 'scale(1.1)',
-              boxShadow: (!isTauri || !windowReady) ? 'none' : '0 2px 8px rgba(33, 150, 243, 0.4)',
+              boxShadow: (!isTauri || !windowReady) ? 'none' : `0 2px 8px ${theme.palette.secondary.main}40`,
               outline: 'none !important',
               border: 'none !important',
             },
             '&:active': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.primary.main} !important`,
+              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.secondary.main} !important`,
               transform: (!isTauri || !windowReady) ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',

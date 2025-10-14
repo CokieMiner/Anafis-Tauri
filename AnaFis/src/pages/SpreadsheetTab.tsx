@@ -11,13 +11,16 @@ import {
   BarChart as QuickPlotIcon,
   FileDownload as ExportIcon
 } from '@mui/icons-material';
-import { LocaleType, IWorkbookData, ICellData } from '@univerjs/core';
-import UniverSpreadsheet, { UniverSpreadsheetRef } from '../components/spreadsheet/UniverSpreadsheet';
+
+import { UniverAdapter } from '../components/spreadsheet/univer';
+import { SpreadsheetRef, CellValue, WorkbookData } from '../components/spreadsheet/SpreadsheetInterface';
+
 import UncertaintySidebar from '../components/spreadsheet/UncertaintySidebar';
 import UnitConversionSidebar from '../components/spreadsheet/UnitConversionSidebar';
 import QuickPlotSidebar from '../components/spreadsheet/QuickPlotSidebar';
 import ExportSidebar from '../components/spreadsheet/ExportSidebar';
 import { ExportFormat, ExportRangeMode, JsonFormat } from '../types/export';
+import { anafisColors } from '../themes';
 
 interface Variable {
   name: string;
@@ -63,24 +66,24 @@ const SpreadsheetTab: React.FC = () => {
   const [exportCustomDelimiter, setExportCustomDelimiter] = useState<string>('|');
   
   // Spreadsheet state
-  const [spreadsheetData, setSpreadsheetData] = useState<IWorkbookData | undefined>(undefined);
-  const univerSpreadsheetRef = useRef<UniverSpreadsheetRef>(null);
+  const [spreadsheetData, setSpreadsheetData] = useState<WorkbookData | undefined>(undefined);
+  const univerSpreadsheetRef = useRef<SpreadsheetRef>(null);
 
-  // Initialize empty Univer workbook - memoized to prevent recreation
-  const emptyWorkbook = useMemo((): IWorkbookData => {
+  // Initialize empty workbook - memoized to prevent recreation
+  const emptyWorkbook = useMemo((): WorkbookData => {
     const sheetId = 'sheet-01';
     
     return {
       id: 'spreadsheet-workbook',
       name: 'AnaFis Spreadsheet',
       appVersion: '1.0.0',
-      locale: LocaleType.EN_US,
+      locale: 'EN_US', // Abstract locale identifier
       styles: {},
       sheets: {
         [sheetId]: {
           id: sheetId,
           name: 'Sheet1',
-          cellData: {}, // Start with empty cells - Univer handles everything
+          cellData: {}, // Start with empty cells
           rowCount: 1000,
           columnCount: 26,
         }
@@ -89,16 +92,14 @@ const SpreadsheetTab: React.FC = () => {
     };
   }, []); // Empty dependency array - only create once
 
-  const createEmptyWorkbook = useCallback((): IWorkbookData => {
+  const createEmptyWorkbook = useCallback((): WorkbookData => {
     return emptyWorkbook;
   }, [emptyWorkbook]);
 
-  const handleCellChange = useCallback((cellRef: string, value: ICellData) => {
-    // Univer handles all data storage now - no backend sync needed
+  const handleCellChange = useCallback((cellRef: string, value: CellValue) => {
+    // Spreadsheet handles all data storage now - no backend sync needed
     console.log('Cell changed:', cellRef, value);
-  }, []);
-
-  const handleFormulaIntercept = useCallback((cellRef: string, formula: string) => {
+  }, []);  const handleFormulaIntercept = useCallback((cellRef: string, formula: string) => {
     // Univer handles formulas - no backend sync needed
     console.log('Formula set:', cellRef, formula);
   }, []);
@@ -177,25 +178,25 @@ const SpreadsheetTab: React.FC = () => {
             onClick={handleOpenQuickPlot}
             sx={{
               mr: 1,
-              color: activeSidebar === 'quickPlot' ? '#2196f3' : 'white',
-              borderColor: activeSidebar === 'quickPlot' ? '#2196f3' : '#64b5f6',
+              color: activeSidebar === 'quickPlot' ? anafisColors.spreadsheet : 'white',
+              borderColor: activeSidebar === 'quickPlot' ? anafisColors.spreadsheet : '#64b5f6',
               backgroundColor: activeSidebar === 'quickPlot' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
               outline: 'none',
               '&:hover': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 backgroundColor: activeSidebar === 'quickPlot' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
               },
               '&:focus': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               },
               '&:focus-visible': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
                 boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
               },
               '&:active': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               }
             }}
@@ -210,25 +211,25 @@ const SpreadsheetTab: React.FC = () => {
             onClick={handleOpenUncertaintyPropagation}
             sx={{
               mr: 1,
-              color: activeSidebar === 'uncertainty' ? '#2196f3' : 'white',
-              borderColor: activeSidebar === 'uncertainty' ? '#2196f3' : '#64b5f6',
+              color: activeSidebar === 'uncertainty' ? anafisColors.spreadsheet : 'white',
+              borderColor: activeSidebar === 'uncertainty' ? anafisColors.spreadsheet : '#64b5f6',
               backgroundColor: activeSidebar === 'uncertainty' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
               outline: 'none',
               '&:hover': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 backgroundColor: activeSidebar === 'uncertainty' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
               },
               '&:focus': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               },
               '&:focus-visible': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
                 boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
               },
               '&:active': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               }
             }}
@@ -243,25 +244,25 @@ const SpreadsheetTab: React.FC = () => {
             onClick={handleOpenUnitConverter}
             sx={{
               mr: 1,
-              color: activeSidebar === 'unitConvert' ? '#2196f3' : 'white',
-              borderColor: activeSidebar === 'unitConvert' ? '#2196f3' : '#64b5f6',
+              color: activeSidebar === 'unitConvert' ? anafisColors.spreadsheet : 'white',
+              borderColor: activeSidebar === 'unitConvert' ? anafisColors.spreadsheet : '#64b5f6',
               backgroundColor: activeSidebar === 'unitConvert' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
               outline: 'none',
               '&:hover': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 backgroundColor: activeSidebar === 'unitConvert' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
               },
               '&:focus': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               },
               '&:focus-visible': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
                 boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
               },
               '&:active': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               }
             }}
@@ -276,25 +277,25 @@ const SpreadsheetTab: React.FC = () => {
             onClick={handleOpenExport}
             sx={{
               mr: 1,
-              color: activeSidebar === 'export' ? '#2196f3' : 'white',
-              borderColor: activeSidebar === 'export' ? '#2196f3' : '#64b5f6',
+              color: activeSidebar === 'export' ? anafisColors.spreadsheet : 'white',
+              borderColor: activeSidebar === 'export' ? anafisColors.spreadsheet : '#64b5f6',
               backgroundColor: activeSidebar === 'export' ? 'rgba(33, 150, 243, 0.2)' : 'transparent',
               outline: 'none',
               '&:hover': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 backgroundColor: activeSidebar === 'export' ? 'rgba(33, 150, 243, 0.3)' : 'rgba(33, 150, 243, 0.1)'
               },
               '&:focus': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               },
               '&:focus-visible': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
                 boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.5)',
               },
               '&:active': {
-                borderColor: '#2196f3',
+                borderColor: anafisColors.spreadsheet,
                 outline: 'none',
               }
             }}
@@ -338,7 +339,7 @@ const SpreadsheetTab: React.FC = () => {
           }}>
             <Box sx={{ flex: 1, overflow: 'hidden' }}>
               {spreadsheetData && (
-                <UniverSpreadsheet
+                <UniverAdapter
                   ref={univerSpreadsheetRef}
                   initialData={spreadsheetData}
                   onCellChange={handleCellChange}

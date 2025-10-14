@@ -24,12 +24,13 @@ import ImageIcon from '@mui/icons-material/Image';
 
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import * as echarts from 'echarts';
-import { UniverSpreadsheetRef } from './UniverSpreadsheet';
+import { SpreadsheetRef } from './SpreadsheetInterface';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { sidebarStyles } from '../../utils/sidebarStyles';
 import SidebarCard from '../ui/SidebarCard';
 import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
+import { anafisColors } from '../../themes';
 
 // Icon aliases for clarity
 const PlotIcon = ShowChartIcon;
@@ -38,7 +39,7 @@ const ExportIcon = ImageIcon;
 interface QuickPlotSidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef?: React.RefObject<UniverSpreadsheetRef | null>;
+  univerRef?: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   // Lifted state for persistence
   xRange: string;
@@ -264,7 +265,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
         type: 'scatter',
         data: scatterData,
         symbolSize: 8,
-        itemStyle: { color: '#2196f3' },
+        itemStyle: { color: anafisColors.spreadsheet },
         z: 2,
       });
 
@@ -316,7 +317,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
         smooth: false,
         showSymbol: false,
         lineStyle: { 
-          color: plotType === 'both' ? '#4caf50' : '#2196f3',
+          color: plotType === 'both' ? '#4caf50' : anafisColors.spreadsheet,
           width: 2 
         },
         z: 0,
@@ -388,7 +389,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
         trigger: 'axis',
         axisPointer: { type: 'cross' },
         backgroundColor: tooltipBg,
-        borderColor: '#2196f3',
+        borderColor: anafisColors.spreadsheet,
         textStyle: { color: textColor },
       },
     };
@@ -681,7 +682,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
                 checked={showErrorBars}
                 onChange={(e) => setShowErrorBars(e.target.checked)}
                 size="small"
-                sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }}
+                sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }}
               />
             }
             label={
@@ -724,17 +725,17 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
             >
               <FormControlLabel
                 value="scatter"
-                control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                 label={<Typography sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.9)' }}>Scatter</Typography>}
               />
               <FormControlLabel
                 value="line"
-                control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                 label={<Typography sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.9)' }}>Line</Typography>}
               />
               <FormControlLabel
                 value="both"
-                control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                 label={<Typography sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.9)' }}>Both</Typography>}
               />
             </RadioGroup>
@@ -750,7 +751,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
           disabled={isPlotting || !xRange || !yRange}
           sx={{
             mb: 2,
-            bgcolor: '#2196f3',
+            bgcolor: anafisColors.spreadsheet,
             fontWeight: 600,
             fontSize: 12,
             py: 1,
@@ -808,9 +809,9 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               startIcon={<SaveIcon />}
               onClick={handleSaveToLibrary}
               sx={{
-                color: '#2196f3',
+                color: anafisColors.spreadsheet,
                 borderColor: 'rgba(33, 150, 243, 0.5)',
-                '&:hover': { borderColor: '#2196f3', bgcolor: 'rgba(33, 150, 243, 0.1)' },
+                '&:hover': { borderColor: anafisColors.spreadsheet, bgcolor: 'rgba(33, 150, 243, 0.1)' },
               }}
             >
               Save to Library
@@ -821,9 +822,9 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               startIcon={<ExportIcon />}
               onClick={handleExportPNG}
               sx={{
-                color: '#2196f3',
+                color: anafisColors.spreadsheet,
                 borderColor: 'rgba(33, 150, 243, 0.5)',
-                '&:hover': { borderColor: '#2196f3', bgcolor: 'rgba(33, 150, 243, 0.1)' },
+                '&:hover': { borderColor: anafisColors.spreadsheet, bgcolor: 'rgba(33, 150, 243, 0.1)' },
               }}
             >
               Export Graph
@@ -842,7 +843,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               }
             }}
           >
-            <DialogTitle sx={{ color: '#2196f3', borderBottom: '1px solid rgba(33, 150, 243, 0.2)' }}>
+            <DialogTitle sx={{ color: anafisColors.spreadsheet, borderBottom: '1px solid rgba(33, 150, 243, 0.2)' }}>
               Save to Data Library
             </DialogTitle>
             <DialogContent sx={{ pt: 2 }}>
@@ -851,7 +852,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               </Typography>
 
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom sx={{ color: '#2196f3' }}>X-Axis Sequence</Typography>
+                <Typography variant="subtitle2" gutterBottom sx={{ color: anafisColors.spreadsheet }}>X-Axis Sequence</Typography>
                 <TextField
                   fullWidth
                   size="small"
@@ -870,7 +871,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               </Box>
 
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom sx={{ color: '#2196f3' }}>Y-Axis Sequence</Typography>
+                <Typography variant="subtitle2" gutterBottom sx={{ color: anafisColors.spreadsheet }}>Y-Axis Sequence</Typography>
                 <TextField
                   fullWidth
                   size="small"
@@ -889,7 +890,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               </Box>
 
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom sx={{ color: '#2196f3' }}>Tags</Typography>
+                <Typography variant="subtitle2" gutterBottom sx={{ color: anafisColors.spreadsheet }}>Tags</Typography>
                 <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
                   {sequenceTags.map(tag => (
                     <Chip
@@ -899,7 +900,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
                       onDelete={() => handleRemoveTag(tag)}
                       sx={{
                         bgcolor: 'rgba(33, 150, 243, 0.2)',
-                        color: '#2196f3',
+                        color: anafisColors.spreadsheet,
                         '& .MuiChip-deleteIcon': { color: 'rgba(33, 150, 243, 0.7)' }
                       }}
                     />
@@ -919,7 +920,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
                     }}
                     sx={{ flex: 1 }}
                   />
-                  <Button size="small" onClick={handleAddTag} variant="outlined" sx={{ color: '#2196f3', borderColor: '#2196f3' }}>
+                  <Button size="small" onClick={handleAddTag} variant="outlined" sx={{ color: anafisColors.spreadsheet, borderColor: anafisColors.spreadsheet }}>
                     Add
                   </Button>
                 </Box>
@@ -929,7 +930,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               <Button onClick={() => setSaveDialogOpen(false)} sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                 Cancel
               </Button>
-              <Button onClick={handleConfirmSave} variant="contained" sx={{ bgcolor: '#2196f3', '&:hover': { bgcolor: '#1976d2' } }}>
+              <Button onClick={handleConfirmSave} variant="contained" sx={{ bgcolor: anafisColors.spreadsheet, '&:hover': { bgcolor: '#1976d2' } }}>
                 Save
               </Button>
             </DialogActions>
@@ -947,7 +948,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
               }
             }}
           >
-            <DialogTitle sx={{ color: '#2196f3', borderBottom: '1px solid rgba(33, 150, 243, 0.2)' }}>
+            <DialogTitle sx={{ color: anafisColors.spreadsheet, borderBottom: '1px solid rgba(33, 150, 243, 0.2)' }}>
               Export Plot
             </DialogTitle>
             <DialogContent sx={{ pt: 3 }}>
@@ -965,12 +966,12 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
                 >
                   <FormControlLabel
                     value="png"
-                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                     label={<Typography sx={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)' }}>PNG (Raster, 1200×800)</Typography>}
                   />
                   <FormControlLabel
                     value="svg"
-                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                     label={<Typography sx={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)' }}>SVG (Vector, scalable)</Typography>}
                   />
                 </RadioGroup>
@@ -986,12 +987,12 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
                 >
                   <FormControlLabel
                     value="dark"
-                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                     label={<Typography sx={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)' }}>Dark background</Typography>}
                   />
                   <FormControlLabel
                     value="light"
-                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    control={<Radio size="small" sx={{ color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                     label={<Typography sx={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)' }}>Light background</Typography>}
                   />
                 </RadioGroup>
@@ -1009,7 +1010,7 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
                 onClick={handleConfirmExport} 
                 disabled={isExporting}
                 variant="contained" 
-                sx={{ bgcolor: '#2196f3', '&:hover': { bgcolor: '#1976d2' } }}
+                sx={{ bgcolor: anafisColors.spreadsheet, '&:hover': { bgcolor: '#1976d2' } }}
                 startIcon={isExporting ? <CircularProgress size={20} sx={{ color: 'white' }} /> : null}
               >
                 {isExporting ? 'Exporting...' : 'Export'}

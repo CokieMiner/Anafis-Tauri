@@ -97,7 +97,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
               right: 0,
               bottom: 0,
               background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
-              animation: 'shine 3s ease-in-out infinite',
+              // animation: 'shine 3s ease-in-out infinite',
             },
             '@keyframes shine': {
               '0%': { transform: 'translateX(-100%)' },

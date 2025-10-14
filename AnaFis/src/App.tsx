@@ -4,6 +4,7 @@ import CustomTitleBar from './components/CustomTitleBar';
 import TabButton from './components/TabButton';
 import { useTabStore } from './hooks/useTabStore';
 import { DetachedTabWindow } from './components/DetachedTabWindow';
+import { anafisColors } from './themes';
 
 // Lazy load tab components for code splitting
 const HomeTab = lazy(() => import('./pages/HomeTab').then(module => ({ default: module.default })));
@@ -22,7 +23,7 @@ const TabLoadingFallback = () => (
     width: '100%',
     backgroundColor: '#0a0a0a'
   }}>
-    <CircularProgress sx={{ color: '#2196f3' }} />
+    <CircularProgress sx={{ color: anafisColors.primary }} />
   </Box>
 );
 
@@ -423,8 +424,8 @@ function App() {
                 padding: '8px 12px',
                 borderRadius: '8px',
                 backgroundColor: draggedTab.id === 'home' ? '#9c27b0' :
-                  draggedTab.id.includes('optimized-spreadsheet') ? '#2196f3' :
-                  draggedTab.id.includes('spreadsheet') ? '#2196f3' :
+                  draggedTab.id.includes('optimized-spreadsheet') ? anafisColors.spreadsheet :
+                  draggedTab.id.includes('spreadsheet') ? anafisColors.spreadsheet :
                   draggedTab.id.includes('fitting') ? '#ff9800' :
                   draggedTab.id.includes('solver') ? '#4caf50' :
                   draggedTab.id.includes('montecarlo') ? '#e91e63' : '#9c27b0',
@@ -613,7 +614,7 @@ function App() {
                       borderColor: 'rgba(33, 150, 243, 0.5)',
                       transform: 'translateY(-1px)',
                       boxShadow: '0 4px 16px rgba(33, 150, 243, 0.25)',
-                      color: '#2196f3',
+                      color: anafisColors.primary,
                     },
                     '&:active': {
                       background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(33, 150, 243, 0.03) 100%)',
@@ -658,7 +659,7 @@ function App() {
                           transition: 'all 0.2s ease-in-out',
                           '&:hover': {
                             backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                            color: '#2196f3',
+                            color: anafisColors.primary,
                             transform: 'translateX(2px)',
                           },
                         },

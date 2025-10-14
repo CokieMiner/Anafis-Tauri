@@ -61,7 +61,7 @@ pub fn create_or_focus_window(
         .focused(false) // Don't focus initially
         .closable(true)
         .visible(false) // Initially hidden to prevent white flash
-        .background_color(tauri::webview::Color(10, 10, 10, 255)); // Set dark background in builder
+        .background_color(tauri::webview::Color(0, 0, 0, 0)); // Set transparent background in builder
     
     // Apply minimum size constraints if specified
     if let (Some(min_width), Some(min_height)) = (config.min_width, config.min_height) {
@@ -83,8 +83,8 @@ pub fn create_or_focus_window(
     let window = builder.build()
         .map_err(|e| AnaFisError::Window(e.to_string()))?;
 
-    // Ensure dark background is set (redundant but safe)
-    let _ = window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255)));
+    // Ensure transparent background is set (redundant but safe)
+    let _ = window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0)));
 
     // Now show and focus the window
     window.show().map_err(|e| AnaFisError::Window(e.to_string()))?;

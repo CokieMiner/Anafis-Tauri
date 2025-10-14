@@ -24,15 +24,16 @@ import {
   Transform as ConvertIcon
 } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
-import { UniverSpreadsheetRef } from './UniverSpreadsheet';
+import { SpreadsheetRef } from './SpreadsheetInterface';
 import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
 import { sidebarStyles } from '../../utils/sidebarStyles';
 import SidebarCard from '../ui/SidebarCard';
+import { anafisColors } from '../../themes';
 
 interface UnitConversionSidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef?: React.RefObject<UniverSpreadsheetRef | null>;
+  univerRef?: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   // Lifted state for persistence
   category: string;
@@ -503,9 +504,9 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                   '& .MuiOutlinedInput-root': {
                     bgcolor: activeUnitInput === 'from' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: activeUnitInput === 'from' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': { borderColor: activeUnitInput === 'from' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
                     '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                     '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
                   }
                 }}
@@ -523,11 +524,11 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                       fontSize: 12,
                       padding: '2px 6px',
                       bgcolor: 'rgba(33, 150, 243, 0.1)',
-                      color: '#2196f3',
+                      color: anafisColors.spreadsheet,
                       border: '1px solid rgba(33, 150, 243, 0.3)',
                       '&:hover': {
                         bgcolor: 'rgba(33, 150, 243, 0.2)',
-                        borderColor: '#2196f3'
+                        borderColor: anafisColors.spreadsheet
                       }
                     }}
                     title={sym.label}
@@ -547,13 +548,13 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                   border: '1px solid rgba(33, 150, 243, 0.3)',
                   '&:hover': {
                     bgcolor: 'rgba(33, 150, 243, 0.2)',
-                    borderColor: '#2196f3',
+                    borderColor: anafisColors.spreadsheet,
                     transform: 'rotate(180deg)',
                     transition: 'transform 0.3s'
                   }
                 }}
               >
-                <SwapIcon sx={{ color: '#2196f3' }} />
+                <SwapIcon sx={{ color: anafisColors.spreadsheet }} />
               </IconButton>
             </Box>
 
@@ -575,9 +576,9 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                   '& .MuiOutlinedInput-root': {
                     bgcolor: activeUnitInput === 'to' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: activeUnitInput === 'to' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': { borderColor: activeUnitInput === 'to' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
                     '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                     '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
                   }
                 }}
@@ -595,11 +596,11 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                       fontSize: 12,
                       padding: '2px 6px',
                       bgcolor: 'rgba(33, 150, 243, 0.1)',
-                      color: '#2196f3',
+                      color: anafisColors.spreadsheet,
                       border: '1px solid rgba(33, 150, 243, 0.3)',
                       '&:hover': {
                         bgcolor: 'rgba(33, 150, 243, 0.2)',
-                        borderColor: '#2196f3'
+                        borderColor: anafisColors.spreadsheet
                       }
                     }}
                     title={sym.label}
@@ -629,9 +630,9 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                   '& .MuiOutlinedInput-root': {
                     bgcolor: focusedInput === 'value' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: focusedInput === 'value' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': { borderColor: focusedInput === 'value' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
                     '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                     '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
                   }
                 }}
@@ -651,19 +652,19 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                 >
                   <FormControlLabel
                     value="cell"
-                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                     label={<Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.9)' }}>To specific cell</Typography>}
                     sx={{ height: 28 }}
                   />
                   <FormControlLabel
                     value="range"
-                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                     label={<Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.9)' }}>To range</Typography>}
                     sx={{ height: 28 }}
                   />
                   <FormControlLabel
                     value="inPlace"
-                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: '#2196f3' } }} />}
+                    control={<Radio size="small" sx={{ py: 0.5, color: 'rgba(33, 150, 243, 0.5)', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                     label={<Typography sx={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.9)' }}>Replace in-place</Typography>}
                     sx={{ height: 28 }}
                   />
@@ -687,9 +688,9 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                       '& .MuiOutlinedInput-root': {
                         bgcolor: focusedInput === 'outputTarget' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
                         borderRadius: '6px',
-                        '& fieldset': { borderColor: focusedInput === 'outputTarget' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                        '& fieldset': { borderColor: focusedInput === 'outputTarget' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
                         '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                        '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                        '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                         '& input': { color: 'white', fontFamily: 'monospace', fontSize: 12 }
                       }
                     }}
@@ -707,16 +708,16 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
               disabled={isConverting || !!compatibilityError}
               sx={{
                 mt: 2,
-                bgcolor: '#2196f3',
+                bgcolor: anafisColors.spreadsheet,
                 fontWeight: 600,
                 fontSize: 14,
                 py: 1.5,
                 outline: 'none',
                 '&:hover': { bgcolor: '#1976d2' },
                 '&:disabled': { bgcolor: '#424242' },
-                '&:focus': { bgcolor: '#2196f3', outline: 'none' },
-                '&:focus-visible': { bgcolor: '#2196f3', outline: 'none', boxShadow: 'none' },
-                '&:active': { bgcolor: '#2196f3' }
+                '&:focus': { bgcolor: anafisColors.spreadsheet, outline: 'none' },
+                '&:focus-visible': { bgcolor: anafisColors.spreadsheet, outline: 'none', boxShadow: 'none' },
+                '&:active': { bgcolor: anafisColors.spreadsheet }
               }}
             >
               {isConverting ? 'Converting...' : 'Convert'}
@@ -746,11 +747,11 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                     height: 28,
                     bgcolor: category === cat ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.05)',
                     border: '1px solid',
-                    borderColor: category === cat ? '#2196f3' : 'rgba(33, 150, 243, 0.2)',
-                    color: '#2196f3',
+                    borderColor: category === cat ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)',
+                    color: anafisColors.spreadsheet,
                     '&:hover': {
                       bgcolor: 'rgba(33, 150, 243, 0.15)',
-                      borderColor: '#2196f3'
+                      borderColor: anafisColors.spreadsheet
                     }
                   }}
                 />
@@ -796,7 +797,7 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                       bgcolor: 'rgba(33, 150, 243, 0.05)',
                       '&:hover': {
                         bgcolor: 'rgba(33, 150, 243, 0.15)',
-                        borderColor: '#2196f3',
+                        borderColor: anafisColors.spreadsheet,
                         transform: 'translateY(-1px)',
                       },
                       '&.Mui-disabled': {

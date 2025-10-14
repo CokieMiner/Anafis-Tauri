@@ -26,6 +26,7 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
 import { sidebarStyles } from '../../utils/sidebarStyles';
 import SidebarCard from '../ui/SidebarCard';
+import { anafisColors } from '../../themes';
 import {
   ExportSidebarProps,
   ExportFormat,
@@ -426,13 +427,13 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
           >
             <FormControlLabel
               value="file"
-              control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }} />}
+              control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
               label="Export to File"
               sx={{ color: 'rgba(255, 255, 255, 0.9)', flex: 1 }}
             />
             <FormControlLabel
               value="library"
-              control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }} />}
+              control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
               label="Export to Data Library"
               sx={{ color: 'rgba(255, 255, 255, 0.9)', flex: 1 }}
             />

@@ -1,6 +1,6 @@
 // Export types - matches Rust backend types
 
-import { UniverSpreadsheetRef } from '../components/spreadsheet/UniverSpreadsheet';
+import { SpreadsheetRef } from '../components/spreadsheet/SpreadsheetInterface';
 
 /**
  * Export format types supported by the application
@@ -70,7 +70,7 @@ export interface ExportConfig {
 export interface ExportSidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef?: React.RefObject<UniverSpreadsheetRef | null>;
+  univerRef?: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   
   // Lifted state for persistence across sidebar switches
