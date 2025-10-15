@@ -54,6 +54,21 @@ def _get_math_functions():
         "gamma": sp.gamma,
         "beta": sp.beta,
         "zeta": sp.zeta,
+        # Bessel functions
+        "besselj": sp.besselj,  # Bessel function of the first kind
+        "bessely": sp.bessely,  # Bessel function of the second kind
+        "besseli": sp.besseli,  # Modified Bessel function of the first kind
+        "besselk": sp.besselk,  # Modified Bessel function of the second kind
+        # Additional special functions
+        "sinc": sp.sinc,  # Sinc function (sin(x)/x)
+        "digamma": sp.digamma,  # Digamma function (derivative of gamma)
+        "LambertW": sp.LambertW,  # Lambert W function
+        # Advanced functions for quantum mechanics and electromagnetism
+        "Ynm": sp.Ynm,  # Spherical harmonics
+        "assoc_legendre": sp.assoc_legendre,  # Associated Legendre polynomials
+        "hermite": sp.hermite,  # Hermite polynomials
+        "elliptic_e": sp.elliptic_e,  # Complete elliptic integral of the second kind
+        "elliptic_k": sp.elliptic_k,  # Complete elliptic integral of the first kind
 
         # Constants
         "pi": sp.pi,

@@ -16,6 +16,9 @@ import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 // Tauri imports
 import { invoke } from '@tauri-apps/api/core';
@@ -581,7 +584,22 @@ function UncertaintyCalculatorWindow() {
                           </Typography>
                           <TextField
                             value={stringRepresentation}
-                            slotProps={{ input: { readOnly: true } }}
+                            slotProps={{
+                              input: {
+                                readOnly: true,
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => navigator.clipboard.writeText(stringRepresentation)}
+                                      sx={{ color: 'text.secondary' }}
+                                    >
+                                      <ContentCopyIcon fontSize="small" />
+                                    </IconButton>
+                                  </InputAdornment>
+                                )
+                              }
+                            }}
                             placeholder="String representation will appear here"
                             variant="outlined"
                             size="small"
@@ -621,7 +639,22 @@ function UncertaintyCalculatorWindow() {
                           </Box>
                           <TextField
                             value={latexFormula}
-                            slotProps={{ input: { readOnly: true } }}
+                            slotProps={{
+                              input: {
+                                readOnly: true,
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => navigator.clipboard.writeText(latexFormula)}
+                                      sx={{ color: 'text.secondary' }}
+                                    >
+                                      <ContentCopyIcon fontSize="small" />
+                                    </IconButton>
+                                  </InputAdornment>
+                                )
+                              }
+                            }}
                             placeholder="LaTeX formula will appear here"
                             variant="outlined"
                             size="small"
