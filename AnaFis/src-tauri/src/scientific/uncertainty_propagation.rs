@@ -139,8 +139,19 @@ fn calculate_derivatives_with_python(
 fn sympy_to_excel(
     sympy_expr: &str,
     var_map: &HashMap<String, String>,  // Maps variable names to Excel cell refs
-) -> String {
+) -> Result<String, String> {
     let mut excel_formula = sympy_expr.to_string();
+    
+    // Check for unsupported functions before conversion
+    let unsupported_functions = [
+        "Ynm", "assoc_legendre", "elliptic_e"
+    ];
+    
+    for unsupported in &unsupported_functions {
+        if excel_formula.contains(unsupported) {
+            return Err(format!("Function '{}' is not supported in Excel formulas", unsupported));
+        }
+    }
     
     // Replace variable names with cell references
     for (var_name, cell_ref) in var_map {
@@ -160,12 +171,12 @@ fn sympy_to_excel(
     // Convert exponential and roots
     excel_formula = excel_formula.replace("sqrt", "SQRT");
     excel_formula = excel_formula.replace("exp", "EXP");
-    
-    // Convert basic trigonometric functions
+    excel_formula = excel_formula.replace("exp_polar", "EXP");  // Approximation
     excel_formula = excel_formula.replace("asin", "ASIN");
     excel_formula = excel_formula.replace("acos", "ACOS");
     excel_formula = excel_formula.replace("atan", "ATAN");
     excel_formula = excel_formula.replace("sin", "SIN");
+    excel_formula = excel_formula.replace("sen", "SIN");  // Portuguese alias
     excel_formula = excel_formula.replace("cos", "COS");
     excel_formula = excel_formula.replace("tan", "TAN");
     
@@ -190,14 +201,34 @@ fn sympy_to_excel(
     // Convert special functions
     excel_formula = excel_formula.replace("erf", "ERF");
     excel_formula = excel_formula.replace("erfc", "ERFC");
+    excel_formula = excel_formula.replace("gamma", "GAMMA");
+    excel_formula = excel_formula.replace("besselj", "BESSELJ");
+    excel_formula = excel_formula.replace("bessely", "BESSELY");
+    excel_formula = excel_formula.replace("besseli", "BESSELI");
+    excel_formula = excel_formula.replace("besselk", "BESSELK");
+    excel_formula = excel_formula.replace("beta", "BETA");
+    excel_formula = excel_formula.replace("digamma", "DIGAMMA");
+    excel_formula = excel_formula.replace("LambertW", "LAMBERTW");
+    excel_formula = excel_formula.replace("hermite", "HERMITE");
+    excel_formula = excel_formula.replace("zeta", "ZETA");
+    excel_formula = excel_formula.replace("elliptic_k", "ELLIPTIC_K");
     
     // Convert constants
     excel_formula = excel_formula.replace("pi", "PI()");
+    excel_formula = excel_formula.replace("e", "EXP(1)");
+    excel_formula = excel_formula.replace("E", "EXP(1)");
     
     // Convert other functions
     excel_formula = excel_formula.replace("abs", "ABS");
+    excel_formula = excel_formula.replace("sinc", "SINC");
+    excel_formula = excel_formula.replace("acot", "ACOT");
+    excel_formula = excel_formula.replace("asec", "ASEC");
+    excel_formula = excel_formula.replace("acsc", "ACSC");
+    excel_formula = excel_formula.replace("acoth", "ACOTH");
+    excel_formula = excel_formula.replace("asech", "ASECH");
+    excel_formula = excel_formula.replace("acsch", "ACSCH");
     
-    excel_formula
+    Ok(excel_formula)
 }
 
 #[tauri::command]
@@ -277,7 +308,15 @@ pub async fn generate_uncertainty_formulas(
             value_var_map.insert(var_name.clone(), cell_ref(val_col, row));
         }
         // Use normalized formula and sympy_to_excel to properly convert all functions
-        let value_formula_body = sympy_to_excel(&formula_for_sympy, &value_var_map);
+        let value_formula_body = match sympy_to_excel(&formula_for_sympy, &value_var_map) {
+            Ok(formula) => formula,
+            Err(e) => return Ok(UncertaintyFormulas {
+                value_formulas: vec![],
+                uncertainty_formulas: vec![],
+                success: false,
+                error: Some(format!("Formula conversion error: {}", e)),
+            }),
+        };
         let value_formula = format!("={}", value_formula_body);
         value_formulas.push(value_formula);
         
@@ -302,7 +341,15 @@ pub async fn generate_uncertainty_formulas(
                 }
                 
                 // Convert derivative to Excel formula
-                let deriv_excel = sympy_to_excel(deriv_expr, &deriv_var_map);
+                let deriv_excel = match sympy_to_excel(deriv_expr, &deriv_var_map) {
+                    Ok(formula) => formula,
+                    Err(e) => return Ok(UncertaintyFormulas {
+                        value_formulas: vec![],
+                        uncertainty_formulas: vec![],
+                        success: false,
+                        error: Some(format!("Derivative conversion error: {}", e)),
+                    }),
+                };
                 let sigma_ref = cell_ref(unc_col, row);
                 
                 // Term: (∂f/∂xi * σ_xi)²

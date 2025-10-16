@@ -42,11 +42,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # ===== UTILITIES =====
 validator = { version = "0.20.0", features = ["derive"] }
 blake3 = "1.5"
-lru = "0.16.1"
+lru = "0.16.2"
 once_cell = "1.19"
 lazy_static = "1.4"
 urlencoding = "2.1"
-regex = "1.12.1"
+regex = "1.12.2"
 base64 = "0.22.1"
 
 # ===== FILE I/O =====
@@ -61,3 +61,7 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # ===== UNIT CONVERSION =====
+
+# ===== HIGH-PRECISION MATH =====
+
+# ===== SCIENTIFIC COMPUTING =====

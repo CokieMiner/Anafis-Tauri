@@ -62,7 +62,13 @@ export const UniverAdapter = forwardRef<SpreadsheetRef, SpreadsheetProps>(
 
     useImperativeHandle(ref, () => ({
       updateCell: (cellRef: string, value: CellValue) => {
-        univerRef.current?.updateCell(cellRef, value);
+        // Convert CellValue to the format expected by univer
+        const univerValue = {
+          v: value.v === null || value.v === undefined ? undefined : 
+             typeof value.v === 'boolean' ? (value.v ? 'TRUE' : 'FALSE') : value.v,
+          f: value.f
+        };
+        univerRef.current?.updateCell(cellRef, univerValue);
       },
       getCellValue: (cellRef: string): string | number | null => {
         return univerRef.current?.getCellValue(cellRef) || null;

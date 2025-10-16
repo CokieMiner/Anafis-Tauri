@@ -11,6 +11,8 @@ import {
   BarChart as QuickPlotIcon,
   FileDownload as ExportIcon
 } from '@mui/icons-material';
+import { invoke } from '@tauri-apps/api/core';
+import { CUSTOM_FUNCTION_NAMES } from '../components/spreadsheet/univer/customFormulas';
 
 import { UniverAdapter } from '../components/spreadsheet/univer';
 import { SpreadsheetRef, CellValue, WorkbookData } from '../components/spreadsheet/SpreadsheetInterface';
@@ -99,9 +101,70 @@ const SpreadsheetTab: React.FC = () => {
   const handleCellChange = useCallback((cellRef: string, value: CellValue) => {
     // Spreadsheet handles all data storage now - no backend sync needed
     console.log('Cell changed:', cellRef, value);
-  }, []);  const handleFormulaIntercept = useCallback((cellRef: string, formula: string) => {
-    // Univer handles formulas - no backend sync needed
-    console.log('Formula set:', cellRef, formula);
+  }, []);  const handleFormulaIntercept = useCallback(async (cellRef: string, formula: string) => {
+    console.log('Formula intercepted:', cellRef, formula);
+
+    try {
+      // Remove the '=' prefix if present
+      const cleanFormula = formula.startsWith('=') ? formula.slice(1) : formula;
+
+      // Check if formula contains our custom high-precision functions that need evaluation
+      const hasCustomFunction = CUSTOM_FUNCTION_NAMES.some(func => cleanFormula.toUpperCase().includes(func));
+
+      if (hasCustomFunction) {
+        console.log('Formula contains custom function - letting Univer handle it directly');
+        // Our functions are now registered with Univer, so let it handle them
+        return;
+      }
+
+      // For complex formulas with variables or other functions, use our evaluation engine
+      console.log('Complex formula - using high-precision evaluation');
+
+      // Extract variable references from the formula (simple regex for cell references like A1, B2, etc.)
+      const cellRefs = cleanFormula.match(/[A-Z]+\d+/g) || [];
+
+      // Get unique cell references
+      const uniqueRefs = [...new Set(cellRefs)];
+
+      // Build variables map
+      const variables: Record<string, number> = {};
+
+      for (const ref of uniqueRefs) {
+        const value = spreadsheetRef.current?.getCellValue(ref);
+        if (typeof value === 'number') {
+          variables[ref] = value;
+        } else if (typeof value === 'string' && !isNaN(Number(value))) {
+          variables[ref] = Number(value);
+        } else {
+          console.warn(`Could not get numeric value for cell ${ref}, got:`, value);
+          // Skip this formula evaluation if we can't get all variables
+          return;
+        }
+      }
+
+      // Call Tauri command to evaluate the formula with high precision
+      const result = await invoke<{
+        value: number;
+        success: boolean;
+        error?: string;
+      }>('evaluate_formula', {
+        formula: cleanFormula,
+        variables
+      });
+
+      if (result.success) {
+        // Update the cell with the computed high-precision value
+        spreadsheetRef.current?.updateCell(cellRef, { v: result.value });
+        console.log(`High-precision formula evaluated: ${formula} = ${result.value}`);
+      } else {
+        console.error('High-precision formula evaluation failed:', result.error);
+        // Update cell with error indicator
+        spreadsheetRef.current?.updateCell(cellRef, { v: '#ERROR!' });
+      }
+
+    } catch (error) {
+      console.error('Error in formula interception:', error);
+    }
   }, []);
 
   const handleSelectionChange = useCallback((cellRef: string) => {

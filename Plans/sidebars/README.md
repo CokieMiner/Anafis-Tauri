@@ -99,9 +99,19 @@ None - Phase 1 Complete!
    - **File**: `08_data_library_sidebar.md`
    - **Note**: Sidebar for SAVING data, Window for MANAGING stored data, tabs for IMPORTING data
 
+#### Monte Carlo Enhancements
+
+10. **[Monte Carlo Uncertainty Function](./../../monte_carlo_uncertainty_function.md)** 🎲
+   - **Priority**: High
+   - **Complexity**: Medium-High
+   - **Features**: Spreadsheet function for Monte Carlo uncertainty propagation, async result injection, confidence interval normalization
+   - **Dependencies**: Enhanced Formula Engine, Async Result Injection
+   - **File**: `../../monte_carlo_uncertainty_function.md`
+   - **Note**: MONTECARLO() function for formulas without analytical derivatives
+
 #### Tabs
 
-9. **[Graphs & Fitting Tab](./09_graphs_and_fitting_tab.md)** 📊📉
+11. **[Graphs & Fitting Tab](./09_graphs_and_fitting_tab.md)** 📊📉
    - **Priority**: High
    - **Complexity**: High
    - **Features**: Advanced 2D/3D plotting from Data Library, n-dimensional curve fitting, fit comparison, residuals
@@ -110,7 +120,7 @@ None - Phase 1 Complete!
 
 #### Windows
 
-10. **Data Library Window** - ✅ FULLY IMPLEMENTED
+12. **Data Library Window** - ✅ FULLY IMPLEMENTED
    - **Status**: ✅ COMPLETE
    - **Features**: SQLite storage, FTS5 search, statistics, preview, multi-select, CSV/JSON export with metadata
    - **Documentation**: Removed (implementation complete)

@@ -1,4 +1,4 @@
-// UniverSpreadsheet.tsx - USING PRESETS APPROACH
+// UniverSpreadsheet.tsx - USING PRESETS APPROACH WITH FORMULA ENABLED
 import { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useTheme } from '@mui/material';
 import {
@@ -11,13 +11,60 @@ import {
     Workbook,
     UniverInstanceType,
     LocaleType,
+    mergeLocales,
 } from '@univerjs/core';
 import { createUniver } from '@univerjs/presets';
-import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core';
-import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US';
+import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation';
+// Import all individual plugins
+import { UniverNetworkPlugin } from '@univerjs/network';
+import { UniverDocsPlugin } from '@univerjs/docs';
+import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
+import { UniverUIPlugin } from '@univerjs/ui';
+import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
+import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
+import { UniverSheetsPlugin } from '@univerjs/sheets';
+import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
+import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
+import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui';
+import { UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula';
+import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
+import { UniverSheetsConditionalFormattingPlugin } from '@univerjs/sheets-conditional-formatting';
+import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
+import { UniverSheetsFilterPlugin } from '@univerjs/sheets-filter';
+import { UniverSheetsFilterUIPlugin } from '@univerjs/sheets-filter-ui';
+import { UniverFindReplacePlugin } from '@univerjs/find-replace';
+import { UniverSheetsFindReplacePlugin } from '@univerjs/sheets-find-replace';
+import { UniverSheetsHyperLinkPlugin } from '@univerjs/sheets-hyper-link';
+import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
+import { UniverSheetsNotePlugin } from '@univerjs/sheets-note';
+import { UniverSheetsNoteUIPlugin } from '@univerjs/sheets-note-ui';
+import { UniverDrawingPlugin } from '@univerjs/drawing';
+import { UniverDocsDrawingPlugin } from '@univerjs/docs-drawing';
+import { UniverDrawingUIPlugin } from '@univerjs/drawing-ui';
+import { UniverSheetsDrawingPlugin } from '@univerjs/sheets-drawing';
+import { UniverSheetsDrawingUIPlugin } from '@univerjs/sheets-drawing-ui';
+import { UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
+import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
+import { UniverSheetsThreadCommentUIPlugin } from '@univerjs/sheets-thread-comment-ui';
+import docsUIEnUS from '@univerjs/docs-ui/locale/en-US';
+import sheetsEnUS from '@univerjs/sheets/locale/en-US';
+import sheetsFormulaEnUS from '@univerjs/sheets-formula/locale/en-US';
+import sheetsFormulaUIEnUS from '@univerjs/sheets-formula-ui/locale/en-US';
+import sheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
+import sheetsNumfmtUIEnUS from '@univerjs/sheets-numfmt-ui/locale/en-US';
+import uiEnUS from '@univerjs/ui/locale/en-US';
+import sheetsConditionalFormattingUIEnUS from '@univerjs/sheets-conditional-formatting-ui/locale/en-US';
+import sheetsFilterEnUS from '@univerjs/preset-sheets-filter/locales/en-US';
+import sheetsFindReplaceEnUS from '@univerjs/preset-sheets-find-replace/locales/en-US';
+import sheetsHyperLinkEnUS from '@univerjs/preset-sheets-hyper-link/locales/en-US';
+import sheetsDrawingEnUS from '@univerjs/preset-sheets-drawing/locales/en-US';
+import sheetsThreadCommentEnUS from '@univerjs/preset-sheets-thread-comment/locales/en-US';
+import sheetsDataValidationUIEnUS from '@univerjs/sheets-data-validation-ui/locale/en-US';
 
 import '@univerjs/preset-sheets-core/lib/index.css';
+import { IRegisterFunctionService } from '@univerjs/sheets-formula';
 import { defaultTheme } from '@univerjs/design';
+import { registerCustomFunctions } from './customFormulas';
 
 
 function columnToLetter(column: number): string {
@@ -215,27 +262,90 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
             }
 
             isInitializedRef.current = true;
-            console.log('Initializing Univer with Presets...');
+            console.log('Initializing Univer');
 
             const { univer, univerAPI } = createUniver({
                 theme: defaultTheme,
                 darkMode: true,
                 locale: LocaleType.EN_US,
                 locales: {
-                    [LocaleType.EN_US]: UniverPresetSheetsCoreEnUS,
+                    [LocaleType.EN_US]: mergeLocales(
+                        docsUIEnUS,
+                        sheetsEnUS,
+                        sheetsFormulaEnUS,
+                        sheetsFormulaUIEnUS,
+                        sheetsUIEnUS,
+                        sheetsNumfmtUIEnUS,
+                        uiEnUS,
+                        sheetsConditionalFormattingUIEnUS,
+                        sheetsFilterEnUS,
+                        sheetsFindReplaceEnUS,
+                        sheetsHyperLinkEnUS,
+                        sheetsDrawingEnUS,
+                        sheetsThreadCommentEnUS,
+                        sheetsDataValidationUIEnUS
+                    ),
                 },
-                presets: [
-                    UniverSheetsCorePreset({
-                        container: containerRef.current,
-                    })
+                presets: [],
+                plugins: [
+                    // Core plugins
+                    UniverNetworkPlugin,
+                    [UniverDocsPlugin, { hasScroll: true }],
+                    UniverRenderEnginePlugin,
+                    [UniverUIPlugin, { container: "univer-container" }],
+                    UniverDocsUIPlugin,
+                    UniverFormulaEnginePlugin,
+                    UniverSheetsPlugin,
+                    [UniverSheetsUIPlugin, {
+                        formulaBar: true,
+                        footer: true,
+                        maxAutoHeightCount: 1000,
+                        clipboardConfig: {},
+                        scrollConfig: {},
+                        protectedRangeShadow: true,
+                        protectedRangeUserSelector: true,
+                        disableForceStringAlert: true,
+                        disableForceStringMark: true
+                    }],
+                    UniverSheetsNumfmtPlugin,
+                    UniverSheetsNumfmtUIPlugin,
+                    UniverSheetsFormulaPlugin,
+                    UniverSheetsFormulaUIPlugin,
+                    
+                    // Additional plugins
+                    UniverSheetsConditionalFormattingPlugin,
+                    UniverSheetsConditionalFormattingUIPlugin,
+                    [UniverSheetsFilterPlugin, { enableSyncSwitch: true }],
+                    UniverSheetsFilterUIPlugin,
+                    UniverFindReplacePlugin,
+                    UniverSheetsFindReplacePlugin,
+                    UniverSheetsHyperLinkPlugin,
+                    UniverSheetsHyperLinkUIPlugin,
+                    UniverSheetsNotePlugin,
+                    UniverSheetsNoteUIPlugin,
+                    [UniverDrawingPlugin, { override: [] }],
+                    UniverDocsDrawingPlugin,
+                    UniverDrawingUIPlugin,
+                    UniverSheetsDrawingPlugin,
+                    UniverSheetsDrawingUIPlugin,
+                    UniverThreadCommentUIPlugin,
+                    UniverSheetsThreadCommentPlugin,
+                    UniverSheetsThreadCommentUIPlugin,
+                    
+                    // Data validation
+                    UniverSheetsDataValidationPlugin,
                 ],
             });
-
             univerRef.current = { univer, univerAPI };
 
             univer.createUnit(UniverInstanceType.UNIVER_SHEET, initialData);
 
+            // Register custom mathematical functions with high precision
             const injector = univer.__getInjector();
+            const formulaEngine = injector.get(IRegisterFunctionService);
+            
+            // Register custom mathematical functions with the formula engine
+            registerCustomFunctions(formulaEngine);
             const commandService = injector.get(ICommandService);
 
             // Track selection changes
@@ -298,6 +408,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
         return (
             <div
                 ref={containerRef}
+                id="univer-container"
                 style={{
                     width: '100%',
                     height: '100%',
