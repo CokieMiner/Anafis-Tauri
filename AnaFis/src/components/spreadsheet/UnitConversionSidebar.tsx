@@ -29,6 +29,7 @@ import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
 import { sidebarStyles } from '../../utils/sidebarStyles';
 import SidebarCard from '../ui/SidebarCard';
 import { anafisColors } from '../../themes';
+import { spreadsheetEventBus } from './SpreadsheetEventBus';
 
 interface UnitConversionSidebarProps {
   open: boolean;
@@ -62,6 +63,10 @@ interface UnitInfo {
 type OutputMode = 'cell' | 'range' | 'inPlace';
 
 type FocusedInputType = 'value' | 'outputTarget' | null;
+
+// Cache for unit metadata (shared across all instances)
+const unitMetadataCache = new Map<string, UnitInfo>();
+let cacheInitialized = false;
 
 const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({ 
   open, 
@@ -108,13 +113,32 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
   const [isConverting, setIsConverting] = useState<boolean>(false);
   const [compatibilityError, setCompatibilityError] = useState<string>('');
 
+  // Subscribe to spreadsheet selection events via event bus
+  useEffect(() => {
+    if (!open) return;
+
+    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
+      // Call the window handler that the hook is listening to
+      const handler = (window as any).__unitConverterSelectionHandler;
+      if (handler) {
+        handler(cellRef);
+      }
+      // NOTE: Don't call onSelectionChange here - it would create an infinite loop
+      // since onSelectionChange emits to the event bus, which triggers this handler again
+    });
+
+    return unsubscribe;
+  }, [open]);
+
   // Define loadCategories before it's used in useEffect
   const loadCategories = useCallback(async () => {
     try {
       const cats: string[] = await invoke('get_supported_categories');
-      setCategories(cats);
-      if (cats.length > 0 && !category) {
-        setCategory(cats[0]);
+      // Add "All" category at the beginning
+      const allCategories = ['All', ...cats];
+      setCategories(allCategories);
+      if (allCategories.length > 0 && !category) {
+        setCategory(allCategories[0]);
       }
     } catch (err) {
       setError('Failed to load categories');
@@ -124,6 +148,7 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
 
   // Category icons mapping (blue theme)
   const categoryIcons: Record<string, string> = {
+    'All': '🌍',
     'length': '📏',
     'mass': '⚖️',
     'time': '⏱️',
@@ -171,14 +196,14 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
       // Filter by category
       const filtered = unitSymbols.filter(symbol => {
         const unitInfo = availableUnits[symbol];
-        return unitInfo.category.toLowerCase() === category.toLowerCase();
+        return category === 'All' || unitInfo.category.toLowerCase() === category.toLowerCase();
       });
       setFilteredUnits(filtered);
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = unitSymbols.filter(symbol => {
         const unitInfo = availableUnits[symbol];
-        return unitInfo.category.toLowerCase() === category.toLowerCase() &&
+        return (category === 'All' || unitInfo.category.toLowerCase() === category.toLowerCase()) &&
                (symbol.toLowerCase().includes(query) || 
                 unitInfo.name.toLowerCase().includes(query));
       });
@@ -188,8 +213,17 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
 
   const loadUnits = async () => {
     try {
-      const units: Record<string, UnitInfo> = await invoke('get_available_units');
-      setAvailableUnits(units);
+      // Use cache if available
+      if (!cacheInitialized) {
+        const units: Record<string, UnitInfo> = await invoke('get_available_units');
+        Object.entries(units).forEach(([symbol, info]) => {
+          unitMetadataCache.set(symbol, info);
+        });
+        cacheInitialized = true;
+      }
+      
+      // Convert Map back to object for state
+      setAvailableUnits(Object.fromEntries(unitMetadataCache));
     } catch (err) {
       setError('Failed to load units');
       console.error(err);
@@ -389,13 +423,12 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
         outputStartRow = parseInt(outputMatch[2]);
       }
 
-      // Convert all values in range
-      let convertedCount = 0;
-      const results: string[] = [];
-
+      // Collect all values to convert
+      const valuesToConvert: Array<{ row: number; value: number; cellRef: string }> = [];
+      
       for (let row = startRow; row <= endRow; row++) {
         const cellRef = `${startCol}${row}`;
-        const cellValue = univerRef.current.getCellValue(cellRef);
+        const cellValue = await univerRef.current.getCellValue(cellRef);
         
         if (cellValue === null || cellValue === undefined) {
           continue; // Skip empty cells
@@ -406,30 +439,46 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
           continue; // Skip non-numeric cells
         }
 
-        // Convert the value
-        const conversionResult: ConversionResult = await invoke('convert_value', {
-          request: {
-            value: numValue,
-            from_unit: fromUnit,
-            to_unit: toUnit
-          }
-        });
+        valuesToConvert.push({ row, value: numValue, cellRef });
+      }
 
+      if (valuesToConvert.length === 0) {
+        setError('No valid numeric values found in range');
+        return;
+      }
+
+      // Convert all values (could be optimized with batch conversion API in future)
+      const conversionResults = await Promise.all(
+        valuesToConvert.map(({ value }) =>
+          invoke<ConversionResult>('convert_value', {
+            request: {
+              value,
+              from_unit: fromUnit,
+              to_unit: toUnit
+            }
+          })
+        )
+      );
+
+      // Prepare batch updates
+      const updates = valuesToConvert.map(({ row, cellRef }, i) => {
         const outputRow = outputStartRow + (row - startRow);
         const outputCellRef = `${outputCol}${outputRow}`;
+        
+        return {
+          cellRef: outputMode === 'inPlace' ? cellRef : outputCellRef,
+          value: { v: conversionResults[i].value }
+        };
+      });
 
-        // Write to output location
-        if (outputMode === 'inPlace') {
-          univerRef.current.updateCell(cellRef, { v: conversionResult.value });
-        } else {
-          univerRef.current.updateCell(outputCellRef, { v: conversionResult.value });
-        }
+      // Write all conversions in batch
+      await univerRef.current.batchUpdateCells(updates);
 
-        convertedCount++;
-        if (results.length < 3) {
-          results.push(`${cellRef}: ${numValue} → ${conversionResult.value.toFixed(4)}`);
-        }
-      }
+      // Generate preview results
+      const results = valuesToConvert.slice(0, 3).map(({ cellRef, value }, i) =>
+        `${cellRef}: ${value} → ${conversionResults[i].value.toFixed(4)}`
+      );
+      const convertedCount = valuesToConvert.length;
 
       if (convertedCount === 0) {
         setError('No valid numeric values found in range');
@@ -779,8 +828,8 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
             />
           </SidebarCard>
 
-          <SidebarCard title="Units" sx={{ flex: 1, display: 'flex', flexDirection: 'column', mx: 0.5 }}>
-            <List dense sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 0.5, py: 0.5, maxHeight: '200px' }}>
+                    <SidebarCard title="Units" sx={{ flex: 1, display: 'flex', flexDirection: 'column', mx: 0.5 }}>
+            <List dense sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 0.5, py: 0.5, maxHeight: '250px' }}>
               {filteredUnits.map((symbol) => {
                 const unitInfo = availableUnits[symbol];
                 return (
@@ -808,10 +857,10 @@ const UnitConversionSidebar: React.FC<UnitConversionSidebarProps> = ({
                     <ListItemText 
                       primary={
                         <Box>
-                          <Typography sx={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600 }}>
+                          <Typography sx={{ fontSize: 15, fontFamily: 'monospace', color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600 }}>
                             {symbol}
                           </Typography>
-                          <Typography sx={{ fontSize: 9, color: 'rgba(255, 255, 255, 0.6)' }}>
+                          <Typography sx={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.6)' }}>
                             {unitInfo?.name}
                           </Typography>
                         </Box>

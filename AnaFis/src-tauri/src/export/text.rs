@@ -36,22 +36,13 @@ pub async fn export_to_text(
     let mut writer = BufWriter::new(file);
 
     // Export data rows
-    for (row_idx, row) in data.iter().enumerate() {
-        // Skip first row if it's headers and we don't want to include them
-        if row_idx == 0 && !config.options.include_headers {
-            continue;
-        }
-
-        // Skip completely empty rows
-        if row.iter().all(|cell| matches!(cell, Value::Null) || cell.as_str() == Some("")) {
-            continue;
-        }
-
+    for row in data.iter() {
+        // Don't skip empty rows - preserve them to maintain data structure
         let formatted_row: Vec<String> = row.iter().map(|cell| {
             format_cell_value(cell, delimiter, quote_char)
         }).collect();
 
-        writeln!(writer, "{}{}", formatted_row.join(delimiter), line_ending)
+        write!(writer, "{}{}", formatted_row.join(delimiter), line_ending)
             .map_err(|e| format!("Failed to write row: {}", e))?;
     }
 

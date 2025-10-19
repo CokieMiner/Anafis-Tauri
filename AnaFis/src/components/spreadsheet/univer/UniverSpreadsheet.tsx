@@ -97,16 +97,18 @@ interface Props {
     onCellChange: (cellRef: string, value: ICellData) => void;
     onFormulaIntercept: (cellRef: string, formula: string) => void;
     onSelectionChange?: (cellRef: string) => void;
+    onUniverReady?: (univerInstance: any) => void;
 }
 
 export interface UniverSpreadsheetRef {
     updateCell: (cellRef: string, value: { v?: string | number; f?: string }) => void;
     getCellValue: (cellRef: string) => string | number | null;
     getRange: (rangeRef: string) => Promise<(string | number)[][]>;
+    univer: ReturnType<typeof createUniver> | null;
 }
 
 const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
-    ({ initialData, onCellChange, onFormulaIntercept, onSelectionChange }, ref) => {
+    ({ initialData, onCellChange, onFormulaIntercept, onSelectionChange, onUniverReady }, ref) => {
         const theme = useTheme();
         const containerRef = useRef<HTMLDivElement>(null);
         const univerRef = useRef<ReturnType<typeof createUniver> | null>(null);
@@ -114,13 +116,17 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
         const onCellChangeRef = useRef(onCellChange);
         const onFormulaInterceptRef = useRef(onFormulaIntercept);
         const onSelectionChangeRef = useRef(onSelectionChange);
+        const onUniverReadyRef = useRef(onUniverReady);
+        // Generate unique container ID for this instance
+        const containerIdRef = useRef(`univer-container-${Math.random().toString(36).substr(2, 9)}`);
 
         // Keep refs updated
         useEffect(() => {
             onCellChangeRef.current = onCellChange;
             onFormulaInterceptRef.current = onFormulaIntercept;
             onSelectionChangeRef.current = onSelectionChange;
-        }, [onCellChange, onFormulaIntercept, onSelectionChange]);
+            onUniverReadyRef.current = onUniverReady;
+        }, [onCellChange, onFormulaIntercept, onSelectionChange, onUniverReady]);
 
         useImperativeHandle(ref, () => ({
             updateCell: (cellRef: string, value: { v?: string | number; f?: string }) => {
@@ -253,6 +259,9 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                     console.error('Failed to get range:', error);
                     return [];
                 }
+            },
+            get univer() {
+                return univerRef.current;
             }
         }));
 
@@ -292,7 +301,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                     UniverNetworkPlugin,
                     [UniverDocsPlugin, { hasScroll: true }],
                     UniverRenderEnginePlugin,
-                    [UniverUIPlugin, { container: "univer-container" }],
+                    [UniverUIPlugin, { container: containerIdRef.current }],
                     UniverDocsUIPlugin,
                     UniverFormulaEnginePlugin,
                     UniverSheetsPlugin,
@@ -339,6 +348,11 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
             univerRef.current = { univer, univerAPI };
 
             univer.createUnit(UniverInstanceType.UNIVER_SHEET, initialData);
+
+            // Notify parent that Univer is ready
+            if (onUniverReadyRef.current) {
+                onUniverReadyRef.current(univer);
+            }
 
             // Register custom mathematical functions with high precision
             const injector = univer.__getInjector();
@@ -408,7 +422,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
         return (
             <div
                 ref={containerRef}
-                id="univer-container"
+                id={containerIdRef.current}
                 style={{
                     width: '100%',
                     height: '100%',

@@ -9,6 +9,7 @@ pub struct Variable {
     pub name: String,
     pub value_range: String,  // e.g., "A1:A10"
     pub uncertainty_range: String,  // e.g., "B1:B10"
+    pub confidence: f64,  // confidence level in percent (e.g., 95.0)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,28 +20,45 @@ pub struct UncertaintyFormulas {
     pub error: Option<String>,
 }
 
-/// Parse range notation like "A1:A10" into start/end row numbers
+/// Parse range notation like "A1:A10" or single cell "A1" into start/end row numbers
 fn parse_range(range: &str) -> Result<(String, usize, usize), String> {
     let parts: Vec<&str> = range.split(':').collect();
-    if parts.len() != 2 {
-        return Err(format!("Invalid range format: {}", range));
+
+    if parts.len() == 1 {
+        // Single cell format like "A1"
+        let cell = parts[0];
+        let col = cell.chars().take_while(|c| c.is_alphabetic()).collect::<String>();
+        let row: usize = cell.chars()
+            .skip_while(|c| c.is_alphabetic())
+            .collect::<String>()
+            .parse()
+            .map_err(|_| format!("Invalid row number in cell: {}", range))?;
+
+        if col.is_empty() {
+            return Err(format!("Invalid cell format: {}", range));
+        }
+
+        Ok((col, row, row)) // For single cell, start and end row are the same
+    } else if parts.len() == 2 {
+        // Range format like "A1:A10"
+        // Extract column letter and row numbers
+        let start_col = parts[0].chars().take_while(|c| c.is_alphabetic()).collect::<String>();
+        let start_row: usize = parts[0].chars()
+            .skip_while(|c| c.is_alphabetic())
+            .collect::<String>()
+            .parse()
+            .map_err(|_| format!("Invalid start row in range: {}", range))?;
+
+        let end_row: usize = parts[1].chars()
+            .skip_while(|c| c.is_alphabetic())
+            .collect::<String>()
+            .parse()
+            .map_err(|_| format!("Invalid end row in range: {}", range))?;
+
+        Ok((start_col, start_row, end_row))
+    } else {
+        Err(format!("Invalid range format: {}", range))
     }
-    
-    // Extract column letter and row numbers
-    let start_col = parts[0].chars().take_while(|c| c.is_alphabetic()).collect::<String>();
-    let start_row: usize = parts[0].chars()
-        .skip_while(|c| c.is_alphabetic())
-        .collect::<String>()
-        .parse()
-        .map_err(|_| format!("Invalid start row in range: {}", range))?;
-    
-    let end_row: usize = parts[1].chars()
-        .skip_while(|c| c.is_alphabetic())
-        .collect::<String>()
-        .parse()
-        .map_err(|_| format!("Invalid end row in range: {}", range))?;
-    
-    Ok((start_col, start_row, end_row))
 }
 
 /// Generate Excel cell reference from column and row
@@ -133,6 +151,58 @@ fn calculate_derivatives_with_python(
 
         Ok(derivatives)
     })
+}
+
+/// Convert confidence percentage to sigma value using approximation
+/// This approximates the inverse cumulative distribution function of the normal distribution
+fn confidence_to_sigma(confidence: f64) -> f64 {
+    // Convert percentage to proportion (0.5 to 0.999)
+    let p = confidence / 100.0;
+
+    // For two-sided confidence intervals, we want the quantile for (1+p)/2
+    // because p% confidence means (100-p)% outside, so (100-p)/2 on each tail
+    let quantile = (1.0 + p) / 2.0;
+
+    // Approximation of the inverse normal CDF using polynomial approximation
+    // This is a simplified version of the Beasley-Springer-Moro algorithm
+    if quantile <= 0.5 {
+        return 0.0; // Should not happen for confidence > 50%
+    }
+
+    let q = quantile - 0.5;
+    let r = q * q;
+
+    // Coefficients for the approximation
+    let a1 = -3.969683028665376e+01;
+    let a2 = 2.209460984245205e+02;
+    let a3 = -2.759285104469687e+02;
+    let a4 = 1.383_577_518_672_69e2;
+    let a5 = -3.066479806614716e+01;
+    let a6 = 2.506628277459239e+00;
+
+    let b1 = -5.447609879822406e+01;
+    let b2 = 1.615858368580409e+02;
+    let b3 = -1.556989798598866e+02;
+    let b4 = 6.680131188771972e+01;
+    let b5 = -1.328068155288572e+01;
+
+    let mut sigma;
+    if q.abs() < 0.42 {
+        // Central region approximation
+        sigma = q * (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6)
+                  / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1.0);
+    } else {
+        // Tail region approximation
+        let r_sqrt = (-(q.ln())).sqrt();
+        sigma = (((((a1 * r_sqrt + a2) * r_sqrt + a3) * r_sqrt + a4) * r_sqrt + a5) * r_sqrt + a6)
+               / (((((b1 * r_sqrt + b2) * r_sqrt + b3) * r_sqrt + b4) * r_sqrt + b5) * r_sqrt + 1.0);
+
+        if q < 0.0 {
+            sigma = -sigma;
+        }
+    }
+
+    sigma
 }
 
 /// Convert SymPy derivative expression to Excel formula
@@ -235,6 +305,7 @@ fn sympy_to_excel(
 pub async fn generate_uncertainty_formulas(
     variables: Vec<Variable>,
     formula: String,
+    output_confidence: f64,
 ) -> Result<UncertaintyFormulas, String> {
     // Normalize formula to lowercase for SymPy (it only recognizes lowercase)
     // But we'll preserve the original for value formula generation
@@ -321,6 +392,7 @@ pub async fn generate_uncertainty_formulas(
         value_formulas.push(value_formula);
         
         // Generate uncertainty formula: σ_f = sqrt(Σ(∂f/∂xi * σ_xi)²)
+        let output_sigma = confidence_to_sigma(output_confidence);
         let mut uncertainty_terms = Vec::new();
         
         for (var_name, _val_col, _val_start, uncertainty_info) in &var_info {
@@ -328,6 +400,13 @@ pub async fn generate_uncertainty_formulas(
             if uncertainty_info.is_none() {
                 continue;
             }
+            
+            // Find the variable's confidence level
+            let var_confidence = variables.iter()
+                .find(|v| v.name == *var_name)
+                .map(|v| v.confidence)
+                .unwrap_or(68.0); // Default to 68% if not found
+            let input_sigma = confidence_to_sigma(var_confidence);
             
             if let Some(deriv_expr) = derivatives.get(var_name) {
                 let (unc_col, unc_start) = uncertainty_info.as_ref().unwrap();
@@ -352,8 +431,16 @@ pub async fn generate_uncertainty_formulas(
                 };
                 let sigma_ref = cell_ref(unc_col, row);
                 
-                // Term: (∂f/∂xi * σ_xi)²
-                let term = format!("(({}) * {})^2", deriv_excel, sigma_ref);
+                // Apply confidence level conversion: σ_converted = σ_input * (σ_output / σ_input)
+                let conversion_factor = output_sigma / input_sigma;
+                let converted_sigma = if (conversion_factor - 1.0).abs() < 1e-10 {
+                    sigma_ref // No conversion needed if factor is 1
+                } else {
+                    format!("({}) * {}", sigma_ref, conversion_factor)
+                };
+                
+                // Term: (∂f/∂xi * σ_xi_converted)²
+                let term = format!("(({}) * {})^2", deriv_excel, converted_sigma);
                 uncertainty_terms.push(term);
             }
         }

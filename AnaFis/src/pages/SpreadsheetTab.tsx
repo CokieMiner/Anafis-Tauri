@@ -11,11 +11,10 @@ import {
   BarChart as QuickPlotIcon,
   FileDownload as ExportIcon
 } from '@mui/icons-material';
-import { invoke } from '@tauri-apps/api/core';
-import { CUSTOM_FUNCTION_NAMES } from '../components/spreadsheet/univer/customFormulas';
 
 import { UniverAdapter } from '../components/spreadsheet/univer';
-import { SpreadsheetRef, CellValue, WorkbookData } from '../components/spreadsheet/SpreadsheetInterface';
+import { SpreadsheetRef, WorkbookData, CellValue } from '../components/spreadsheet/SpreadsheetInterface';
+import { spreadsheetEventBus } from '../components/spreadsheet/SpreadsheetEventBus';
 
 import UncertaintySidebar from '../components/spreadsheet/UncertaintySidebar';
 import UnitConversionSidebar from '../components/spreadsheet/UnitConversionSidebar';
@@ -28,6 +27,7 @@ interface Variable {
   name: string;
   valueRange: string;
   uncertaintyRange: string;
+  confidence: number;
 }
 
 const SpreadsheetTab: React.FC = () => {
@@ -37,11 +37,12 @@ const SpreadsheetTab: React.FC = () => {
   
   // Uncertainty sidebar state - persisted across sidebar switches
   const [uncertaintyVariables, setUncertaintyVariables] = useState<Variable[]>([
-    { name: 'a', valueRange: 'A1:A10', uncertaintyRange: 'B1:B10' }
+    { name: 'a', valueRange: 'A1:A10', uncertaintyRange: 'B1:B10', confidence: 95 }
   ]);
   const [uncertaintyFormula, setUncertaintyFormula] = useState<string>('');
   const [uncertaintyOutputValueRange, setUncertaintyOutputValueRange] = useState<string>('C1:C10');
   const [uncertaintyOutputUncertaintyRange, setUncertaintyOutputUncertaintyRange] = useState<string>('D1:D10');
+  const [uncertaintyOutputConfidence, setUncertaintyOutputConfidence] = useState<number>(95);
   
   // Unit conversion sidebar state - persisted across sidebar switches
   const [unitConversionCategory, setUnitConversionCategory] = useState<string>('');
@@ -62,7 +63,6 @@ const SpreadsheetTab: React.FC = () => {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
   const [exportRangeMode, setExportRangeMode] = useState<ExportRangeMode>('selection');
   const [exportCustomRange, setExportCustomRange] = useState<string>('');
-  const [exportIncludeHeaders, setExportIncludeHeaders] = useState<boolean>(true);
   const [exportJsonFormat, setExportJsonFormat] = useState<JsonFormat>('records');
   const [exportPrettyPrint, setExportPrettyPrint] = useState<boolean>(true);
   const [exportCustomDelimiter, setExportCustomDelimiter] = useState<string>('|');
@@ -99,104 +99,22 @@ const SpreadsheetTab: React.FC = () => {
   }, [emptyWorkbook]);
 
   const handleCellChange = useCallback((cellRef: string, value: CellValue) => {
-    // Spreadsheet handles all data storage now - no backend sync needed
+    // Cell change handler - Univer manages all data internally
+    // This is called when a cell value changes (not formulas)
     console.log('Cell changed:', cellRef, value);
-  }, []);  const handleFormulaIntercept = useCallback(async (cellRef: string, formula: string) => {
-    console.log('Formula intercepted:', cellRef, formula);
+    // No backend sync needed - Univer handles all data storage
+  }, []);
 
-    try {
-      // Remove the '=' prefix if present
-      const cleanFormula = formula.startsWith('=') ? formula.slice(1) : formula;
-
-      // Check if formula contains our custom high-precision functions that need evaluation
-      const hasCustomFunction = CUSTOM_FUNCTION_NAMES.some(func => cleanFormula.toUpperCase().includes(func));
-
-      if (hasCustomFunction) {
-        console.log('Formula contains custom function - letting Univer handle it directly');
-        // Our functions are now registered with Univer, so let it handle them
-        return;
-      }
-
-      // For complex formulas with variables or other functions, use our evaluation engine
-      console.log('Complex formula - using high-precision evaluation');
-
-      // Extract variable references from the formula (simple regex for cell references like A1, B2, etc.)
-      const cellRefs = cleanFormula.match(/[A-Z]+\d+/g) || [];
-
-      // Get unique cell references
-      const uniqueRefs = [...new Set(cellRefs)];
-
-      // Build variables map
-      const variables: Record<string, number> = {};
-
-      for (const ref of uniqueRefs) {
-        const value = spreadsheetRef.current?.getCellValue(ref);
-        if (typeof value === 'number') {
-          variables[ref] = value;
-        } else if (typeof value === 'string' && !isNaN(Number(value))) {
-          variables[ref] = Number(value);
-        } else {
-          console.warn(`Could not get numeric value for cell ${ref}, got:`, value);
-          // Skip this formula evaluation if we can't get all variables
-          return;
-        }
-      }
-
-      // Call Tauri command to evaluate the formula with high precision
-      const result = await invoke<{
-        value: number;
-        success: boolean;
-        error?: string;
-      }>('evaluate_formula', {
-        formula: cleanFormula,
-        variables
-      });
-
-      if (result.success) {
-        // Update the cell with the computed high-precision value
-        spreadsheetRef.current?.updateCell(cellRef, { v: result.value });
-        console.log(`High-precision formula evaluated: ${formula} = ${result.value}`);
-      } else {
-        console.error('High-precision formula evaluation failed:', result.error);
-        // Update cell with error indicator
-        spreadsheetRef.current?.updateCell(cellRef, { v: '#ERROR!' });
-      }
-
-    } catch (error) {
-      console.error('Error in formula interception:', error);
-    }
+  const handleFormulaIntercept = useCallback((cellRef: string, formula: string) => {
+    // Formula interception is no longer needed - Univer handles all formulas
+    // Custom functions are registered directly with Univer's formula engine
+    // This handler is kept for potential future use (e.g., formula validation)
+    console.log('Formula entered:', cellRef, formula);
   }, []);
 
   const handleSelectionChange = useCallback((cellRef: string) => {
-    // Selection change handling - pass to active sidebar
-    
-    // Call uncertainty sidebar handler if it exists
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (window as any).__uncertaintySidebarSelectionHandler === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__uncertaintySidebarSelectionHandler(cellRef);
-    }
-    
-    // Call unit converter sidebar handler if it exists
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (window as any).__unitConverterSelectionHandler === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__unitConverterSelectionHandler(cellRef);
-    }
-    
-    // Call quick plot sidebar handler if it exists
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (window as any).__quickPlotSelectionHandler === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__quickPlotSelectionHandler(cellRef);
-    }
-    
-    // Call export sidebar handler if it exists
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (window as any).__exportSelectionHandler === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__exportSelectionHandler(cellRef);
-    }
+    // Emit selection change event to all interested subscribers (sidebars)
+    spreadsheetEventBus.emit('selection-change', cellRef);
   }, []);
 
   useEffect(() => {
@@ -430,6 +348,8 @@ const SpreadsheetTab: React.FC = () => {
                 setOutputValueRange={setUncertaintyOutputValueRange}
                 outputUncertaintyRange={uncertaintyOutputUncertaintyRange}
                 setOutputUncertaintyRange={setUncertaintyOutputUncertaintyRange}
+                outputConfidence={uncertaintyOutputConfidence}
+                setOutputConfidence={setUncertaintyOutputConfidence}
               />
             )}
             {/* Unit Conversion Sidebar - positioned within spreadsheet */}
@@ -485,8 +405,6 @@ const SpreadsheetTab: React.FC = () => {
                 setRangeMode={setExportRangeMode}
                 customRange={exportCustomRange}
                 setCustomRange={setExportCustomRange}
-                includeHeaders={exportIncludeHeaders}
-                setIncludeHeaders={setExportIncludeHeaders}
                 jsonFormat={exportJsonFormat}
                 setJsonFormat={setExportJsonFormat}
                 prettyPrint={exportPrettyPrint}

@@ -10,8 +10,12 @@ export type ExportFormat =
   | 'tsv'           // Tab-separated values
   | 'txt'           // Custom delimiter text
   | 'json'          // JSON format
-  | 'xlsx'          // Excel 2007+ format (future)
-  | 'anafispread';  // AnaFis spreadsheet format (future)
+  | 'xlsx'          // Excel 2007+ format
+  | 'parquet'       // Apache Parquet
+  | 'tex'           // LaTeX table
+  | 'html'          // HTML table
+  | 'markdown'      // Markdown table
+  | 'anafispread';  // AnaFis spreadsheet format
 
 /**
  * Export range mode
@@ -39,7 +43,6 @@ export interface ExportOptions {
   includeFormulas?: boolean;       // Include formulas vs evaluated values (default: false)
   includeFormatting?: boolean;     // Include formatting metadata (default: false)
   includeMetadata?: boolean;       // Include metadata (default: false)
-  includeUncertainties?: boolean;  // Include uncertainties (default: false)
   
   // Text format options (CSV, TSV, TXT)
   delimiter?: string;              // Delimiter character (default: ',' for CSV, '\t' for TSV)
@@ -82,8 +85,6 @@ export interface ExportSidebarProps {
   setCustomRange: (range: string) => void;
   
   // Export options (lifted for persistence)
-  includeHeaders: boolean;
-  setIncludeHeaders: (include: boolean) => void;
   jsonFormat: JsonFormat;
   setJsonFormat: (format: JsonFormat) => void;
   prettyPrint: boolean;

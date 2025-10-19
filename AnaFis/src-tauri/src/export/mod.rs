@@ -3,13 +3,24 @@
 // Submodules:
 // - text: CSV, TSV, TXT exports
 // - json: JSON exports
-// - excel: Excel (.xlsx) exports (future)
-// - anafispread: Custom AnaFis spreadsheet format (future)
+// - excel: Excel (.xlsx) exports
+// - html: HTML table exports
+// - markdown: Markdown table exports
+// - tex: LaTeX table exports
+// - parquet: Apache Parquet exports
+// - anafispread: Custom AnaFis spreadsheet format
 
 pub mod text;
 pub mod json;
+pub mod excel;
+pub mod html;
+pub mod markdown;
+pub mod tex;
+pub mod parquet;
+pub mod anafispread;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// Export format types supported by the application
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,9 +34,17 @@ pub enum ExportFormat {
     Txt,
     /// JSON format
     Json,
-    /// Excel 2007+ format (future)
+    /// Excel 2007+ format
     Xlsx,
-    /// AnaFis spreadsheet format (future)
+    /// Apache Parquet
+    Parquet,
+    /// LaTeX table
+    Tex,
+    /// HTML table
+    Html,
+    /// Markdown table
+    Markdown,
+    /// AnaFis spreadsheet format
     #[serde(rename = "anafispread")]
     AnaFisSpread,
 }
@@ -59,9 +78,6 @@ pub struct ExportOptions {
     /// Include metadata
     #[serde(default)]
     pub include_metadata: bool,
-    /// Include uncertainties
-    #[serde(default)]
-    pub include_uncertainties: bool,
     
     // Text format options (CSV, TSV, TXT)
     /// Delimiter character (default: ',' for CSV, '\t' for TSV)
@@ -118,7 +134,6 @@ impl Default for ExportOptions {
             include_formulas: false,
             include_formatting: false,
             include_metadata: false,
-            include_uncertainties: false,
             delimiter: None,
             encoding: default_utf8(),
             line_ending: default_crlf(),
@@ -126,6 +141,66 @@ impl Default for ExportOptions {
             json_format: default_json_format(),
             pretty_print: true,
             compress: false,
+        }
+    }
+}
+
+/// Main export dispatcher function that routes to the appropriate format handler
+#[tauri::command]
+pub async fn export_data(
+    data: Vec<serde_json::Value>,
+    file_path: String,
+    config: ExportConfig,
+) -> Result<(), String> {
+    match config.format {
+        ExportFormat::Csv | ExportFormat::Tsv | ExportFormat::Txt => {
+            // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for text export
+            let data_vec: Vec<Vec<Value>> = data
+                .into_iter()
+                .filter_map(|row| row.as_array().cloned())
+                .collect();
+            text::export_to_text(data_vec, file_path, config).await
+        }
+        ExportFormat::Json => {
+            // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for JSON export
+            let data_vec: Vec<Vec<Value>> = data
+                .into_iter()
+                .filter_map(|row| row.as_array().cloned())
+                .collect();
+            json::export_to_json(data_vec, file_path, config).await
+        }
+        ExportFormat::Xlsx => {
+            excel::export_to_excel(data, file_path, config).await
+        }
+        ExportFormat::Parquet => {
+            parquet::export_to_parquet(data, file_path, config).await
+        }
+        ExportFormat::Html => {
+            // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for HTML export
+            let data_vec: Vec<Vec<Value>> = data
+                .into_iter()
+                .filter_map(|row| row.as_array().cloned())
+                .collect();
+            html::export_to_html(data_vec, file_path).await
+        }
+        ExportFormat::Markdown => {
+            // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for Markdown export
+            let data_vec: Vec<Vec<Value>> = data
+                .into_iter()
+                .filter_map(|row| row.as_array().cloned())
+                .collect();
+            markdown::export_to_markdown(data_vec, file_path).await
+        }
+        ExportFormat::Tex => {
+            // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for LaTeX export
+            let data_vec: Vec<Vec<Value>> = data
+                .into_iter()
+                .filter_map(|row| row.as_array().cloned())
+                .collect();
+            tex::export_to_latex(data_vec, file_path).await
+        }
+        ExportFormat::AnaFisSpread => {
+            anafispread::export_to_anafis_spread(data, file_path, config).await
         }
     }
 }

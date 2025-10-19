@@ -9,20 +9,6 @@ use crate::unit_conversion::core::{
 use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RangeConversionRequest {
-    pub range: String,
-    pub from_unit: String,
-    pub to_unit: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RangeConversionResult {
-    pub range: String,
-    pub converted_count: usize,
-    pub preview: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct DimensionalAnalysisResult {
     pub unit_formula: String,
     pub dimensional_formula: String,
@@ -193,26 +179,6 @@ pub async fn get_unit_dimensional_formula(unit: String) -> Result<String, String
         Ok(parsed) => Ok(format_dimension(&parsed.dimension)),
         Err(e) => Err(e)
     }
-}
-
-// ===== SPREADSHEET INTEGRATION =====
-
-#[command]
-pub async fn convert_spreadsheet_range(request: RangeConversionRequest) -> Result<RangeConversionResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
-
-    let preview = converter.get_conversion_preview(&request.from_unit, &request.to_unit);
-
-    if !preview.is_valid {
-        return Err(format!("Invalid unit conversion: {} to {}", request.from_unit, request.to_unit));
-    }
-
-    Ok(RangeConversionResult {
-        range: request.range.clone(),
-        converted_count: 0, // Would be calculated based on actual range
-        preview: format!("Would convert range {} from {} to {} (factor: {:.6})",
-                        request.range, request.from_unit, request.to_unit, preview.conversion_factor),
-    })
 }
 
 // ===== UTILITY COMMANDS =====

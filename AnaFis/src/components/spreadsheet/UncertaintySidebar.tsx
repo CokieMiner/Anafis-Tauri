@@ -7,11 +7,13 @@ import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
 import { sidebarStyles } from '../../utils/sidebarStyles';
 import SidebarCard from '../ui/SidebarCard';
 import { anafisColors } from '../../themes';
+import { spreadsheetEventBus } from './SpreadsheetEventBus';
 
 interface Variable {
   name: string;
   valueRange: string;
   uncertaintyRange: string;
+  confidence: number;
 }
 
 type FocusedInputType = 
@@ -36,6 +38,8 @@ interface UncertaintySidebarProps {
   setOutputValueRange: (range: string) => void;
   outputUncertaintyRange: string;
   setOutputUncertaintyRange: (range: string) => void;
+  outputConfidence: number;
+  setOutputConfidence: (confidence: number) => void;
 }
 
 export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({ 
@@ -51,7 +55,9 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
   outputValueRange,
   setOutputValueRange,
   outputUncertaintyRange,
-  setOutputUncertaintyRange
+  setOutputUncertaintyRange,
+  outputConfidence,
+  setOutputConfidence
 }) => {
   // Remove local state - now using props
   const [selectedVariable, setSelectedVariable] = useState<number>(0);
@@ -83,6 +89,23 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
     handlerName: '__uncertaintySidebarSelectionHandler'
   });
 
+  // Subscribe to spreadsheet selection events via event bus
+  React.useEffect(() => {
+    if (!open) return;
+
+    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
+      // Call the window handler that the hook is listening to
+      const handler = (window as any).__uncertaintySidebarSelectionHandler;
+      if (handler) {
+        handler(cellRef);
+      }
+      // NOTE: Don't call onSelectionChange here - it would create an infinite loop
+      // since onSelectionChange emits to the event bus, which triggers this handler again
+    });
+
+    return unsubscribe;
+  }, [open]);
+
   // Generate next variable name: a-z, then aa-zz
   const getNextVariableName = () => {
     const count = variables.length;
@@ -100,7 +123,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
 
   const addVariable = () => {
     const nextName = getNextVariableName();
-    setVariables([...variables, { name: nextName, valueRange: '', uncertaintyRange: '' }]);
+    setVariables([...variables, { name: nextName, valueRange: '', uncertaintyRange: '', confidence: 95 }]);
     setSelectedVariable(variables.length);
   };
 
@@ -111,10 +134,57 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
     }
   };
 
-  const updateVariable = (index: number, field: keyof Variable, value: string) => {
+  const updateVariable = (index: number, field: keyof Variable, value: string | number) => {
     const updated = [...variables];
-    updated[index][field] = value;
+    updated[index] = { ...updated[index], [field]: value };
     setVariables(updated);
+  };
+
+  // Validate ranges contain numeric data
+  const validateRanges = async (): Promise<boolean> => {
+    if (!univerRef?.current) {
+      setError('Spreadsheet not initialized');
+      return false;
+    }
+
+    try {
+      for (const variable of variables) {
+        if (!variable.valueRange) continue;
+
+        // Check value range
+        const valueData = await univerRef.current.getRange(variable.valueRange);
+        const allNumeric = valueData.every(row =>
+          row.every(cell => typeof cell === 'number' && isFinite(cell as number))
+        );
+
+        if (!allNumeric) {
+          setError(`Variable "${variable.name}" value range contains non-numeric data`);
+          return false;
+        }
+
+        // Check uncertainty range if provided
+        if (variable.uncertaintyRange) {
+          const uncData = await univerRef.current.getRange(variable.uncertaintyRange);
+          if (uncData.length !== valueData.length) {
+            setError(`Variable "${variable.name}": uncertainty range length doesn't match value range`);
+            return false;
+          }
+
+          const allNumericUnc = uncData.every(row =>
+            row.every(cell => typeof cell === 'number' && isFinite(cell as number))
+          );
+
+          if (!allNumericUnc) {
+            setError(`Variable "${variable.name}" uncertainty range contains non-numeric data`);
+            return false;
+          }
+        }
+      }
+      return true;
+    } catch (err) {
+      setError(`Failed to validate ranges: ${err}`);
+      return false;
+    }
   };
 
   const handlePropagate = async () => {
@@ -135,6 +205,12 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
 
     setIsProcessing(true);
     try {
+      // Validate data before sending to backend
+      const isValid = await validateRanges();
+      if (!isValid) {
+        setIsProcessing(false);
+        return;
+      }
       // Call backend to generate formulas
       const result = await invoke<{
         value_formulas: string[];
@@ -145,9 +221,11 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
         variables: variables.map(v => ({
           name: v.name,
           value_range: v.valueRange,
-          uncertainty_range: v.uncertaintyRange
+          uncertainty_range: v.uncertaintyRange,
+          confidence: v.confidence
         })),
-        formula
+        formula,
+        outputConfidence: outputConfidence
       });
 
       if (!result.success || result.error) {
@@ -157,9 +235,19 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
 
       // Parse output ranges to get starting cell
       const parseRange = (range: string): { col: string; row: number } | null => {
-        const match = range.match(/^([A-Z]+)(\d+):/);
-        if (!match) return null;
-        return { col: match[1], row: parseInt(match[2]) };
+        // Try range format first: "A1:B5"
+        let match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+        if (match) {
+          return { col: match[1], row: parseInt(match[2]) };
+        }
+
+        // Try single cell format: "A1"
+        match = range.match(/^([A-Z]+)(\d+)$/);
+        if (match) {
+          return { col: match[1], row: parseInt(match[2]) };
+        }
+
+        return null;
       };
 
       const valueStart = parseRange(outputValueRange);
@@ -170,23 +258,21 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
         return;
       }
 
-      // Write value formulas to Univer
-      console.log(`Writing ${result.value_formulas.length} value formulas starting at ${valueStart.col}${valueStart.row}`);
-      for (let i = 0; i < result.value_formulas.length; i++) {
-        const cellRef = `${valueStart.col}${valueStart.row + i}`;
-        const formula = result.value_formulas[i];
-        console.log(`  ${cellRef}: ${formula}`);
-        univerRef.current.updateCell(cellRef, { f: formula });
-      }
+      // Prepare batch updates for value formulas
+      const valueUpdates = result.value_formulas.map((formula, i) => ({
+        cellRef: `${valueStart.col}${valueStart.row + i}`,
+        value: { f: formula }
+      }));
 
-      // Write uncertainty formulas to Univer
-      console.log(`Writing ${result.uncertainty_formulas.length} uncertainty formulas starting at ${uncStart.col}${uncStart.row}`);
-      for (let i = 0; i < result.uncertainty_formulas.length; i++) {
-        const cellRef = `${uncStart.col}${uncStart.row + i}`;
-        const formula = result.uncertainty_formulas[i];
-        console.log(`  ${cellRef}: ${formula}`);
-        univerRef.current.updateCell(cellRef, { f: formula });
-      }
+      // Prepare batch updates for uncertainty formulas
+      const uncertaintyUpdates = result.uncertainty_formulas.map((formula, i) => ({
+        cellRef: `${uncStart.col}${uncStart.row + i}`,
+        value: { f: formula }
+      }));
+
+      // Write all formulas in batches (much faster than one-by-one)
+      console.log(`Writing ${valueUpdates.length} value formulas and ${uncertaintyUpdates.length} uncertainty formulas in batch`);
+      await univerRef.current.batchUpdateCells([...valueUpdates, ...uncertaintyUpdates]);
 
       onPropagationComplete?.(outputValueRange);
       setError('');
@@ -329,7 +415,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                 onChange={(e) => updateVariable(selectedVariable, 'valueRange', e.target.value)}
                 onFocus={() => handleInputFocus({ type: 'valueRange', varIndex: selectedVariable })}
                 onBlur={handleInputBlur}
-                placeholder="A1:A10"
+                placeholder="A1 or A1:A10"
                 size="small"
                 fullWidth
                 sx={sidebarStyles.input}
@@ -344,12 +430,29 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                 onChange={(e) => updateVariable(selectedVariable, 'uncertaintyRange', e.target.value)}
                 onFocus={() => handleInputFocus({ type: 'uncertaintyRange', varIndex: selectedVariable })}
                 onBlur={handleInputBlur}
-                placeholder="B1:B10 or leave empty for zero"
+                placeholder="B1 or B1:B10 or leave empty for zero"
                 size="small"
                 fullWidth
                 sx={sidebarStyles.input}
                 slotProps={{
                   input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
+                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
+                }}
+              />
+              <TextField
+                label="Confidence (%)"
+                type="number"
+                value={currentVariable.confidence}
+                onChange={(e) => updateVariable(selectedVariable, 'confidence', Number(e.target.value))}
+                placeholder="95"
+                size="small"
+                fullWidth
+                sx={sidebarStyles.input}
+                slotProps={{
+                  input: { 
+                    style: { color: 'white', fontFamily: 'monospace', fontSize: 12 },
+                    inputProps: { min: 50, max: 99.9, step: 0.1 }
+                  },
                   inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
                 }}
               />
@@ -384,7 +487,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                 onChange={(e) => setOutputValueRange(e.target.value)}
                 onFocus={() => handleInputFocus({ type: 'outputValueRange' })}
                 onBlur={handleInputBlur}
-                placeholder="C1:C10"
+                placeholder="C1 or C1:C10"
                 size="small"
                 fullWidth
                 sx={sidebarStyles.input}
@@ -399,12 +502,29 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                 onChange={(e) => setOutputUncertaintyRange(e.target.value)}
                 onFocus={() => handleInputFocus({ type: 'outputUncertaintyRange' })}
                 onBlur={handleInputBlur}
-                placeholder="D1:D10"
+                placeholder="D1 or D1:D10"
                 size="small"
                 fullWidth
                 sx={sidebarStyles.input}
                 slotProps={{
                   input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
+                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
+                }}
+              />
+              <TextField
+                label="Output Confidence (%)"
+                type="number"
+                value={outputConfidence}
+                onChange={(e) => setOutputConfidence(Number(e.target.value))}
+                placeholder="95"
+                size="small"
+                fullWidth
+                sx={sidebarStyles.input}
+                slotProps={{
+                  input: { 
+                    style: { color: 'white', fontFamily: 'monospace', fontSize: 12 },
+                    inputProps: { min: 50, max: 99.9, step: 0.1 }
+                  },
                   inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
                 }}
               />

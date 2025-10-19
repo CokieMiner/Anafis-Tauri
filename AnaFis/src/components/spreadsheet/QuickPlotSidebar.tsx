@@ -31,6 +31,7 @@ import { sidebarStyles } from '../../utils/sidebarStyles';
 import SidebarCard from '../ui/SidebarCard';
 import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
 import { anafisColors } from '../../themes';
+import { spreadsheetEventBus } from './SpreadsheetEventBus';
 
 // Icon aliases for clarity
 const PlotIcon = ShowChartIcon;
@@ -127,6 +128,23 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
     sidebarDataAttribute: 'data-quick-plot-sidebar',
     handlerName: '__quickPlotSelectionHandler',
   });
+
+  // Subscribe to spreadsheet selection events via event bus
+  useEffect(() => {
+    if (!open) return;
+
+    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
+      // Call the window handler that the hook is listening to
+      const handler = (window as any).__quickPlotSelectionHandler;
+      if (handler) {
+        handler(cellRef);
+      }
+      // NOTE: Don't call onSelectionChange here - it would create an infinite loop
+      // since onSelectionChange emits to the event bus, which triggers this handler again
+    });
+
+    return unsubscribe;
+  }, [open]);
 
   // Initialize ECharts instance for sidebar plot
   useEffect(() => {
@@ -639,7 +657,17 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
             onChange={(e) => setXRange(e.target.value)}
             onFocus={() => handleInputFocus('xRange')}
             onBlur={handleInputBlur}
-            sx={{ mb: 1 }}
+            sx={{
+              mb: 1,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: focusedInput === 'xRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                borderRadius: '6px',
+                '& fieldset': { borderColor: focusedInput === 'xRange' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
+                '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+              }
+            }}
           />
           <TextField
             fullWidth
@@ -647,6 +675,16 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
             placeholder="X-axis label"
             value={xLabel}
             onChange={(e) => setXLabel(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'rgba(33, 150, 243, 0.05)',
+                borderRadius: '6px',
+                '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                '& input': { color: 'white', fontSize: 13 }
+              }
+            }}
           />
         </Box>
 
@@ -663,7 +701,17 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
             onChange={(e) => setYRange(e.target.value)}
             onFocus={() => handleInputFocus('yRange')}
             onBlur={handleInputBlur}
-            sx={{ mb: 1 }}
+            sx={{
+              mb: 1,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: focusedInput === 'yRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                borderRadius: '6px',
+                '& fieldset': { borderColor: focusedInput === 'yRange' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
+                '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+              }
+            }}
           />
           <TextField
             fullWidth
@@ -671,6 +719,16 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
             placeholder="Y-axis label"
             value={yLabel}
             onChange={(e) => setYLabel(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: 'rgba(33, 150, 243, 0.05)',
+                borderRadius: '6px',
+                '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                '& input': { color: 'white', fontSize: 13 }
+              }
+            }}
           />
         </Box>
 
@@ -704,6 +762,16 @@ const QuickPlotSidebar: React.FC<QuickPlotSidebarProps> = ({
                 onChange={(e) => setErrorRange(e.target.value)}
                 onFocus={() => handleInputFocus('errorRange')}
                 onBlur={handleInputBlur}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: focusedInput === 'errorRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                    borderRadius: '6px',
+                    '& fieldset': { borderColor: focusedInput === 'errorRange' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
+                    '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                    '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                    '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+                  }
+                }}
               />
             </>
           )}

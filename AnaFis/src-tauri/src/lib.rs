@@ -28,7 +28,6 @@ pub fn run() {
             unit_conversion::commands::parse_unit_formula,
             unit_conversion::commands::analyze_dimensional_compatibility,
             unit_conversion::commands::get_unit_dimensional_formula,
-            unit_conversion::commands::convert_spreadsheet_range,
             unit_conversion::commands::validate_unit_string,
             unit_conversion::commands::get_supported_categories,
 
@@ -60,9 +59,15 @@ pub fn run() {
             data_library::commands::export_sequences_csv,
             data_library::commands::export_sequences_json,
             
-            // Export Commands (2 commands)
+            // Export Commands (8 commands)
+            export::export_data,
             export::text::export_to_text,
             export::json::export_to_json,
+            export::excel::export_to_excel,
+            export::html::export_to_html,
+            export::markdown::export_to_markdown,
+            export::tex::export_to_latex,
+            export::parquet::export_to_parquet,
             
             // Utility Commands (File Operations)
             utils::file_operations::save_png_file,

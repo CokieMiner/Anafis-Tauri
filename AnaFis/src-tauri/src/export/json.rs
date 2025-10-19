@@ -29,10 +29,10 @@ pub async fn export_to_json(
         _ => return Err(format!("Unknown JSON format: {}", config.options.json_format)),
     }?;
 
-    // Serialize to string
+    // Serialize to string with custom formatting
     let json_string = if config.options.pretty_print {
-        serde_json::to_string_pretty(&json_data)
-            .map_err(|e| format!("Failed to serialize JSON: {}", e))?
+        // Use custom pretty printing that keeps arrays compact
+        pretty_print_json(&json_data)?
     } else {
         serde_json::to_string(&json_data)
             .map_err(|e| format!("Failed to serialize JSON: {}", e))?
@@ -52,6 +52,72 @@ pub async fn export_to_json(
     Ok(())
 }
 
+/// Custom pretty print that keeps arrays on single lines
+fn pretty_print_json(value: &Value) -> Result<String, String> {
+    fn format_value(value: &Value, indent: usize, is_top_level: bool) -> String {
+        let indent_str = "  ".repeat(indent);
+        
+        match value {
+            Value::Array(arr) => {
+                if arr.is_empty() {
+                    return "[]".to_string();
+                }
+                
+                // Check if this is an array of arrays (2D array) at top level
+                let is_array_of_arrays = is_top_level && arr.iter().any(|v| matches!(v, Value::Array(_)));
+                
+                if is_array_of_arrays {
+                    // Format as multi-line with each sub-array on its own line
+                    let mut lines = vec!["[".to_string()];
+                    for (i, item) in arr.iter().enumerate() {
+                        let comma = if i < arr.len() - 1 { "," } else { "" };
+                        let formatted = format_value(item, indent + 1, false);
+                        lines.push(format!("{}  {}{}", indent_str, formatted, comma));
+                    }
+                    lines.push(format!("{}]", indent_str));
+                    lines.join("\n")
+                } else {
+                    // Keep simple arrays on a single line
+                    let items: Vec<String> = arr.iter()
+                        .map(|v| match v {
+                            Value::String(s) => format!("\"{}\"", s.replace('"', "\\\"")),
+                            Value::Number(n) => n.to_string(),
+                            Value::Bool(b) => b.to_string(),
+                            Value::Null => "null".to_string(),
+                            Value::Array(_) => format_value(v, 0, false),
+                            Value::Object(_) => format_value(v, indent + 1, false),
+                        })
+                        .collect();
+                    format!("[{}]", items.join(", "))
+                }
+            }
+            Value::Object(obj) => {
+                if obj.is_empty() {
+                    return "{}".to_string();
+                }
+                
+                let mut lines = vec!["{".to_string()];
+                let entries: Vec<_> = obj.iter().collect();
+                
+                for (i, (key, val)) in entries.iter().enumerate() {
+                    let comma = if i < entries.len() - 1 { "," } else { "" };
+                    let formatted_val = format_value(val, indent + 1, false);
+                    lines.push(format!("{}  \"{}\": {}{}", indent_str, key, formatted_val, comma));
+                }
+                
+                lines.push(format!("{}}}", indent_str));
+                lines.join("\n")
+            }
+            Value::String(s) => format!("\"{}\"", s.replace('"', "\\\"")),
+            Value::Number(n) => n.to_string(),
+            Value::Bool(b) => b.to_string(),
+            Value::Null => "null".to_string(),
+        }
+    }
+    
+    Ok(format_value(value, 0, true))
+}
+
 /// Format data as simple 2D array
 fn format_as_array(data: &[Vec<Value>]) -> Result<Value, String> {
     Ok(json!(data))
@@ -65,16 +131,31 @@ fn format_as_object(data: &[Vec<Value>], has_headers: bool) -> Result<Value, Str
     }
 
     let (headers, data_rows) = if has_headers && data.len() > 1 {
-        // First row is headers
+        // First row is headers - use values or auto-generate for empty cells
         let headers: Vec<String> = data[0].iter().enumerate().map(|(i, val)| {
             match val {
-                Value::String(s) => s.clone(),
+                Value::String(s) if !s.trim().is_empty() => s.trim().to_string(),
+                Value::Number(n) => n.to_string(),
                 _ => format!("Column{}", i + 1),
             }
         }).collect();
-        (headers, &data[1..])
+        
+        // Check if ALL headers are auto-generated (meaning entire first row was empty)
+        let all_auto_generated = headers.iter().all(|h| h.starts_with("Column"));
+        
+        if all_auto_generated {
+            // Entire first row was empty, treat it as data instead
+            let col_count = data[0].len();
+            let headers: Vec<String> = (1..=col_count)
+                .map(|i| format!("Column{}", i))
+                .collect();
+            (headers, data)
+        } else {
+            // At least some headers are valid, skip first row
+            (headers, &data[1..])
+        }
     } else {
-        // Generate column names
+        // No headers - generate column names and use all data
         let col_count = data[0].len();
         let headers: Vec<String> = (1..=col_count)
             .map(|i| format!("Column{}", i))
@@ -82,7 +163,9 @@ fn format_as_object(data: &[Vec<Value>], has_headers: bool) -> Result<Value, Str
         (headers, data)
     };
 
-    // Build column-oriented object
+    // Build column-oriented object with preserved order
+    // serde_json::Map uses BTreeMap which sorts keys alphabetically
+    // We need to build it in order to preserve column positions
     let mut result = serde_json::Map::new();
     
     for (col_idx, header) in headers.iter().enumerate() {
@@ -103,16 +186,31 @@ fn format_as_records(data: &[Vec<Value>], has_headers: bool) -> Result<Value, St
     }
 
     let (headers, data_rows) = if has_headers && data.len() > 1 {
-        // First row is headers
+        // First row is headers - use values or auto-generate for empty cells
         let headers: Vec<String> = data[0].iter().enumerate().map(|(i, val)| {
             match val {
-                Value::String(s) => s.clone(),
+                Value::String(s) if !s.trim().is_empty() => s.trim().to_string(),
+                Value::Number(n) => n.to_string(),
                 _ => format!("Column{}", i + 1),
             }
         }).collect();
-        (headers, &data[1..])
+        
+        // Check if ALL headers are auto-generated (meaning entire first row was empty)
+        let all_auto_generated = headers.iter().all(|h| h.starts_with("Column"));
+        
+        if all_auto_generated {
+            // Entire first row was empty, treat it as data instead
+            let col_count = data[0].len();
+            let headers: Vec<String> = (1..=col_count)
+                .map(|i| format!("Column{}", i))
+                .collect();
+            (headers, data)
+        } else {
+            // At least some headers are valid, skip first row
+            (headers, &data[1..])
+        }
     } else {
-        // Generate column names
+        // No headers - generate column names and use all data
         let col_count = data[0].len();
         let headers: Vec<String> = (1..=col_count)
             .map(|i| format!("Column{}", i))

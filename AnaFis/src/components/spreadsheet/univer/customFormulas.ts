@@ -313,7 +313,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
                     return Math.exp(logGamma(x) + logGamma(y) - logGamma(x + y));
                 }
                 return gamma(x) * gamma(y) / gamma(x + y);
-            } catch (e) {
+            } catch {
                 return NaN;
             }
         },
@@ -327,7 +327,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
             const x = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
             try {
                 return digamma(x);
-            } catch (e) {
+            } catch {
                 return NaN;
             }
         },
@@ -341,7 +341,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
             const x = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
             try {
                 return lambertW(x);
-            } catch (e) {
+            } catch {
                 return NaN;
             }
         },
@@ -356,7 +356,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
             const x = typeof args[1] === 'number' ? args[1] : parseFloat(args[1] as string) || 0;
             try {
                 return hermite(n, x);
-            } catch (e) {
+            } catch {
                 return NaN;
             }
         },
@@ -370,7 +370,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
             const x = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
             try {
                 return gamma(x);
-            } catch (e) {
+            } catch {
                 return NaN;
             }
         },
@@ -384,7 +384,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
             const s = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
             try {
                 return zeta(s);
-            } catch (e) {
+            } catch {
                 return NaN;
             }
         },
@@ -398,7 +398,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
             const k = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
             try {
                 return elliptic_k(k);
-            } catch (e) {
+            } catch {
                 return NaN;
             }
         },

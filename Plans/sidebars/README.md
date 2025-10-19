@@ -115,7 +115,7 @@ None - Phase 1 Complete!
    - **Priority**: High
    - **Complexity**: High
    - **Features**: Advanced 2D/3D plotting from Data Library, n-dimensional curve fitting, fit comparison, residuals
-   - **Dependencies**: Plotly.js, ✅ Data Library (DONE!), nalgebra, levenberg-marquardt
+   - **Dependencies**: echarts, ✅ Data Library (DONE!), nalgebra, levenberg-marquardt
    - **File**: `09_graphs_and_fitting_tab.md`
 
 #### Windows
