@@ -67,11 +67,11 @@ This table outlines the primary libraries and crates intended for use across dif
 | Module | Primary Lib (Rust) | Primary Lib (Frontend) | Why |
 |---|---|---|---|
 | **Shell/Notebook** | `tauri`, `tauri-plugin-window` | React, Material-UI | For building the desktop application shell, managing native windows, and creating a responsive UI for detachable tabs, adhering to Material Design principles. |
-| **Tabs/Solver Tab** | `sympy` through PyO3, `nalgebra` | React, MathJax/KaTeX, Plotly.js, Material-UI | To provide symbolic mathematics capabilities, numerical computation for solving equations, live LaTeX rendering, interactive plotting of solutions, and consistent UI. |
-| **GUI/Plotting** | `plotters` (via WebAssembly/Canvas) | Plotly.js, D3.js, ECharts, Material-UI | For generating high-quality, interactive data visualizations and plots within the webview, with consistent UI. |
+| **Tabs/Solver Tab** | `sympy` through PyO3, `nalgebra` | React, MathJax/KaTeX, ECharts, Material-UI | To provide symbolic mathematics capabilities, numerical computation for solving equations, live LaTeX rendering, interactive plotting of solutions, and consistent UI. **Migrated from Plotly to ECharts** for reliable export and smaller bundle. |
+| **GUI/Plotting** | `plotters` (via WebAssembly/Canvas) | **ECharts** (primary), D3.js (advanced), Material-UI | For generating high-quality, interactive data visualizations and plots within the webview, with consistent UI. **ECharts chosen** for: reliable PNG/SVG export, native timeline animation, 500KB size vs Plotly's 3MB, and no WebKit issues. |
 | **Tabs/Monte Carlo Tab** | `ndarray`, `rand` (via WebAssembly) | React, Web Workers | For efficient N-dimensional array operations, random number generation for simulations, and offloading heavy computations to improve UI responsiveness. |
 | **Core/Data** | `uom` (Units of Measurement) | TypeScript types | For robust handling of physical quantities with units, ensuring type safety and correctness across the application. |
-| **Services/Curve Fitting** | `argmin`, `nalgebra` | React, Plotly.js | For implementing N-dimensional optimization algorithms for curve fitting and visualizing the fitting results. |
+| **Services/Curve Fitting** | `argmin`, `nalgebra` | React, ECharts | For implementing N-dimensional optimization algorithms for curve fitting and visualizing the fitting results. **Migrated from Plotly to ECharts**. |
 | **Core/Symbolic** | `sympy` through PyO3 | | For symbolic manipulation and representing expressions as Directed Acyclic Graphs (DAGs) for efficient updates. |
 | **Compute** | `wgpu` (GPU), `rayon` (CPU) | WebAssembly, Web Workers | For auto-dispatching computations to available hardware (GPU/CPU) and enabling parallel processing for performance-critical tasks. |
 | **Persistence/State** | `tauri-plugin-store`, `serde` | Zustand/Jotai/Redux (frontend state) | For saving and restoring application state (e.g., open tabs, user preferences) and managing complex frontend state. |
@@ -132,18 +132,26 @@ ANAFIS must fulfill the following core requirements:
 
 This section outlines the phased implementation plan for the Tauri-based ANAFIS application:
 
--   [ ] 1. Project Setup and Basic Tauri Application Initialization
--   [ ] 2. Frontend Framework Integration (React/TypeScript) and initial UI scaffolding
--   [ ] 3. Data Bus Communication System (Tauri IPC) establishment
--   [ ] 4. Basic Tab Management and Detachable Windows implementation
--   [ ] 5. Spreadsheet Tab Core Functionality (Frontend) development
--   [ ] 6. Spreadsheet Advanced Features and Testing
--   [ ] 7. Curve Fitting Tab Foundation (Frontend & Rust integration)
--   [ ] 8. Fitting Algorithms Implementation (Rust backend)
--   [ ] 9. Advanced Visualization (Web-based Plotting) integration
+-   [x] 1. Project Setup and Basic Tauri Application Initialization
+-   [x] 2. Frontend Framework Integration (React/TypeScript) and initial UI scaffolding
+-   [x] 3. Data Bus Communication System (Tauri IPC) establishment
+-   [x] 4. Basic Tab Management and Detachable Windows implementation
+-   [x] 5. Spreadsheet Tab Core Functionality (Frontend) development
+-   [x] 6. Spreadsheet Advanced Features (Univer.js integration complete)
+-   [x] 7. Data Library Infrastructure (SQLite + FTS5 search + statistics + export)
+-   [x] 8. Quick Plot Sidebar (ECharts 2D plotting + PNG/SVG export + Data Library integration)
+-   [x] 9. Code Quality & Type Safety (ESLint, TypeScript, Clippy - all errors fixed)
+-   [ ] 10. Curve Fitting Tab Foundation (Frontend & Rust integration)
+-   [ ] 11. Fitting Algorithms Implementation (Rust backend)
+-   [ ] 12. Advanced Visualization (3D plotting with ECharts-GL) integration
 -   [ ] 10. Equation Solver Tab Implementation (Frontend & Rust integration)
 -   [ ] 11. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration)
 -   [ ] 12. Floating Tools Implementation
+-   [ ] 13. Statistical Analysis Sidebar (statrs crate + descriptive statistics)
+-   [ ] 14. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
+-   [ ] 15. Outlier Detection Sidebar (Z-score, IQR methods)
+-   [ ] 16. Data Validation Sidebar (real-time validation rules)
+-   [ ] 17. Metadata Manager Sidebar (experimental context tracking)
 -   [ ] 13. Internationalization System setup
 -   [ ] 14. Application Settings and Configuration management
 -   [ ] 15. Update System Implementation

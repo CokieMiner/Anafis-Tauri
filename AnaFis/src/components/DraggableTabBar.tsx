@@ -17,7 +17,7 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
 }) {
   const { renameTab } = useTabStore();
   const isHomeTab = tab.id === 'home';
-  const tabRef = useRef<HTMLDivElement>(null);
+  const tabRef = useRef<HTMLDivElement | null>(null);
 
   const {
     attributes,

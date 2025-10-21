@@ -88,3 +88,4 @@ AnaFis/src-tauri/gen/
 AnaFis/package-lock.json
 Installer/BuildOutputs
 .github/
+AnaFis/src-tauri/python/__pycache__/

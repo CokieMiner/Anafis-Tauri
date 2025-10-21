@@ -10,9 +10,9 @@ export const getTabColors = (tabId: string) => {
   if (tabId === 'home') {
     return {
       primary: '#9c27b0', // Purple
-      secondary: '#ba68c8',
-      accent: '#ba68c8',
-      icon: '#ba68c8'
+      secondary: '#9c27b0',
+      accent: '#9c27b0',
+      icon: '#9c27b0'
     };
   }
   if (tabId.includes('spreadsheet')) {

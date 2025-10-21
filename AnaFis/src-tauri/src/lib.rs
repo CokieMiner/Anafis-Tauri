@@ -3,6 +3,9 @@ mod uncertainty_calculator;
 mod windows;
 mod utils;
 mod unit_conversion;
+mod scientific;
+mod data_library;
+mod export;
 
 use tauri::Manager;
 
@@ -25,24 +28,68 @@ pub fn run() {
             unit_conversion::commands::parse_unit_formula,
             unit_conversion::commands::analyze_dimensional_compatibility,
             unit_conversion::commands::get_unit_dimensional_formula,
-            unit_conversion::commands::convert_spreadsheet_range,
             unit_conversion::commands::validate_unit_string,
             unit_conversion::commands::get_supported_categories,
 
-            // Window Management Commands (8 commands)
+            // Window Management Commands (9 commands)
             windows::secondary_windows::open_latex_preview_window,
             windows::secondary_windows::open_uncertainty_calculator_window,
             windows::secondary_windows::close_uncertainty_calculator_window,
             windows::secondary_windows::resize_uncertainty_calculator_window,
             windows::secondary_windows::open_settings_window,
             windows::secondary_windows::close_settings_window,
-            windows::secondary_windows::open_unit_conversion_window,
+            windows::secondary_windows::open_data_library_window,
+            windows::secondary_windows::close_data_library_window,
             windows::tabs::send_tab_to_main,
             windows::tabs::create_tab_window,
-        ])        .setup(|app| {
+
+            // Scientific Computation Commands (Sidebar tools)
+            scientific::uncertainty_propagation::generate_uncertainty_formulas,
+
+            // Data Library Commands (11 commands)
+            data_library::commands::save_sequence,
+            data_library::commands::get_sequences,
+            data_library::commands::get_sequence,
+            data_library::commands::update_sequence,
+            data_library::commands::delete_sequence,
+            data_library::commands::get_sequence_stats,
+            data_library::commands::pin_sequence,
+            data_library::commands::duplicate_sequence,
+            data_library::commands::get_all_tags,
+            data_library::commands::export_sequences_csv,
+            data_library::commands::export_sequences_json,
+            
+            // Export Commands (8 commands)
+            export::export_data,
+            export::text::export_to_text,
+            export::json::export_to_json,
+            export::excel::export_to_excel,
+            export::html::export_to_html,
+            export::markdown::export_to_markdown,
+            export::tex::export_to_latex,
+            export::parquet::export_to_parquet,
+            
+            // Utility Commands (File Operations)
+            utils::file_operations::save_png_file,
+            utils::file_operations::save_image_from_data_url,
+            utils::file_operations::save_svg_file,
+        ])
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
             // Initialize logging
             if let Err(e) = utils::init_logging() {
                 eprintln!("Failed to initialize logging: {e}");
+            }
+
+            // Initialize Data Library
+            match data_library::commands::init_data_library(app.handle()) {
+                Ok(state) => {
+                    app.manage(state);
+                    utils::log_info("Data Library initialized successfully");
+                }
+                Err(e) => {
+                    utils::log_info(&format!("WARNING: Failed to initialize Data Library: {}", e));
+                }
             }
 
             utils::log_info("Using system Python - no embedded Python setup needed");

@@ -1,36 +1,77 @@
 import { createTheme } from '@mui/material/styles';
 
+// AnaFis Color Palette - Unified theme system
+export const anafisColors = {
+  // Primary theme colors
+  primary: '#9c27b0', // Purple - default/fallback
+  spreadsheet: '#2196f3', // Blue - spreadsheet related
+
+  // Tab-specific colors
+  tabs: {
+    home: '#9c27b0', // Purple
+    spreadsheet: '#2196f3', // Blue
+    fitting: '#ff9800', // Orange
+    solver: '#4caf50', // Green
+    montecarlo: '#e91e63', // Pink
+  },
+
+  // Top bar button colors (bright versions)
+  buttons: {
+    minimize: '#4caf50', // Bright green
+    maximize: '#2196f3', // Bright blue
+    close: '#f44336', // Bright red
+  },
+
+  // UI element colors
+  ui: {
+    background: '#0a0a0a',
+    paper: '#111111',
+    border: 'rgba(255, 255, 255, 0.08)',
+    text: {
+      primary: '#ffffff',
+      secondary: 'rgba(255, 255, 255, 0.8)',
+      tertiary: 'rgba(255, 255, 255, 0.6)',
+    }
+  }
+};
+
 // Shared theme configuration for AnaFis
 export const createAnafisTheme = () => {
   return createTheme({
     palette: {
       mode: 'dark',
       primary: {
-        main: '#9c27b0', // Readable purple for settings
+        main: anafisColors.primary, // Purple as default
         light: '#ba68c8',
         dark: '#7b1fa2',
       },
       secondary: {
-        main: '#7f1d1d', // Deep dark red
-        light: '#991b1b',
-        dark: '#450a0a',
+        main: anafisColors.spreadsheet, // Blue for spreadsheet
+        light: '#64b5f6',
+        dark: '#1976d2',
       },
       background: {
-        default: '#0a0a0a', // Pure black background
-        paper: '#111111', // Very dark gray for cards
+        default: anafisColors.ui.background,
+        paper: anafisColors.ui.paper,
       },
       text: {
-        primary: '#ffffff', // Pure white text
-        secondary: '#ffffff', // Pure white secondary text
+        primary: anafisColors.ui.text.primary,
+        secondary: anafisColors.ui.text.secondary,
       },
       success: {
-        main: '#166534', // Dark green
+        main: anafisColors.buttons.minimize, // Green
+        light: '#81c784',
+        dark: '#388e3c',
       },
       warning: {
-        main: '#92400e', // Dark orange
+        main: anafisColors.tabs.fitting, // Orange
+        light: '#ffb74d',
+        dark: '#f57c00',
       },
       error: {
-        main: '#7f1d1d', // Deep dark red
+        main: anafisColors.buttons.close, // Red
+        light: '#ef5350',
+        dark: '#d32f2f',
       },
     },
     typography: {
@@ -62,7 +103,7 @@ export const createAnafisTheme = () => {
         styleOverrides: {
           root: {
             backgroundColor: '#111111',
-            backgroundImage: 'linear-gradient(135deg, rgba(156, 39, 176, 0.15) 0%, rgba(79, 29, 29, 0.15) 100%)',
+            backgroundImage: 'linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.05) 100%)',
             backdropFilter: 'blur(10px)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           },
@@ -74,10 +115,7 @@ export const createAnafisTheme = () => {
             backgroundColor: '#111111',
             backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
-            transition: 'all 0.3s ease-in-out',
-            '&:hover': {
-              border: '1px solid rgba(156, 39, 176, 0.25)',
-            },
+            transition: 'none',
           },
         },
       },
@@ -86,15 +124,23 @@ export const createAnafisTheme = () => {
           root: {
             borderRadius: 8,
             padding: '8px 16px',
-            transition: 'all 0.2s ease-in-out',
+            transition: 'none',
             '&:hover': {
-              transform: 'translateY(-1px)',
+              transform: 'none',
             },
           },
-          contained: {
-            background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #ba68c8 0%, #9c27b0 100%)',
+        },
+      },
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            '& .MuiOutlinedInput-root': {
+              '&.Mui-focused fieldset': {
+                borderColor: '#9c27b0', // Use purple primary color
+              },
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: '#9c27b0', // Use purple primary color
             },
           },
         },
@@ -116,6 +162,79 @@ export const createAnafisTheme = () => {
             '&::-webkit-scrollbar-thumb:hover': {
               background: '#7a7a7a',
             },
+          },
+        },
+      },
+    },
+  });
+};
+
+// Theme without transitions for windows that need to resize smoothly without flickering
+export const createNoTransitionTheme = () => {
+  const baseTheme = createAnafisTheme();
+  return createTheme(baseTheme, {
+    components: {
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundColor: '#111111',
+            backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            transition: 'none',
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            padding: '8px 16px',
+            transition: 'none',
+            '&:hover': {
+              transform: 'none',
+            },
+          },
+        },
+      },
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            '& .MuiOutlinedInput-root': {
+              '&.Mui-focused fieldset': {
+                borderColor: '#9c27b0', // Use purple primary color
+              },
+            },
+            '& .MuiInputLabel-root.Mui-focused': {
+              color: '#9c27b0', // Use purple primary color
+            },
+          },
+        },
+      },
+      MuiFormLabel: {
+        styleOverrides: {
+          root: {
+            transition: 'none',
+          },
+        },
+      },
+      MuiRadio: {
+        styleOverrides: {
+          root: {
+            transition: 'none',
+          },
+        },
+      },
+      MuiCheckbox: {
+        styleOverrides: {
+          root: {
+            transition: 'none',
+          },
+        },
+      },
+      MuiListItemButton: {
+        styleOverrides: {
+          root: {
+            transition: 'none',
           },
         },
       },

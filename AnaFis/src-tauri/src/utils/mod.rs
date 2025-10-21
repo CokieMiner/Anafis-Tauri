@@ -3,6 +3,7 @@
 pub mod validation;
 pub mod logging;
 pub mod error;
+pub mod file_operations;
 
 // Re-export commonly used types and functions
 pub use validation::{VariableInput, validate_formula, validate_variables, generate_cache_key};

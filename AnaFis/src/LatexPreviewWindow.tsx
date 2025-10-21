@@ -4,6 +4,8 @@ import 'katex/dist/katex.min.css';
 import { invoke } from '@tauri-apps/api/core';
 import { createRoot } from 'react-dom/client';
 import CustomTitleBar from './components/CustomTitleBar';
+import { ThemeProvider, useTheme } from '@mui/material';
+import { createAnafisTheme } from './themes';
 
 interface LatexPreviewWindowProps {
   formula: string;
@@ -11,6 +13,7 @@ interface LatexPreviewWindowProps {
 }
 
 const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title }) => {
+  const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,7 +25,7 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
 
         const container = containerRef.current;
         container.style.display = 'none';
-        container.offsetHeight;
+        void container.offsetHeight; // Force reflow
         container.style.display = 'block';
 
         const rect = container.getBoundingClientRect();
@@ -74,14 +77,14 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
           height: '135px', // Fixed height for content area
           overflowX: 'auto',
           overflowY: 'auto',
-          backgroundColor: '#0a0a0a',
+          backgroundColor: theme.palette.background.default,
           scrollbarWidth: 'thin',
           scrollbarColor: '#555 #0a0a0a'
         }}
         data-scrollbar-container
       >
         <div style={{
-          backgroundColor: '#1a1a1a',
+          backgroundColor: theme.palette.background.paper,
           borderRadius: '8px',
           padding: '20px',
           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -95,7 +98,7 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
           {formula ? (
             <div style={{
               fontSize: '1.2em',
-              color: '#ffffff',
+              color: theme.palette.text.primary,
               display: 'block',
               overflow: 'visible',
               whiteSpace: 'normal'
@@ -103,7 +106,7 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
               <BlockMath math={formula} />
             </div>
           ) : (
-            <div style={{ color: '#888', fontStyle: 'italic' }}>
+            <div style={{ color: theme.palette.text.secondary, fontStyle: 'italic' }}>
               No formula provided
             </div>
           )}
@@ -117,34 +120,34 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
           div[data-scrollbar-container]::-webkit-scrollbar {
             width: 16px !important;
             height: 16px !important;
-            background: #0a0a0a !important;
+            background: ${theme.palette.background.default} !important;
           }
 
           div[data-scrollbar-container]::-webkit-scrollbar-track {
-            background: #0a0a0a !important;
+            background: ${theme.palette.background.default} !important;
             border-radius: 8px !important;
           }
 
           div[data-scrollbar-container]::-webkit-scrollbar-thumb {
-            background: #666 !important;
+            background: #5a5a5a !important;
             border-radius: 8px !important;
-            border: 3px solid #0a0a0a !important;
+            border: 3px solid ${theme.palette.background.default} !important;
             min-height: 20px !important;
             min-width: 20px !important;
           }
 
           div[data-scrollbar-container]::-webkit-scrollbar-thumb:hover {
-            background: #888 !important;
+            background: #7a7a7a !important;
           }
 
           div[data-scrollbar-container]::-webkit-scrollbar-corner {
-            background: #0a0a0a !important;
+            background: ${theme.palette.background.default} !important;
           }
 
           /* Ensure scrollbars are always visible */
           div[data-scrollbar-container] {
             scrollbar-width: thin !important;
-            scrollbar-color: #666 #0a0a0a !important;
+            scrollbar-color: #5a5a5a ${theme.palette.background.default} !important;
           }
         `
       }} />
@@ -159,8 +162,13 @@ const title = decodeURIComponent(urlParams.get('title') || 'LaTeX Preview');
 
 const container = document.getElementById('root');
 if (container) {
+  // Create theme using shared configuration
+  const theme = createAnafisTheme();
+  
   // Create and render the component using modern React 18+ API
-  const app = React.createElement(LatexPreviewWindow, { formula, title });
+  const app = React.createElement(ThemeProvider, { theme }, 
+    React.createElement(LatexPreviewWindow, { formula, title })
+  );
   const root = createRoot(container);
   root.render(app);
 }

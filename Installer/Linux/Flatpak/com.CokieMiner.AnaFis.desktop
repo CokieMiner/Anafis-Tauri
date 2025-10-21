@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AnaFis
+GenericName=Scientific Data Analysis
+Comment=Advanced Numerical Analysis and Fitting Interface System
+Icon=com.CokieMiner.AnaFis
+Exec=anafis
+Terminal=false
+Categories=Science;Education;Math;DataVisualization;
+Keywords=science;data;analysis;statistics;fitting;numerical;spreadsheet;
+StartupWMClass=AnaFis
+StartupNotify=true

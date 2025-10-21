@@ -1,26 +1,62 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { DraggableTabBar } from './components/DraggableTabBar';
 import CustomTitleBar from './components/CustomTitleBar';
 import TabButton from './components/TabButton';
-import HomeTab from './pages/HomeTab';
-import SpreadsheetTab from './pages/SpreadsheetTab';
-import FittingTab from './pages/FittingTab';
-import SolverTab from './pages/SolverTab';
-import MonteCarloTab from './pages/MonteCarloTab';
 import { useTabStore } from './hooks/useTabStore';
 import { DetachedTabWindow } from './components/DetachedTabWindow';
+import { anafisColors } from './themes';
+
+// Lazy load tab components for code splitting
+const HomeTab = lazy(() => import('./pages/HomeTab').then(module => ({ default: module.default })));
+const SpreadsheetTab = lazy(() => import('./pages/SpreadsheetTab').then(module => ({ default: module.default })));
+const FittingTab = lazy(() => import('./pages/FittingTab').then(module => ({ default: module.default })));
+const SolverTab = lazy(() => import('./pages/SolverTab').then(module => ({ default: module.default })));
+const MonteCarloTab = lazy(() => import('./pages/MonteCarloTab').then(module => ({ default: module.default })));
+
+// Loading component for lazy-loaded tabs
+const TabLoadingFallback = () => (
+  <Box sx={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    width: '100%',
+    backgroundColor: '#0a0a0a'
+  }}>
+    <CircularProgress sx={{ color: anafisColors.primary }} />
+  </Box>
+);
 
 // Material-UI Icons for drag overlay
 // Icons now handled by shared utility function
 
 import type { Tab } from './types/tabs'; // Import the Tab interface
 
+// Helper function to create tab content based on type
+const createTabContent = (tabType: string, openNewTab?: (id: string, title: string, content: React.ReactNode) => void) => {
+  const safeOpenNewTab = openNewTab || (() => {});
+  switch (tabType) {
+    case 'home':
+      return <HomeTab openNewTab={safeOpenNewTab} />;
+    case 'spreadsheet':
+      return <SpreadsheetTab />;
+    case 'fitting':
+      return <FittingTab />;
+    case 'solver':
+      return <SolverTab />;
+    case 'montecarlo':
+      return <MonteCarloTab />;
+    default:
+      return <HomeTab openNewTab={safeOpenNewTab} />;
+  }
+};
+
 // TabInfo interface matching the Rust TabInfo struct
 interface TabInfo {
   id: string;
   title: string;
   content_type: string;
-  state: any;
+  state: Record<string, unknown>;
   icon?: string;
 }
 
@@ -32,7 +68,8 @@ import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
-import { AddIcon, SettingsIcon, CalculateIcon } from './icons';
+import CircularProgress from '@mui/material/CircularProgress';
+import { AddIcon, SettingsIcon, CalculateIcon, StorageIcon } from './icons';
 
 // Tauri imports
 import { invoke } from '@tauri-apps/api/core';
@@ -130,15 +167,23 @@ function App() {
   const openUncertaintyCalculator = async () => {
     try {
       await invoke('open_uncertainty_calculator_window');
-    } catch (error) {
+    } catch {
       // Failed to open uncertainty calculator window
+    }
+  };
+
+  const openDataLibrary = async () => {
+    try {
+      await invoke('open_data_library_window');
+    } catch {
+      // Failed to open data library window
     }
   };
 
   const openSettings = async () => {
     try {
       await invoke('open_settings_window');
-    } catch (error) {
+    } catch {
       // Failed to open settings window
     }
   };
@@ -186,7 +231,7 @@ function App() {
 
         await currentWindow.close();
       }
-    } catch (error) {
+    } catch {
       // Failed to reattach tab
     }
   };
@@ -194,11 +239,12 @@ function App() {
   // Use handleReattachTab directly when rendering CustomTitleBar for detached windows
 
   // Helper to render active tab content
-    const renderActiveTabContent = () => {
-    const activeTab = tabs.find(tab => tab.id === activeTabId);
-    if (!activeTab) return null;
+  const renderActiveTabContent = () => {
+    if (tabs.length === 0) return null;
 
     if (isDetachedTabWindow) {
+      const activeTab = tabs.find(tab => tab.id === activeTabId);
+      if (!activeTab) return null;
       return (
         <DetachedTabWindow>
           {activeTab.content}
@@ -206,7 +252,26 @@ function App() {
       );
     }
 
-    return activeTab.content;
+    // Render all tabs but only show the active one
+    // This keeps components mounted and preserves their state
+    return (
+      <>
+        {tabs.map(tab => (
+          <Box
+            key={tab.id}
+            sx={{
+              display: tab.id === activeTabId ? 'block' : 'none',
+              width: '100%',
+              height: '100%'
+            }}
+          >
+            <Suspense fallback={<TabLoadingFallback />}>
+              {tab.content}
+            </Suspense>
+          </Box>
+        ))}
+      </>
+    );
   };
 
   // Check if this is a detached window
@@ -219,7 +284,7 @@ function App() {
           // Skip drag preview window logic - not needed
           return;
         }
-      } catch (error) {
+      } catch {
         // Failed to check window type
       }
     };
@@ -245,56 +310,56 @@ function App() {
             let tabContent: React.ReactNode;
             switch (tabType) {
               case 'spreadsheet':
-                tabContent = <SpreadsheetTab />;
+                tabContent = createTabContent('spreadsheet');
                 break;
               case 'fitting':
-                tabContent = <FittingTab />;
+                tabContent = createTabContent('fitting');
                 break;
               case 'solver':
-                tabContent = <SolverTab />;
+                tabContent = createTabContent('solver');
                 break;
               case 'montecarlo':
-                tabContent = <MonteCarloTab />;
+                tabContent = createTabContent('montecarlo');
                 break;
               default:
-                tabContent = <HomeTab openNewTab={addTab} />;
+                tabContent = createTabContent('home', addTab);
             }
 
             addTab(tabId, decodeURIComponent(tabTitle), tabContent);
           } else {
             // Normal startup - add home tab
-            addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
+            addTab('home', 'Home', createTabContent('home', addTab));
           }
-        } catch (error) {
+        } catch {
           // Fallback - add home tab
           addTab('home', 'Home', <HomeTab openNewTab={addTab} />);
         }
       })();
     }
-  }, [addTab]); // Removed isDragPreviewWindow dependency
+  }, [addTab, tabs.length]); // Added tabs.length dependency
 
   // Listen for reattach tab events from detached windows
   useEffect(() => {
-    const handleReattachTabEvent = (event: any) => {
+    const handleReattachTabEvent = (event: { payload: TabInfo }) => {
       const tabInfo = event.payload as TabInfo;
 
       // Create the appropriate tab content
       let tabContent: React.ReactNode;
       switch (tabInfo.content_type) {
         case 'spreadsheet':
-          tabContent = <SpreadsheetTab />;
+          tabContent = createTabContent('spreadsheet');
           break;
         case 'fitting':
-          tabContent = <FittingTab />;
+          tabContent = createTabContent('fitting');
           break;
         case 'solver':
-          tabContent = <SolverTab />;
+          tabContent = createTabContent('solver');
           break;
         case 'montecarlo':
-          tabContent = <MonteCarloTab />;
+          tabContent = createTabContent('montecarlo');
           break;
         default:
-          tabContent = <HomeTab openNewTab={addTab} />;
+          tabContent = createTabContent('home', addTab);
       }
 
       // Add the tab back to the main window
@@ -307,7 +372,7 @@ function App() {
         const { listen } = await import('@tauri-apps/api/event');
         // Listen for event emitted by Rust when a detached tab is sent back
         await listen('tab-from-detached', handleReattachTabEvent);
-      } catch (error) {
+      } catch {
         // Failed to setup reattach listener
       }
     };
@@ -359,8 +424,8 @@ function App() {
                 padding: '8px 12px',
                 borderRadius: '8px',
                 backgroundColor: draggedTab.id === 'home' ? '#9c27b0' :
-                  draggedTab.id.includes('optimized-spreadsheet') ? '#2196f3' :
-                  draggedTab.id.includes('spreadsheet') ? '#2196f3' :
+                  draggedTab.id.includes('optimized-spreadsheet') ? anafisColors.spreadsheet :
+                  draggedTab.id.includes('spreadsheet') ? anafisColors.spreadsheet :
                   draggedTab.id.includes('fitting') ? '#ff9800' :
                   draggedTab.id.includes('solver') ? '#4caf50' :
                   draggedTab.id.includes('montecarlo') ? '#e91e63' : '#9c27b0',
@@ -488,16 +553,14 @@ function App() {
           }}
         >
           {/* Custom Title Bar - Show for main window and detached tab windows */}
-          {(!false || isDetachedTabWindow) && (
-            <CustomTitleBar
-              title={isDetachedTabWindow ? tabs[0]?.title : 'AnaFis'}
-              isDetachedTabWindow={isDetachedTabWindow}
-              onReattach={isDetachedTabWindow ? handleReattachTab : undefined}
-            />
-          )}
+          <CustomTitleBar
+            title={isDetachedTabWindow ? tabs[0]?.title : 'AnaFis'}
+            isDetachedTabWindow={isDetachedTabWindow}
+            onReattach={isDetachedTabWindow ? handleReattachTab : undefined}
+          />
 
           {/* Top Menu Bar / Toolbar - Show only for main window */}
-          {!false && !isDetachedTabWindow && (
+          {!isDetachedTabWindow && (
             <AppBar
               position="static"
               sx={{
@@ -523,7 +586,7 @@ function App() {
                         alignItems: 'center',
                         ml: 0.5,
                         transition: 'transform 0.2s ease-in-out',
-                        transform: Boolean(anchorEl) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transform: anchorEl ? 'rotate(180deg)' : 'rotate(0deg)',
                         fontSize: '0.9rem',
                         lineHeight: 1,
                         fontWeight: 'bold',
@@ -551,7 +614,7 @@ function App() {
                       borderColor: 'rgba(33, 150, 243, 0.5)',
                       transform: 'translateY(-1px)',
                       boxShadow: '0 4px 16px rgba(33, 150, 243, 0.25)',
-                      color: '#2196f3',
+                      color: anafisColors.primary,
                     },
                     '&:active': {
                       background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(33, 150, 243, 0.03) 100%)',
@@ -596,7 +659,7 @@ function App() {
                           transition: 'all 0.2s ease-in-out',
                           '&:hover': {
                             backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                            color: '#2196f3',
+                            color: anafisColors.primary,
                             transform: 'translateX(2px)',
                           },
                         },
@@ -654,7 +717,7 @@ function App() {
 
                 <TabButton
                   label="Spreadsheet"
-                  onClick={() => addTab('spreadsheet-' + Date.now(), 'Spreadsheet', <SpreadsheetTab />)}
+                  onClick={() => addTab('spreadsheet-' + Date.now(), 'Spreadsheet', createTabContent('spreadsheet'))}
                   hoverColor="#64b5f6"
                   hoverBackgroundColor="rgba(33, 150, 243, 0.12)"
                   hoverBorderColor="rgba(33, 150, 243, 0.2)"
@@ -662,7 +725,7 @@ function App() {
                 />
                 <TabButton
                   label="Fitting"
-                  onClick={() => addTab('fitting-' + Date.now(), 'Fitting', <FittingTab />)}
+                  onClick={() => addTab('fitting-' + Date.now(), 'Fitting', createTabContent('fitting'))}
                   hoverColor="#ffb74d"
                   hoverBackgroundColor="rgba(255, 152, 0, 0.12)"
                   hoverBorderColor="rgba(255, 152, 0, 0.2)"
@@ -670,7 +733,7 @@ function App() {
                 />
                 <TabButton
                   label="Solver"
-                  onClick={() => addTab('solver-' + Date.now(), 'Solver', <SolverTab />)}
+                  onClick={() => addTab('solver-' + Date.now(), 'Solver', createTabContent('solver'))}
                   hoverColor="#81c784"
                   hoverBackgroundColor="rgba(76, 175, 80, 0.12)"
                   hoverBorderColor="rgba(76, 175, 80, 0.2)"
@@ -678,12 +741,44 @@ function App() {
                 />
                 <TabButton
                   label="Monte Carlo"
-                  onClick={() => addTab('montecarlo-' + Date.now(), 'Monte Carlo', <MonteCarloTab />)}
+                  onClick={() => addTab('montecarlo-' + Date.now(), 'Monte Carlo', createTabContent('montecarlo'))}
                   hoverColor="#f06292"
                   hoverBackgroundColor="rgba(233, 30, 99, 0.12)"
                   hoverBorderColor="rgba(233, 30, 99, 0.2)"
                   hoverBoxShadowColor="rgba(233, 30, 99, 0.3)"
                 />
+
+                {/* Data Library Action */}
+                <IconButton
+                  color="inherit"
+                  onClick={openDataLibrary}
+                  title="Data Library"
+                  disableRipple
+                  disableFocusRipple
+                  sx={{
+                    color: '#ffffff',
+                    backgroundColor: 'rgba(76, 175, 80, 0.06)',
+                    border: 'none',
+                    borderRadius: 2,
+                    mr: 1,
+                    transition: 'all 0.18s ease-in-out',
+                    '&:hover': {
+                      backgroundColor: 'rgba(76, 175, 80, 0.12)',
+                      color: '#4caf50',
+                      transform: 'scale(1.05)',
+                    },
+                    '&:focus': {
+                      outline: '2px solid rgba(255, 255, 255, 0.8)',
+                      outlineOffset: '2px',
+                    },
+                    '&.Mui-focusVisible': {
+                      outline: '2px solid rgba(255, 255, 255, 0.8)',
+                      outlineOffset: '2px',
+                    }
+                  }}
+                >
+                  <StorageIcon />
+                </IconButton>
 
                 {/* Uncertainty Calculator Action */}
                 <IconButton
@@ -755,7 +850,7 @@ function App() {
             flexDirection: 'column',
             flexGrow: 1,
             width: '100%',
-            height: false ? '100vh' : (isDetachedTabWindow ? '100%' : 'calc(100vh - 96px)'), // Adjust height for detached windows
+            height: isDetachedTabWindow ? '100%' : 'calc(100vh - 96px)', // Adjust height for detached windows
             overflow: 'hidden', // Prevent overflow
             margin: 0,
             padding: 0

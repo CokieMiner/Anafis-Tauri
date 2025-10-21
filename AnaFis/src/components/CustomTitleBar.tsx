@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box, Typography, IconButton, useTheme } from '@mui/material';
 import { Close, Minimize, CropSquare, Reply } from '@mui/icons-material';
 import { Home, TableChart, TrendingUp, Calculate, Casino } from '@mui/icons-material';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -11,6 +11,7 @@ interface CustomTitleBarProps {
 }
 
 const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDetachedTabWindow = false, onReattach }) => {
+  const theme = useTheme();
   const [isMaximized, setIsMaximized] = useState(false);
   const [windowReady, setWindowReady] = useState(false);
   const [isTauri, setIsTauri] = useState(false);
@@ -22,7 +23,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     const urlParams = new URLSearchParams(window.location.search);
     const tabType = urlParams.get('tabType');
 
-  const iconSx = { fontSize: '1.05rem', mr: 0.5, color: undefined, verticalAlign: 'middle', display: 'inline-flex', lineHeight: 1, transform: 'translateY(2px)' } as any;
+  const iconSx = { fontSize: '1.05rem', mr: 0.5, color: undefined, verticalAlign: 'middle', display: 'inline-flex', lineHeight: 1, transform: 'translateY(2px)' } as React.CSSProperties;
     switch (tabType) {
       case 'home':
         return <Home sx={{ ...iconSx, color: '#ba68c8' }} />;
@@ -66,6 +67,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
 
         // Check for Tauri global
         if (typeof window !== 'undefined') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const win = window as any;
           if (win.__TAURI__) {
             try {
@@ -93,10 +95,11 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
     try {
       // Method 1: Standard Tauri API
       return getCurrentWindow();
-    } catch (error) {
+    } catch {
 
       // Method 2: Direct global access
       if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const win = window as any;
         if (win.__TAURI__ && win.__TAURI__.window) {
           return win.__TAURI__.window;
@@ -104,7 +107,9 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
       }
 
       // Method 3: Check if window object has Tauri methods
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (typeof window !== 'undefined' && (window as any).minimize) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return window as any;
       }
 
@@ -232,7 +237,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
       onDoubleClick={handleDoubleClick}
       sx={{
         height: '36px',
-        background: 'linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%)',
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         display: 'flex',
         alignItems: 'center',
@@ -286,15 +291,15 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
               height: '24px',
               borderRadius: '4px',
               color: 'rgba(255, 255, 255, 0.7)',
-              backgroundColor: 'rgba(33, 150, 243, 0.1)',
-              border: '1px solid rgba(33, 150, 243, 0.3)',
+              backgroundColor: `${theme.palette.primary.main}20`,
+              border: `1px solid ${theme.palette.primary.main}50`,
               WebkitAppRegion: 'no-drag',
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
-                backgroundColor: 'rgba(33, 150, 243, 0.2)',
-                color: '#2196f3',
+                backgroundColor: `${theme.palette.primary.main}30`,
+                color: theme.palette.primary.main,
                 transform: 'scale(1.05)',
-                borderColor: 'rgba(33, 150, 243, 0.5)',
+                borderColor: `${theme.palette.primary.main}70`,
               },
             }}
             title="Reattach tab to main window"
@@ -310,7 +315,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            backgroundColor: isTauri && windowReady ? '#4caf50' : isTauri ? '#ff9800' : '#f44336',
+            backgroundColor: isTauri && windowReady ? theme.palette.success.main : isTauri ? theme.palette.warning.main : theme.palette.error.main,
             boxShadow: '0 0 4px rgba(0, 0, 0, 0.3)',
             WebkitAppRegion: 'no-drag',
           }}
@@ -342,7 +347,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
             boxShadow: 'none',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : '#4caf50 !important',
+              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.success.main} !important`,
               color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : '#ffffff',
               transform: (!isTauri || !windowReady) ? 'none' : 'scale(1.1)',
               boxShadow: (!isTauri || !windowReady) ? 'none' : '0 2px 8px rgba(76, 175, 80, 0.4)',
@@ -389,15 +394,15 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
             boxShadow: 'none',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : '#2196f3 !important',
+              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.secondary.main} !important`,
               color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : '#ffffff',
               transform: (!isTauri || !windowReady) ? 'none' : 'scale(1.1)',
-              boxShadow: (!isTauri || !windowReady) ? 'none' : '0 2px 8px rgba(33, 150, 243, 0.4)',
+              boxShadow: (!isTauri || !windowReady) ? 'none' : `0 2px 8px ${theme.palette.secondary.main}40`,
               outline: 'none !important',
               border: 'none !important',
             },
             '&:active': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : '#1976d2 !important',
+              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.secondary.main} !important`,
               transform: (!isTauri || !windowReady) ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',
@@ -442,7 +447,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
             boxShadow: 'none',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : '#f44336 !important',
+              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.error.main} !important`,
               color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : '#ffffff',
               transform: (!isTauri || !windowReady) ? 'none' : 'scale(1.1)',
               boxShadow: (!isTauri || !windowReady) ? 'none' : '0 2px 8px rgba(244, 67, 54, 0.4)',
@@ -450,7 +455,7 @@ const CustomTitleBar: React.FC<CustomTitleBarProps> = ({ title = 'AnaFis', isDet
               border: 'none !important',
             },
             '&:active': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : '#d32f2f !important',
+              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.error.dark} !important`,
               transform: (!isTauri || !windowReady) ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',

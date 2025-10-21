@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Box, Typography, Paper, List, ListItemButton, ListItemIcon, ListItemText, Card, CardContent, Avatar } from '@mui/material'; // Updated import
 import TableChartIcon from '@mui/icons-material/TableChart'; // Spreadsheet
 import ShowChartIcon from '@mui/icons-material/ShowChart'; // Fitting
@@ -12,14 +12,19 @@ import FittingTab from './FittingTab';
 import SolverTab from './SolverTab';
 import MonteCarloTab from './MonteCarloTab';
 
+// Import centralized tab colors
+import { getTabColors } from '../utils/tabColors';
+
 interface HomeTabProps {
   openNewTab: (id: string, title: string, content: React.ReactNode) => void;
 }
 
 const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
-  const handleNewTabClick = (tabType: string, title: string, content: React.ReactNode) => {
-    openNewTab(`${tabType}-${Date.now()}`, title, content);
-  };
+  const handleNewTabClick = useCallback((tabType: string, title: string, content: React.ReactNode) => {
+    // Generate unique ID at call time (event handler, not during render)
+    const uniqueId = `${tabType}-${Date.now()}`;
+    openNewTab(uniqueId, title, content);
+  }, [openNewTab]);
 
   const quickActions = [
     {
@@ -27,7 +32,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Spreadsheet',
       description: 'Data analysis and manipulation',
       icon: <TableChartIcon sx={{ fontSize: 28 }} />,
-      color: '#2196f3', // Light blue
       content: <SpreadsheetTab />,
       emoji: '📊'
     },
@@ -36,7 +40,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Fitting',
       description: 'Curve fitting and regression',
       icon: <ShowChartIcon sx={{ fontSize: 28 }} />,
-      color: '#ff9800', // Orange
       content: <FittingTab />,
       emoji: '📈'
     },
@@ -45,7 +48,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Solver',
       description: 'Mathematical equation solving',
       icon: <FunctionsIcon sx={{ fontSize: 28 }} />,
-      color: '#4caf50', // Green
       content: <SolverTab />,
       emoji: '🧮'
     },
@@ -54,7 +56,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       title: 'New Monte Carlo',
       description: 'Statistical simulations',
       icon: <CasinoIcon sx={{ fontSize: 28 }} />,
-      color: '#e91e63', // Pink
       content: <MonteCarloTab />,
       emoji: '🎲'
     }
@@ -96,7 +97,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
               right: 0,
               bottom: 0,
               background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
-              animation: 'shine 3s ease-in-out infinite',
+              // animation: 'shine 3s ease-in-out infinite',
             },
             '@keyframes shine': {
               '0%': { transform: 'translateX(-100%)' },
@@ -171,9 +172,9 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
                   border: '1px solid rgba(255, 255, 255, 0.1)',
                   '&:hover': {
                     transform: 'translateY(-8px)',
-                    boxShadow: `0 20px 40px ${action.color}30`,
+                    boxShadow: `0 20px 40px ${getTabColors(action.id).primary}30`,
                     border: '1px solid',
-                    borderColor: action.color,
+                    borderColor: getTabColors(action.id).primary,
                   },
                 }}
                 onClick={() => handleNewTabClick(action.id, action.title.replace('New ', ''), action.content)}
@@ -185,17 +186,17 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
                       height: 60,
                       mx: 'auto',
                       mb: 2,
-                      bgcolor: `${action.color}15`,
-                      color: action.color,
+                      bgcolor: `${getTabColors(action.id).primary}15`,
+                      color: getTabColors(action.id).primary,
                       border: '2px solid',
-                      borderColor: action.color,
+                      borderColor: getTabColors(action.id).primary,
                       opacity: 1,
                       transition: 'all 0.3s ease-in-out',
-                      boxShadow: `0 4px 12px ${action.color}30`,
+                      boxShadow: `0 4px 12px ${getTabColors(action.id).primary}30`,
                       '&:hover': {
                         opacity: 1,
                         transform: 'scale(1.1)',
-                        boxShadow: `0 8px 20px ${action.color}50`,
+                        boxShadow: `0 8px 20px ${getTabColors(action.id).primary}50`,
                       },
                     }}
                   >
