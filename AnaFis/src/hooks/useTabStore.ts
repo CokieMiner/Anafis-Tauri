@@ -1,49 +1,49 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { Tab } from '../types/tabs';
-import { invoke } from '@tauri-apps/api/core';
 
 interface TabState {
   tabs: Tab[];
   activeTabId: string | null;
-  draggedTab: Tab | null;
+  
+  // Actions
   addTab: (tab: Tab) => void;
-  removeTab: (id: string) => Promise<void>;
+  removeTab: (id: string) => void;
   renameTab: (id: string, newTitle: string) => void;
   setActiveTab: (id: string) => void;
   reorderTabs: (sourceIndex: number, targetIndex: number) => void;
-  setDraggedTab: (tab: Tab | null) => void;
-  detachTab: (id: string, position?: { x: number; y: number }) => Promise<void>;
   initializeTabs: (initialTabs: Tab[]) => void;
+  updateTabState: (id: string, state: Record<string, unknown>) => void;
 }
 
 export const useTabStore = create<TabState>()(
   subscribeWithSelector((set, get) => ({
     tabs: [],
     activeTabId: null,
-    draggedTab: null,
 
     addTab: (tab: Tab) => set((state) => {
       // Check if tab with this ID already exists
       if (state.tabs.some((existingTab) => existingTab.id === tab.id)) {
-        // If it exists, just set it as active
-        return {
-          ...state,
-          activeTabId: tab.id
-        };
+        return { ...state, activeTabId: tab.id };
       }
-      // Otherwise add the new tab and make it active
+      
+      // Memory management: Warn if too many tabs are open
+      const totalTabs = state.tabs.length + 1;
+      if (totalTabs > 10) {
+        console.warn(`Warning: ${totalTabs} tabs are open. Consider closing unused tabs to improve performance.`);
+      }
+      
       return {
         tabs: [...state.tabs, tab],
         activeTabId: tab.id
       };
     }),
 
-    removeTab: async (id: string) => {
+    removeTab: (id: string) => {
       const state = get();
       const newTabs = state.tabs.filter((t) => t.id !== id);
       const newActiveId = state.activeTabId === id
-        ? newTabs[0]?.id || null
+        ? newTabs[0]?.id ?? null
         : state.activeTabId;
 
       set({ tabs: newTabs, activeTabId: newActiveId });
@@ -60,66 +60,28 @@ export const useTabStore = create<TabState>()(
     reorderTabs: (sourceIndex: number, targetIndex: number) => set((state) => {
       const newTabs = [...state.tabs];
       const [removed] = newTabs.splice(sourceIndex, 1);
+
+      if (!removed) {
+        console.warn('Failed to reorder tabs: source index out of bounds');
+        return state;
+      }
+
       newTabs.splice(targetIndex, 0, removed);
       return { tabs: newTabs };
     }),
 
-    setDraggedTab: (tab: Tab | null) => set({ draggedTab: tab }),
-
-    detachTab: async (id: string, position?: { x: number; y: number }) => {
-      const { tabs } = get();
-      const tabToDetach = tabs.find((t) => t.id === id);
-      if (!tabToDetach || id === 'home') return;
-
-      // Remove from current store
-      await get().removeTab(id);
-
-      // Prepare geometry in outer scope so errors can log it
-      const geometry = position ? {
-        x: position.x,
-        y: position.y,
-        width: 800,
-        height: 600
-      } : undefined;
-
-      try {
-        // Small delay to avoid race where the new webview loads before Vite injects the preamble
-        await new Promise((resolve) => setTimeout(resolve, 150));
-
-        // Create detached window via Tauri with geometry
-        // Provide both snake_case and camelCase keys to support different arg mappings
-        await invoke('create_tab_window', {
-          tab_info: {
-            id: tabToDetach.id,
-            title: tabToDetach.title,
-            content_type: id.split('-')[0],
-            state: {},
-            icon: null
-          },
-          tabInfo: {
-            id: tabToDetach.id,
-            title: tabToDetach.title,
-            content_type: id.split('-')[0],
-            state: {},
-            icon: null
-          },
-          geometry: geometry
-        });
-      } catch (error) {
-        console.error('Failed to detach tab', {
-          id: tabToDetach?.id,
-          title: tabToDetach?.title,
-          geometry,
-          error
-        });
-        // Restore tab on failure
-        get().addTab(tabToDetach);
-      }
-    },
-
     initializeTabs: (initialTabs: Tab[]) => set({
       tabs: initialTabs,
-      activeTabId: initialTabs[0]?.id || null
-    })
+      activeTabId: initialTabs[0]?.id ?? null
+    }),
+
+    updateTabState: (id: string, state: Record<string, unknown>) => {
+      // Update frontend state
+      set((currentState) => ({
+        tabs: currentState.tabs.map((tab) =>
+          tab.id === id ? { ...tab, state: { ...tab.state, ...state } } : tab
+        ),
+      }));
+    }
   }))
 );

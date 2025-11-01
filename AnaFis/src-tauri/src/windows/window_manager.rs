@@ -15,6 +15,7 @@ pub struct WindowConfig {
     pub parent: Option<String>,
     pub min_width: Option<f64>,
     pub min_height: Option<f64>,
+    pub focus_on_create: bool,
 }
 
 impl Default for WindowConfig {
@@ -32,6 +33,7 @@ impl Default for WindowConfig {
             parent: Some("main".to_string()),
             min_width: None,
             min_height: None,
+            focus_on_create: true,
         }
     }
 }
@@ -86,9 +88,13 @@ pub fn create_or_focus_window(
     // Ensure transparent background is set (redundant but safe)
     let _ = window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0)));
 
-    // Now show and focus the window
+    // Now show the window
     window.show().map_err(|e| AnaFisError::Window(e.to_string()))?;
-    window.set_focus().map_err(|e| AnaFisError::Window(e.to_string()))?;
+    
+    // Only focus if requested
+    if config.focus_on_create {
+        window.set_focus().map_err(|e| AnaFisError::Window(e.to_string()))?;
+    }
 
     Ok(())
 }
@@ -114,4 +120,10 @@ pub fn resize_window(app: &AppHandle, window_id: &str, width: f64, height: f64) 
     } else {
         Err(AnaFisError::Window(format!("Window '{window_id}' not found")))
     }
+}
+
+#[tauri::command]
+pub fn set_window_size(app: AppHandle, window_id: String, width: f64, height: f64) -> Result<(), String> {
+    resize_window(&app, &window_id, width, height)
+        .map_err(|e| e.to_string())
 }

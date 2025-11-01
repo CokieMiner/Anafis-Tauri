@@ -124,38 +124,52 @@ impl DataLibraryDatabase {
     pub fn get_sequences(&self, search: &SearchRequest) -> SqliteResult<Vec<DataSequence>> {
         let conn = self.conn.lock().unwrap();
         
-        let mut query = String::from("SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at FROM sequences");
+        let mut params_vec: Vec<String> = Vec::new();
+        
+        // Determine if we need FTS search
+        let has_search_query = search.query.as_ref().is_some_and(|q| !q.is_empty());
+        
+        let mut query = "SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at FROM sequences".to_string();
         let mut where_clauses = Vec::new();
         
-        // Add full-text search if query provided
-        if let Some(q) = &search.query {
-            if !q.is_empty() {
-                query = "SELECT s.id, s.name, s.description, s.tags, s.unit, s.source, s.data, s.uncertainties, s.is_pinned, s.created_at, s.modified_at 
-                     FROM sequences s
-                     JOIN sequences_fts fts ON s.id = fts.id
-                     WHERE sequences_fts MATCH ?1".to_string();
-            }
+        // Add search query parameter if present (using LIKE for substring matching)
+        if has_search_query {
+            let query_text = search.query.as_ref().unwrap();
+            // Use LIKE with wildcards for true substring matching
+            let search_pattern = format!("%{}%", query_text);
+            params_vec.push(search_pattern);
+            
+            where_clauses.push(format!(
+                "name LIKE ?{}",
+                params_vec.len()
+            ));
         }
         
-        // Add tag filter
+        // Add tag filter (intersection - must have ALL selected tags)
         if let Some(tags) = &search.tags {
             if !tags.is_empty() {
                 let tags_conditions: Vec<String> = tags.iter()
-                    .map(|_| "tags LIKE ?".to_string())
+                        .map(|tag| {
+                            // push the LIKE pattern and use the params_vec length as the placeholder index
+                            params_vec.push(format!("%{}%", tag));
+                            format!("tags LIKE ?{}", params_vec.len())
+                        })
                     .collect();
-                where_clauses.push(format!("({})", tags_conditions.join(" OR ")));
+                where_clauses.push(format!("({})", tags_conditions.join(" AND ")));
             }
         }
         
         // Add source filter
         if let Some(source) = &search.source {
             if !source.is_empty() {
-                where_clauses.push("source = ?".to_string());
+                params_vec.push(source.clone());
+                // the newly pushed parameter will be at params_vec.len()
+                where_clauses.push(format!("source = ?{}", params_vec.len()));
             }
         }
         
-        // Add WHERE clause if needed
-        if !where_clauses.is_empty() && search.query.is_none() {
+        // Add WHERE clause if we have any conditions
+        if !where_clauses.is_empty() {
             query.push_str(&format!(" WHERE {}", where_clauses.join(" AND ")));
         }
         
@@ -174,18 +188,18 @@ impl DataLibraryDatabase {
         
         let mut stmt = conn.prepare(&query)?;
         
-        // Execute query with parameters
-        let mut rows = if let Some(q) = &search.query {
-            if !q.is_empty() {
-                stmt.query(params![q])?
-            } else {
-                stmt.query([])?
-            }
-        } else {
+        // Execute query with collected parameters
+        let rows = if params_vec.is_empty() {
             stmt.query([])?
+        } else {
+            let param_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter()
+                .map(|p| p as &dyn rusqlite::ToSql)
+                .collect();
+            stmt.query(&param_refs[..])?
         };
         
         let mut sequences = Vec::new();
+        let mut rows = rows;
         while let Some(row) = rows.next()? {
             let id: String = row.get(0)?;
             let name: String = row.get(1)?;

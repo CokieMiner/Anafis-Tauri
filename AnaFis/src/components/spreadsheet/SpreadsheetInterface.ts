@@ -15,6 +15,9 @@
 // The code in adapters can still support sync handlers for backward
 // compatibility by checking whether the returned value is a Promise.
 
+// Note: After several iterations, the app has become tightly coupled with Univer.
+// This may limit flexibility for future adapter implementations.
+
 export interface CellValue {
   v?: string | number | boolean | null;
   f?: string; // formula
@@ -36,6 +39,10 @@ export interface SpreadsheetRef {
   updateCell: (cellRef: string, value: CellValue) => Promise<void>;
   // Update multiple cells in a single batch operation (more efficient than calling updateCell in a loop)
   batchUpdateCells: (updates: Array<{ cellRef: string; value: CellValue }>) => Promise<void>;
+  
+  // Update an entire range with a 2D array of values (more efficient for large updates)
+  updateRange: (rangeRef: string, values: CellValue[][]) => Promise<void>;
+  
   // Read the current (calculated) value of a single cell. Returns null when
   // the cell does not exist or has no value.
   getCellValue: (cellRef: string) => Promise<string | number | null>;
@@ -49,7 +56,13 @@ export interface SpreadsheetRef {
   // Get current selection range
   getSelection: () => Promise<string | null>;
   // Get used range of active sheet
-  getUsedRange: () => Promise<string>;
+  getUsedRange: () => string;
+  // Get tracked bounds for efficient export (runtime tracking of max modified cells per sheet)
+  getTrackedBounds: () => Record<string, { maxRow: number; maxCol: number }> | null;
+  // Check if Facade API is ready for operations
+  isFacadeReady: () => boolean;
+  // Get raw API for advanced operations (implementation-specific)
+  getRawAPI?: () => unknown;
 }
 
 export interface SpreadsheetProps {
@@ -63,6 +76,7 @@ export interface SpreadsheetProps {
   // or return a Promise to support async evaluation via backend/Rust/WASM.
   onFormulaIntercept: (cellRef: string, formula: string) => void;
   onSelectionChange?: (cellRef: string) => void;
+  tabId?: string; // Optional tab ID for instance tracking
 }
 
 // Abstract data structure - can be adapted per library

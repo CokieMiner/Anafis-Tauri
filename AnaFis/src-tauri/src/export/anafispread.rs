@@ -4,8 +4,11 @@
 // Preserves everything: cell values, formulas, formatting, metadata, uncertainties.
 
 use std::fs::File;
+use std::io::BufWriter;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use serde_json::json;
-use super::{ExportConfig, ExportFormat};
+use super::{ExportConfig, ExportFormat, DataStructure};
 
 /// Export data to AnaFis Spreadsheet (.anafispread) format
 #[tauri::command]
@@ -19,6 +22,16 @@ pub async fn export_to_anafis_spread(
         return Err("Invalid format for AnaFis Spreadsheet export".to_string());
     }
 
+    // Validate data structure - AnaFisSpread supports both single and multi-sheet
+    match config.data_structure {
+        DataStructure::Array2D | DataStructure::MultiSheetArray => {
+            // Supported formats
+        }
+        DataStructure::MultiSheetJson => {
+            return Err("AnaFis Spreadsheet export does not support MultiSheetJson data structure. Use MultiSheetArray format instead.".to_string());
+        }
+    }
+
     // Filter data based on export options
     let filtered_data = filter_data_by_options(&data, &config);
 
@@ -29,7 +42,6 @@ pub async fn export_to_anafis_spread(
         "metadata": {
             "created": chrono::Utc::now().to_rfc3339(),
             "export_options": {
-                "include_headers": config.options.include_headers,
                 "include_formulas": config.options.include_formulas,
                 "include_formatting": config.options.include_formatting,
                 "include_metadata": config.options.include_metadata
@@ -43,11 +55,13 @@ pub async fn export_to_anafis_spread(
         .map_err(|e| format!("Failed to create file: {}", e))?;
 
     if config.options.compress {
-        // TODO: Implement gzip compression
-        // For now, write uncompressed
-        serde_json::to_writer_pretty(file, &export_data)
-            .map_err(|e| format!("Failed to write AnaFis Spreadsheet file: {}", e))?;
+        // Compress with gzip
+        let encoder = GzEncoder::new(file, Compression::default());
+        let writer = BufWriter::new(encoder);
+        serde_json::to_writer_pretty(writer, &export_data)
+            .map_err(|e| format!("Failed to write compressed AnaFis Spreadsheet file: {}", e))?;
     } else {
+        // Write uncompressed
         serde_json::to_writer_pretty(file, &export_data)
             .map_err(|e| format!("Failed to write AnaFis Spreadsheet file: {}", e))?;
     }
@@ -56,7 +70,7 @@ pub async fn export_to_anafis_spread(
 }
 
 /// Filter data based on export options
-fn filter_data_by_options(data: &Vec<serde_json::Value>, config: &ExportConfig) -> Vec<serde_json::Value> {
+fn filter_data_by_options(data: &[serde_json::Value], config: &ExportConfig) -> Vec<serde_json::Value> {
     data.iter().map(|item| {
         if let Some(sheet_obj) = item.as_object() {
             // Multi-sheet format: { name: string, data: array }
@@ -84,7 +98,7 @@ fn filter_data_by_options(data: &Vec<serde_json::Value>, config: &ExportConfig) 
 }
 
 /// Filter sheet data (array of rows) based on export options
-fn filter_sheet_data(data: &Vec<serde_json::Value>, config: &ExportConfig) -> Vec<serde_json::Value> {
+fn filter_sheet_data(data: &[serde_json::Value], config: &ExportConfig) -> Vec<serde_json::Value> {
     data.iter().map(|row| {
         if let Some(row_array) = row.as_array() {
             let filtered_row: Vec<serde_json::Value> = row_array.iter().map(|cell| {

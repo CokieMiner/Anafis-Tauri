@@ -3,7 +3,7 @@
 **Status**: Planned  
 **Priority**: High  
 **Complexity**: High  
-**Dependencies**: Plotly.js, Data Library, nalgebra, levenberg-marquardt
+**Dependencies**: ECharts, Data Library, nalgebra, levenberg-marquardt
 
 ---
 
@@ -11,30 +11,33 @@
 
 Unified tab for creating publication-quality plots and performing curve fitting. Integrates data visualization with statistical fitting in a single workflow. Supports 2D and 3D plotting with n-dimensional curve fitting capabilities.
 
+**Note**: Uses **ECharts 6.0** (already integrated in QuickPlotSidebar) for all visualizations. Extends existing plotting infrastructure with curve fitting capabilities.
+
 ---
 
 ## Features
 
 ### Plot Sub-Tab
 - **Create named plots** from Data Library sequences
-- **2D plots**: Scatter, Line, Scatter+Line, Bar
-- **3D plots**: 3D Scatter, 3D Surface, Contour
-- **Multi-plot support**: Multiple plots on same canvas with visibility toggles
+- **2D plots**: Scatter, Line, Scatter+Line, Bar (ECharts types: 'scatter', 'line', 'bar')
+- **3D plots**: 3D Scatter, 3D Surface (ECharts GL components)
+- **Multi-plot support**: Multiple series on same ECharts instance with visibility toggles
 - **Data validation**: Prevent length mismatches
-- **Plot layers/groups**: Organize and bulk hide/show plots
-- **Interactive controls**: Zoom, pan, rotate (3D), reset
-- **Export**: PNG, SVG, PDF
+- **Plot layers/groups**: Organize and bulk hide/show plot series
+- **Interactive controls**: Zoom, pan, dataZoom, toolbox (ECharts built-in)
+- **Export**: PNG, SVG (ECharts saveAsImage feature)
 
 ### Fit Sub-Tab
-- **Select plot to fit** from active plots
+- **Select plot to fit** from active plots (ECharts series)
 - **Fit functions**: Linear, Polynomial, Exponential, Logarithmic, Power, Gaussian, Custom
 - **N-dimensional fitting**: Automatic detection for 2D (Y=f(X)) and 3D (Z=f(X,Y))
 - **Parameter estimation**: Initial guess with auto-calculation
-- **Uncertainty weighting**: Use data uncertainties in fit
+- **Uncertainty weighting**: Use data uncertainties in fit (error bars from ECharts series)
 - **Goodness-of-fit metrics**: R², χ², RMSE
-- **Residuals plot**: Automatic residuals visualization
+- **Residuals plot**: Automatic residuals visualization (new ECharts series)
 - **Fit comparison**: Compare multiple fit functions for same data
 - **Non-intrusive warnings**: Alert when plot data changes after fit
+- **Fit overlay**: Add fit curve as new ECharts series on existing chart
 
 ---
 
@@ -52,10 +55,10 @@ Unified tab for creating publication-quality plots and performing curve fitting.
 │  │ [●📊 Plot] [○📐 Fit]            │  │                            ││
 │  │ ═══════════════════════════      │  │   Interactive Plot         ││
 │  │                                  │  │                            ││
-│  │ ┌─ New Plot ─────────────────┐  │  │   (Plotly.js canvas)       ││
+│  │ ┌─ New Plot ─────────────────┐  │  │   (ECharts canvas)         ││
 │  │ │                             │  │  │                            ││
-│  │ │ Name:                       │  │  │   Multi-plot overlay       ││
-│  │ │ [Temp vs Time - Run 1____] │  │  │   with visibility toggles  ││
+│  │ │ Name:                       │  │  │   Multi-series overlay     ││
+│  │ │ [Temp vs Time - Run 1____] │  │  │   with legend toggles      ││
 │  │ │                             │  │  │                            ││
 │  │ │ Type: [Scatter ▼]          │  │  │                            ││
 │  │ │  • Scatter                  │  │  │                            ││
@@ -290,7 +293,7 @@ Results:
 interface PlotDefinition {
   id: string;
   name: string;
-  type: 'scatter' | 'line' | 'scatter+line' | 'bar' | '3d_scatter' | '3d_surface' | 'contour';
+  type: 'scatter' | 'line' | 'bar' | '3d_scatter' | '3d_surface';  // ECharts types
   dimensionality: '2d' | '3d';
   
   // Data sources from library
@@ -309,13 +312,26 @@ interface PlotDefinition {
     };
   };
   
-  // Visual style
-  style: {
-    color: string;
-    markerType: 'circle' | 'square' | 'triangle' | 'diamond' | 'cross' | 'x';
-    markerSize: number;
-    lineWidth?: number;
-    opacity: number;
+  // ECharts series configuration
+  echartsSeriesConfig: {
+    type: 'scatter' | 'line' | 'bar' | 'scatter3D' | 'surface3D';
+    name: string;
+    data: [number, number][] | [number, number, number][];  // ECharts data format
+    itemStyle: {
+      color: string;
+      borderWidth?: number;
+    };
+    symbolSize: number;
+    lineStyle?: {
+      width: number;
+      type: 'solid' | 'dashed' | 'dotted';
+    };
+    // Error bars for ECharts
+    errorBar?: {
+      type: 'bar';
+      xError: number[] | [number, number][];
+      yError: number[] | [number, number][];
+    };
   };
   
   // Visibility and organization
@@ -597,15 +613,25 @@ pub async fn fit_3d_planar(
 
 ## Dependencies
 
-```bash
-npm install plotly.js react-plotly.js
+**Frontend** (already installed):
+```json
+{
+  "echarts": "6.0.0"  // ✅ Already in package.json
+}
 ```
 
+**Backend** (already added to Cargo.toml):
 ```toml
 [dependencies]
-nalgebra = "0.32"
-levenberg-marquardt = "0.12"
+nalgebra = "0.33"              # ✅ Already added
+levenberg-marquardt = "0.14"   # ✅ Already added
+statrs = "0.17"                # ✅ Already added (for statistics)
 ```
+
+**Integration with QuickPlotSidebar**:
+- Reuse existing ECharts instance and configuration
+- Extend with curve fitting capabilities
+- Share plot management logic
 
 ---
 
@@ -623,18 +649,20 @@ levenberg-marquardt = "0.12"
 ## Success Criteria
 
 - ✓ Can create named plots from Data Library
-- ✓ Multiple plots visible simultaneously with toggles
+- ✓ Multiple series visible simultaneously with ECharts legend toggles
 - ✓ Data validation prevents length mismatches
-- ✓ Plot layers allow bulk show/hide
-- ✓ 2D fitting works for all function types
+- ✓ Plot layers allow bulk show/hide of series
+- ✓ 2D fitting works for all function types (Rust backend)
 - ✓ 3D fitting works for planar and polynomial surfaces
-- ✓ Parameter uncertainties calculated correctly
+- ✓ Parameter uncertainties calculated correctly (Rust)
 - ✓ R², χ², RMSE metrics accurate
-- ✓ Residuals plot displays correctly
+- ✓ Residuals plot displays correctly (ECharts series)
 - ✓ Fit comparison shows multiple fit results
 - ✓ Non-intrusive warning when plot data changes
 - ✓ Can save fit results to Data Library
-- ✓ Export works (PNG, SVG, PDF)
+- ✓ Export works (PNG, SVG via ECharts saveAsImage)
+- ✓ **Seamlessly integrates with existing ECharts infrastructure**
+- ✓ **Reuses QuickPlotSidebar patterns and components**
 
 ---
 

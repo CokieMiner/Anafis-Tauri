@@ -5,7 +5,7 @@
 
 use serde_json::Value;
 use rust_xlsxwriter::{Workbook, Format, Color};
-use super::{ExportConfig, ExportFormat};
+use super::{ExportConfig, ExportFormat, DataStructure};
 
 /// Export data to Excel (.xlsx) format
 #[tauri::command]
@@ -22,30 +22,36 @@ pub async fn export_to_excel(
     // Create a new Excel file
     let mut workbook = Workbook::new();
 
-    // Check if data is multi-sheet (array of sheet objects) or single sheet
-    if data.len() > 0 && data[0].is_object() && data[0].get("name").is_some() && data[0].get("data").is_some() {
-        // Multi-sheet data: [{name: "Sheet1", data: [[...], [...]]}, ...]
-        for sheet_value in data {
-            if let Some(sheet_obj) = sheet_value.as_object() {
-                let sheet_name = sheet_obj.get("name")
-                    .and_then(|n| n.as_str())
-                    .unwrap_or("Sheet");
-                let sheet_data = sheet_obj.get("data")
-                    .and_then(|d| d.as_array())
-                    .ok_or("Invalid sheet data structure")?;
+    // Use explicit data structure marker instead of implicit detection
+    match config.data_structure {
+        DataStructure::MultiSheetArray => {
+            // Multi-sheet data: [{name: "Sheet1", data: [[...], [...]]}, ...]
+            for sheet_value in data {
+                if let Some(sheet_obj) = sheet_value.as_object() {
+                    let sheet_name = sheet_obj.get("name")
+                        .and_then(|n| n.as_str())
+                        .unwrap_or("Sheet");
+                    let sheet_data = sheet_obj.get("data")
+                        .and_then(|d| d.as_array())
+                        .ok_or_else(|| format!("Invalid sheet data structure for sheet '{}'", sheet_name))?;
 
-                // Create worksheet with name
-                let worksheet = workbook.add_worksheet();
-                worksheet.set_name(sheet_name).map_err(|e| format!("Failed to set worksheet name: {}", e))?;
+                    // Create worksheet with name
+                    let worksheet = workbook.add_worksheet();
+                    worksheet.set_name(sheet_name).map_err(|e| format!("Failed to set worksheet name '{}': {}", sheet_name, e))?;
 
-                // Write sheet data
-                write_sheet_data(worksheet, sheet_data, &config)?;
+                    // Write sheet data
+                    write_sheet_data(worksheet, sheet_data, &config)?;
+                }
             }
         }
-    } else {
-        // Single sheet data: [[...], [...]]
-        let worksheet = workbook.add_worksheet();
-        write_sheet_data(worksheet, &data, &config)?;
+        DataStructure::Array2D => {
+            // Single sheet data: [[...], [...]]
+            let worksheet = workbook.add_worksheet();
+            write_sheet_data(worksheet, &data, &config)?;
+        }
+        DataStructure::MultiSheetJson => {
+            return Err("Excel export does not support MultiSheetJson data structure. Use MultiSheetArray format instead.".to_string());
+        }
     }
 
     // Save the file
@@ -57,12 +63,11 @@ pub async fn export_to_excel(
 /// Helper function to write data to a worksheet
 fn write_sheet_data(
     worksheet: &mut rust_xlsxwriter::Worksheet,
-    data: &Vec<serde_json::Value>,
+    data: &[serde_json::Value],
     config: &ExportConfig,
 ) -> Result<(), String> {
 
     // Create formats
-    let header_format = Format::new().set_bold();
     let data_format = Format::new();
 
     // Check if this is rich export (contains CellValue objects)
@@ -82,11 +87,8 @@ fn write_sheet_data(
         }
 
         for (col_idx, cell) in row_array.iter().enumerate() {
-            let format = if row_idx == 0 && config.options.include_headers {
-                &header_format
-            } else {
-                &data_format
-            };
+            // Excel export: all rows are data, no special header handling
+            let format = &data_format;
 
             if is_rich_export {
                 // Handle CellValue objects for rich export (data + formulas + styling)
@@ -101,8 +103,6 @@ fn write_sheet_data(
                     // Create format from style if available
                     let cell_format = if let Some(style_val) = style {
                         create_format_from_style(style_val)
-                    } else if row_idx == 0 && config.options.include_headers {
-                        header_format.clone()
                     } else {
                         data_format.clone()
                     };
@@ -132,12 +132,9 @@ fn write_sheet_data(
                     }
                 } else {
                     // Not a CellValue object, treat as simple value
-                    let cell_format = if row_idx == 0 && config.options.include_headers {
-                        header_format.clone()
-                    } else {
-                        data_format.clone()
-                    };
-                    write_cell_with_format(worksheet, row_idx as u32, col_idx as u16, cell, &cell_format)?;
+                    // Original logic for basic export
+                let cell_format = &data_format;
+                    write_cell_with_format(worksheet, row_idx as u32, col_idx as u16, cell, cell_format)?;
                 }
             } else {
                 // Original logic for basic export
@@ -315,7 +312,7 @@ fn parse_rgb_color(color_str: &str) -> Option<Color> {
 
     // rgba(...) or rgb(...)
     if (s.starts_with("rgb(") && s.ends_with(")")) || (s.starts_with("rgba(") && s.ends_with(")")) {
-        let inner = s.splitn(2, '(').nth(1)?.trim_end_matches(')');
+        let inner = s.split_once('(')?.1.trim_end_matches(')');
         let parts: Vec<&str> = inner.split(',').collect();
         if parts.len() >= 3 {
             if let (Ok(r), Ok(g), Ok(b)) = (
@@ -329,7 +326,7 @@ fn parse_rgb_color(color_str: &str) -> Option<Color> {
     }
 
     // Hex like #RRGGBB or RRGGBB
-    let hex = if s.starts_with('#') { &s[1..] } else { s };
+    let hex = s.strip_prefix('#').unwrap_or(s);
     if hex.len() == 6 {
         if let Ok(color_val) = u32::from_str_radix(hex, 16) {
             return Some(Color::RGB(color_val));

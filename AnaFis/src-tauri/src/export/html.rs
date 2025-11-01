@@ -5,13 +5,23 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use serde_json::Value;
+use super::{ExportConfig, DataStructure};
 
 /// Export data to HTML format
 #[tauri::command]
 pub async fn export_to_html(
     data: Vec<Vec<Value>>,
     file_path: String,
+    config: ExportConfig,
 ) -> Result<(), String> {
+    // Validate data structure - HTML only supports single-sheet 2D arrays
+    if !matches!(config.data_structure, DataStructure::Array2D) {
+        return Err(format!(
+            "HTML export only supports single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
+            config.data_structure
+        ));
+    }
+
     if data.is_empty() {
         return Err("No data to export".to_string());
     }

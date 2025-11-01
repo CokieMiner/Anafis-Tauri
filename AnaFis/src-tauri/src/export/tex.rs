@@ -5,13 +5,23 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use serde_json::Value;
+use super::{ExportConfig, DataStructure};
 
 /// Export data to LaTeX format
 #[tauri::command]
 pub async fn export_to_latex(
     data: Vec<Vec<Value>>,
     file_path: String,
+    config: ExportConfig,
 ) -> Result<(), String> {
+    // Validate data structure - LaTeX only supports single-sheet 2D arrays
+    if !matches!(config.data_structure, DataStructure::Array2D) {
+        return Err(format!(
+            "LaTeX export only supports single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
+            config.data_structure
+        ));
+    }
+
     if data.is_empty() {
         return Err("No data to export".to_string());
     }
@@ -44,14 +54,13 @@ pub async fn export_to_latex(
     for row in data.iter() {
         // Format row cells
         let formatted_cells: Vec<String> = row.iter().map(|cell| {
-            let cell_content = match cell {
+            match cell {
                 Value::String(s) => latex_escape(s),
                 Value::Number(n) => n.to_string(),
                 Value::Bool(b) => b.to_string(),
                 Value::Null => String::new(),
                 _ => cell.to_string(),
-            };
-            cell_content
+            }
         }).collect();
 
         // Write the row

@@ -1,283 +1,156 @@
-// src/components/spreadsheet/univer/facade.ts - Facade API wrapper with lifecycle awareness
+// facade.ts - Simplified facade wrapper using Facade API exclusively
 import { FUniver } from '@univerjs/core/facade';
-import '@univerjs/sheets/facade';
-import '@univerjs/ui/facade';
-import { IDisposable } from '@univerjs/core';
+import {
+  ExportService,
+  type ExportResult,
+  type ExportFormat
+} from './exportService';
+import { extractFormattedTable, type ExtractionOptions, type FormattedTable } from './tableFormatExtraction';
+import {
+  getWorkbook,
+  updateCell,
+  getCellValue,
+  getRange,
+  type UniverRef
+} from './spreadsheetOperations';
+import type { ExportOptions } from '../../../types/export';
+import type { FWorkbook } from '@univerjs/sheets/facade';
 
-export class UniverFacade {
-  private univerAPI: ReturnType<typeof FUniver.newAPI> | null = null;
-  private lifecycleDisposable: IDisposable | null = null;
-  private isInitialized = false;
+/**
+ * Simplified facade interface for spreadsheet operations
+ */
+export interface ISpreadsheetFacade {
+  // Core operations
+  getWorkbook(): Promise<FWorkbook | null>;
+  updateCell(range: string, value: { v?: string | number; f?: string }): Promise<void>;
+  getCellValue(range: string): Promise<string | number | null>;
+  getRange(range: string): Promise<(string | number)[][]>;
 
-  constructor(univer: any) {
-    this.initializeWithLifecycle(univer);
+  // Export operations
+  exportToFile(options: ExportOptions): Promise<ExportResult>;
+  exportToMultiple(formats: ExportFormat[], options: ExportOptions): Promise<ExportResult>;
+
+  // Data extraction
+  extractFormattedTable(options: ExtractionOptions): Promise<FormattedTable>;
+}
+
+/**
+ * Simplified spreadsheet facade implementation using Facade API
+ */
+export class SpreadsheetFacade implements ISpreadsheetFacade {
+  private univerAPI: ReturnType<typeof FUniver.newAPI>;
+
+  constructor(univerAPI: ReturnType<typeof FUniver.newAPI>) {
+    this.univerAPI = univerAPI;
   }
 
-  private initializeWithLifecycle(univer: any) {
-    const tempAPI = FUniver.newAPI(univer);
-
-    this.lifecycleDisposable = tempAPI.addEvent(tempAPI.Event.LifeCycleChanged, ({ stage }) => {
-      if (stage === tempAPI.Enum.LifecycleStages.Rendered) {
-        this.univerAPI = tempAPI;
-        this.isInitialized = true;
-        // Now safe to perform facade operations
-      }
-    });
+  // Core operations
+  getWorkbook(): Promise<FWorkbook | null> {
+    return Promise.resolve(getWorkbook({ current: this.univerAPI } as UniverRef));
   }
 
-  // Check if facade is ready for operations
-  private ensureInitialized(): boolean {
-    return this.isInitialized && this.univerAPI !== null;
+  async updateCell(range: string, value: { v?: string | number; f?: string }): Promise<void> {
+    return updateCell({ current: this.univerAPI } as UniverRef, range, value);
   }
 
-  // Dispose lifecycle listener when no longer needed
-  dispose() {
-    if (this.lifecycleDisposable) {
-      this.lifecycleDisposable.dispose();
-      this.lifecycleDisposable = null;
-    }
+  async getCellValue(range: string): Promise<string | number | null> {
+    return getCellValue({ current: this.univerAPI } as UniverRef, range);
   }
 
-  // Simple operations using Facade API
-  getActiveWorkbook() {
-    if (!this.ensureInitialized()) return null;
-    return this.univerAPI!.getActiveWorkbook();
+  async getRange(range: string): Promise<(string | number)[][]> {
+    return getRange({ current: this.univerAPI } as UniverRef, range);
   }
 
-  getActiveSheet() {
-    if (!this.ensureInitialized()) return null;
-    return this.univerAPI!.getActiveWorkbook()?.getActiveSheet();
+  // Export operations
+  async exportToFile(options: ExportOptions): Promise<ExportResult> {
+    const exportService = new ExportService();
+    return exportService.exportWithDialog(options, this.univerAPI);
   }
 
-  async getCellValue(cellRef: string): Promise<string | number | null> {
-    if (!this.ensureInitialized()) return null;
-
-    try {
-      const range = this.univerAPI!.getActiveWorkbook()?.getActiveSheet()?.getRange(cellRef);
-      const value = await range?.getValue();
-      if (value === null || value === undefined) return null;
-      if (typeof value === 'boolean') return value ? 1 : 0;
-      return value as string | number;
-    } catch {
-      return null;
-    }
-  }
-
-  async setCellValue(cellRef: string, value: any): Promise<boolean> {
-    if (!this.ensureInitialized()) return false;
-
-    try {
-      const range = this.univerAPI!.getActiveWorkbook()?.getActiveSheet()?.getRange(cellRef);
-      if (!range) return false;
-
-      await range.setValue(value);
-      return true;
-    } catch (error) {
-      console.error('Failed to set cell value:', error);
-      return false;
-    }
-  }
-
-  async getRangeValues(rangeRef: string): Promise<(string | number)[][]> {
-    if (!this.ensureInitialized()) return [];
-
-    try {
-      const range = this.univerAPI!.getActiveWorkbook()?.getActiveSheet()?.getRange(rangeRef);
-      const values = await range?.getValues();
-      if (!values) return [];
-
-      // Convert CellValue[][] to (string | number)[][]
-      return values.map(row =>
-        row.map(cell => {
-          if (cell === null || cell === undefined) return '';
-          if (typeof cell === 'boolean') return cell ? 1 : 0;
-          return cell as string | number;
-        })
-      );
-    } catch {
-      return [];
-    }
-  }
-
-  async getRangeFull(rangeRef: string): Promise<any[][]> {
-    if (!this.ensureInitialized()) return [];
-
-    try {
-      const range = this.univerAPI!.getActiveWorkbook()?.getActiveSheet()?.getRange(rangeRef);
-      return await range?.getCellDatas() ?? [];
-    } catch {
-      return [];
-    }
-  }
-
-
-
-  getUsedRange(): string {
-    if (!this.ensureInitialized()) return 'A1:Z100';
-
-    try {
-      const sheet = this.univerAPI!.getActiveWorkbook()?.getActiveSheet();
-      if (!sheet) return 'A1:Z100';
-
-      // Use more efficient algorithm with early termination
-      return this.calculateUsedBoundsEfficiently(sheet);
-    } catch {
-      return 'A1:Z100';
-    }
-  }
-
-  private calculateUsedBoundsEfficiently(sheet: any): string {
-    // Configurable limits for performance
-    const MAX_CHECK_ROWS = 1000;
-    const MAX_CHECK_COLS = 100;
-    const SAMPLE_SIZE = 50; // Check every Nth cell for early termination
-
-    // Helper function to check if a cell has content
-    const hasContent = (row: number, col: number): boolean => {
-      try {
-        const cell = sheet.getRange(row, col).getValue();
-        return cell !== null && cell !== undefined && cell !== '';
-      } catch {
-        return false;
-      }
-    };
-
-    // Find last non-empty row using binary search with sampling
-    let lastRow = -1;
-    let rowHigh = Math.min(MAX_CHECK_ROWS, sheet.getMaxRows?.() || 1000);
-
-    // First pass: find approximate bounds with sampling
-    for (let row = 0; row < rowHigh; row += SAMPLE_SIZE) {
-      for (let col = 0; col < Math.min(MAX_CHECK_COLS, 26); col++) { // Check A-Z first
-        if (hasContent(row, col)) {
-          lastRow = Math.max(lastRow, row);
-        }
+  async exportToMultiple(formats: ExportFormat[], options: ExportOptions): Promise<ExportResult> {
+    const exportService = new ExportService();
+    // Export to multiple formats sequentially
+    for (const format of formats) {
+      const formatOptions = { ...options, exportFormat: format };
+      const result = await exportService.exportWithDialog(formatOptions, this.univerAPI);
+      if (!result.success) {
+        return result; // Return on first failure
       }
     }
-
-    // Second pass: binary search for precise last row
-    if (lastRow >= 0) {
-      let lo = Math.max(0, lastRow - SAMPLE_SIZE);
-      let hi = Math.min(rowHigh, lastRow + SAMPLE_SIZE);
-
-      while (lo <= hi) {
-        const mid = Math.floor((lo + hi) / 2);
-        let found = false;
-
-        // Check a few columns in this row
-        for (let col = 0; col < Math.min(MAX_CHECK_COLS, 10); col++) {
-          if (hasContent(mid, col)) {
-            found = true;
-            break;
-          }
-        }
-
-        if (found) {
-          lastRow = mid;
-          lo = mid + 1;
-        } else {
-          hi = mid - 1;
-        }
-      }
-    }
-
-    // Find last non-empty column using similar approach
-    let lastCol = -1;
-    let colHigh = Math.min(MAX_CHECK_COLS, sheet.getMaxColumns?.() || 100);
-
-    // First pass: find approximate bounds
-    for (let col = 0; col < colHigh; col += Math.floor(SAMPLE_SIZE / 5)) {
-      for (let row = 0; row < Math.min(lastRow + 1, 100); row++) {
-        if (hasContent(row, col)) {
-          lastCol = Math.max(lastCol, col);
-        }
-      }
-    }
-
-    // Second pass: binary search for precise last column
-    if (lastCol >= 0) {
-      let lo = Math.max(0, lastCol - Math.floor(SAMPLE_SIZE / 5));
-      let hi = Math.min(colHigh, lastCol + Math.floor(SAMPLE_SIZE / 5));
-
-      while (lo <= hi) {
-        const mid = Math.floor((lo + hi) / 2);
-        let found = false;
-
-        // Check a few rows in this column
-        for (let row = 0; row < Math.min(lastRow + 1, 50); row++) {
-          if (hasContent(row, mid)) {
-            found = true;
-            break;
-          }
-        }
-
-        if (found) {
-          lastCol = mid;
-          lo = mid + 1;
-        } else {
-          hi = mid - 1;
-        }
-      }
-    }
-
-    if (lastRow === -1 && lastCol === -1) {
-      return 'A1:A1';
-    }
-
-    const startCol = 'A';
-    const endCol = lastCol >= 0 ? this.indexToColumn(lastCol) : 'A';
-    const startRow = 1;
-    const endRow = lastRow >= 0 ? lastRow + 1 : 1;
-
-    return `${startCol}${startRow}:${endCol}${endRow}`;
+    return { success: true, message: `Successfully exported to ${formats.length} formats` };
   }
 
-  private indexToColumn(index: number): string {
-    let result = '';
-    index += 1; // Convert to 1-based
-    while (index > 0) {
-      index -= 1;
-      result = String.fromCharCode(65 + (index % 26)) + result;
-      index = Math.floor(index / 26);
+  // Data extraction
+  extractFormattedTable(options: ExtractionOptions): Promise<FormattedTable> {
+    return Promise.resolve(extractFormattedTable(this.univerAPI, options));
+  }
+
+  /**
+   * Get the underlying Univer API instance
+   */
+  getUniverAPI(): ReturnType<typeof FUniver.newAPI> {
+    return this.univerAPI;
+  }
+}
+
+/**
+ * Create a spreadsheet facade instance
+ */
+export function createSpreadsheetFacade(univerAPI: ReturnType<typeof FUniver.newAPI>): SpreadsheetFacade {
+  return new SpreadsheetFacade(univerAPI);
+}
+
+/**
+ * Global facade instance
+ */
+let globalFacade: SpreadsheetFacade | null = null;
+
+/**
+ * Warn if attempting to initialize with a different Univer API instance
+ */
+function warnIfDifferentAPI(univerAPI: ReturnType<typeof FUniver.newAPI>): void {
+  if (globalFacade && globalFacade.getUniverAPI() !== univerAPI) {
+    console.warn(
+      'Attempting to initialize spreadsheet facade with a different Univer API instance. ' +
+      'The existing facade will be replaced. If this is intentional, consider calling resetFacade() first for clarity.'
+    );
+  }
+}
+
+/**
+ * Get or create the global facade instance
+ */
+export function getSpreadsheetFacade(univerAPI?: ReturnType<typeof FUniver.newAPI>): SpreadsheetFacade | null {
+  if (univerAPI) {
+    // Check if we already have a facade with a different API
+    warnIfDifferentAPI(univerAPI);
+
+    // Create or replace the facade with the provided API
+    if (!globalFacade || globalFacade.getUniverAPI() !== univerAPI) {
+      globalFacade = new SpreadsheetFacade(univerAPI);
     }
-    return result;
+  }
+  return globalFacade;
+}
+
+/**
+ * Initialize the global facade
+ */
+export function initializeFacade(univerAPI: ReturnType<typeof FUniver.newAPI>): void {
+  // Check if we already have a facade with the same API - if so, do nothing
+  if (globalFacade && globalFacade.getUniverAPI() === univerAPI) {
+    return;
   }
 
-  // Event system integration - simplified for now
-  addEvent(eventName: string, callback: (params: any) => void): IDisposable | null {
-    if (!this.ensureInitialized()) return null;
+  // Check if we already have a facade with a different API
+  warnIfDifferentAPI(univerAPI);
 
-    try {
-      // Use the core event system
-      return this.univerAPI!.addEvent(eventName as any, callback);
-    } catch (error) {
-      console.error('Failed to add event listener:', error);
-      return null;
-    }
-  }
+  globalFacade = new SpreadsheetFacade(univerAPI);
+}
 
-  // Access to event constants
-  get Event() {
-    return this.univerAPI?.Event || {};
-  }
-
-  async getSelection(): Promise<string | null> {
-    if (!this.ensureInitialized()) return null;
-
-    try {
-      const sheet = this.univerAPI!.getActiveWorkbook()?.getActiveSheet();
-      if (!sheet) return null;
-
-      const selection = sheet.getSelection();
-      if (!selection) return null;
-
-      const activeRange = selection.getActiveRange();
-      if (!activeRange) return null;
-
-      return activeRange.getA1Notation();
-    } catch (error) {
-      console.error('Failed to get selection:', error);
-      return null;
-    }
-  }
+/**
+ * Reset the global facade
+ */
+export function resetFacade(): void {
+  globalFacade = null;
 }

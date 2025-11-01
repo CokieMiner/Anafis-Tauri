@@ -142,7 +142,7 @@ fn compute_symbolic_derivatives_py(app: &AppHandle, formula: &str, variables: &[
         let vals_vec: Vec<f64> = values.to_vec();
 
         let res_any = func.call1(py, (formula, vars_vec, vals_vec)).map_err(|e| python_err_to_string(py, e))?;
-        let res_dict = res_any.downcast_bound::<PyDict>(py).map_err(|e| python_err_to_string(py, e.into()))?;
+        let res_dict = res_any.cast_bound::<PyDict>(py).map_err(|e| python_err_to_string(py, e.into()))?;
 
         // success flag
         let success = match res_dict.get_item("success").map_err(|e| e.to_string())? {
@@ -171,10 +171,10 @@ fn compute_symbolic_derivatives_py(app: &AppHandle, formula: &str, variables: &[
 
         let mut numerical_derivatives = HashMap::new();
         if let Ok(Some(obj)) = res_dict.get_item("numerical_derivatives") {
-            if let Ok(d) = obj.downcast::<PyDict>() {
+            if let Ok(d) = obj.cast::<PyDict>() {
                 for (k, v) in d.iter() {
-                    let key: String = k.extract().map_err(|e| e.to_string())?;
-                    let val: f64 = v.extract().map_err(|e| e.to_string())?;
+                    let key: String = k.extract().map_err(|e: PyErr| e.to_string())?;
+                    let val: f64 = v.extract().map_err(|e: PyErr| e.to_string())?;
                     if !val.is_finite() { return Err(format!("numerical_derivative for {key} not finite")); }
                     numerical_derivatives.insert(key, val);
                 }
@@ -193,7 +193,7 @@ fn compute_uncertainty_formula_py(app: &AppHandle, formula: &str, variables: &[S
         let func = module.getattr(py, "generate_latex_data").map_err(|e| python_err_to_string(py, e))?;
         let vars_vec: Vec<String> = variables.to_vec();
         let res_any = func.call1(py, (formula, vars_vec)).map_err(|e| python_err_to_string(py, e))?;
-        let res_dict = res_any.downcast_bound::<PyDict>(py).map_err(|e| python_err_to_string(py, e.into()))?;
+        let res_dict = res_any.cast_bound::<PyDict>(py).map_err(|e| python_err_to_string(py, e.into()))?;
 
         let success = res_dict
             .get_item("success").map_err(|e| python_err_to_string(py, e))?

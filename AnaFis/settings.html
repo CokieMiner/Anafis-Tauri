@@ -1,59 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" style="background-color: #0a0a0a !important;">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AnaFis Settings</title>
-    <style>
-      /* CRITICAL: Prevent white flash by setting dark background BEFORE anything loads */
-      html, body {
-        margin: 0;
-        padding: 0;
-        width: auto;
-        height: auto;
-        min-width: 0;
-        min-height: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-          sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        background-color: #0a0a0a !important;
-        color: #e0e0e0;
-        overflow: visible;
-        border: none;
-        outline: none;
-      }
-
-      #root {
-        width: auto;
-        height: auto;
-        min-width: 0;
-        min-height: 0;
-        background-color: #0a0a0a !important;
-        overflow: visible;
-        box-sizing: border-box;
-        border: none;
-        outline: none;
-        position: relative;
-        padding: 0;
-        margin: 0;
-      }
-
-      /* Ensure all elements use border-box */
-      *, *::before, *::after {
-        box-sizing: border-box;
-      }
-
-      /* Override any default white backgrounds */
-      html, body, #root {
-        background-color: #0a0a0a !important;
-      }
-    </style>
+    <link rel="stylesheet" href="/src/shared-styles.css" />
   </head>
-  <body style="background-color: #0a0a0a !important;">
-    <div id="root" style="background-color: #0a0a0a !important;"></div>
+  <body>
+    <div id="root" class="window-auto-size"></div>
     <script type="module" src="/src/SettingsWindow.tsx"></script>
   </body>
 </html>

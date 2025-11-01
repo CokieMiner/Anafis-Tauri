@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { SortableContext, horizontalListSortingStrategy} from '@dnd-kit/sortable';
-import { useSortable} from '@dnd-kit/sortable';
+import { SortableContext, horizontalListSortingStrategy, useSortable} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTabStore } from '../hooks/useTabStore';
 import { Box, TextField, IconButton } from '@mui/material';
@@ -122,7 +121,7 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
         userSelect: 'none',
         transition: 'all 0.2s ease-in-out',
         background: isActive
-          ? colors.primary
+          ? 'rgba(255, 255, 255, 0.05)'  // Keep dark background even when active
           : isDragging
             ? 'rgba(255, 255, 255, 0.03)'
             : 'rgba(255, 255, 255, 0.02)',
@@ -137,7 +136,7 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
             : 'none',
         '&:hover': {
           background: isActive
-            ? colors.primary
+            ? 'rgba(255, 255, 255, 0.08)'  // Keep dark background on hover too
             : isDragging
               ? colors.secondary
               : 'rgba(255, 255, 255, 0.08)',
@@ -162,6 +161,10 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
           zIndex: -1,
         } : {},
       }}
+      role="tab"
+      aria-label={`${tab.title} tab${isActive ? ' (active)' : ''}`}
+      aria-selected={isActive}
+      tabIndex={isActive ? 0 : -1}
     >
       {/* Enhanced Drag Handle */}
       {!isHomeTab && (
@@ -184,6 +187,16 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
             flexShrink: 0,
           }}
           title="Drag to reorder or detach tab"
+          role="button"
+          aria-label={`Drag handle for ${tab.title} tab`}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              // Focus the drag handle to enable dragging with keyboard
+              e.currentTarget.focus();
+            }
+          }}
         >
           {/* Drag indicator - three fat horizontal lines */}
           <Box
@@ -313,6 +326,8 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
               transform: 'scale(0.95)',
             },
           }}
+          aria-label={`Close ${tab.title} tab`}
+          title={`Close ${tab.title} tab`}
         >
           <CloseIcon sx={{ fontSize: '0.9rem' }} />
         </IconButton>
@@ -392,7 +407,7 @@ export function DraggableTabBar() {
                 userSelect: 'none',
                 transition: 'all 0.2s ease-in-out',
                 background: activeTabId === tab.id
-                  ? '#9c27b0'
+                  ? 'rgba(255, 255, 255, 0.05)'  // Keep dark background for home tab too
                   : 'rgba(255, 255, 255, 0.05)',
                 border: activeTabId === tab.id
                   ? `2px solid #ba68c8`
@@ -405,7 +420,7 @@ export function DraggableTabBar() {
                   : 'none',
                 '&:hover': {
                   background: activeTabId === tab.id
-                    ? '#9c27b0'
+                    ? 'rgba(255, 255, 255, 0.08)'  // Keep dark background on hover for home tab
                     : `rgba(255, 255, 255, 0.08)`,
                   borderColor: activeTabId === tab.id
                     ? '#ba68c8'
@@ -452,9 +467,7 @@ export function DraggableTabBar() {
                   tab={tab}
                   isActive={activeTabId === tab.id}
                   onActivate={() => setActiveTab(tab.id)}
-                  onClose={async () => {
-                    await removeTab(tab.id);
-                  }}
+                  onClose={() => void removeTab(tab.id)}
                 />
               );
           })}

@@ -11,18 +11,17 @@ export type ExportFormat =
   | 'txt'           // Custom delimiter text
   | 'json'          // JSON format
   | 'xlsx'          // Excel 2007+ format
+  | 'anafispread'   // AnaFis spreadsheet format
   | 'parquet'       // Apache Parquet
   | 'tex'           // LaTeX table
   | 'html'          // HTML table
-  | 'markdown'      // Markdown table
-  | 'anafispread';  // AnaFis spreadsheet format
+  | 'markdown';     // Markdown table
 
 /**
  * Export range mode
  */
 export type ExportRangeMode = 
-  | 'selection'     // Current spreadsheet selection
-  | 'sheet'         // Active sheet only
+  | 'sheet'         // Current sheet only
   | 'all'           // All sheets
   | 'custom';       // Custom range (e.g., 'A1:D20')
 
@@ -35,28 +34,51 @@ export type JsonFormat =
   | 'records';      // Array of objects [{col1: 1, col2: 2}, {col1: 3, col2: 4}]
 
 /**
- * Options for configuring exports
+ * Options for configuring exports - using discriminated unions for type safety
  */
-export interface ExportOptions {
-  // General options
-  includeHeaders?: boolean;        // Include header row (default: true)
-  includeFormulas?: boolean;       // Include formulas vs evaluated values (default: false)
-  includeFormatting?: boolean;     // Include formatting metadata (default: false)
-  includeMetadata?: boolean;       // Include metadata (default: false)
-  
+export interface ExportOptionsBase {
+  // Basic export configuration
+  exportFormat: ExportFormat;
+
+  // General options (required - UI always provides these)
+  includeHeaders: boolean;        // Include header row
+  losslessExtraction: boolean;    // Use advanced data extraction
+  includeFormulas: boolean;       // Include formulas vs evaluated values
+  includeFormatting: boolean;     // Include formatting metadata
+  includeMetadata: boolean;       // Include metadata
+
   // Text format options (CSV, TSV, TXT)
   delimiter?: string;              // Delimiter character (default: ',' for CSV, '\t' for TSV)
-  encoding?: 'utf8' | 'latin1' | 'utf16';  // Character encoding (default: utf8)
-  lineEnding?: 'lf' | 'crlf';      // Line ending style (default: crlf)
+  encoding: 'utf8' | 'latin1' | 'utf16';  // Character encoding (restricted to supported types)
+  lineEnding?: 'lf' | 'crlf' | 'cr';      // Line ending style (default: crlf)
   quoteChar?: string;              // Quote character (default: '"')
-  
+
   // JSON options
   jsonFormat?: JsonFormat;         // JSON format type (default: 'records')
   prettyPrint?: boolean;           // Pretty print JSON (default: true)
-  
+
   // Compression options
   compress?: boolean;              // Compress output file (gzip) (default: false)
+
+  // Runtime tracking for efficient export
+  trackedBounds: Record<string, { maxRow: number; maxCol: number }> | null;
 }
+
+// Discriminated union: customRange is required only when rangeMode === 'custom'
+export interface ExportOptionsSheet extends ExportOptionsBase {
+  rangeMode: 'sheet';
+}
+
+export interface ExportOptionsAll extends ExportOptionsBase {
+  rangeMode: 'all';
+}
+
+export interface ExportOptionsCustom extends ExportOptionsBase {
+  rangeMode: 'custom';
+  customRange: string;  // Required only for custom range mode
+}
+
+export type ExportOptions = ExportOptionsSheet | ExportOptionsAll | ExportOptionsCustom;
 
 /**
  * Export configuration passed to backend
@@ -91,6 +113,9 @@ export interface ExportSidebarProps {
   setPrettyPrint: (pretty: boolean) => void;
   customDelimiter: string;
   setCustomDelimiter: (delimiter: string) => void;
+
+  // Runtime bounds tracking for efficient export (per-sheet bounds)
+  getTrackedBounds?: () => Record<string, { maxRow: number; maxCol: number }> | null;
   
   // Data Library export state (optional - for future implementation)
   dataLibraryName?: string;

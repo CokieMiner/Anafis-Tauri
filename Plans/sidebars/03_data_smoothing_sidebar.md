@@ -16,40 +16,7 @@ Apply smoothing and filtering algorithms to noisy experimental data to improve s
 ## Features
 
 ### Smoothing Methods
-- **Mo}
-```
-
----
-
-## Rust Command Implementation (Continued)
-
-```rust
-// src-tauri/src/scientific/smoothing.rs
-
-use ndarray::{Array1, ArrayView1};
-
-#[derive(serde::Deserialize)]
-pub struct SmoothingRequest {
-    data: Vec<f64>,
-    method: String,
-    window_size: Option<usize>,
-    polynomial_order: Option<usize>,
-    sigma: Option<f64>,
-    // ... other parameters
-}
-
-#[derive(serde::Serialize)]
-pub struct SmoothingResponse {
-    smoothed_data: Vec<f64>,
-    original_rms: f64,
-    smoothed_rms: f64,
-    noise_reduction: f64,
-}
-
-#[tauri::command]
-pub async fn apply_smoothing(
-    request: SmoothingRequest,
-) -> Result<SmoothingResponse, String> {Average**:
+- **Moving Average**:
   - Simple moving average
   - Weighted moving average
   - Exponential moving average

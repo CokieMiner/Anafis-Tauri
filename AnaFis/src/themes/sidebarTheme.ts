@@ -1,21 +1,47 @@
 // AnaFis Sidebar Theme - Unified design system for all sidebars
 // Inspired by Home tab aesthetics with blue accents
 
+// Color constants for better performance and consistency
+const COLORS = {
+  PRIMARY: '#2196f3',
+  PRIMARY_DARK: '#1976d2',
+  SECONDARY: '#64b5f6',
+  ACCENT: '#90caf9',
+  SUCCESS: '#4caf50',
+  WARNING: '#ff9800',
+  ERROR: '#f44336',
+} as const;
+
+const TEXT_COLORS = {
+  PRIMARY: 'rgba(255, 255, 255, 0.95)',
+  SECONDARY: 'rgba(255, 255, 255, 0.8)',
+  TERTIARY: 'rgba(255, 255, 255, 0.6)',
+  DISABLED: 'rgba(255, 255, 255, 0.4)',
+} as const;
+
+// Shared hover effects to reduce duplication
+const HOVER_EFFECTS = {
+  primary: {
+    transform: 'translateY(-1px)',
+    boxShadow: '0 4px 15px rgba(33, 150, 243, 0.4)'
+  }
+} as const;
+
 export const sidebarTheme = {
   // Color Palette
   colors: {
-    primary: '#2196f3',      // Bright blue (main accent)
-    secondary: '#64b5f6',    // Light blue (labels, secondary elements)
-    accent: '#90caf9',       // Very light blue (hover states)
-    success: '#4caf50',      // Green for positive actions
-    warning: '#ff9800',      // Orange for warnings
-    error: '#f44336',        // Red for errors
-    text: {
-      primary: 'rgba(255, 255, 255, 0.95)',
-      secondary: 'rgba(255, 255, 255, 0.8)',
-      tertiary: 'rgba(255, 255, 255, 0.6)',
-      disabled: 'rgba(255, 255, 255, 0.4)'
-    }
+    primary: COLORS.PRIMARY,
+    primaryDark: COLORS.PRIMARY_DARK,
+    primaryContrast: TEXT_COLORS.PRIMARY,
+    secondary: COLORS.SECONDARY,
+    accent: COLORS.ACCENT,
+    success: COLORS.SUCCESS,
+    warning: COLORS.WARNING,
+    error: COLORS.ERROR,
+    hover: COLORS.PRIMARY_DARK,
+    disabledBg: '#555555',
+    disabledText: 'rgba(255, 255, 255, 0.5)',
+    text: TEXT_COLORS,
   },
 
   // Background Gradients (Home tab inspired)
@@ -108,10 +134,10 @@ export const sidebarTheme = {
     button: {
       primary: {
         background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+        color: 'white',
         '&:hover': {
           background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-          transform: 'translateY(-1px)',
-          boxShadow: '0 4px 15px rgba(33, 150, 243, 0.4)'
+          ...HOVER_EFFECTS.primary
         }
       },
       secondary: {
@@ -121,6 +147,16 @@ export const sidebarTheme = {
           borderColor: '#2196f3',
           backgroundColor: 'rgba(33, 150, 243, 0.1)',
           transform: 'translateY(-1px)'
+        }
+      },
+      // Default button style for all sidebar buttons
+      default: {
+        backgroundColor: COLORS.PRIMARY,
+        color: 'white',
+        border: 'none',
+        '&:hover': {
+          backgroundColor: COLORS.PRIMARY_DARK,
+          ...HOVER_EFFECTS.primary
         }
       }
     },

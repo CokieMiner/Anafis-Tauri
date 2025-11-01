@@ -1,160 +1,40 @@
-/* CSS Reset to prevent white flash */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* Main application styles - imports shared styles and adds app-specific overrides */
+@import './shared-styles.css';
 
-/* Disable right-click context menu globally */
-* {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-html,
+/* Application-specific overrides */
 body {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: dark;
-  /* Force dark mode only */
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0a0a0a !important;
-  /* Force dark background */
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-html {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #0a0a0a !important;
-  /* Force dark background */
-  color: #ffffff;
-  /* Allow overflow so individual windows can control scroll behaviour */
-  overflow: visible;
-  /* Disable pinch-to-zoom */
-  touch-action: manipulation;
-}
-
-body {
-  margin: 0;
-  padding: 0;
   min-width: 320px;
   min-height: 100vh;
-  width: 100vw;
-  overflow-x: visible;
-  background-color: #0a0a0a !important;
-  /* Force dark background */
-  color: #ffffff;
-  /* Allow overflow so windows can be measured and resized */
-  overflow: visible;
-  /* Disable pinch-to-zoom */
-  touch-action: manipulation;
-}
-
-#root {
   width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  background-color: #0a0a0a !important;
-  /* Force dark background */
-  overflow: visible;
 }
 
-/* Spreadsheet grid and cell styles for dark mode */
-.spreadsheet-grid {
-  background-color: #111111 !important;
-  color: #ffffff !important;
-  border: 1px solid #333 !important;
-}
-.spreadsheet-cell {
-  background-color: #1a1a1a !important;
-  color: #ffffff !important;
-  border: 1px solid #333 !important;
-}
-.spreadsheet-header {
-  background-color: #222 !important;
-  color: #ffffff !important;
-  border: 1px solid #444 !important;
+/* Spreadsheet component styles */
+.univer-spreadsheet-container .spreadsheet-grid {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-/* Hide any loading spinners or default content */
-#root:empty::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: #0a0a0a !important;
-  z-index: 9999;
+.univer-spreadsheet-container .spreadsheet-cell {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-/* Prevent Material-UI loading flashes */
-.MuiBackdrop-root {
-  background-color: rgba(0, 0, 0, 0.8) !important;
+.univer-spreadsheet-container .spreadsheet-header {
+  background-color: var(--bg-paper);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-.MuiCircularProgress-root {
-  color: #ffffff !important;
-}
-
-/* Keep the reset but allow component backgrounds (Paper, inputs) to define their own colors */
-div,
-span,
-p,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-button {
-  background-color: transparent;
-}
-
-/* Allow Material UI components to have their own backgrounds - let the theme handle this */
-.MuiPaper-root,
-.MuiButton-root,
-.MuiTextField-root,
-.MuiDialog-root,
-.MuiAppBar-root {
-  background-color: unset !important;
-}
-
-/* Only set background for root elements */
-html,
-body,
-#root {
-  background-color: #0a0a0a !important;
-}
-
+/* Typography */
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+  color: var(--text-primary);
 }
 
+/* Button styles */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -162,28 +42,17 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background-color 0.25s;
 }
 
-button:focus,
-button:focus-visible {
-  outline: none;
-}
-
-*:focus,
-*:focus-visible {
-  outline: none !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-
-  button {
-    background-color: #f9f9f9;
-  }
+/* Allow Material UI components to have their own backgrounds */
+.MuiPaper-root,
+.MuiButton-root,
+.MuiTextField-root,
+.MuiDialog-root,
+.MuiAppBar-root {
+  background-color: unset !important;
 }

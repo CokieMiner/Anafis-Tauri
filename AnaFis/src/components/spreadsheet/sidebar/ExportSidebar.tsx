@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -21,24 +21,25 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import SaveIcon from '@mui/icons-material/Save';
-import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
-import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
-import { sidebarStyles } from '../../utils/sidebarStyles';
-import SidebarCard from '../ui/SidebarCard';
-import { anafisColors } from '../../themes';
-import { spreadsheetEventBus } from './SpreadsheetEventBus';
+// invoke and save moved to exportService
+import { useSpreadsheetSelection } from '@/hooks/useSpreadsheetSelection';
+import { sidebarStyles } from '@/utils/sidebarStyles';
+import SidebarCard from './SidebarCard';
+import { anafisColors } from '@/themes';
+import { spreadsheetEventBus } from '../SpreadsheetEventBus';
 import {
   ExportSidebarProps,
   ExportFormat,
   ExportRangeMode,
-  ExportConfig,
-  JsonFormat
-} from '../../types/export';
+  JsonFormat,
+  ExportOptions
+} from '@/types/export';
+import { ExportService } from '../univer/exportService';
+import { FUniver } from '@univerjs/core/facade';
 
 type FocusedInputType = 'customRange' | 'dataRange' | 'uncertaintyRange' | null;
 
-const ExportSidebar: React.FC<ExportSidebarProps> = ({
+const ExportSidebar = React.memo<ExportSidebarProps>(({
   open,
   onClose,
   univerRef,
@@ -55,6 +56,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
   setPrettyPrint,
   customDelimiter,
   setCustomDelimiter,
+  getTrackedBounds,
 }) => {
   // State
   const [isExporting, setIsExporting] = useState(false);
@@ -67,6 +69,12 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
   // Headers option
   const [includeHeaders, setIncludeHeaders] = useState<boolean>(false);
 
+  // New lossless export options
+  const [includeFormulas, setIncludeFormulas] = useState<boolean>(false);
+  const [includeFormatting, setIncludeFormatting] = useState<boolean>(false);
+  const [includeMetadata, setIncludeMetadata] = useState<boolean>(false);
+  const [useLosslessExtraction, setUseLosslessExtraction] = useState<boolean>(false);
+
   // Data Library export state
   const [libraryName, setLibraryName] = useState('');
   const [libraryDescription, setLibraryDescription] = useState('');
@@ -78,28 +86,36 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
 
 
   // Use spreadsheet selection hook
+  // Memoized update field function for better performance
+  const updateField = useCallback((inputType: FocusedInputType, selection: string) => {
+    if (inputType === 'customRange') {
+      setCustomRange(selection);
+    } else if (inputType === 'dataRange') {
+      setDataRange(selection);
+    } else if (inputType === 'uncertaintyRange') {
+      setUncertaintyRange(selection);
+    }
+  }, [setCustomRange, setDataRange, setUncertaintyRange]);
+
+  // Stable no-op function to prevent unnecessary re-renders
+  const noopSelectionChange = useCallback(() => {
+    // No-op function for when onSelectionChange is not provided
+  }, []);
+
   const { focusedInput, handleInputFocus, handleInputBlur } = useSpreadsheetSelection<FocusedInputType>({
-    onSelectionChange,
-    updateField: (inputType, selection) => {
-      if (inputType === 'customRange') {
-        setCustomRange(selection);
-      } else if (inputType === 'dataRange') {
-        setDataRange(selection);
-      } else if (inputType === 'uncertaintyRange') {
-        setUncertaintyRange(selection);
-      }
-    },
+    onSelectionChange: onSelectionChange ?? noopSelectionChange,
+    updateField,
     sidebarDataAttribute: 'data-export-sidebar',
     handlerName: '__exportSelectionHandler',
   });
 
   // Subscribe to spreadsheet selection events via event bus
   useEffect(() => {
-    if (!open) return;
+    if (!open) { return; }
 
     const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
       // Call the window handler that the hook is listening to
-      const handler = (window as any).__exportSelectionHandler;
+      const handler = (window as unknown as Record<string, (cellRef: string) => void>).__exportSelectionHandler;
       if (handler) {
         handler(cellRef);
       }
@@ -110,155 +126,12 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
     return unsubscribe;
   }, [open]);
 
-  // Get file extension for current format
-  const getFileExtension = useCallback((): string => {
-    switch (exportFormat) {
-      case 'csv': return 'csv';
-      case 'tsv': return 'tsv';
-      case 'txt': return 'txt';
-      case 'json': return 'json';
-      case 'parquet': return 'parquet';
-      case 'tex': return 'tex';
-      case 'html': return 'html';
-      case 'markdown': return 'md';
-      default: return 'txt';
-    }
-  }, [exportFormat]);
+  // File extension and filter utilities moved to exportService
 
-  // Get file filter name
-  const getFilterName = useCallback((): string => {
-    switch (exportFormat) {
-      case 'csv': return 'CSV File';
-      case 'tsv': return 'TSV File';
-      case 'txt': return 'Text File';
-      case 'json': return 'JSON File';
-      case 'parquet': return 'Parquet File';
-      case 'tex': return 'LaTeX File';
-      case 'html': return 'HTML File';
-      case 'markdown': return 'Markdown File';
-      default: return 'File';
-    }
-  }, [exportFormat]);
+  // Create export service instance
+  const exportService = useMemo(() => new ExportService(), []);
 
-  // Extract data from spreadsheet based on range mode
-  const extractData = useCallback(async (): Promise<unknown[][] | null> => {
-    if (!univerRef?.current) {
-      console.error('[Export] Spreadsheet reference not available');
-      setError('Spreadsheet reference not available');
-      return null;
-    }
-
-    try {
-      console.log('[Export] Range mode:', rangeMode, 'Format:', exportFormat);
-
-      // Single sheet extraction only
-      let range: string;
-
-      if (rangeMode === 'custom') {
-        if (!customRange) {
-          setError('Please specify a custom range');
-          return null;
-        }
-        range = customRange;
-      } else {
-        // Default to 'sheet' - get used range of active sheet
-        console.log('[Export] Getting used range for sheet...');
-        range = await univerRef.current.getUsedRange();
-        console.log('[Export] Used range:', range);
-      }
-
-      console.log('[Export] Final range:', range);
-      console.log('[Export] About to call getRange...');
-      const rawData = await univerRef.current.getRange(range);
-      console.log('[Export] Raw data:', rawData);
-
-      // Filter out completely empty rows and trim empty cells at the end
-      const filteredData = filterEmptyData(rawData);
-      console.log('[Export] Filtered data:', filteredData);
-
-      if (filteredData.length === 0) {
-        console.error('[Export] No data after filtering');
-        setError('No data found in the selected range');
-        return null;
-      }
-
-      return filteredData;
-    } catch (err) {
-      setError(`Failed to extract data: ${err}`);
-      return null;
-    }
-    // univerRef is a ref and doesn't change, so it's safe to omit from dependencies
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangeMode, customRange, exportFormat]);
-
-  // Filter out empty rows and trim empty columns
-  const filterEmptyData = (data: unknown[][]): unknown[][] => {
-    if (!data || data.length === 0) return [];
-
-    // Find the last non-empty row
-    let lastNonEmptyRow = -1;
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (data[i].some(cell => cell !== null && cell !== undefined && cell !== '')) {
-        lastNonEmptyRow = i;
-        break;
-      }
-    }
-
-    if (lastNonEmptyRow === -1) {
-      return []; // All rows are empty
-    }
-
-    // Trim to last non-empty row
-    const trimmedRows = data.slice(0, lastNonEmptyRow + 1);
-
-    // Find the last non-empty column across all rows
-    let lastNonEmptyCol = -1;
-    for (const row of trimmedRows) {
-      for (let j = row.length - 1; j >= 0; j--) {
-        const cell = row[j];
-        if (cell !== null && cell !== undefined && cell !== '') {
-          lastNonEmptyCol = Math.max(lastNonEmptyCol, j);
-          break;
-        }
-      }
-    }
-
-    if (lastNonEmptyCol === -1) {
-      return []; // All columns are empty
-    }
-
-    // Trim each row to last non-empty column
-    return trimmedRows.map(row => row.slice(0, lastNonEmptyCol + 1));
-  };
-
-  // Extract range data for Data Library export
-  const extractRangeData = useCallback(async (range: string): Promise<number[]> => {
-    if (!univerRef?.current) {
-      throw new Error('Spreadsheet reference not available');
-    }
-
-    try {
-      // Use Univer's API to get the range data
-      const rangeData = await univerRef.current.getRange(range);
-      const values: number[] = [];
-
-      // Flatten the range data and extract numeric values
-      for (const row of rangeData) {
-        for (const cell of row) {
-          if (cell !== null && cell !== undefined && cell !== '') {
-            const num = typeof cell === 'number' ? cell : parseFloat(String(cell));
-            if (!isNaN(num)) {
-              values.push(num);
-            }
-          }
-        }
-      }
-
-      return values;
-    } catch (err) {
-      throw new Error(`Failed to extract range ${range}: ${err}`);
-    }
-  }, [univerRef]);
+  // Data Library export logic moved to exportService
 
   // Handle export to Data Library
   const handleExportToLibrary = useCallback(async () => {
@@ -267,71 +140,42 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
     setIsExporting(true);
 
     try {
-      // Validate inputs
-      if (!libraryName.trim()) {
-        setError('Please enter a name for the data sequence');
+      // Get the univerAPI from the ref
+      const univerAPI = univerRef?.current?.getRawAPI?.();
+      if (!univerAPI) {
+        setError('Spreadsheet API not available');
+        setIsExporting(false);
         return;
       }
 
-      if (!dataRange.trim()) {
-        setError('Please specify a data range');
-        return;
+      const result = await exportService.exportToDataLibrary({
+        libraryName,
+        libraryDescription,
+        libraryTags,
+        libraryUnit,
+        dataRange,
+        uncertaintyRange,
+      }, univerAPI as ReturnType<typeof FUniver.newAPI>);
+
+      if (result.success) {
+        setSuccess(result.message ?? 'Successfully saved to Data Library');
+
+        // Reset form
+        setLibraryName('');
+        setLibraryDescription('');
+        setLibraryTags('');
+        setLibraryUnit('');
+        setDataRange('A:A');
+        setUncertaintyRange('');
+      } else {
+        setError(result.error ?? 'Failed to save to Data Library');
       }
-
-      // Extract range data
-      const dataValues = await extractRangeData(dataRange);
-      if (dataValues.length === 0) {
-        setError(`No valid numeric data found in range ${dataRange}`);
-        return;
-      }
-
-      // Extract uncertainty data if specified
-      let uncertainties: number[] | undefined;
-      if (uncertaintyRange.trim()) {
-        uncertainties = await extractRangeData(uncertaintyRange);
-        if (uncertainties.length !== dataValues.length) {
-          setError(`Uncertainty range (${uncertainties.length} values) must have the same length as data range (${dataValues.length} values)`);
-          return;
-        }
-      }
-
-      // Parse tags
-      const tags = libraryTags
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
-
-      // Build save request
-      const request = {
-        name: libraryName.trim(),
-        description: libraryDescription.trim(),
-        tags,
-        unit: libraryUnit.trim(),
-        source: `Range: ${dataRange}${uncertaintyRange ? ` (uncertainty: ${uncertaintyRange})` : ''}`,
-        data: dataValues,
-        uncertainties: uncertainties && uncertainties.length > 0 ? uncertainties : null,
-        is_pinned: false,
-      };
-
-      // Save to Data Library
-      await invoke<string>('save_sequence', { request });
-
-      setSuccess(`Successfully saved '${libraryName}' to Data Library (${dataValues.length} data points)`);
-
-      // Reset form
-      setLibraryName('');
-      setLibraryDescription('');
-      setLibraryTags('');
-      setLibraryUnit('');
-      setDataRange('A:A');
-      setUncertaintyRange('');
-
     } catch (err) {
-      setError(`Failed to save to Data Library: ${err}`);
+      setError(`Failed to save to Data Library: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsExporting(false);
     }
-  }, [libraryName, libraryDescription, libraryTags, libraryUnit, dataRange, uncertaintyRange, extractRangeData]);
+  }, [libraryName, libraryDescription, libraryTags, libraryUnit, dataRange, uncertaintyRange, exportService, univerRef]);
 
   // Handle export action
   const handleExport = useCallback(async () => {
@@ -340,101 +184,82 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
     setIsExporting(true);
 
     try {
-      // Extract data
-      const data = await extractData();
-      if (!data) {
-        setError('No data to export');
-        return;
+      // Create the discriminated union ExportOptions based on rangeMode
+      const baseOptions = {
+        exportFormat,
+        includeHeaders,
+        losslessExtraction: useLosslessExtraction,
+        includeFormulas,
+        includeFormatting,
+        includeMetadata,
+        jsonFormat,
+        prettyPrint,
+        delimiter: customDelimiter,
+        encoding: 'utf8' as const,
+        trackedBounds: getTrackedBounds?.() ?? null,
+      };
+
+      let options: ExportOptions;
+      switch (rangeMode) {
+        case 'sheet':
+          options = {
+            ...baseOptions,
+            rangeMode: 'sheet',
+          };
+          break;
+        case 'all':
+          options = {
+            ...baseOptions,
+            rangeMode: 'all',
+          };
+          break;
+        case 'custom':
+          options = {
+            ...baseOptions,
+            rangeMode: 'custom',
+            customRange,
+          };
+          break;
       }
 
-      // Handle single-sheet data only
-      const exportData = data as unknown[][];
-      const rowCount = exportData.length;
-      const colCount = exportData[0]?.length || 0;
-      const previewText = `${rowCount} rows × ${colCount} columns`;
-
-      // Validate export data
-      if (exportData.length === 0) {
-        setError('No data found to export');
-        return;
-      }
-
-      // Show save dialog
-      const filePath = await save({
-        defaultPath: `export.${getFileExtension()}`,
-        filters: [{
-          name: getFilterName(),
-          extensions: [getFileExtension()]
-        }]
-      });
-
-      if (!filePath) {
-        // User cancelled
+      const univerAPI = univerRef?.current?.getRawAPI?.();
+      if (!univerAPI) {
+        setError('Spreadsheet API not available');
         setIsExporting(false);
         return;
       }
 
-      // Validate file path
-      if (!filePath.trim()) {
-        setError('Invalid file path');
-        return;
-      }
-
-      // Build export config
-      const config: ExportConfig = {
-        range: rangeMode === 'custom' ? customRange : rangeMode,
-        format: exportFormat,
-        options: {
-          includeHeaders,
-          delimiter: exportFormat === 'txt' ? customDelimiter : undefined,
-          jsonFormat,
-          prettyPrint,
-          encoding: 'utf8',
-          lineEnding: 'lf',
-          quoteChar: '"',
-          compress: false,
-        }
+      // Type guard to validate API shape instead of unsafe assertion
+      const isValidUniverAPI = (api: unknown): api is ReturnType<typeof FUniver.newAPI> => {
+        return (
+          api !== null &&
+          typeof api === 'object' &&
+          'getActiveWorkbook' in api &&
+          typeof (api as Record<string, unknown>).getActiveWorkbook === 'function'
+        );
       };
 
-      // Call appropriate backend command based on format
-      if (exportFormat === 'csv' || exportFormat === 'tsv' || exportFormat === 'txt') {
-        await invoke('export_to_text', { data: exportData, filePath, config });
-      } else if (exportFormat === 'json') {
-        await invoke('export_to_json', { data: exportData, filePath, config });
-      } else if (exportFormat === 'html') {
-        await invoke('export_to_html', { data: exportData, filePath, config });
-      } else if (exportFormat === 'markdown') {
-        await invoke('export_to_markdown', { data: exportData, filePath, config });
-      } else if (exportFormat === 'tex') {
-        await invoke('export_to_latex', { data: exportData, filePath, config });
-      } else if (exportFormat === 'parquet') {
-        await invoke('export_to_parquet', { data: exportData, filePath, config });
-      } else {
-        setError(`Export format '${exportFormat}' not supported`);
+      if (!isValidUniverAPI(univerAPI)) {
+        setError('Spreadsheet API is not in the expected format');
+        setIsExporting(false);
         return;
       }
 
-      setSuccess(`Successfully exported ${previewText} to ${filePath}`);
-    } catch (err) {
-      // Provide more specific error messages based on error type
-      const errorMessage = err as string;
-      if (errorMessage.includes('permission') || errorMessage.includes('access')) {
-        setError('Permission denied: Cannot write to the selected file. Please check file permissions and try a different location.');
-      } else if (errorMessage.includes('disk') || errorMessage.includes('space')) {
-        setError('Insufficient disk space to save the file.');
-      } else if (errorMessage.includes('format') || errorMessage.includes('invalid')) {
-        setError(`Data format error: ${errorMessage}`);
-      } else if (errorMessage.includes('encoding')) {
-        setError(`Text encoding error: ${errorMessage}`);
+      const result = await exportService.exportWithDialog(options, univerAPI);
+
+      if (result.success) {
+        setSuccess(result.message ?? 'Export completed successfully');
       } else {
-        setError(`Export failed: ${errorMessage || 'Unknown error occurred'}`);
+        setError(result.error ?? 'Export failed');
       }
+    } catch (err) {
+      setError(`Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsExporting(false);
     }
-  }, [exportFormat, rangeMode, customRange, jsonFormat, prettyPrint, customDelimiter, includeHeaders, extractData, getFileExtension, getFilterName]);
+  }, [exportFormat, rangeMode, customRange, includeHeaders, useLosslessExtraction, includeFormulas, includeFormatting, includeMetadata, jsonFormat, prettyPrint, customDelimiter, getTrackedBounds, exportService, univerRef]);
 
-  if (!open) return null;
+  if (!open) { return null; }
 
   return (
     <Box data-export-sidebar sx={{ ...sidebarStyles.container, px: 1, pt: 2 }}>
@@ -452,9 +277,9 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
       </Box>
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: 2, p: 1.5 }}>
+      <Box sx={sidebarStyles.contentWrapper}>
         {/* Export Mode */}
-        <SidebarCard title="Export Destination" defaultExpanded={true}>
+        <SidebarCard title="Export Mode" defaultExpanded={true}>
           <FormControl fullWidth>
             <RadioGroup
               value={exportMode}
@@ -479,7 +304,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
 
         {/* File Export Settings */}
         {exportMode === 'file' && (
-          <SidebarCard title="File Export Settings" defaultExpanded={true}>
+          <SidebarCard title="Export Configuration" defaultExpanded={true}>
             {/* Export Format */}
             <FormControl fullWidth sx={{ mb: 3 }}>
               <FormLabel component="legend" sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, '&.Mui-focused': { color: '#2196f3' } }}>
@@ -502,6 +327,8 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                 <MenuItem value="tsv">TSV (Tab-separated values)</MenuItem>
                 <MenuItem value="txt">TXT (Custom delimiter)</MenuItem>
                 <MenuItem value="json">JSON (JavaScript Object Notation)</MenuItem>
+                <MenuItem value="xlsx">Excel (.xlsx)</MenuItem>
+                <MenuItem value="anafispread">AnaFis Spreadsheet (.anafispread)</MenuItem>
                 <MenuItem value="parquet">Parquet (.parquet)</MenuItem>
                 <MenuItem value="tex">LaTeX (.tex)</MenuItem>
                 <MenuItem value="html">HTML (.html)</MenuItem>
@@ -510,7 +337,10 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
 
               {/* Format-specific info */}
               <Typography sx={{ color: 'rgba(255, 152, 0, 0.8)', fontSize: 11, mt: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                ℹ️ Formulas will be evaluated - only values exported
+                {(exportFormat === 'xlsx' || exportFormat === 'anafispread')
+                  ? 'Supports formulas, formatting, and metadata preservation'
+                  : 'Formulas will be evaluated to their calculated values'
+                }
               </Typography>
             </FormControl>
 
@@ -526,8 +356,15 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                 <FormControlLabel
                   value="sheet"
                   control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }} />}
-                  label="Active Sheet"
+                  label="Current Sheet"
                   sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                />
+                <FormControlLabel
+                  value="all"
+                  control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }} />}
+                  label="All Sheets"
+                  sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                  disabled={!(exportFormat === 'xlsx' || exportFormat === 'anafispread' || exportFormat === 'json')}
                 />
                 <FormControlLabel
                   value="custom"
@@ -563,10 +400,97 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
 
             <Divider sx={{ my: 2, bgcolor: 'rgba(33, 150, 243, 0.2)' }} />
 
+            {/* Lossless Export Options */}
+            {(exportFormat === 'xlsx' || exportFormat === 'anafispread' || exportFormat === 'json') && (
+              <Box sx={{ mb: 3 }}>
+                <FormLabel sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  3. Advanced Options
+                </FormLabel>
+
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={useLosslessExtraction}
+                      onChange={(e) => {
+                        setUseLosslessExtraction(e.target.checked);
+                        if (e.target.checked) {
+                          // Enable advanced options by default for lossless
+                          if (exportFormat === 'xlsx' || exportFormat === 'anafispread') {
+                            setIncludeFormulas(true);
+                            setIncludeFormatting(true);
+                          }
+                          if (exportFormat === 'anafispread') {
+                            setIncludeMetadata(true);
+                          }
+                        }
+                      }}
+                      sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
+                    />
+                  }
+                  label="Advanced Data Extraction"
+                  sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 1, display: 'block' }}
+                />
+
+                {useLosslessExtraction && (
+                  <Box sx={{ ml: 4, mt: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={includeFormulas}
+                          onChange={(e) => setIncludeFormulas(e.target.checked)}
+                          sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
+                        />
+                      }
+                      label="Include Formulas"
+                      sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block' }}
+                    />
+
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={includeFormatting}
+                          onChange={(e) => setIncludeFormatting(e.target.checked)}
+                          sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
+                        />
+                      }
+                      label="Include Cell Formatting"
+                      sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block' }}
+                    />
+
+                    {exportFormat === 'anafispread' && (
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={includeMetadata}
+                            onChange={(e) => setIncludeMetadata(e.target.checked)}
+                            sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
+                          />
+                        }
+                        label="Include Cell Metadata"
+                        sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block' }}
+                      />
+                    )}
+                  </Box>
+                )}
+
+                <Typography sx={{
+                  color: 'rgba(100, 181, 246, 0.7)',
+                  fontSize: 11,
+                  mt: 1,
+                  fontStyle: 'italic'
+                }}>
+                  {useLosslessExtraction
+                    ? 'Advanced extraction preserves complete spreadsheet structure'
+                    : 'Standard extraction exports cell values only'
+                  }
+                </Typography>
+              </Box>
+            )}
+
             {/* Format-specific options */}
             <Box sx={{ mb: 3 }}>
               <FormLabel sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, '&.Mui-focused': { color: '#2196f3' } }}>
-                3. Format Options
+                {(exportFormat === 'xlsx' || exportFormat === 'anafispread' || exportFormat === 'json') ? '4. Format Options' : '3. Format Options'}
               </FormLabel>
 
               {/* TXT delimiter option */}
@@ -580,8 +504,8 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                     size="small"
                     value={customDelimiter}
                     onChange={(e) => setCustomDelimiter(e.target.value)}
-                    placeholder="e.g., | or ; or tab"
-                    helperText="Common: | (pipe), ; (semicolon), tab, space"
+                    placeholder="Enter delimiter character"
+                    helperText="Examples: | (pipe), ; (semicolon), tab, space"
                     sx={{
                       mt: 0.5,
                       '& .MuiOutlinedInput-root': {
@@ -618,9 +542,9 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                         '& .MuiSvgIcon-root': { color: '#64b5f6' }
                       }}
                     >
-                      <MenuItem value="array">Array - [[1,2],[3,4]]</MenuItem>
-                      <MenuItem value="object">Object - {'{col1:[1,3], col2:[2,4]}'}</MenuItem>
-                      <MenuItem value="records">Records - [{'{col1:1}'},{'{col1:3}'}]</MenuItem>
+                      <MenuItem value="array">2D Array Format</MenuItem>
+                      <MenuItem value="object">Column-based Object</MenuItem>
+                      <MenuItem value="records">Record Array Format</MenuItem>
                     </Select>
                   </FormControl>
 
@@ -634,7 +558,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                           sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
                         />
                       }
-                      label="First row contains headers"
+                      label="Use first row as column headers"
                       sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 2 }}
                     />
                   )}
@@ -647,7 +571,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                         sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
                       />
                     }
-                    label="Pretty Print (indented)"
+                    label="Format JSON with indentation"
                     sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
                   />
                 </Box>
@@ -658,7 +582,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
 
         {/* Data Library Export Settings */}
         {exportMode === 'library' && (
-          <SidebarCard title="Data Library Settings" defaultExpanded={true}>
+          <SidebarCard title="Data Library Configuration" defaultExpanded={true}>
             <TextField
               fullWidth
               label="Name"
@@ -705,7 +629,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
               label="Tags (comma-separated)"
               value={libraryTags}
               onChange={(e) => setLibraryTags(e.target.value)}
-              placeholder="experiment, measurement, physics"
+              placeholder="experimental, measurement, analysis"
               sx={{
                 mb: 2,
                 '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
@@ -725,7 +649,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
               label="Unit"
               value={libraryUnit}
               onChange={(e) => setLibraryUnit(e.target.value)}
-              placeholder="m, kg, s, V, A, etc."
+              placeholder="m, kg, s, V, A"
               sx={{
                 mb: 2,
                 '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
@@ -762,7 +686,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                   },
                   '& .MuiFormHelperText-root': { color: '#888', fontSize: '0.75rem' }
                 }}
-                helperText="Column: A:A, C:C | Range: A1:A100, C5:C50"
+                helperText="Entire column: A:A, C:C | Specific range: A1:A100, C5:C50"
               />
 
               <TextField
@@ -785,7 +709,7 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
                   },
                   '& .MuiFormHelperText-root': { color: '#888', fontSize: '0.75rem' }
                 }}
-                helperText="Optional - same format as data range"
+                helperText="Optional uncertainty values (same format as data range)"
               />
             </Box>
 
@@ -798,11 +722,11 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
               borderRadius: 1,
               border: '1px solid rgba(33, 150, 243, 0.3)'
             }}>
-              💡 <strong>Tip:</strong> A:A = entire column A | 1:1 = entire row 1 | A1:A100 = cells A1 to A100
+              <strong>Range Examples:</strong> A:A (entire column A), 1:1 (entire row 1), A1:A100 (specific range)
             </Typography>
 
             <Typography sx={{ color: '#888', fontSize: '0.75rem', mb: 2 }}>
-              Only numeric values from the specified ranges will be exported.
+              Only numeric values from the specified ranges will be saved to the library.
             </Typography>
           </SidebarCard>
         )}
@@ -826,38 +750,30 @@ const ExportSidebar: React.FC<ExportSidebarProps> = ({
           {exportMode === 'file' ? (
             <Button
               fullWidth
-              variant="contained"
               startIcon={isExporting ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <FileDownloadIcon />}
-              onClick={handleExport}
+              onClick={() => void handleExport()}
               disabled={isExporting || (rangeMode === 'custom' && !customRange)}
-              sx={{
-                bgcolor: '#2196f3',
-                '&:hover': { bgcolor: '#1976d2' },
-                '&:disabled': { bgcolor: '#555' }
-              }}
+              sx={sidebarStyles.button.primary}
             >
-              {isExporting ? 'Exporting...' : 'Export to File'}
+              {isExporting ? 'Exporting...' : 'Export File'}
             </Button>
           ) : (
             <Button
               fullWidth
-              variant="contained"
               startIcon={isExporting ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <SaveIcon />}
-              onClick={handleExportToLibrary}
+              onClick={() => void handleExportToLibrary()}
               disabled={isExporting || !libraryName.trim() || !dataRange.trim()}
-              sx={{
-                bgcolor: '#2196f3',
-                '&:hover': { bgcolor: '#1976d2' },
-                '&:disabled': { bgcolor: '#555' }
-              }}
+              sx={sidebarStyles.button.primary}
             >
-              {isExporting ? 'Saving...' : 'Save to Library'}
+              {isExporting ? 'Saving...' : 'Save to Data Library'}
             </Button>
           )}
         </SidebarCard>
       </Box>
     </Box>
   );
-};
+});
+
+ExportSidebar.displayName = 'ExportSidebar';
 
 export default ExportSidebar;

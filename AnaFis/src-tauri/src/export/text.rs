@@ -6,7 +6,7 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use serde_json::Value;
-use super::{ExportConfig, ExportFormat};
+use super::{ExportConfig, ExportFormat, DataStructure};
 
 /// Export data to CSV/TSV/TXT format
 #[tauri::command]
@@ -15,6 +15,14 @@ pub async fn export_to_text(
     file_path: String,
     config: ExportConfig,
 ) -> Result<(), String> {
+    // Validate data structure - text formats only support single-sheet 2D arrays
+    if !matches!(config.data_structure, DataStructure::Array2D) {
+        return Err(format!(
+            "Text formats (CSV/TSV/TXT) only support single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
+            config.data_structure
+        ));
+    }
+
     // Determine delimiter based on format
     let delimiter = match config.format {
         ExportFormat::Csv => config.options.delimiter.as_deref().unwrap_or(","),

@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Box, Typography, IconButton, List, ListItemButton, ListItemText, TextField, Button } from '@mui/material';
 import { Close as CloseIcon, Add as AddIcon, Delete as DeleteIcon, PlayArrow as RunIcon } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
-import { SpreadsheetRef } from './SpreadsheetInterface';
-import { useSpreadsheetSelection } from '../../hooks/useSpreadsheetSelection';
-import { sidebarStyles } from '../../utils/sidebarStyles';
-import SidebarCard from '../ui/SidebarCard';
-import { anafisColors } from '../../themes';
-import { spreadsheetEventBus } from './SpreadsheetEventBus';
+import { SpreadsheetRef } from '../SpreadsheetInterface';
+import { useSpreadsheetSelection } from '@/hooks/useSpreadsheetSelection';
+import { sidebarStyles } from '@/utils/sidebarStyles';
+import SidebarCard from './SidebarCard';
+import { anafisColors } from '@/themes';
+import { spreadsheetEventBus } from '../SpreadsheetEventBus';
+import { normalizeRangeRef } from '../univer/errors';
 
 interface Variable {
   name: string;
@@ -16,7 +17,273 @@ interface Variable {
   confidence: number;
 }
 
-type FocusedInputType = 
+// Helper types for optimized validation (moved outside component)
+interface RangeRequest {
+  type: 'value' | 'uncertainty';
+  variableIndex: number;
+  range: string;
+  variableName: string;
+}
+
+interface RangeResult extends RangeRequest {
+  data: (string | number)[][];
+}
+
+// Helper functions moved outside component to prevent recreation
+const collectRangeRequests = (variables: Variable[]): RangeRequest[] => {
+  return variables.flatMap((variable, index) => {
+    const requests: RangeRequest[] = [];
+
+    if (variable.valueRange) {
+      requests.push({
+        type: 'value',
+        variableIndex: index,
+        range: variable.valueRange,
+        variableName: variable.name
+      });
+    }
+
+    if (variable.uncertaintyRange) {
+      requests.push({
+        type: 'uncertainty',
+        variableIndex: index,
+        range: variable.uncertaintyRange,
+        variableName: variable.name
+      });
+    }
+
+    return requests;
+  });
+};
+
+// Check if data contains only numeric values
+const isAllNumericData = (data: (string | number)[][]): boolean => {
+  return data.every(row =>
+    row.every(cell => typeof cell === 'number' && isFinite(cell))
+  );
+};
+
+// Validate all range data in batch
+const validateRangeData = (rangeResults: RangeResult[], variables: Variable[]): void => {
+  // Group results by variable for easier validation
+  const resultsByVariable = new Map<number, { value?: RangeResult; uncertainty?: RangeResult }>();
+
+  for (const result of rangeResults) {
+    if (!resultsByVariable.has(result.variableIndex)) {
+      resultsByVariable.set(result.variableIndex, {});
+    }
+
+    const varResults = resultsByVariable.get(result.variableIndex)!;
+    if (result.type === 'value') {
+      varResults.value = result;
+    } else {
+      varResults.uncertainty = result;
+    }
+  }
+
+  // Validate each variable's data
+  for (const [varIndex, results] of resultsByVariable) {
+    const variable = variables[varIndex]!;
+
+    // Validate value data
+    if (results.value) {
+      if (!isAllNumericData(results.value.data)) {
+        throw new Error(`Variable "${variable.name}" value range contains non-numeric data`);
+      }
+    }
+
+    // Validate uncertainty data and length matching
+    if (results.uncertainty && results.value) {
+      if (!isAllNumericData(results.uncertainty.data)) {
+        throw new Error(`Variable "${variable.name}" uncertainty range contains non-numeric data`);
+      }
+
+      if (results.uncertainty.data.length !== results.value.data.length) {
+        throw new Error(`Variable "${variable.name}": uncertainty range length doesn't match value range`);
+      }
+    }
+  }
+};
+
+// Generate next variable name: a-z, then aa-zz
+const generateNextVariableName = (variableCount: number): string => {
+  if (variableCount < 26) {
+    // a-z
+    return String.fromCharCode(97 + variableCount);
+  } else {
+    // aa-zz
+    const doubleIndex = variableCount - 26;
+    const firstChar = String.fromCharCode(97 + Math.floor(doubleIndex / 26));
+    const secondChar = String.fromCharCode(97 + (doubleIndex % 26));
+    return firstChar + secondChar;
+  }
+};
+
+// Helper functions for range validation and intersection
+interface RangeBounds {
+  startCol: number;
+  startRow: number;
+  endCol: number;
+  endRow: number;
+}
+
+/**
+ * Parse a range string into bounds
+ */
+function parseRangeBounds(range: string): RangeBounds | null {
+  // Handle single cell: "A1"
+  const singleCellMatch = range.match(/^([A-Z]+)(\d+)$/);
+  if (singleCellMatch) {
+    const col = columnToNumber(singleCellMatch[1]!);
+    const row = parseInt(singleCellMatch[2]!);
+    return { startCol: col, startRow: row, endCol: col, endRow: row };
+  }
+
+  // Handle range: "A1:B5"
+  const rangeMatch = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+  if (rangeMatch) {
+    const startCol = columnToNumber(rangeMatch[1]!);
+    const startRow = parseInt(rangeMatch[2]!);
+    const endCol = columnToNumber(rangeMatch[3]!);
+    const endRow = parseInt(rangeMatch[4]!);
+    return { startCol, startRow, endCol, endRow };
+  }
+
+  return null;
+}
+
+/**
+ * Convert column letter to number (A=1, B=2, ..., Z=26, AA=27, etc.)
+ */
+function columnToNumber(col: string): number {
+  let result = 0;
+  for (let i = 0; i < col.length; i++) {
+    result = result * 26 + (col.charCodeAt(i) - 64);
+  }
+  return result;
+}
+
+/**
+ * Check if two ranges intersect/overlap
+ */
+function rangesIntersect(range1: RangeBounds, range2: RangeBounds): boolean {
+  return !(range1.endCol < range2.startCol ||
+           range2.endCol < range1.startCol ||
+           range1.endRow < range2.startRow ||
+           range2.endRow < range1.startRow);
+}
+
+/**
+ * Validate output ranges comprehensively
+ */
+async function validateOutputRanges(
+  outputValueRange: string,
+  outputUncertaintyRange: string,
+  variables: Variable[],
+  univerAPI: SpreadsheetRef
+): Promise<void> {
+  // 1. Validate range formats
+  if (!outputValueRange.trim()) {
+    throw new Error('Output value range is required');
+  }
+  if (!outputUncertaintyRange.trim()) {
+    throw new Error('Output uncertainty range is required');
+  }
+
+  try {
+    normalizeRangeRef(outputValueRange);
+  } catch (_error) {
+    throw new Error(`Invalid output value range format: ${outputValueRange}`);
+  }
+
+  try {
+    normalizeRangeRef(outputUncertaintyRange);
+  } catch (_error) {
+    throw new Error(`Invalid output uncertainty range format: ${outputUncertaintyRange}`);
+  }
+
+  // 2. Parse ranges into bounds
+  const valueBounds = parseRangeBounds(outputValueRange);
+  const uncertaintyBounds = parseRangeBounds(outputUncertaintyRange);
+
+  if (!valueBounds) {
+    throw new Error(`Could not parse output value range: ${outputValueRange}`);
+  }
+  if (!uncertaintyBounds) {
+    throw new Error(`Could not parse output uncertainty range: ${outputUncertaintyRange}`);
+  }
+
+  // 3. Check for self-intersection between output ranges
+  if (rangesIntersect(valueBounds, uncertaintyBounds)) {
+    throw new Error('Output value and uncertainty ranges cannot overlap');
+  }
+
+  // 4. Collect all input ranges for overlap checking
+  const inputRanges: RangeBounds[] = [];
+  for (const variable of variables) {
+    if (variable.valueRange) {
+      const bounds = parseRangeBounds(variable.valueRange);
+      if (bounds) {
+        inputRanges.push(bounds);
+      }
+    }
+    if (variable.uncertaintyRange) {
+      const bounds = parseRangeBounds(variable.uncertaintyRange);
+      if (bounds) {
+        inputRanges.push(bounds);
+      }
+    }
+  }
+
+  // 5. Check output ranges don't overlap with input ranges
+  for (const inputRange of inputRanges) {
+    if (rangesIntersect(valueBounds, inputRange)) {
+      throw new Error(`Output value range "${outputValueRange}" overlaps with input data range`);
+    }
+    if (rangesIntersect(uncertaintyBounds, inputRange)) {
+      throw new Error(`Output uncertainty range "${outputUncertaintyRange}" overlaps with input data range`);
+    }
+  }
+
+  // 6. Verify ranges exist and are within sheet bounds by attempting to read them
+  try {
+    await univerAPI.getRange(outputValueRange);
+  } catch (_error) {
+    throw new Error(`Output value range "${outputValueRange}" is not accessible or out of bounds`);
+  }
+
+  try {
+    await univerAPI.getRange(outputUncertaintyRange);
+  } catch (_error) {
+    throw new Error(`Output uncertainty range "${outputUncertaintyRange}" is not accessible or out of bounds`);
+  }
+
+  // 7. Check if ranges are writable (attempt to read and see if we get data)
+  // This is a basic check - more sophisticated protection checking would require
+  // additional API support for protected ranges
+  try {
+    const testData = await univerAPI.getRange(outputValueRange);
+    if (!Array.isArray(testData) || testData.length === 0) {
+      throw new Error(`Output value range "${outputValueRange}" appears to be empty or inaccessible`);
+    }
+  } catch (_error) {
+    throw new Error(`Output value range "${outputValueRange}" is not writable`);
+  }
+
+  try {
+    const testData = await univerAPI.getRange(outputUncertaintyRange);
+    if (!Array.isArray(testData) || testData.length === 0) {
+      throw new Error(`Output uncertainty range "${outputUncertaintyRange}" appears to be empty or inaccessible`);
+    }
+  } catch (_error) {
+    throw new Error(`Output uncertainty range "${outputUncertaintyRange}" is not writable`);
+  }
+
+  // Note: Merged cell handling would require additional API support
+  // For now, we assume the ranges are valid for writing
+}
+
+type FocusedInputType =
   | { type: 'valueRange'; varIndex: number }
   | { type: 'uncertaintyRange'; varIndex: number }
   | { type: 'outputValueRange' }
@@ -42,10 +309,10 @@ interface UncertaintySidebarProps {
   setOutputConfidence: (confidence: number) => void;
 }
 
-export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({ 
-  open, 
-  onClose, 
-  univerRef, 
+export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
+  open,
+  onClose,
+  univerRef,
   onSelectionChange,
   onPropagationComplete,
   variables,
@@ -64,12 +331,18 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
+  // Memoized current variable for performance
+  const currentVariable = useMemo(() =>
+    variables[selectedVariable],
+    [variables, selectedVariable]
+  );
+
   // Use the spreadsheet selection hook
   const { handleInputFocus, handleInputBlur } = useSpreadsheetSelection<FocusedInputType>({
-    onSelectionChange,
+    onSelectionChange: onSelectionChange ?? (() => { }),
     updateField: (inputType, selection) => {
-      if (!inputType) return;
-      
+      if (!inputType) { return; }
+
       switch (inputType.type) {
         case 'valueRange':
           updateVariable(inputType.varIndex, 'valueRange', selection);
@@ -91,11 +364,11 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
 
   // Subscribe to spreadsheet selection events via event bus
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) { return; }
 
     const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
       // Call the window handler that the hook is listening to
-      const handler = (window as any).__uncertaintySidebarSelectionHandler;
+      const handler = (window as unknown as Record<string, (cellRef: string) => void>).__uncertaintySidebarSelectionHandler;
       if (handler) {
         handler(cellRef);
       }
@@ -106,88 +379,115 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
     return unsubscribe;
   }, [open]);
 
-  // Generate next variable name: a-z, then aa-zz
-  const getNextVariableName = () => {
-    const count = variables.length;
-    if (count < 26) {
-      // a-z
-      return String.fromCharCode(97 + count);
-    } else {
-      // aa-zz
-      const doubleIndex = count - 26;
-      const firstChar = String.fromCharCode(97 + Math.floor(doubleIndex / 26));
-      const secondChar = String.fromCharCode(97 + (doubleIndex % 26));
-      return firstChar + secondChar;
+  // Memoized parseRange function to avoid regex recompilation
+  const parseRange = useCallback((range: string): { col: string; row: number } | null => {
+    // Try range format first: "A1:B5"
+    let match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+    if (match?.[1] && match[2]) {
+      return { col: match[1], row: parseInt(match[2]) };
     }
-  };
 
-  const addVariable = () => {
-    const nextName = getNextVariableName();
-    setVariables([...variables, { name: nextName, valueRange: '', uncertaintyRange: '', confidence: 95 }]);
+    // Try single cell format: "A1"
+    match = range.match(/^([A-Z]+)(\d+)$/);
+    if (match?.[1] && match[2]) {
+      return { col: match[1], row: parseInt(match[2]) };
+    }
+
+    return null;
+  }, []);
+
+  const addVariable = useCallback(() => {
+    const nextName = generateNextVariableName(variables.length);
+    const newVariable: Variable = {
+      name: nextName,
+      valueRange: '',
+      uncertaintyRange: '',
+      confidence: 95
+    };
+    setVariables([...variables, newVariable]);
     setSelectedVariable(variables.length);
-  };
+  }, [variables, setVariables]);
 
-  const removeVariable = (index: number) => {
+  const removeVariable = useCallback((index: number) => {
     if (variables.length > 1) {
       setVariables(variables.filter((_, i) => i !== index));
       setSelectedVariable(index > 0 ? index - 1 : 0);
     }
-  };
+  }, [variables, setVariables]);
 
-  const updateVariable = (index: number, field: keyof Variable, value: string | number) => {
+  const updateVariable = useCallback((index: number, field: keyof Variable, value: string | number) => {
     const updated = [...variables];
-    updated[index] = { ...updated[index], [field]: value };
-    setVariables(updated);
-  };
+    const currentVar = updated[index];
+    if (currentVar) {
+      updated[index] = { ...currentVar, [field]: value } as Variable;
+      setVariables(updated);
+    }
+  }, [variables, setVariables]);
 
-  // Validate ranges contain numeric data
-  const validateRanges = async (): Promise<boolean> => {
-    if (!univerRef?.current) {
+
+
+  // Optimized parallel validation (memoized)
+  const validateRanges = useCallback(async (): Promise<boolean> => {
+    if (!univerRef.current) {
       setError('Spreadsheet not initialized');
       return false;
     }
 
+    // Capture the current API instance to avoid race conditions
+    const univerAPI = univerRef.current;
+
     try {
-      for (const variable of variables) {
-        if (!variable.valueRange) continue;
+      // First validate input ranges (existing logic)
+      const rangeRequests = collectRangeRequests(variables);
 
-        // Check value range
-        const valueData = await univerRef.current.getRange(variable.valueRange);
-        const allNumeric = valueData.every(row =>
-          row.every(cell => typeof cell === 'number' && isFinite(cell as number))
-        );
-
-        if (!allNumeric) {
-          setError(`Variable "${variable.name}" value range contains non-numeric data`);
-          return false;
-        }
-
-        // Check uncertainty range if provided
-        if (variable.uncertaintyRange) {
-          const uncData = await univerRef.current.getRange(variable.uncertaintyRange);
-          if (uncData.length !== valueData.length) {
-            setError(`Variable "${variable.name}": uncertainty range length doesn't match value range`);
-            return false;
-          }
-
-          const allNumericUnc = uncData.every(row =>
-            row.every(cell => typeof cell === 'number' && isFinite(cell as number))
-          );
-
-          if (!allNumericUnc) {
-            setError(`Variable "${variable.name}" uncertainty range contains non-numeric data`);
-            return false;
-          }
-        }
+      if (rangeRequests.length === 0) {
+        setError('No input ranges to validate');
+        return false;
       }
+
+      // Performance monitoring
+      const startTime = performance.now();
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[UncertaintySidebar] Starting parallel validation of ${rangeRequests.length} input ranges`);
+      }
+
+      // Read all input ranges in parallel
+      const rangeResults = await Promise.all(
+        rangeRequests.map(async (request) => {
+          try {
+            const data = await univerAPI.getRange(request.range);
+            return { ...request, data };
+          } catch (error) {
+            throw new Error(`Failed to read ${request.type} range "${request.range}" for variable "${request.variableName}": ${String(error)}`);
+          }
+        })
+      );
+
+      // Validate all input data in batch
+      validateRangeData(rangeResults, variables);
+
+      // Now validate output ranges comprehensively
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[UncertaintySidebar] Validating output ranges: "${outputValueRange}" and "${outputUncertaintyRange}"`);
+      }
+
+      await validateOutputRanges(outputValueRange, outputUncertaintyRange, variables, univerAPI);
+
+      // Performance logging
+      if (process.env.NODE_ENV === 'development') {
+        const endTime = performance.now();
+        console.log(`[UncertaintySidebar] Complete validation completed in ${(endTime - startTime).toFixed(2)}ms`);
+      }
+
       return true;
+
     } catch (err) {
-      setError(`Failed to validate ranges: ${err}`);
+      setError(`Validation failed: ${String(err)}`);
       return false;
     }
-  };
+  }, [variables, univerRef, outputValueRange, outputUncertaintyRange]);
 
-  const handlePropagate = async () => {
+  const handlePropagate = useCallback(async () => {
     setError('');
     if (variables.some(v => !v.valueRange)) {
       setError('Fill in all value ranges');
@@ -198,7 +498,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
       return;
     }
 
-    if (!univerRef?.current) {
+    if (!univerRef.current) {
       setError('Spreadsheet not initialized');
       return;
     }
@@ -225,31 +525,15 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
           confidence: v.confidence
         })),
         formula,
-        outputConfidence: outputConfidence
+        outputConfidence
       });
 
       if (!result.success || result.error) {
-        setError(result.error || 'Formula generation failed');
+        setError(result.error ?? 'Formula generation failed');
         return;
       }
 
-      // Parse output ranges to get starting cell
-      const parseRange = (range: string): { col: string; row: number } | null => {
-        // Try range format first: "A1:B5"
-        let match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
-        if (match) {
-          return { col: match[1], row: parseInt(match[2]) };
-        }
-
-        // Try single cell format: "A1"
-        match = range.match(/^([A-Z]+)(\d+)$/);
-        if (match) {
-          return { col: match[1], row: parseInt(match[2]) };
-        }
-
-        return null;
-      };
-
+      // Parse output ranges to get starting cell (using memoized function)
       const valueStart = parseRange(outputValueRange);
       const uncStart = parseRange(outputUncertaintyRange);
 
@@ -271,7 +555,10 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
       }));
 
       // Write all formulas in batches (much faster than one-by-one)
-      console.log(`Writing ${valueUpdates.length} value formulas and ${uncertaintyUpdates.length} uncertainty formulas in batch`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Writing ${valueUpdates.length} value formulas and ${uncertaintyUpdates.length} uncertainty formulas in batch`);
+      }
+
       await univerRef.current.batchUpdateCells([...valueUpdates, ...uncertaintyUpdates]);
 
       onPropagationComplete?.(outputValueRange);
@@ -282,10 +569,12 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [variables, formula, outputValueRange, outputUncertaintyRange, outputConfidence, univerRef, validateRanges, parseRange, onPropagationComplete]);
 
-  if (!open) return null;
-  const currentVariable = variables[selectedVariable];
+  if (!open) { return null; }
+
+  // Return early if no current variable
+  if (!currentVariable) { return null; }
 
   return (
     <Box
@@ -331,16 +620,24 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                   py: 0.75,
                   mb: 0.5,
                   borderRadius: '6px',
-                  border: '1px solid rgba(33, 150, 243, 0.2)',
-                  bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.05)',
-                  color: selectedVariable === index ? anafisColors.spreadsheet : 'rgba(255, 255, 255, 0.7)',
+                  border: selectedVariable === index ? `1px solid ${anafisColors.spreadsheet}` : '1px solid rgba(255, 255, 255, 0.2)',
+                  bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.15)' : 'transparent',
+                  color: selectedVariable === index ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
                   transition: 'all 0.2s',
                   '&:hover': {
-                    bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.25)' : 'rgba(33, 150, 243, 0.15)',
-                    borderColor: anafisColors.spreadsheet,
+                    bgcolor: selectedVariable === index ? 'rgba(33, 150, 243, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    borderColor: selectedVariable === index ? anafisColors.spreadsheet : 'rgba(255, 255, 255, 0.4)',
                     color: '#ffffff',
                     transform: 'translateY(-1px)',
-                    boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
+                    boxShadow: selectedVariable === index ? `0 2px 8px rgba(33, 150, 243, 0.3)` : '0 2px 8px rgba(255, 255, 255, 0.1)'
+                  },
+                  '&.Mui-selected': {
+                    bgcolor: 'rgba(33, 150, 243, 0.15) !important',
+                    borderColor: `${anafisColors.spreadsheet} !important`,
+                    color: '#ffffff !important',
+                    '&:hover': {
+                      bgcolor: 'rgba(33, 150, 243, 0.2) !important'
+                    }
                   }
                 }}
               >
@@ -449,7 +746,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                 fullWidth
                 sx={sidebarStyles.input}
                 slotProps={{
-                  input: { 
+                  input: {
                     style: { color: 'white', fontFamily: 'monospace', fontSize: 12 },
                     inputProps: { min: 50, max: 99.9, step: 0.1 }
                   },
@@ -521,7 +818,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                 fullWidth
                 sx={sidebarStyles.input}
                 slotProps={{
-                  input: { 
+                  input: {
                     style: { color: 'white', fontFamily: 'monospace', fontSize: 12 },
                     inputProps: { min: 50, max: 99.9, step: 0.1 }
                   },
@@ -532,7 +829,7 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
                 fullWidth
                 variant="contained"
                 startIcon={<RunIcon />}
-                onClick={handlePropagate}
+                onClick={() => void handlePropagate()}
                 disabled={isProcessing}
                 sx={sidebarStyles.button.primary}
               >
@@ -558,6 +855,8 @@ export const UncertaintySidebar: React.FC<UncertaintySidebarProps> = ({
       </Box>
     </Box>
   );
-};
+});
+
+UncertaintySidebar.displayName = 'UncertaintySidebar';
 
 export default UncertaintySidebar;

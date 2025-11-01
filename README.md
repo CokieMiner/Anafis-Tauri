@@ -12,6 +12,7 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
   - ✅ **Unit Conversion Sidebar**: Convert between different physical units
   - ✅ **Uncertainty Propagation Sidebar**: Calculate error propagation through formulas
   - ✅ **Quick Plot Sidebar**: Instant 2D visualization with ECharts (scatter, line, error bars)
+  - ✅ **Export Sidebar**: Export data in 10 formats (CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
 - **📈 Fitting Tab**: Robust curve fitting algorithms with interactive visualization and regression analysis *(Coming Soon)*
 - **🧮 Solver Tab**: Intelligent equation solver providing step-by-step mathematical solutions *(Coming Soon)*
 - **🎲 Monte Carlo Tab**: Complex simulation capabilities for statistical analysis and probabilistic modeling *(Coming Soon)*
@@ -37,10 +38,21 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
   - Dark/Light theme support
   - High-DPI PNG export and vector SVG export
   - Future support for 3D plots (echarts-gl) and timeline animations
+  - **Note**: Migrated from Plotly.js for improved export reliability and reduced bundle size
+
+### Export System
+- **10 Format Support**: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread
+  - Single-sheet and multi-sheet exports
+  - Configurable options per format
+  - Explicit data structure markers (no implicit detection)
+  - Header handling customization for JSON formats
+  - Lossless exports for XLSX and AnaFisSpread (formulas, formatting, metadata)
+  - ⚠️ **Testing Status**: Core workflows validated (~80% reliability). Edge cases and complex multi-sheet scenarios may have issues. Please report bugs encountered.
 
 ### Key Features
-- **Detachable Tabs**: Drag tabs outside the main window for multi-monitor workflows
-- **Drag & Drop Interface**: Intuitive tab reordering and management
+- **Tab Management**: Single-window interface with drag-to-reorder tabs
+  - ⚠️ **Tab Detaching**: Temporarily removed for stability. Planned for re-implementation with improved multi-window state synchronization
+- **Drag & Drop Interface**: Intuitive tab reordering within main window
 - **Python Integration**: Embedded Python runtime with SymPy for symbolic mathematics
 - **Cross-Platform**: Native desktop application for Windows, macOS, and Linux
 - **Modern UI**: Material Design interface built with React and Material-UI
@@ -57,6 +69,8 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
 - **Serde**: Serialization framework for data interchange
 - **SQLite (rusqlite)**: Embedded database for Data Library with FTS5 full-text search
 - **Statrs**: Statistical computations (mean, std dev, variance, etc.)
+- **rust_xlsxwriter**: Excel export with formatting support
+- **Polars**: High-performance dataframe library for Parquet export
 - **Optimized Code**: Clippy-compliant with modern Rust idioms and performance improvements
 - **Zero Warnings**: Clean codebase with all linting issues resolved
 
@@ -65,7 +79,7 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
 - **TypeScript**: Type-safe JavaScript development with 100% type coverage
 - **Material-UI (MUI)**: Component library following Material Design principles
 - **Univer.js**: Advanced spreadsheet engine with formula evaluation
-- **Apache ECharts**: Interactive data visualization (migrated from Plotly)
+- **Apache ECharts**: Interactive data visualization and plotting library
 - **Vite**: Fast build tool and development server
 - **Zustand**: Lightweight state management
 - **@dnd-kit**: Drag and drop functionality for tab management

@@ -85,7 +85,7 @@ export function useSpreadsheetSelection<T>({
 
   // Listen to selection changes and update focused input
   useEffect(() => {
-    if (!onSelectionChange) return;
+    if (!onSelectionChange) {return;}
 
     const handleSelection = (selection: string) => {
       // CRITICAL: Check the ref first to prevent race conditions
@@ -106,7 +106,7 @@ export function useSpreadsheetSelection<T>({
       // Helper function to parse cell reference (e.g., "B12" -> { col: "B", row: 12 })
       const parseCell = (cell: string): { col: string; row: number } | null => {
         const match = cell.match(/^([A-Z]+)(\d+)$/);
-        if (!match) return null;
+        if (!match?.[1] || !match[2]) {return null;}
         return { col: match[1], row: parseInt(match[2], 10) };
       };
 
@@ -121,16 +121,21 @@ export function useSpreadsheetSelection<T>({
 
       // Helper function to check if anchor cell is in the range
       const isAnchorInRange = (range: string, anchor: string): boolean => {
-        if (range === anchor) return true; // Single cell match
+        if (range === anchor) {return true;} // Single cell match
 
-        if (!range.includes(':')) return range === anchor; // Single cell range
+        if (!range.includes(':')) {return range === anchor;} // Single cell range
 
-        const [start, end] = range.split(':');
+        const rangeParts = range.split(':');
+        if (rangeParts.length !== 2) {return false;}
+        
+        const [start, end] = rangeParts;
+        if (!start || !end) {return false;}
+        
         const anchorParsed = parseCell(anchor);
         const startParsed = parseCell(start);
         const endParsed = parseCell(end);
 
-        if (!anchorParsed || !startParsed || !endParsed) return false;
+        if (!anchorParsed || !startParsed || !endParsed) {return false;}
 
         // Convert columns to numbers for comparison
         const anchorCol = colToNum(anchorParsed.col);
@@ -155,7 +160,12 @@ export function useSpreadsheetSelection<T>({
       // If this is the first selection, store it as anchor
       if (!anchorCellRef.current) {
         // Store the first cell of the selection as anchor
-        anchorCellRef.current = selection.split(':')[0];
+        const firstCell = selection.split(':')[0];
+        if (!firstCell) {
+          console.warn('Invalid selection format:', selection);
+          return;
+        }
+        anchorCellRef.current = firstCell;
         lastSelectionRef.current = selection;
         updateField(focusedInput, selection);
         return;
@@ -179,23 +189,23 @@ export function useSpreadsheetSelection<T>({
     };
 
     // Register the handler on window
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any)[handlerName] = handleSelection;
+    (window as unknown as Record<string, unknown>)[handlerName] = handleSelection;
 
     return () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (window as any)[handlerName];
+      delete (window as unknown as Record<string, unknown>)[handlerName];
     };
   }, [focusedInput, isSelectionMode, onSelectionChange, updateField, handlerName]);
 
   // Exit selection mode when clicking on sidebar elements (buttons, etc.)
   useEffect(() => {
     const handleSidebarClick = (e: MouseEvent) => {
+      if (!isSelectionMode) {return;} // Early exit if not in selection mode
+      
       const sidebar = document.querySelector(`[${sidebarDataAttribute}]`);
       const target = e.target as HTMLElement;
 
       // Check if clicking on a button, select, or other interactive element in the sidebar
-      if (sidebar && sidebar.contains(target)) {
+      if (sidebar?.contains(target)) {
         const isInteractiveElement = target.closest('button, select, .MuiAutocomplete-root');
         if (isInteractiveElement) {
           // Set ref FIRST to immediately block subsequent events
@@ -208,11 +218,14 @@ export function useSpreadsheetSelection<T>({
       }
     };
 
-    document.addEventListener('click', handleSidebarClick);
+    if (isSelectionMode) {
+      document.addEventListener('click', handleSidebarClick, { passive: true });
+    }
+    
     return () => {
       document.removeEventListener('click', handleSidebarClick);
     };
-  }, [sidebarDataAttribute]);
+  }, [sidebarDataAttribute, isSelectionMode]);
 
   // Input focus handler - enter selection mode
   const handleInputFocus = useCallback((inputType: T) => {

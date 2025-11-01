@@ -40,8 +40,7 @@ pub fn run() {
             windows::secondary_windows::close_settings_window,
             windows::secondary_windows::open_data_library_window,
             windows::secondary_windows::close_data_library_window,
-            windows::tabs::send_tab_to_main,
-            windows::tabs::create_tab_window,
+            windows::window_manager::set_window_size,
 
             // Scientific Computation Commands (Sidebar tools)
             scientific::uncertainty_propagation::generate_uncertainty_formulas,
@@ -59,7 +58,7 @@ pub fn run() {
             data_library::commands::export_sequences_csv,
             data_library::commands::export_sequences_json,
             
-            // Export Commands (8 commands)
+            // Export Commands (9 commands)
             export::export_data,
             export::text::export_to_text,
             export::json::export_to_json,
@@ -68,6 +67,7 @@ pub fn run() {
             export::markdown::export_to_markdown,
             export::tex::export_to_latex,
             export::parquet::export_to_parquet,
+            export::anafispread::export_to_anafis_spread,
             
             // Utility Commands (File Operations)
             utils::file_operations::save_png_file,
@@ -118,7 +118,7 @@ pub fn run() {
 
             // Listen for main window events
             let app_handle = app.handle().clone();
-            if let Some(main_window) = app.get_window("main") {
+            if let Some(main_window) = app.get_webview_window("main") {
                 main_window.on_window_event(move |event| {
                     match event {
                         tauri::WindowEvent::Focused(true) => {
@@ -132,14 +132,6 @@ pub fn run() {
                                 .and_then(|w| w.close().ok());
                             let _ = app_handle.get_webview_window("latex-preview")
                                 .and_then(|w| w.close().ok());
-
-                            // Close all detached tab windows (they start with "tab_")
-                            let windows = app_handle.webview_windows();
-                            for (label, window) in windows {
-                                if label.starts_with("tab_") {
-                                    let _ = window.close();
-                                }
-                            }
                         }
                         _ => {}
                     }

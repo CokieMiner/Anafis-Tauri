@@ -24,10 +24,11 @@ function gamma(x: number): number {
                -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
 
     x -= 1;
-    let a = p[0];
+    let a = p[0]!; // Safe access - we know p[0] exists
     const t = x + g + 0.5;
     for (let i = 1; i < p.length; i++) {
-        a += p[i] / (x + i);
+        const pi = p[i]!;
+        a += pi / (x + i);
     }
 
     return Math.sqrt(2 * Math.PI) * Math.pow(t, x + 0.5) * Math.exp(-t) * a;
@@ -49,10 +50,11 @@ function logGamma(x: number): number {
                -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
 
     x -= 1;
-    let a = p[0];
+    let a = p[0]!; // Safe access - we know p[0] exists
     const t = x + g + 0.5;
     for (let i = 1; i < p.length; i++) {
-        a += p[i] / (x + i);
+        const pi = p[i]!;
+        a += pi / (x + i);
     }
 
     return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
@@ -107,7 +109,7 @@ function lambertW(x: number): number {
 
     // Initial approximation
     let w: number;
-    if (x === 0) return 0;
+    if (x === 0) {return 0;}
     if (x < 0) {
         // For negative values near -1/e, start close to -1
         w = -1 + Math.sqrt(2 * (x + 1/Math.E));
@@ -125,11 +127,11 @@ function lambertW(x: number): number {
         const fp: number = ew * (w + 1);
 
         // Avoid division by zero
-        if (Math.abs(fp) < 1e-15) break;
+        if (Math.abs(fp) < 1e-15) {break;}
 
         const delta: number = f / fp;
         w = w - delta;
-        if (Math.abs(delta) < 1e-15) break;
+        if (Math.abs(delta) < 1e-15) {break;}
     }
 
     return w;
@@ -146,8 +148,8 @@ function hermite(n: number, x: number): number {
         throw new Error("Hermite polynomial degree must be a non-negative integer");
     }
 
-    if (n === 0) return 1;
-    if (n === 1) return 2 * x;
+    if (n === 0) {return 1;}
+    if (n === 1) {return 2 * x;}
 
     let h_prev2 = 1; // H_0
     let h_prev1 = 2 * x; // H_1
@@ -167,11 +169,11 @@ function hermite(n: number, x: number): number {
  */
 function elliptic_k(k: number): number {
     if (Math.abs(k) >= 1) {
-        if (k === 1 || k === -1) return Infinity;
+        if (k === 1 || k === -1) {return Infinity;}
         throw new Error("Modulus k must be in (-1, 1)");
     }
     
-    if (k === 0) return Math.PI / 2;
+    if (k === 0) {return Math.PI / 2;}
     
     // Arithmetic-geometric mean method
     let a = 1.0;
@@ -233,7 +235,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
         name: 'SINC',
         func: (...args: FormulaFunctionValueType[]): FormulaFunctionResultValueType => {
             const x = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
-            if (x === 0) return 1;
+            if (x === 0) {return 1;}
             return Math.sin(x) / x;
         },
         description: 'Sinc function: sinc(x) = sin(x)/x, with sinc(0) = 1.'
@@ -274,7 +276,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
         name: 'ACOTH',
         func: (...args: FormulaFunctionValueType[]): FormulaFunctionResultValueType => {
             const x = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
-            if (Math.abs(x) <= 1) return NaN; // Domain error
+            if (Math.abs(x) <= 1) {return NaN;} // Domain error
             return 0.5 * Math.log((x + 1) / (x - 1));
         },
         description: 'Inverse hyperbolic cotangent function: acoth(x) = 0.5 * ln((x+1)/(x-1))'
@@ -285,7 +287,7 @@ export function registerCustomFunctions(formulaEngine: IRegisterFunctionService)
         name: 'ASECH',
         func: (...args: FormulaFunctionValueType[]): FormulaFunctionResultValueType => {
             const x = typeof args[0] === 'number' ? args[0] : parseFloat(args[0] as string) || 0;
-            if (x <= 0 || x > 1) return NaN; // Domain: (0, 1]
+            if (x <= 0 || x > 1) {return NaN;} // Domain: (0, 1]
             return Math.log((1 + Math.sqrt(1 - x * x)) / x);
         },
         description: 'Inverse hyperbolic secant function: asech(x) = ln((1 + √(1-x²))/x)'

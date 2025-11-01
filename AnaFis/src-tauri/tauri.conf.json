@@ -25,7 +25,8 @@
         "closable": true,
         "skipTaskbar": false,
         "label": "main",
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "titleBarStyle": "Overlay"
       }
     ],
     "security": {

@@ -115,7 +115,7 @@ fn calculate_derivatives_with_python(
         let result = func.call1((formula, vars_vec, vals_vec))
             .map_err(|e| format!("Python function call failed: {e}"))?;
 
-        let result_dict = result.downcast::<PyDict>()
+        let result_dict = result.cast::<PyDict>()
             .map_err(|e| format!("Result is not a dict: {e}"))?;
 
         let success: bool = result_dict.get_item("success")
@@ -137,7 +137,7 @@ fn calculate_derivatives_with_python(
             .map_err(|e| e.to_string())?
             .ok_or("No derivatives in result")?;
         
-        let derivatives_dict = derivatives_obj.downcast::<PyDict>()
+        let derivatives_dict = derivatives_obj.cast::<PyDict>()
             .map_err(|e| format!("Derivatives is not a dict: {e}"))?;
 
         let mut derivatives = HashMap::new();

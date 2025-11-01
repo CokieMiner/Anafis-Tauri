@@ -1,7 +1,11 @@
 // src-tauri/src/secondary_windows.rs
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, WindowEvent};
 use pyo3::prelude::*;
+use urlencoding;
+use tokio::time::{timeout, Duration};
+use tokio::sync::Notify;
+use tracing::{info, error};
 use crate::windows::window_manager::{create_or_focus_window, WindowConfig};
 
 #[tauri::command]
@@ -47,6 +51,7 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
         parent: Some("main".to_string()),
         min_width: Some(600.0), // More reasonable minimum width for two columns
         min_height: Some(670.0), // Increased minimum height to ensure rendered formula section is always visible
+        focus_on_create: true,
     };
 
     create_or_focus_window(&app, "uncertainty-calculator", config)
@@ -81,6 +86,7 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
         parent: Some("main".to_string()),
         min_width: Some(500.0),
         min_height: Some(500.0),
+        focus_on_create: true,
     };
 
     create_or_focus_window(&app, "settings", config)
@@ -98,7 +104,7 @@ pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
     // First check if window already exists
     if let Some(existing_window) = app.get_webview_window("data-library") {
         existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
+        // Don't set focus - let user keep focus on main window
         return Ok(());
     }
 
@@ -115,6 +121,7 @@ pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
         parent: Some("main".to_string()),
         min_width: Some(700.0),
         min_height: Some(500.0),
+        focus_on_create: false,
     };
 
     create_or_focus_window(&app, "data-library", config)
@@ -123,22 +130,57 @@ pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, title: String) -> Result<(), String> {
-    // First check if window already exists
-    if let Some(existing_window) = app.get_webview_window("latex-preview") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
-        return Ok(());
-    }
+    // Debug logging
+    info!("Opening LaTeX preview window with formula: {}..., title: {}", 
+             &latex_formula.chars().take(50).collect::<String>(), title);
 
     // Encode the parameters for URL
     let encoded_formula = urlencoding::encode(&latex_formula);
     let encoded_title = urlencoding::encode(&title);
-    let url = format!("latex-preview.html?formula={encoded_formula}&title={encoded_title}");
+    let new_url = format!("latex-preview.html?formula={encoded_formula}&title={encoded_title}");
+    
+    // Check if window already exists and destroy it
+    if let Some(existing_window) = app.get_webview_window("latex-preview") {
+        info!("Destroying existing LaTeX preview window");
+        
+        // Create a notify to wait for window destruction
+        let notify = std::sync::Arc::new(Notify::new());
+        let notify_clone = notify.clone();
+        
+        // Register the destruction listener BEFORE calling destroy()
+        // This ensures the listener is active when destroy() is called
+        existing_window.on_window_event(move |event| {
+            if let WindowEvent::Destroyed = event {
+                notify_clone.notify_one();
+            }
+        });
+        
+        // Create the notified future immediately after registering the listener
+        // This prevents missing fast Destroyed events
+        let notified_fut = notify.notified();
+        
+        // Call destroy() and handle the Result properly
+        if let Err(destroy_err) = existing_window.destroy() {
+            error!("Failed to destroy existing LaTeX preview window: {}", destroy_err);
+            return Err(format!("Failed to destroy existing window: {}", destroy_err));
+        }
+        
+        // Wait for the window to be fully destroyed with a shorter timeout
+        // Treat timeout as a hard failure to prevent race conditions
+        match timeout(Duration::from_millis(500), notified_fut).await {
+            Ok(_) => info!("Existing LaTeX preview window destroyed successfully"),
+            Err(_) => {
+                error!("Timeout waiting for window destruction - window may not be fully destroyed");
+                return Err("Failed to destroy existing window: timeout waiting for destruction confirmation".to_string());
+            }
+        }
+    }
 
+    info!("Creating new LaTeX preview window");
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         "latex-preview",
-        tauri::WebviewUrl::App(url.into())
+        tauri::WebviewUrl::App(new_url.into())
     )
     .title(&title)
     .decorations(false)
@@ -146,16 +188,26 @@ pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, ti
     .inner_size(500.0_f64, 225.0_f64)
     .min_inner_size(400.0_f64, 225.0_f64)
     .max_inner_size(1600.0_f64, 225.0_f64)
-    .transparent(true)
+    .transparent(false)
+    .always_on_top(true)
     .skip_taskbar(true)
     .closable(true)
     .build()
-    .map_err(|e| format!("Failed to create window: {e}"))?;
+    .map_err(|e| {
+        error!("Failed to create window: {}", e);
+        format!("Failed to create window: {e}")
+    })?;
 
     // Show and focus the window
-    let _ = window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0)));
-    window.show().map_err(|e| format!("Failed to show window: {e}"))?;
-    window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
+    window.show().map_err(|e| {
+        error!("Failed to show window: {}", e);
+        format!("Failed to show window: {e}")
+    })?;
+    window.set_focus().map_err(|e| {
+        error!("Failed to focus window: {}", e);
+        format!("Failed to focus window: {e}")
+    })?;
 
+    info!("LaTeX preview window opened successfully");
     Ok(())
 }

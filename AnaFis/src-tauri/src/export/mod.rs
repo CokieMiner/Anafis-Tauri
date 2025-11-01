@@ -20,7 +20,21 @@ pub mod parquet;
 pub mod anafispread;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+
+/// Data structure format indicator - tells backend exactly what format to expect
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DataStructure {
+    /// Simple 2D array: [[row1], [row2], ...]
+    #[serde(rename = "array2d")]
+    Array2D,
+    /// Multi-sheet array format: [{name: "Sheet1", data: [[...]]}, {name: "Sheet2", data: [[...]]}]
+    #[serde(rename = "multisheetarray")]
+    MultiSheetArray,
+    /// Multi-sheet JSON format: [{_multiSheet: true, data: {"Sheet1": [[...]], "Sheet2": [[...]]}}]
+    #[serde(rename = "multisheetjson")]
+    MultiSheetJson,
+}
 
 /// Export format types supported by the application
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,10 +67,12 @@ pub enum ExportFormat {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportConfig {
-    /// Range to export: 'selection', 'sheet', 'all', or specific range
+    /// Range mode used (for logging/debugging): 'sheet', 'all', or 'custom'
     pub range: String,
     /// Export format
     pub format: ExportFormat,
+    /// Data structure format indicator (explicit, not detected)
+    pub data_structure: DataStructure,
     /// Format-specific options
     pub options: ExportOptions,
 }
@@ -145,6 +161,33 @@ impl Default for ExportOptions {
     }
 }
 
+/// Helper function to validate and convert 2D array data for formats that require it
+/// Returns a validated Vec<Vec<Value>> or an error string with the format name
+fn validate_2d_array_data(data: &[serde_json::Value], format_name: &str) -> Result<Vec<Vec<serde_json::Value>>, String> {
+    let mut data_vec: Vec<Vec<serde_json::Value>> = Vec::new();
+    for (i, row) in data.iter().enumerate() {
+        match row.as_array() {
+            Some(arr) => data_vec.push(arr.clone()),
+            None => {
+                return Err(format!(
+                    "Invalid data structure: row {} is not an array (found {}). {} requires 2D array data.",
+                    i + 1,
+                    match row {
+                        serde_json::Value::Null => "null".to_string(),
+                        serde_json::Value::Bool(b) => format!("boolean '{}'", b),
+                        serde_json::Value::Number(n) => format!("number '{}'", n),
+                        serde_json::Value::String(s) => format!("string '{}'", s),
+                        serde_json::Value::Array(_) => "array".to_string(), // This shouldn't happen due to the match
+                        serde_json::Value::Object(_) => "object".to_string(),
+                    },
+                    format_name
+                ));
+            }
+        }
+    }
+    Ok(data_vec)
+}
+
 /// Main export dispatcher function that routes to the appropriate format handler
 #[tauri::command]
 pub async fn export_data(
@@ -155,19 +198,13 @@ pub async fn export_data(
     match config.format {
         ExportFormat::Csv | ExportFormat::Tsv | ExportFormat::Txt => {
             // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for text export
-            let data_vec: Vec<Vec<Value>> = data
-                .into_iter()
-                .filter_map(|row| row.as_array().cloned())
-                .collect();
+            // Validate that all rows are arrays to prevent silent data loss
+            let data_vec = validate_2d_array_data(&data, "Text formats")?;
             text::export_to_text(data_vec, file_path, config).await
         }
         ExportFormat::Json => {
-            // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for JSON export
-            let data_vec: Vec<Vec<Value>> = data
-                .into_iter()
-                .filter_map(|row| row.as_array().cloned())
-                .collect();
-            json::export_to_json(data_vec, file_path, config).await
+            // Pass data directly to JSON export (now handles both single and multi-sheet formats)
+            json::export_to_json(data, file_path, config).await
         }
         ExportFormat::Xlsx => {
             excel::export_to_excel(data, file_path, config).await
@@ -177,27 +214,21 @@ pub async fn export_data(
         }
         ExportFormat::Html => {
             // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for HTML export
-            let data_vec: Vec<Vec<Value>> = data
-                .into_iter()
-                .filter_map(|row| row.as_array().cloned())
-                .collect();
-            html::export_to_html(data_vec, file_path).await
+            // Validate that all rows are arrays to prevent silent data loss
+            let data_vec = validate_2d_array_data(&data, "HTML export")?;
+            html::export_to_html(data_vec, file_path, config).await
         }
         ExportFormat::Markdown => {
             // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for Markdown export
-            let data_vec: Vec<Vec<Value>> = data
-                .into_iter()
-                .filter_map(|row| row.as_array().cloned())
-                .collect();
-            markdown::export_to_markdown(data_vec, file_path).await
+            // Validate that all rows are arrays to prevent silent data loss
+            let data_vec = validate_2d_array_data(&data, "Markdown export")?;
+            markdown::export_to_markdown(data_vec, file_path, config).await
         }
         ExportFormat::Tex => {
             // Convert Vec<serde_json::Value> to Vec<Vec<Value>> for LaTeX export
-            let data_vec: Vec<Vec<Value>> = data
-                .into_iter()
-                .filter_map(|row| row.as_array().cloned())
-                .collect();
-            tex::export_to_latex(data_vec, file_path).await
+            // Validate that all rows are arrays to prevent silent data loss
+            let data_vec = validate_2d_array_data(&data, "LaTeX export")?;
+            tex::export_to_latex(data_vec, file_path, config).await
         }
         ExportFormat::AnaFisSpread => {
             anafispread::export_to_anafis_spread(data, file_path, config).await

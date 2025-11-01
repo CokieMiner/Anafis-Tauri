@@ -6,7 +6,7 @@
 use std::fs::File;
 use serde_json::Value;
 use polars::prelude::*;
-use super::{ExportConfig, ExportFormat};
+use super::{ExportConfig, ExportFormat, DataStructure};
 
 /// Export data to Apache Parquet (.parquet) format
 #[tauri::command]
@@ -20,8 +20,13 @@ pub async fn export_to_parquet(
         return Err("Invalid format for Parquet export".to_string());
     }
 
-    // For now, create a simplified implementation
-    // Convert JSON data to Polars DataFrame using a simpler approach
+    // Validate data structure - Parquet only supports single-sheet 2D arrays
+    if !matches!(config.data_structure, DataStructure::Array2D) {
+        return Err(format!(
+            "Parquet export only supports single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
+            config.data_structure
+        ));
+    }
 
     // Determine the maximum number of columns
     let max_cols = data.iter()
@@ -61,28 +66,9 @@ pub async fn export_to_parquet(
         }
 
         // Create series name
-        let series_name = if col_idx == 0 && config.options.include_headers {
-            // Try to get header from first row
-            if let Some(first_row) = data.first() {
-                if let Some(first_row_array) = first_row.as_array() {
-                    if col_idx < first_row_array.len() {
-                        if let Some(header) = first_row_array[col_idx].as_str() {
-                            header.to_string()
-                        } else {
-                            format!("column_{}", col_idx + 1)
-                        }
-                    } else {
-                        format!("column_{}", col_idx + 1)
-                    }
-                } else {
-                    format!("column_{}", col_idx + 1)
-                }
-            } else {
-                format!("column_{}", col_idx + 1)
-            }
-        } else {
-            format!("column_{}", col_idx + 1)
-        };
+        // Parquet: Always auto-generate column names to preserve all data
+        // include_headers is ignored for Parquet (columnar format with metadata)
+        let series_name = format!("column_{}", col_idx + 1);
 
         // Create string series
         let series = Series::new(PlSmallStr::from(&series_name), string_values);

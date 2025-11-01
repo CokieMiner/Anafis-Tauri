@@ -8,12 +8,42 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use serde_json::{json, Value};
-use super::ExportConfig;
+use super::{ExportConfig, DataStructure};
+
+/// Helper function to collect valid sheet rows from Value array
+fn collect_sheet_rows(rows: &[Value]) -> Vec<Vec<Value>> {
+    rows.iter()
+        .filter_map(|row| {
+            row.as_array().cloned()
+        })
+        .collect()
+}
+
+/// Helper function to convert a Value to a string for column naming
+fn value_to_string(val: &Value) -> String {
+    match val {
+        Value::String(s) if !s.trim().is_empty() => s.trim().to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::Bool(b) => b.to_string(),
+        Value::Null => "null".to_string(),
+        _ => "value".to_string(),
+    }
+}
+
+/// Helper function to format sheet data according to JSON format options
+fn format_sheet_data(sheet_rows: &[Vec<Value>], json_format: &str, include_headers: bool) -> Result<Value, String> {
+    match json_format {
+        "array" => format_as_array(sheet_rows),
+        "object" => format_as_object(sheet_rows, include_headers),
+        "records" => format_as_records(sheet_rows, include_headers),
+        _ => Err(format!("Unknown JSON format: {}", json_format)),
+    }
+}
 
 /// Export data to JSON format
 #[tauri::command]
 pub async fn export_to_json(
-    data: Vec<Vec<Value>>,
+    data: Vec<Value>,
     file_path: String,
     config: ExportConfig,
 ) -> Result<(), String> {
@@ -21,13 +51,87 @@ pub async fn export_to_json(
         return Err("No data to export".to_string());
     }
 
-    // Convert data based on format option
-    let json_data = match config.options.json_format.as_str() {
-        "array" => format_as_array(&data),
-        "object" => format_as_object(&data, config.options.include_headers),
-        "records" => format_as_records(&data, config.options.include_headers),
-        _ => return Err(format!("Unknown JSON format: {}", config.options.json_format)),
-    }?;
+    // Use explicit data structure marker instead of implicit detection
+    let json_data = match config.data_structure {
+        DataStructure::MultiSheetJson => {
+            // Handle multi-sheet JSON format: [{ _multiSheet: true, data: { "Sheet1": [[...]], "Sheet2": [[...]] } }]
+            if let Some(multi_sheet_obj) = data[0].as_object() {
+                if let Some(sheets_data) = multi_sheet_obj.get("data") {
+                    if let Some(sheets_obj) = sheets_data.as_object() {
+                        // Convert each sheet according to the format option
+                        let mut result = serde_json::Map::new();
+                        
+                        for (sheet_name, sheet_data) in sheets_obj {
+                            if let Some(sheet_array) = sheet_data.as_array() {
+                                // Convert Value array to Vec<Vec<Value>>
+                                let sheet_rows = collect_sheet_rows(sheet_array);
+                                
+                                if !sheet_rows.is_empty() {
+                                    let formatted_sheet = format_sheet_data(&sheet_rows, config.options.json_format.as_str(), config.options.include_headers)?;
+                                    result.insert(sheet_name.clone(), formatted_sheet);
+                                }
+                            }
+                        }
+                        
+                        Value::Object(result)
+                    } else {
+                        return Err("Invalid multi-sheet data structure: expected object".to_string());
+                    }
+                } else {
+                    return Err("Multi-sheet data missing 'data' field".to_string());
+                }
+            } else {
+                return Err("Invalid multi-sheet object".to_string());
+            }
+        }
+        DataStructure::MultiSheetArray => {
+            // Multi-sheet format: [{ name: "Sheet1", data: [[...]] }, { name: "Sheet2", data: [[...]] }]
+            let mut result = serde_json::Map::new();
+            
+            for (sheet_index, sheet_value) in data.iter().enumerate() {
+                if let Some(sheet_obj) = sheet_value.as_object() {
+                    let sheet_name = if let Some(name_val) = sheet_obj.get("name") {
+                        if let Some(name_str) = name_val.as_str() {
+                            if !name_str.trim().is_empty() {
+                                name_str.to_string()
+                            } else {
+                                format!("Sheet{}", sheet_index + 1)
+                            }
+                        } else {
+                            format!("Sheet{}", sheet_index + 1)
+                        }
+                    } else {
+                        format!("Sheet{}", sheet_index + 1)
+                    };
+                    
+                    if let Some(sheet_data) = sheet_obj.get("data") {
+                        if let Some(sheet_array) = sheet_data.as_array() {
+                            // Convert Value array to Vec<Vec<Value>>
+                            let sheet_rows = collect_sheet_rows(sheet_array);
+                            
+                            if !sheet_rows.is_empty() {
+                                let formatted_sheet = format_sheet_data(&sheet_rows, config.options.json_format.as_str(), config.options.include_headers)?;
+                                result.insert(sheet_name.to_string(), formatted_sheet);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Value::Object(result)
+        }
+        DataStructure::Array2D => {
+            // Single sheet data: convert Vec<Value> to Vec<Vec<Value>>
+            let sheet_rows = collect_sheet_rows(&data);
+            
+            if sheet_rows.is_empty() {
+                return Err("No valid data rows found".to_string());
+            }
+            
+            // Convert data based on format option
+            format_sheet_data(&sheet_rows, config.options.json_format.as_str(), config.options.include_headers)?
+        }
+    };
 
     // Serialize to string with custom formatting
     let json_string = if config.options.pretty_print {
@@ -125,37 +229,24 @@ fn format_as_array(data: &[Vec<Value>]) -> Result<Value, String> {
 
 /// Format data as object with named columns
 /// Example: {"Time": [0, 1, 2], "Temperature": [20, 21, 22]}
+/// 
+/// User controls via include_headers:
+/// - true: Use first row as column names
+/// - false: Auto-generate column names (Column1, Column2, etc.)
 fn format_as_object(data: &[Vec<Value>], has_headers: bool) -> Result<Value, String> {
     if data.is_empty() {
         return Ok(json!({}));
     }
 
     let (headers, data_rows) = if has_headers && data.len() > 1 {
-        // First row is headers - use values or auto-generate for empty cells
-        let headers: Vec<String> = data[0].iter().enumerate().map(|(i, val)| {
-            match val {
-                Value::String(s) if !s.trim().is_empty() => s.trim().to_string(),
-                Value::Number(n) => n.to_string(),
-                _ => format!("Column{}", i + 1),
-            }
-        }).collect();
-        
-        // Check if ALL headers are auto-generated (meaning entire first row was empty)
-        let all_auto_generated = headers.iter().all(|h| h.starts_with("Column"));
-        
-        if all_auto_generated {
-            // Entire first row was empty, treat it as data instead
-            let col_count = data[0].len();
-            let headers: Vec<String> = (1..=col_count)
-                .map(|i| format!("Column{}", i))
-                .collect();
-            (headers, data)
-        } else {
-            // At least some headers are valid, skip first row
-            (headers, &data[1..])
-        }
+        // User explicitly said: use first row as column names
+        // RESPECT their choice - no detection, no override
+        let headers: Vec<String> = data[0].iter()
+            .map(value_to_string)
+            .collect();
+        (headers, &data[1..])
     } else {
-        // No headers - generate column names and use all data
+        // User said no headers - auto-generate column names
         let col_count = data[0].len();
         let headers: Vec<String> = (1..=col_count)
             .map(|i| format!("Column{}", i))
@@ -180,37 +271,24 @@ fn format_as_object(data: &[Vec<Value>], has_headers: bool) -> Result<Value, Str
 
 /// Format data as array of record objects
 /// Example: [{"Time": 0, "Temperature": 20}, {"Time": 1, "Temperature": 21}]
+///
+/// User controls via include_headers:
+/// - true: Use first row as column names
+/// - false: Auto-generate column names (Column1, Column2, etc.)
 fn format_as_records(data: &[Vec<Value>], has_headers: bool) -> Result<Value, String> {
     if data.is_empty() {
         return Ok(json!([]));
     }
 
     let (headers, data_rows) = if has_headers && data.len() > 1 {
-        // First row is headers - use values or auto-generate for empty cells
-        let headers: Vec<String> = data[0].iter().enumerate().map(|(i, val)| {
-            match val {
-                Value::String(s) if !s.trim().is_empty() => s.trim().to_string(),
-                Value::Number(n) => n.to_string(),
-                _ => format!("Column{}", i + 1),
-            }
-        }).collect();
-        
-        // Check if ALL headers are auto-generated (meaning entire first row was empty)
-        let all_auto_generated = headers.iter().all(|h| h.starts_with("Column"));
-        
-        if all_auto_generated {
-            // Entire first row was empty, treat it as data instead
-            let col_count = data[0].len();
-            let headers: Vec<String> = (1..=col_count)
-                .map(|i| format!("Column{}", i))
-                .collect();
-            (headers, data)
-        } else {
-            // At least some headers are valid, skip first row
-            (headers, &data[1..])
-        }
+        // User explicitly said: use first row as column names
+        // RESPECT their choice - no detection, no override
+        let headers: Vec<String> = data[0].iter()
+            .map(value_to_string)
+            .collect();
+        (headers, &data[1..])
     } else {
-        // No headers - generate column names and use all data
+        // User said no headers - auto-generate column names
         let col_count = data[0].len();
         let headers: Vec<String> = (1..=col_count)
             .map(|i| format!("Column{}", i))

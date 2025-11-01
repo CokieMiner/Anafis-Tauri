@@ -34,30 +34,51 @@ Anafis-Tauri/
 ├── .gitignore
 ├── LICENSE
 ├── README.md
-├── GEMINI.md
-└── Code/
-    ├── .eslint.config.js
+└── AnaFis/                   # Main application directory
+    ├── eslint.config.js
     ├── package.json
     ├── tsconfig.json
+    ├── tsconfig.node.json
     ├── vite.config.ts
     ├── node_modules/
     ├── public/
     ├── src/                  # Frontend (React/TypeScript) application code
-    │   ├── assets/           # Static assets (images, icons)
     │   ├── components/       # Reusable UI components
+    │   │   ├── spreadsheet/  # Spreadsheet-specific components
+    │   │   │   ├── sidebar/  # Sidebars (Export, QuickPlot, Uncertainty, UnitConversion)
+    │   │   │   └── univer/   # Univer.js integration
+    │   │   ├── dataLibrary/  # Data Library components
+    │   │   └── ...           # Tab management, toolbar, etc.
     │   ├── hooks/            # Custom React hooks
-    │   ├── pages/            # Top-level page components for each tab/view
-    │   ├── services/         # Frontend services for API calls, data manipulation
-    │   ├── store/            # Frontend state management (e.g., Zustand store)
-    │   └── App.tsx           # Main React application entry point
+    │   ├── pages/            # Top-level page components for each tab
+    │   │   ├── HomeTab.tsx
+    │   │   ├── SpreadsheetTab.tsx
+    │   │   ├── FittingTab.tsx (stub)
+    │   │   ├── SolverTab.tsx (stub)
+    │   │   └── MonteCarloTab.tsx (stub)
+    │   ├── themes/           # Theme configuration
+    │   ├── types/            # TypeScript type definitions
+    │   ├── utils/            # Utility functions
+    │   ├── DataLibraryWindow.tsx
+    │   ├── LatexPreviewWindow.tsx
+    │   ├── SettingsWindow.tsx
+    │   ├── UncertaintyCalculatorWindow.tsx
+    │   ├── App.tsx           # Main React application entry point
+    │   └── main.tsx          # React entry point
     └── src-tauri/            # Rust Backend (Tauri application core)
         ├── Cargo.toml        # Rust project manifest and dependencies
-        ├── src/              # Rust source code
-        │   ├── commands.rs   # Tauri commands (Rust functions exposed to JavaScript)
-        │   ├── main.rs       # Main Rust application entry point
-        │   └── models.rs     # Rust data structures and types
         ├── tauri.conf.json   # Tauri configuration file
-        └── build.rs          # Rust build script
+        ├── build.rs          # Rust build script
+        └── src/              # Rust source code
+            ├── main.rs       # Main Rust application entry point
+            ├── lib.rs        # Library entry point
+            ├── data_library/ # Data Library (SQLite + FTS5)
+            ├── export/       # Export system (10 formats)
+            ├── scientific/   # Scientific computations
+            ├── uncertainty_calculator/
+            ├── unit_conversion/
+            ├── utils/        # Utility modules
+            └── windows/      # Window management
 ```
 
 ## 4. Library Map (Tauri Edition)
@@ -66,15 +87,16 @@ This table outlines the primary libraries and crates intended for use across dif
 
 | Module | Primary Lib (Rust) | Primary Lib (Frontend) | Why |
 |---|---|---|---|
-| **Shell/Notebook** | `tauri`, `tauri-plugin-window` | React, Material-UI | For building the desktop application shell, managing native windows, and creating a responsive UI for detachable tabs, adhering to Material Design principles. |
-| **Tabs/Solver Tab** | `sympy` through PyO3, `nalgebra` | React, MathJax/KaTeX, ECharts, Material-UI | To provide symbolic mathematics capabilities, numerical computation for solving equations, live LaTeX rendering, interactive plotting of solutions, and consistent UI. **Migrated from Plotly to ECharts** for reliable export and smaller bundle. |
-| **GUI/Plotting** | `plotters` (via WebAssembly/Canvas) | **ECharts** (primary), D3.js (advanced), Material-UI | For generating high-quality, interactive data visualizations and plots within the webview, with consistent UI. **ECharts chosen** for: reliable PNG/SVG export, native timeline animation, 500KB size vs Plotly's 3MB, and no WebKit issues. |
+| **Shell/Notebook** | `tauri`, `tauri-plugin-window` | React, Material-UI | For building the desktop application shell, managing native windows, and creating a responsive UI with consistent Material Design principles. |
+| **Tabs/Solver Tab** | `sympy` through PyO3, `nalgebra` | React, MathJax/KaTeX, ECharts, Material-UI | To provide symbolic mathematics capabilities, numerical computation for solving equations, live LaTeX rendering, interactive plotting of solutions, and consistent UI. **Uses ECharts** for reliable export and smaller bundle. |
+| **GUI/Plotting** | `plotters` (via WebAssembly/Canvas) | **ECharts** (primary), D3.js (advanced), Material-UI | For generating high-quality, interactive data visualizations and plots within the webview, with consistent UI. **ECharts chosen** for: reliable PNG/SVG export, native timeline animation, 500KB size, and no WebKit issues. **Plotly removed** due to export failures and 3MB bundle size. |
 | **Tabs/Monte Carlo Tab** | `ndarray`, `rand` (via WebAssembly) | React, Web Workers | For efficient N-dimensional array operations, random number generation for simulations, and offloading heavy computations to improve UI responsiveness. |
 | **Core/Data** | `uom` (Units of Measurement) | TypeScript types | For robust handling of physical quantities with units, ensuring type safety and correctness across the application. |
-| **Services/Curve Fitting** | `argmin`, `nalgebra` | React, ECharts | For implementing N-dimensional optimization algorithms for curve fitting and visualizing the fitting results. **Migrated from Plotly to ECharts**. |
+| **Services/Curve Fitting** | `argmin`, `nalgebra` | React, ECharts | For implementing N-dimensional optimization algorithms for curve fitting and visualizing the fitting results. **Uses ECharts** for consistent plotting. |
 | **Core/Symbolic** | `sympy` through PyO3 | | For symbolic manipulation and representing expressions as Directed Acyclic Graphs (DAGs) for efficient updates. |
-| **Compute** | `wgpu` (GPU), `rayon` (CPU) | WebAssembly, Web Workers | For auto-dispatching computations to available hardware (GPU/CPU) and enabling parallel processing for performance-critical tasks. |
-| **Persistence/State** | `tauri-plugin-store`, `serde` | Zustand/Jotai/Redux (frontend state) | For saving and restoring application state (e.g., open tabs, user preferences) and managing complex frontend state. |
+| **Compute** | `wgpu` (GPU - planned), `rayon` (CPU) | WebAssembly, Web Workers | For auto-dispatching computations to available hardware (GPU/CPU) and enabling parallel processing for performance-critical tasks. |
+| **Persistence/State** | `tauri-plugin-store`, `serde`, `rusqlite` | Zustand (frontend state) | For saving and restoring application state (e.g., open tabs, user preferences), managing complex frontend state, and persistent data storage with SQLite. |
+| **Export System** | `rust_xlsxwriter`, `csv`, `polars`, `serde_json` | TypeScript types | For exporting data in 10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread. All export logic in Rust. |
 | **Utils** | `log`, `env_logger`, `config` | `zod` (validation) | For structured logging, environment-aware configuration management, and data validation. |
 
 ## 5. GUI Sketches
@@ -109,7 +131,7 @@ ANAFIS is built upon the following core design principles:
 3.  **Functional Programming**: Advocate for pure functions and immutable data structures, especially in the frontend, to enhance predictability and testability.
 4.  **Modular Tabs**: Each analysis tool is designed as an independent, self-contained, and closable tab, implemented as a reusable web component.
 5.  **Data Bus Communication**: Facilitate inter-tab data sharing and communication via Tauri's IPC mechanisms and efficient web-based state management patterns.
-6.  **Detachable Interface**: Enable tabs to be torn off into separate, independent windows, providing a flexible and customizable user workspace.
+6.  **Detachable Interface**: ⚠️ **Currently Removed** - Tab detaching functionality was temporarily removed for stability improvements. **Planned for re-implementation** in a future release with improved multi-window state synchronization.
 7.  **Material Design**: Adhere to Material Design principles for a modern and consistent user interface using Material-UI.
 
 ## 7. Core Requirements
@@ -135,50 +157,78 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 -   [x] 1. Project Setup and Basic Tauri Application Initialization
 -   [x] 2. Frontend Framework Integration (React/TypeScript) and initial UI scaffolding
 -   [x] 3. Data Bus Communication System (Tauri IPC) establishment
--   [x] 4. Basic Tab Management and Detachable Windows implementation
+-   [x] 4. Basic Tab Management (Detachable Windows temporarily removed, planned for re-implementation)
 -   [x] 5. Spreadsheet Tab Core Functionality (Frontend) development
 -   [x] 6. Spreadsheet Advanced Features (Univer.js integration complete)
 -   [x] 7. Data Library Infrastructure (SQLite + FTS5 search + statistics + export)
 -   [x] 8. Quick Plot Sidebar (ECharts 2D plotting + PNG/SVG export + Data Library integration)
 -   [x] 9. Code Quality & Type Safety (ESLint, TypeScript, Clippy - all errors fixed)
--   [ ] 10. Curve Fitting Tab Foundation (Frontend & Rust integration)
--   [ ] 11. Fitting Algorithms Implementation (Rust backend)
--   [ ] 12. Advanced Visualization (3D plotting with ECharts-GL) integration
--   [ ] 10. Equation Solver Tab Implementation (Frontend & Rust integration)
--   [ ] 11. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration)
--   [ ] 12. Floating Tools Implementation
--   [ ] 13. Statistical Analysis Sidebar (statrs crate + descriptive statistics)
--   [ ] 14. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
--   [ ] 15. Outlier Detection Sidebar (Z-score, IQR methods)
--   [ ] 16. Data Validation Sidebar (real-time validation rules)
--   [ ] 17. Metadata Manager Sidebar (experimental context tracking)
--   [ ] 13. Internationalization System setup
--   [ ] 14. Application Settings and Configuration management
--   [ ] 15. Update System Implementation
--   [ ] 16. State Persistence and File Management
--   [ ] 17. Comprehensive Testing Suite (Unit, Integration, E2E) development
--   [ ] 18. Distribution and Packaging (Tauri Bundler) setup
--   [ ] 19. Documentation and User Guide creation
--   [ ] 20. GPU Acceleration and Performance Optimization (Rust/WebAssembly) fine-tuning
--   [ ] 21. UI Polish and Accessibility improvements
--   [ ] 22. Final Integration and Release Preparation
+-   [x] 10. Export System Implementation (10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
+-   [x] 11. Export Logic Refactoring (Header handling simplified, explicit data structure markers)
+-   [ ] 12. Curve Fitting Tab Foundation (Frontend & Rust integration)
+-   [ ] 13. Fitting Algorithms Implementation (Rust backend)
+-   [ ] 14. Advanced Visualization (3D plotting with ECharts-GL) integration
+-   [ ] 15. Equation Solver Tab Implementation (Frontend & Rust integration)
+-   [ ] 16. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration)
+-   [ ] 17. Floating Tools Implementation
+-   [ ] 18. Statistical Analysis Sidebar (statrs crate + descriptive statistics)
+-   [ ] 19. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
+-   [ ] 20. Outlier Detection Sidebar (Z-score, IQR methods)
+-   [ ] 21. Data Validation Sidebar (real-time validation rules)
+-   [ ] 22. Metadata Manager Sidebar (experimental context tracking)
+-   [ ] 23. Tab Detaching Re-implementation (Multi-window state synchronization)
+-   [ ] 24. Internationalization System setup
+-   [ ] 25. Application Settings and Configuration management
+-   [ ] 26. Update System Implementation
+-   [ ] 27. State Persistence and File Management
+-   [ ] 28. Comprehensive Testing Suite (Unit, Integration, E2E) development
+-   [ ] 29. Distribution and Packaging (Tauri Bundler) setup
+-   [ ] 30. Documentation and User Guide creation
+-   [ ] 31. GPU Acceleration and Performance Optimization (Rust/WebAssembly) fine-tuning
+-   [ ] 32. UI Polish and Accessibility improvements
+-   [ ] 33. Final Integration and Release Preparation
 
 ## 9. Plan for Tabs (Tauri Edition)
 
-This section details the implementation strategy for browser-style drag-and-drop tabs within the Tauri framework:
+This section details the implementation strategy for browser-style tabs within the Tauri framework:
 
-### 9.1. Core Drag-and-Drop Tab Functionality
--   Leverage web-based drag-and-drop APIs for reordering tabs within a single window.
--   Utilize Tauri's window management APIs to enable detaching tabs into new, independent windows.
+### 9.1. Core Tab Functionality
+-   Utilize web-based drag-and-drop APIs for reordering tabs within a single window.
+-   Use @dnd-kit for smooth drag-and-drop interactions with React.
 -   Implement a custom React component for the tabs and tab bar to ensure full control over behavior and appearance.
--   Use Tauri's IPC to transfer essential tab information (e.g., ID, state) between different windows during drag-and-drop operations.
+-   Use Zustand for tab state management (active tab, tab order, tab content).
 
-### 9.2. Handling Drops and Window Creation
--   Implement comprehensive drag and drop handlers in the frontend to manage the visual feedback and state changes during a drag operation.
--   Use `tauri::api::window::WindowBuilder` in the Rust backend to programmatically create new windows when a tab is detached.
--   Develop a robust system to manage tab state and ensure data consistency across multiple Tauri windows.
+### 9.2. Tab Detaching (Planned Feature)
+⚠️ **Status**: Temporarily removed for stability improvements. Planned for re-implementation.
 
-### 9.3. Advanced Features and Customization
--   Implement a persistent Home Tab that cannot be closed or detached, serving as the application's central hub.
+**Original Vision**:
+-   Enable tabs to be detached into new, independent Tauri windows.
+-   Use Tauri's window management APIs (`tauri::api::window::WindowBuilder`).
+-   Implement cross-window state synchronization via Tauri IPC.
+-   Maintain data consistency across multiple windows.
+
+**Challenges Identified**:
+-   State synchronization complexity across multiple windows
+-   Window lifecycle management (closing detached windows)
+-   Data consistency when same spreadsheet open in multiple windows
+-   Performance impact of IPC communication overhead
+
+**Future Implementation Plan**:
+-   Implement robust state synchronization mechanism
+-   Add window registry to track all open windows
+-   Use event-driven architecture for cross-window updates
+-   Implement conflict resolution for concurrent edits
+-   Add user preferences for detachment behavior
+
+### 9.3. Current Tab System
+-   Single-window tabbed interface with drag-to-reorder functionality
+-   Home Tab remains permanently open as application hub
+-   Other tabs (Spreadsheet, Fitting, Solver, Monte Carlo) can be opened/closed dynamically
+-   Tab state persisted using `tauri-plugin-store`
+-   Optimized tab rendering to prevent unnecessary re-renders
+
+### 9.4. Advanced Features
+-   Implement a persistent Home Tab that cannot be closed, serving as the application's central hub.
 -   Utilize `tauri-plugin-store` for application-wide state management, persisting user preferences and application settings.
--   Explore implementing cross-instance drag-and-drop using Tauri's IPC and potentially a custom protocol for advanced scenarios.
+-   Tab lazy-loading: Only render active tab content to improve performance.
+-   Tab state caching: Preserve tab state when switching between tabs.
