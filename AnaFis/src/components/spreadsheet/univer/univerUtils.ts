@@ -259,10 +259,6 @@ export function startPeriodicCacheCleanup(intervalMs: number = 300000): void { /
   
   cacheCleanupInterval = setInterval(() => {
     // LRU caches handle automatic eviction, but we can trigger cleanup if needed
-    // For now, just log cache sizes in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[UniverUtils] Cache sizes - Column→Letter: ${columnLetterCache.size}, Letter→Column: ${letterColumnCache.size}`);
-    }
   }, intervalMs);
 }
 
@@ -284,8 +280,4 @@ export function stopPeriodicCacheCleanup(): void {
 export function clearAllCaches(): void {
   columnLetterCache.clear();
   letterColumnCache.clear();
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[UniverUtils] All caches cleared manually');
-  }
 }

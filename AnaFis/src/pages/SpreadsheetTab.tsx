@@ -204,25 +204,21 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
 
   // NOTE: Backend data persistence removed - spreadsheet data is now local-only
 
-  const handleCellChange = useCallback((cellRef: string, value: CellValue) => {
+  const handleCellChange = useCallback((_cellRef: string, _value: CellValue) => {
     // Cell change handler - Univer manages all data internally
     // NOTE: Backend persistence removed - cell data is now local-only
-    console.log('Cell changed:', cellRef, value);
   }, []);
 
-  const handleFormulaIntercept = useCallback((cellRef: string, formula: string) => {
+  const handleFormulaIntercept = useCallback((_cellRef: string, _formula: string) => {
     // Formula interception is no longer needed - Univer handles all formulas
     // Custom functions are registered directly with Univer's formula engine
     // This handler is kept for potential future use (e.g., formula validation)
-    console.log('Formula entered:', cellRef, formula);
   }, []);
 
   const handleSelectionChange = useCallback((cellRef: string) => {
     // Emit selection change event to all interested subscribers (sidebars)
     spreadsheetEventBus.emit('selection-change', cellRef);
   }, []);
-
-  // No initialization needed - tabs stay mounted so state persists naturally
 
   // Handlers
   const handleOpenUnitConverter = useCallback(() => {
@@ -354,8 +350,7 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
                 onClose={() => setActiveSidebar(null)}
                 univerRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
-                onPropagationComplete={(resultRange: string) => {
-                  console.log('Propagation complete, results in:', resultRange);
+                onPropagationComplete={(_resultRange: string) => {
                   // Could refresh spreadsheet or show notification here
                 }}
                 variables={sidebarState.uncertaintyVariables}
