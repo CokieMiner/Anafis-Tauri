@@ -374,7 +374,9 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
 
             // Track selection changes
             const selectionDisposable = commandService.onCommandExecuted((command: ICommandInfo) => {
-                if (isDisposed) {return;} // Guard against post-cleanup execution
+                if (isDisposed) { 
+                    return; 
+                } // Guard against post-cleanup execution
                 
                 if (command.id === 'sheet.operation.set-selections') {
                     const params = command.params as { selections?: Array<{ range?: IRange }> };

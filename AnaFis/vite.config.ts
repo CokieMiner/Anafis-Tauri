@@ -205,6 +205,7 @@ export default defineConfig(() => ({
       '@dnd-kit/sortable',
       '@dnd-kit/utilities',
       // Force pre-bundling of critical Univer dependencies
+      '@wendellhu/redi',
       '@univerjs/core',
       '@univerjs/design',
       '@univerjs/engine-render',
