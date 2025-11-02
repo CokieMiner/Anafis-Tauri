@@ -24,6 +24,17 @@ export default defineConfig(() => ({
       '@/themes': path.resolve(__dirname, './src/themes'),
       '@/pages': path.resolve(__dirname, './src/pages'),
     },
+    // Deduplicate shared dependencies to prevent multiple instances
+    dedupe: [
+      '@wendellhu/redi',
+      '@univerjs/core',
+      '@univerjs/design',
+      '@univerjs/engine-render',
+      '@univerjs/engine-formula',
+      '@univerjs/network',
+      'react',
+      'react-dom',
+    ],
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
@@ -54,9 +65,18 @@ export default defineConfig(() => ({
           if (id.includes('@mui') || id.includes('@emotion')) {
             return 'vendor-mui';
           }
-          // Univer spreadsheet ecosystem
+          // Core Univer dependencies (must be in same chunk to avoid duplicate DI)
+          if (id.includes('@wendellhu/redi') || 
+              id.includes('@univerjs/core') || 
+              id.includes('@univerjs/design') ||
+              id.includes('@univerjs/engine-render') ||
+              id.includes('@univerjs/engine-formula') ||
+              id.includes('@univerjs/network')) {
+            return 'vendor-univer-core';
+          }
+          // Other Univer packages
           if (id.includes('@univerjs')) {
-            return 'vendor-univer';
+            return 'vendor-univer-plugins';
           }
           // Charts and visualization
           if (id.includes('echarts')) {
@@ -184,11 +204,16 @@ export default defineConfig(() => ({
       '@dnd-kit/core',
       '@dnd-kit/sortable',
       '@dnd-kit/utilities',
+      // Force pre-bundling of critical Univer dependencies
+      '@univerjs/core',
+      '@univerjs/design',
+      '@univerjs/engine-render',
+      '@univerjs/engine-formula',
+      '@univerjs/network',
     ],
     exclude: [
-      // Exclude large libraries that should be chunked separately
-      '@univerjs/core',
-      '@univerjs/sheets',
+      // Exclude large plugin packages that should be chunked separately
+      '@univerjs/presets',
     ],
   },
 

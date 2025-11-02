@@ -40,7 +40,6 @@
     "@univerjs/engine-render": "0.10.14",
     "@univerjs/find-replace": "0.10.14",
     "@univerjs/network": "0.10.14",
-    "@univerjs/presets": "0.10.14",
     "@univerjs/sheets": "0.10.14",
     "@univerjs/sheets-conditional-formatting": "0.10.14",
     "@univerjs/sheets-conditional-formatting-ui": "0.10.14",
@@ -59,6 +58,8 @@
     "@univerjs/sheets-numfmt": "0.10.14",
     "@univerjs/sheets-numfmt-ui": "0.10.14",
     "@univerjs/sheets-thread-comment": "0.10.14",
+    "@univerjs/sheets-thread-comment-ui": "^0.10.14",
+    "@univerjs/thread-comment-ui": "^0.10.14",
     "echarts": "6.0.0",
     "katex": "0.16.25",
     "react": "19.2.0",
@@ -90,7 +91,9 @@
     "vite-bundle-analyzer": "1.2.3"
   },
   "resolutions": {
+    "@wendellhu/redi": "1.0.1",
     "@univerjs/core": "0.10.14",
-    "@redi/core": "0.15.1"
+    "@univerjs/design": "0.10.14",
+    "@univerjs/network": "0.10.14"
   }
 }

@@ -20,38 +20,63 @@ import {
     UniverInstanceType,
     LocaleType,
     mergeLocales,
+    Univer,
 } from '@univerjs/core';
-import { IRegisterFunctionService, UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula';
-import { createUniver } from '@univerjs/presets';
-import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation';
-// Import all individual plugins
-import { UniverNetworkPlugin } from '@univerjs/network';
-import { UniverDocsPlugin } from '@univerjs/docs';
+
+// LAYER 1: Core infrastructure plugins (no dependencies)
 import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
-import { UniverUIPlugin } from '@univerjs/ui';
-import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
 import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
+import { UniverNetworkPlugin } from '@univerjs/network';
+
+// LAYER 2: UI and Document foundation
+import { UniverUIPlugin } from '@univerjs/ui';
+import { UniverDocsPlugin } from '@univerjs/docs';
+import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
+
+// LAYER 3: Base Sheets (depends on Docs, UI, Engines)
 import { UniverSheetsPlugin } from '@univerjs/sheets';
 import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
+
+// LAYER 4: Formula extensions (depends on Sheets UI)
+import { IRegisterFunctionService, UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula';
+import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
+
+// LAYER 5: Number formatting (depends on Sheets UI)
 import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
 import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui';
-import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
-// Import additional feature plugins
+
+// LAYER 6: Data validation (depends on Sheets UI, Formula UI, Numfmt)
+import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation';
+import { UniverSheetsDataValidationUIPlugin } from '@univerjs/sheets-data-validation-ui';
+
+// LAYER 7: Conditional formatting (depends on Sheets UI)
 import { UniverSheetsConditionalFormattingPlugin } from '@univerjs/sheets-conditional-formatting';
 import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
+
+// LAYER 8: Filter functionality (depends on Sheets UI)
 import { UniverSheetsFilterPlugin } from '@univerjs/sheets-filter';
 import { UniverSheetsFilterUIPlugin } from '@univerjs/sheets-filter-ui';
+
+// LAYER 9: Find & Replace (depends on UI)
 import { UniverFindReplacePlugin } from '@univerjs/find-replace';
 import { UniverSheetsFindReplacePlugin } from '@univerjs/sheets-find-replace';
+
+// LAYER 10: Hyperlinks (depends on Sheets UI)
 import { UniverSheetsHyperLinkPlugin } from '@univerjs/sheets-hyper-link';
 import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
+
+// LAYER 11: Notes/Comments (depends on Sheets UI)
 import { UniverSheetsNotePlugin } from '@univerjs/sheets-note';
 import { UniverSheetsNoteUIPlugin } from '@univerjs/sheets-note-ui';
+
+// LAYER 12: Drawing (depends on Docs, Sheets)
 import { UniverDrawingPlugin } from '@univerjs/drawing';
 import { UniverDocsDrawingPlugin } from '@univerjs/docs-drawing';
 import { UniverDrawingUIPlugin } from '@univerjs/drawing-ui';
 import { UniverSheetsDrawingPlugin } from '@univerjs/sheets-drawing';
 import { UniverSheetsDrawingUIPlugin } from '@univerjs/sheets-drawing-ui';
+
+// LAYER 13: Thread Comments (highest dependencies - must be last)
 import { UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
 import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
 import { UniverSheetsThreadCommentUIPlugin } from '@univerjs/sheets-thread-comment-ui';
@@ -65,14 +90,25 @@ import sheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
 import sheetsNumfmtUIEnUS from '@univerjs/sheets-numfmt-ui/locale/en-US';
 import uiEnUS from '@univerjs/ui/locale/en-US';
 import sheetsConditionalFormattingUIEnUS from '@univerjs/sheets-conditional-formatting-ui/locale/en-US';
-import sheetsFilterEnUS from '@univerjs/preset-sheets-filter/locales/en-US';
-import sheetsFindReplaceEnUS from '@univerjs/preset-sheets-find-replace/locales/en-US';
-import sheetsHyperLinkEnUS from '@univerjs/preset-sheets-hyper-link/locales/en-US';
-import sheetsDrawingEnUS from '@univerjs/preset-sheets-drawing/locales/en-US';
-import sheetsThreadCommentEnUS from '@univerjs/preset-sheets-thread-comment/locales/en-US';
+import sheetsFilterUIEnUS from '@univerjs/sheets-filter-ui/locale/en-US';
+import findReplaceEnUS from '@univerjs/find-replace/locale/en-US';
+import sheetsHyperLinkUIEnUS from '@univerjs/sheets-hyper-link-ui/locale/en-US';
+import sheetsDrawingUIEnUS from '@univerjs/sheets-drawing-ui/locale/en-US';
+import sheetsThreadCommentUIEnUS from '@univerjs/sheets-thread-comment-ui/locale/en-US';
 import sheetsDataValidationUIEnUS from '@univerjs/sheets-data-validation-ui/locale/en-US';
 
-// Import Facade APIs
+// Import styles FIRST - before Facade APIs
+// Styles must be loaded before Facade initialization
+import '@univerjs/design/lib/index.css';
+import '@univerjs/ui/lib/index.css';
+import '@univerjs/docs-ui/lib/index.css';
+import '@univerjs/sheets-ui/lib/index.css';
+import '@univerjs/sheets-formula-ui/lib/index.css';
+import '@univerjs/sheets-numfmt-ui/lib/index.css';
+
+// Import Facade APIs LAST - after all plugins and styles are loaded
+// These are side-effect imports that initialize global APIs
+// They must come after CSS to avoid DOM/style access issues
 import '@univerjs/engine-formula/facade';
 import '@univerjs/ui/facade';
 import '@univerjs/docs-ui/facade';
@@ -80,14 +116,6 @@ import '@univerjs/sheets/facade';
 import '@univerjs/sheets-ui/facade';
 import '@univerjs/sheets-formula/facade';
 import '@univerjs/sheets-numfmt/facade';
-
-// Import styles in correct order
-import '@univerjs/design/lib/index.css';
-import '@univerjs/ui/lib/index.css';
-import '@univerjs/docs-ui/lib/index.css';
-import '@univerjs/sheets-ui/lib/index.css';
-import '@univerjs/sheets-formula-ui/lib/index.css';
-import '@univerjs/sheets-numfmt-ui/lib/index.css';
 
 import { registerCustomFunctions } from './customFormulas';
 
@@ -99,7 +127,7 @@ interface Props {
     onCellChange: (cellRef: string, value: ICellData) => void;
     onFormulaIntercept: (cellRef: string, formula: string) => void;
     onSelectionChange?: (cellRef: string) => void;
-    onUniverReady?: (univerInstance: ReturnType<typeof createUniver>['univer']) => void;
+    onUniverReady?: (univerInstance: Univer) => void;
     tabId?: string; // Optional tab ID for better instance tracking
 }
 
@@ -107,14 +135,14 @@ export interface UniverSpreadsheetRef {
     updateCell: (cellRef: string, value: { v?: string | number; f?: string }) => void;
     getCellValue: (cellRef: string) => string | number | null;
     getRange: (rangeRef: string) => (string | number)[][];
-    univer: ReturnType<typeof createUniver> | null;
+    univer: Univer | null;
 }
 
 const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
     ({ initialData, onCellChange, onFormulaIntercept, onSelectionChange, onUniverReady, tabId }, ref) => {
         const theme = useTheme();
         const containerRef = useRef<HTMLDivElement>(null);
-        const univerRef = useRef<ReturnType<typeof createUniver> | null>(null);
+        const univerRef = useRef<Univer | null>(null);
         const isInitializedRef = useRef(false);
         const onCellChangeRef = useRef(onCellChange);
         const onFormulaInterceptRef = useRef(onFormulaIntercept);
@@ -140,7 +168,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                 if (!univerRef.current) { return; }
 
                 try {
-                    const injector = univerRef.current.univer.__getInjector();
+                    const injector = univerRef.current.__getInjector();
                     const commandService = injector.get(ICommandService);
                     const instanceService = injector.get(IUniverInstanceService);
                     const workbook = instanceService.getFocusedUnit() as Workbook;
@@ -171,7 +199,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                 if (!univerRef.current) { return null; }
 
                 try {
-                    const injector = univerRef.current.univer.__getInjector();
+                    const injector = univerRef.current.__getInjector();
                     const instanceService = injector.get(IUniverInstanceService);
                     const workbook = instanceService.getFocusedUnit() as Workbook;
                     const activeSheet = workbook.getActiveSheet();
@@ -193,7 +221,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                 if (!univerRef.current) { return []; }
 
                 try {
-                    const injector = univerRef.current.univer.__getInjector();
+                    const injector = univerRef.current.__getInjector();
                     const instanceService = injector.get(IUniverInstanceService);
                     const workbook = instanceService.getFocusedUnit() as Workbook;
                     const activeSheet = workbook.getActiveSheet();
@@ -242,7 +270,8 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                 console.log(`Active instances: ${window.__UNIVER_INSTANCES__.size}`);
             }
 
-            const { univer, univerAPI } = createUniver({
+            // Create Univer instance with direct plugin registration
+            const univer = new Univer({
                 darkMode: true,
                 locale: LocaleType.EN_US,
                 locales: {
@@ -255,87 +284,77 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                         sheetsNumfmtUIEnUS,
                         uiEnUS,
                         sheetsConditionalFormattingUIEnUS,
-                        sheetsFilterEnUS,
-                        sheetsFindReplaceEnUS,
-                        sheetsHyperLinkEnUS,
-                        sheetsDrawingEnUS,
-                        sheetsThreadCommentEnUS,
+                        sheetsFilterUIEnUS,
+                        findReplaceEnUS,
+                        sheetsHyperLinkUIEnUS,
+                        sheetsDrawingUIEnUS,
+                        sheetsThreadCommentUIEnUS,
                         sheetsDataValidationUIEnUS
                     ),
                 },
-                presets: [],
-                plugins: [
-                    // Core plugins - essential services first
-                    UniverRenderEnginePlugin,
-                    UniverFormulaEnginePlugin,
-                    [UniverUIPlugin, { container: containerIdRef.current }],
-
-                    // Essential sheet plugins
-                    UniverSheetsPlugin,
-                    [UniverSheetsUIPlugin, {
-                        formulaBar: true,
-                        footer: true,
-                        clipboardConfig: {
-                            enableCopyPasteShortcut: true,
-                            enableCopyPasteMenu: true
-                        },
-                        scrollConfig: {
-                            enableCache: true,
-                            cacheSize: 100,
-                            enableVirtualScrolling: true
-                        },
-                        protectedRangeShadow: true,
-                        protectedRangeUserSelector: true,
-                        disableForceStringAlert: true,
-                        disableForceStringMark: true
-                    }],
-
-                    // Formula plugins
-                    UniverSheetsFormulaPlugin,
-                    UniverSheetsFormulaUIPlugin,
-
-                    // Number formatting
-                    UniverSheetsNumfmtPlugin,
-                    UniverSheetsNumfmtUIPlugin,
-
-                    // Conditional plugins
-                    UniverSheetsConditionalFormattingPlugin,
-                    UniverSheetsConditionalFormattingUIPlugin,
-
-                    // Filter functionality
-                    [UniverSheetsFilterPlugin, { enableSyncSwitch: true }],
-                    UniverSheetsFilterUIPlugin,
-
-                    // Search functionality
-                    UniverFindReplacePlugin,
-                    UniverSheetsFindReplacePlugin,
-
-                    // Optional features
-                    UniverSheetsHyperLinkPlugin,
-                    UniverSheetsHyperLinkUIPlugin,
-                    UniverSheetsNotePlugin,
-                    UniverSheetsNoteUIPlugin,
-
-                    // Data validation
-                    UniverSheetsDataValidationPlugin,
-
-                    // Document and drawing plugins
-                    UniverNetworkPlugin,
-                    [UniverDocsPlugin, { hasScroll: true }],
-                    UniverDocsUIPlugin,
-                    [UniverDrawingPlugin, { override: [] }],
-                    UniverDocsDrawingPlugin,
-                    UniverDrawingUIPlugin,
-                    UniverSheetsDrawingPlugin,
-                    UniverSheetsDrawingUIPlugin,
-
-                    // Comment plugins
-                    UniverThreadCommentUIPlugin,
-                    UniverSheetsThreadCommentPlugin,
-                    UniverSheetsThreadCommentUIPlugin,
-                ],
             });
-            univerRef.current = { univer, univerAPI };
+
+            // Register plugins in the correct dependency order
+            // LAYER 1: Core infrastructure (no dependencies on other plugins)
+            univer.registerPlugin(UniverRenderEnginePlugin);
+            univer.registerPlugin(UniverFormulaEnginePlugin);
+            univer.registerPlugin(UniverNetworkPlugin); // Only depends on @univerjs/core
+
+            // LAYER 2: UI and Document foundation
+            univer.registerPlugin(UniverUIPlugin, { container: containerIdRef.current });
+            univer.registerPlugin(UniverDocsPlugin, { hasScroll: false });
+            univer.registerPlugin(UniverDocsUIPlugin);
+
+            // LAYER 3: Base Sheets (depends on Docs, UI, Engines)
+            univer.registerPlugin(UniverSheetsPlugin);
+            univer.registerPlugin(UniverSheetsUIPlugin); // Depends on: sheets, docs-ui, ui, telemetry
+
+            // LAYER 4: Formula extensions (depends on Sheets UI)
+            univer.registerPlugin(UniverSheetsFormulaPlugin);
+            univer.registerPlugin(UniverSheetsFormulaUIPlugin);
+
+            // LAYER 5: Number formatting (depends on Sheets UI)
+            univer.registerPlugin(UniverSheetsNumfmtPlugin);
+            univer.registerPlugin(UniverSheetsNumfmtUIPlugin);
+
+            // LAYER 6: Data validation (depends on Sheets UI, Formula UI, Numfmt)
+            univer.registerPlugin(UniverSheetsDataValidationPlugin);
+            univer.registerPlugin(UniverSheetsDataValidationUIPlugin);
+
+            // LAYER 7: Conditional formatting (depends on Sheets UI)
+            univer.registerPlugin(UniverSheetsConditionalFormattingPlugin);
+            univer.registerPlugin(UniverSheetsConditionalFormattingUIPlugin);
+
+            // LAYER 8: Filter functionality (depends on Sheets UI)
+            univer.registerPlugin(UniverSheetsFilterPlugin);
+            univer.registerPlugin(UniverSheetsFilterUIPlugin);
+
+            // LAYER 9: Find & Replace (depends on UI)
+            univer.registerPlugin(UniverFindReplacePlugin);
+            univer.registerPlugin(UniverSheetsFindReplacePlugin);
+
+            // LAYER 10: Hyperlinks (depends on Sheets UI)
+            univer.registerPlugin(UniverSheetsHyperLinkPlugin);
+            univer.registerPlugin(UniverSheetsHyperLinkUIPlugin);
+
+            // LAYER 11: Notes/Comments (depends on Sheets UI)
+            univer.registerPlugin(UniverSheetsNotePlugin);
+            univer.registerPlugin(UniverSheetsNoteUIPlugin);
+
+            // LAYER 12: Drawing (depends on Docs, Sheets)
+            univer.registerPlugin(UniverDrawingPlugin, { override: [] });
+            univer.registerPlugin(UniverDocsDrawingPlugin);
+            univer.registerPlugin(UniverDrawingUIPlugin);
+            univer.registerPlugin(UniverSheetsDrawingPlugin);
+            univer.registerPlugin(UniverSheetsDrawingUIPlugin);
+
+            // LAYER 13: Thread Comments (depends on Sheets UI and thread-comment base)
+            // Must be last - depends on almost everything including sheets-ui
+            univer.registerPlugin(UniverThreadCommentUIPlugin);
+            univer.registerPlugin(UniverSheetsThreadCommentPlugin);
+            univer.registerPlugin(UniverSheetsThreadCommentUIPlugin);
+
+            univerRef.current = univer;
 
             univer.createUnit(UniverInstanceType.UNIVER_SHEET, initialData);
 
@@ -347,11 +366,16 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
             registerCustomFunctions(formulaEngine);
             const commandService = injector.get(ICommandService);
 
-            // Start periodic cache cleanup for long-running sessions
+            // Start periodic cache cleanup for long-running sessions  
             startPeriodicCacheCleanup();
+
+            // Disposal flag to prevent handlers from running after cleanup
+            let isDisposed = false;
 
             // Track selection changes
             const selectionDisposable = commandService.onCommandExecuted((command: ICommandInfo) => {
+                if (isDisposed) {return;} // Guard against post-cleanup execution
+                
                 if (command.id === 'sheet.operation.set-selections') {
                     const params = command.params as { selections?: Array<{ range?: IRange }> };
                     if (params.selections && params.selections.length > 0) {
@@ -370,6 +394,8 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
 
             // Helper function to handle cell change events from both command types
             const handleCellChangeCommand = (command: ICommandInfo, commandType: 'mutation' | 'command') => {
+                if (isDisposed) {return;} // Guard against post-cleanup execution
+                
                 const params = command.params as { range?: IRange; value?: ICellData[][] };
                 if (!params.range) {
                     // Some internal Univer operations don't provide range - this is normal
@@ -427,6 +453,8 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
 
             // Listen to both mutation and command events for comprehensive bounds tracking
             const afterCommandDisposable = commandService.onCommandExecuted((command: ICommandInfo) => {
+                if (isDisposed) {return;} // Guard against post-cleanup execution
+                
                 if (command.id === 'sheet.mutation.set-range-values') {
                     handleCellChangeCommand(command, 'mutation');
                 } else if (command.id === 'sheet.command.set-range-values') {
@@ -436,6 +464,8 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
 
             // Separate handler for formula interception to avoid conflicts with cell change handling
             const editingDisposable = commandService.onCommandExecuted((command: ICommandInfo) => {
+                if (isDisposed) {return;} // Guard against post-cleanup execution
+                
                 // Handle formula interception for both command types
                 if (command.id === 'sheet.command.set-range-values' || command.id === 'sheet.mutation.set-range-values') {
                     const params = command.params as { range?: IRange; value?: ICellData[][] };
@@ -459,6 +489,9 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
             }
 
             return () => {
+                // Set disposal flag FIRST to stop all handlers immediately
+                isDisposed = true;
+                
                 if (process.env.NODE_ENV === 'development') {
                     console.log('Cleaning up Univer...');
                 }
@@ -474,7 +507,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                     if (process.env.NODE_ENV === 'development') {
                         console.log(`Disposing Univer instance for container: ${containerId}`);
                     }
-                    univerRef.current.univer.dispose();
+                    univerRef.current.dispose();
                     univerRef.current = null;
                 }
 
