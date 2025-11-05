@@ -1,15 +1,10 @@
-// UniverErrorBoundary.tsx - Enhanced error boundary with recovery mechanisms
-import React, { Component, ReactNode, useCallback } from 'react';
-import { Box, Typography, Button, Alert } from '@mui/material';
-import { RefreshOutlined, BugReportOutlined } from '@mui/icons-material';
+// UniverErrorBoundary.tsx - Modern error boundary with recovery mechanisms
+import React, { Component, ReactNode } from 'react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | undefined;
   errorInfo: React.ErrorInfo | undefined;
-}
-
-interface LightweightErrorBoundaryState extends ErrorBoundaryState {
   retryCount: number;
   isAutoRetryScheduled: boolean;
 }
@@ -21,7 +16,7 @@ interface ErrorBoundaryProps {
   maxRetries?: number;
 }
 
-export class LightweightErrorBoundary extends Component<ErrorBoundaryProps, LightweightErrorBoundaryState> {
+export class UniverErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private retryTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(props: ErrorBoundaryProps) {
@@ -150,122 +145,6 @@ export class LightweightErrorBoundary extends Component<ErrorBoundaryProps, Ligh
             </details>
           )}
         </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-/**
- * Hook for handling errors in functional components
- */
-export function useErrorHandler() {
-  return useCallback((error: Error) => {
-    console.error('Univer operation error:', error);
-    // In a real application, you might want to send this to an error reporting service
-  }, []);
-}
-
-// Full-featured error boundary with detailed UI and retry functionality (for backward compatibility)
-export class UniverErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: undefined,
-      errorInfo: undefined
-    };
-  }
-
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return {
-      hasError: true,
-      error
-    };
-  }
-
-  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    this.setState({
-      error,
-      errorInfo
-    });
-
-    // Log error for debugging
-    console.error('Univer Error Boundary caught an error:', error, errorInfo);
-
-    // Call custom error handler if provided
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
-    }
-  }
-
-  handleRetry = () => {
-    this.setState({
-      hasError: false,
-      error: undefined,
-      errorInfo: undefined
-    });
-  };
-
-  override render() {
-    if (this.state.hasError) {
-      // Custom fallback UI if provided
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
-      // Default error UI
-      return (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 400,
-            p: 3,
-            textAlign: 'center',
-            backgroundColor: 'background.default',
-            color: 'text.primary',
-            width: '100%',
-            height: '100%'
-          }}
-        >
-          <BugReportOutlined sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
-
-          <Typography variant="h6" gutterBottom color="text.primary">
-            Spreadsheet Error
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 400 }}>
-            Something went wrong with the spreadsheet. Click retry to continue.
-          </Typography>
-
-          <Alert severity="error" sx={{ mb: 2, maxWidth: 500 }}>
-            <Typography variant="body2">
-              {this.state.error?.message ?? 'Unknown error occurred'}
-            </Typography>
-          </Alert>
-
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<RefreshOutlined />}
-            onClick={this.handleRetry}
-            sx={{ mb: 1 }}
-          >
-            Retry
-          </Button>
-
-          {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
-            <Box sx={{ mt: 2, p: 1, bgcolor: 'background.paper', borderRadius: 1, maxWidth: 600, border: 1, borderColor: 'divider' }}>
-              <Typography variant="caption" component="pre" sx={{ fontSize: '0.7rem', overflow: 'auto', color: 'text.secondary' }}>
-                {this.state.error?.message}
-              </Typography>
-            </Box>
-          )}
-        </Box>
       );
     }
 

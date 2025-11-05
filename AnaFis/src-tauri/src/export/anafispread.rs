@@ -1,159 +1,70 @@
 // AnaFis Spreadsheet (.anafispread) export
 //
-// Custom JSON-based format for AnaFis spreadsheet data.
-// Preserves everything: cell values, formulas, formatting, metadata, uncertainties.
+// Custom format for AnaFis spreadsheet data - Native Univer IWorkbookData snapshot.
+// This format preserves EVERYTHING: cell values, formulas, formatting, metadata,
+// protection rules, resources, merged cells, and all Univer-specific data.
+//
+// This is the LOSSLESS native format for complete save/restore cycles.
+// Format: Magic bytes + Version + Compressed (gzip) JSON of full IWorkbookData
+//
+// File Structure:
+// - Bytes 0-7:   Magic number "ANAFIS\x01\x00" (identifies file type)
+// - Bytes 8-11:  Format version (u32, little-endian, currently 1)
+// - Bytes 12+:   Gzip-compressed JSON data
 
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufWriter, Write};
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use serde_json::json;
-use super::{ExportConfig, ExportFormat, DataStructure};
+use serde_json::Value;
+
+/// Magic number for .anafispread files: "ANAFIS" + version marker
+const MAGIC_NUMBER: &[u8; 8] = b"ANAFIS\x01\x00";
+const FORMAT_VERSION: u32 = 1;
 
 /// Export data to AnaFis Spreadsheet (.anafispread) format
+/// 
+/// This format accepts the full IWorkbookData JSON snapshot from Univer's workbook.save()
+/// and stores it with compression and optional encryption for complete lossless save/restore.
 #[tauri::command]
-pub async fn export_to_anafis_spread(
-    data: Vec<serde_json::Value>,
+pub async fn export_anafispread(
+    data: Value,
     file_path: String,
-    config: ExportConfig,
 ) -> Result<(), String> {
-    // Validate format
-    if !matches!(config.format, ExportFormat::AnaFisSpread) {
-        return Err("Invalid format for AnaFis Spreadsheet export".to_string());
-    }
+    // For .anafispread, we expect the IWorkbookData snapshot directly
+    let workbook_data = &data;
 
-    // Validate data structure - AnaFisSpread supports both single and multi-sheet
-    match config.data_structure {
-        DataStructure::Array2D | DataStructure::MultiSheetArray => {
-            // Supported formats
-        }
-        DataStructure::MultiSheetJson => {
-            return Err("AnaFis Spreadsheet export does not support MultiSheetJson data structure. Use MultiSheetArray format instead.".to_string());
-        }
-    }
-
-    // Filter data based on export options
-    let filtered_data = filter_data_by_options(&data, &config);
-
-    // Create comprehensive export structure
-    let export_data = json!({
+    // Create comprehensive export structure with metadata
+    let export_data = serde_json::json!({
         "version": "1.0",
         "format": "anafis_spreadsheet",
+        "compressed": true,
+        "encrypted": false,  // TODO: Add encryption support
         "metadata": {
             "created": chrono::Utc::now().to_rfc3339(),
-            "export_options": {
-                "include_formulas": config.options.include_formulas,
-                "include_formatting": config.options.include_formatting,
-                "include_metadata": config.options.include_metadata
-            }
+            "creator": "AnaFis",
+            "description": "Complete Univer workbook snapshot with full fidelity"
         },
-        "data": filtered_data
+        "workbook": workbook_data
     });
 
-    // Write to file with optional compression
-    let file = File::create(&file_path)
+    // Write to file with gzip compression (always compressed for .anafispread)
+    let mut file = File::create(&file_path)
         .map_err(|e| format!("Failed to create file: {}", e))?;
 
-    if config.options.compress {
-        // Compress with gzip
-        let encoder = GzEncoder::new(file, Compression::default());
-        let writer = BufWriter::new(encoder);
-        serde_json::to_writer_pretty(writer, &export_data)
-            .map_err(|e| format!("Failed to write compressed AnaFis Spreadsheet file: {}", e))?;
-    } else {
-        // Write uncompressed
-        serde_json::to_writer_pretty(file, &export_data)
-            .map_err(|e| format!("Failed to write AnaFis Spreadsheet file: {}", e))?;
-    }
+    // Write magic number to identify file type
+    file.write_all(MAGIC_NUMBER)
+        .map_err(|e| format!("Failed to write magic number: {}", e))?;
+
+    // Write format version (u32, little-endian)
+    file.write_all(&FORMAT_VERSION.to_le_bytes())
+        .map_err(|e| format!("Failed to write version: {}", e))?;
+
+    // Now write the compressed JSON data
+    let encoder = GzEncoder::new(file, Compression::default());
+    let writer = BufWriter::new(encoder);
+    serde_json::to_writer(writer, &export_data)
+        .map_err(|e| format!("Failed to write AnaFis Spreadsheet file: {}", e))?;
 
     Ok(())
-}
-
-/// Filter data based on export options
-fn filter_data_by_options(data: &[serde_json::Value], config: &ExportConfig) -> Vec<serde_json::Value> {
-    data.iter().map(|item| {
-        if let Some(sheet_obj) = item.as_object() {
-            // Multi-sheet format: { name: string, data: array }
-            if let (Some(name), Some(sheet_data)) = (sheet_obj.get("name"), sheet_obj.get("data")) {
-                if let Some(data_array) = sheet_data.as_array() {
-                    let filtered_sheet_data = filter_sheet_data(data_array, config);
-                    let mut new_sheet_obj = serde_json::Map::new();
-                    new_sheet_obj.insert("name".to_string(), name.clone());
-                    new_sheet_obj.insert("data".to_string(), serde_json::Value::Array(filtered_sheet_data));
-                    serde_json::Value::Object(new_sheet_obj)
-                } else {
-                    item.clone()
-                }
-            } else {
-                item.clone()
-            }
-        } else if let Some(data_array) = item.as_array() {
-            // Single sheet format: array of arrays
-            let filtered_data = filter_sheet_data(data_array, config);
-            serde_json::Value::Array(filtered_data)
-        } else {
-            item.clone()
-        }
-    }).collect()
-}
-
-/// Filter sheet data (array of rows) based on export options
-fn filter_sheet_data(data: &[serde_json::Value], config: &ExportConfig) -> Vec<serde_json::Value> {
-    data.iter().map(|row| {
-        if let Some(row_array) = row.as_array() {
-            let filtered_row: Vec<serde_json::Value> = row_array.iter().map(|cell| {
-                filter_cell(cell, config)
-            }).collect();
-            serde_json::Value::Array(filtered_row)
-        } else {
-            row.clone()
-        }
-    }).collect()
-}
-
-/// Filter individual cell based on export options
-fn filter_cell(cell: &serde_json::Value, config: &ExportConfig) -> serde_json::Value {
-    if let Some(cell_obj) = cell.as_object() {
-        let mut filtered_cell = serde_json::Map::new();
-
-        // Always include value
-        if let Some(v) = cell_obj.get("v") {
-            filtered_cell.insert("v".to_string(), v.clone());
-        }
-
-        // Include formula only if requested
-        if config.options.include_formulas {
-            if let Some(f) = cell_obj.get("f") {
-                filtered_cell.insert("f".to_string(), f.clone());
-            }
-        }
-
-        // Include formatting only if requested
-        if config.options.include_formatting {
-            if let Some(style) = cell_obj.get("style") {
-                filtered_cell.insert("style".to_string(), style.clone());
-            }
-        }
-
-        // Include metadata only if requested
-        if config.options.include_metadata {
-            if let Some(meta) = cell_obj.get("meta") {
-                filtered_cell.insert("meta".to_string(), meta.clone());
-            }
-        }
-
-        if filtered_cell.is_empty() {
-            // If no data to include, return the original value if it's just a simple value
-            if cell_obj.contains_key("v") && cell_obj.len() == 1 {
-                cell_obj.get("v").unwrap_or(cell).clone()
-            } else {
-                serde_json::Value::Object(filtered_cell)
-            }
-        } else {
-            serde_json::Value::Object(filtered_cell)
-        }
-    } else {
-        // Simple value cell
-        cell.clone()
-    }
 }

@@ -1,7 +1,8 @@
 // dataConversion.ts - Data conversion utilities for Facade API
 import { IWorkbookData, ICellData, LocaleType, Nullable, IStyleData, IObjectMatrixPrimitiveType } from '@univerjs/core';
-import { WorkbookData, CellValue } from '../SpreadsheetInterface';
-import { cellRefToIndices } from './univerUtils';
+import { WorkbookData, CellValue } from '@/components/spreadsheet/SpreadsheetInterface';
+import { parseCellRef } from '../index';
+import { ERROR_MESSAGES } from './constants';
 
 /**
  * Type guard to check if a value is a valid cell style
@@ -44,8 +45,10 @@ function convertCellValueToICellData(cellValue: CellValue): ICellData {
   }
 
   // Handle style with type checking
-  if (cellValue.style !== undefined && isValidCellStyle(cellValue.style)) {
-    univerCell.s = cellValue.style;
+  // Support both abstract format (style) and direct Univer format (s)
+  const styleData = cellValue.style ?? (cellValue as unknown as { s?: unknown }).s;
+  if (styleData !== undefined && isValidCellStyle(styleData)) {
+    univerCell.s = styleData;
   }
 
   // Handle meta fields with proper type guards
@@ -82,6 +85,29 @@ export function convertToUniverCellValue(cellValue: CellValue): ICellData {
 }
 
 /**
+ * Convert cell data from Record<string, CellValue> to nested IObjectMatrixPrimitiveType<ICellData>
+ * Structure: { [row: number]: { [col: number]: ICellData } }
+ */
+function convertCellDataToMatrix(cellDataRecord: Record<string, unknown>): IObjectMatrixPrimitiveType<ICellData> {
+  const cellData: IObjectMatrixPrimitiveType<ICellData> = {};
+  
+  Object.entries(cellDataRecord).forEach(([cellRef, cellValue]) => {
+    const indices = parseCellRef(cellRef);
+    if (indices) {
+      const { row, col } = indices;
+      // Initialize row object if it doesn't exist
+      cellData[row] ??= {};
+      // Set the cell data at the specific row and column
+      cellData[row][col] = convertCellValueToICellData(cellValue as CellValue);
+    } else {
+      console.warn(`Invalid cell reference: ${cellRef}`);
+    }
+  });
+  
+  return cellData;
+}
+
+/**
  * Convert abstract WorkbookData to Univer IWorkbookData
  */
 export function convertToUniverData(data: WorkbookData): IWorkbookData {
@@ -89,26 +115,10 @@ export function convertToUniverData(data: WorkbookData): IWorkbookData {
   const sheet = data.sheets[sheetId];
 
   if (!sheet) {
-    throw new Error(`Sheet with ID ${sheetId} not found`);
+    throw new Error(ERROR_MESSAGES.SHEET_ID_NOT_FOUND(sheetId));
   }
 
-  // Convert cellData from Record<string, CellValue> to nested IObjectMatrixPrimitiveType<ICellData>
-  // Structure: { [row: number]: { [col: number]: ICellData } }
-  const cellData: IObjectMatrixPrimitiveType<ICellData> = {};
-  if (sheet.cellData) {
-    Object.entries(sheet.cellData).forEach(([cellRef, cellValue]) => {
-      const indices = cellRefToIndices(cellRef);
-      if (indices) {
-        const { row, col } = indices;
-        // Initialize row object if it doesn't exist
-        cellData[row] ??= {};
-        // Set the cell data at the specific row and column
-        cellData[row][col] = convertCellValueToICellData(cellValue);
-      } else {
-        console.warn(`Invalid cell reference: ${cellRef}`);
-      }
-    });
-  }
+  const cellData = sheet.cellData ? convertCellDataToMatrix(sheet.cellData) : {};
 
   // Convert styles with proper type checking
   const styles: Record<string, Nullable<IStyleData>> = {};
@@ -140,6 +150,69 @@ export function convertToUniverData(data: WorkbookData): IWorkbookData {
 }
 
 /**
+ * Convert abstract WorkbookData to Univer IWorkbookData with support for multiple sheets
+ */
+export function convertToUniverDataMultiSheet(data: WorkbookData): IWorkbookData {
+  // Convert styles with proper type checking
+  const styles: Record<string, Nullable<IStyleData>> = {};
+  if (data.styles && typeof data.styles === 'object') {
+    Object.entries(data.styles).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        styles[key] = value as Nullable<IStyleData>;
+      }
+    });
+  }
+
+  // Convert all sheets
+  const sheets: Record<string, unknown> = {};
+  const sheetOrder: string[] = [];
+
+  Object.entries(data.sheets).forEach(([sheetId, sheet]) => {
+    const cellData = sheet.cellData ? convertCellDataToMatrix(sheet.cellData) : {};
+    
+    // Create base sheet object with converted cell data
+    const sheetObj: Record<string, unknown> = {
+      id: sheetId,
+      name: sheet.name,
+      cellData,
+      rowCount: sheet.rowCount ?? 1000,
+      columnCount: sheet.columnCount ?? 26,
+    };
+    
+    // Copy over additional properties from sheet (like mergeData, etc.)
+    // This allows sheet-specific data to be preserved through conversion
+    Object.entries(sheet).forEach(([key, value]) => {
+      // Skip properties we've already handled
+      if (!['id', 'name', 'cellData', 'rowCount', 'columnCount'].includes(key)) {
+        sheetObj[key] = value;
+      }
+    });
+    
+    sheets[sheetId] = sheetObj;
+    sheetOrder.push(sheetId);
+  });
+
+  const result: Record<string, unknown> = {
+    id: data.id,
+    name: data.name,
+    appVersion: data.appVersion ?? '1.0.0',
+    locale: getUniverLocale(data.locale),
+    styles,
+    sheets,
+    sheetOrder,
+  };
+  
+  // Copy over any additional workbook-level properties
+  Object.entries(data).forEach(([key, value]) => {
+    if (!['id', 'name', 'appVersion', 'locale', 'styles', 'sheets', 'sheetOrder'].includes(key)) {
+      result[key] = value;
+    }
+  });
+
+  return result as unknown as IWorkbookData;
+}
+
+/**
  * Convert abstract locale to Univer LocaleType
  */
 export function getUniverLocale(locale?: string): LocaleType {
@@ -153,6 +226,24 @@ export function getUniverLocale(locale?: string): LocaleType {
     default:
       return LocaleType.EN_US;
   }
+}
+
+/**
+ * Convert simple 2D array of values to CellValue[][] format
+ * Used for importing simple data formats (CSV, TSV, etc.)
+ */
+export function convertSimpleArrayToCellValues(data: unknown[][]): CellValue[][] {
+  return data.map(row =>
+    row.map(cell => {
+      if (cell === null || cell === undefined) {
+        return { v: null };
+      }
+      if (typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean') {
+        return { v: cell };
+      }
+      return { v: null };
+    })
+  );
 }
 
 /**

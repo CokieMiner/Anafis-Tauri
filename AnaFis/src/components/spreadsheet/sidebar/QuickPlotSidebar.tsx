@@ -40,7 +40,7 @@ const ExportIcon = ImageIcon;
 interface QuickPlotSidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef?: React.RefObject<SpreadsheetRef | null>;
+  spreadsheetRef?: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   // Lifted state for persistence
   xRange: string;
@@ -64,7 +64,7 @@ type FocusedInputType = 'xRange' | 'yRange' | 'errorRange' | null;
 const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
   open,
   onClose,
-  univerRef,
+  spreadsheetRef,
   onSelectionChange,
   xRange,
   setXRange,
@@ -186,7 +186,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
 
   // Extract data from spreadsheet and validate
   const extractAndValidateData = useCallback(async () => {
-    if (!univerRef?.current || !xRange || !yRange) {
+    if (!spreadsheetRef?.current || !xRange || !yRange) {
       setValidationError('Please specify both X and Y ranges');
       return false;
     }
@@ -196,7 +196,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
       setValidationError(null);
 
       // Get X data
-      const xValues = await univerRef.current.getRange(xRange);
+      const xValues = await spreadsheetRef.current.getRange(xRange);
       const xFlat = xValues.flat().map((v: unknown) => {
         const num = typeof v === 'number' ? v : parseFloat(String(v));
         // Round to prevent floating-point precision issues
@@ -204,7 +204,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
       }).filter(num => isFinite(num));
 
       // Get Y data
-      const yValues = await univerRef.current.getRange(yRange);
+      const yValues = await spreadsheetRef.current.getRange(yRange);
       const yFlat = yValues.flat().map((v: unknown) => {
         const num = typeof v === 'number' ? v : parseFloat(String(v));
         // Round to prevent floating-point precision issues
@@ -242,7 +242,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
       // Get error bars if enabled
       let errorFlat: number[] | undefined = undefined;
       if (showErrorBars && errorRange) {
-        const errorValues = await univerRef.current.getRange(errorRange);
+        const errorValues = await spreadsheetRef.current.getRange(errorRange);
         errorFlat = errorValues.flat().map((v: unknown) => {
           const num = typeof v === 'number' ? v : parseFloat(String(v));
           // Round and take absolute value to prevent precision issues
@@ -268,7 +268,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
     } finally {
       setIsPlotting(false);
     }
-  }, [univerRef, xRange, yRange, errorRange, showErrorBars]);
+  }, [spreadsheetRef, xRange, yRange, errorRange, showErrorBars]);
 
   // Helper function to generate chart options with optional theme override
   const generateChartOptions = useCallback((theme: 'dark' | 'light' = 'dark'): echarts.EChartsOption => {

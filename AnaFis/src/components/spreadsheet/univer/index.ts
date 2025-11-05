@@ -1,108 +1,150 @@
-// univer/index.ts - Optimized exports for better tree shaking and performance
+// univer/index.ts - Organized exports with clear structure
 
-// Primary components (most commonly used)
-export { UniverAdapter } from './UniverAdapter';
-export { default as UniverSpreadsheet } from './UniverSpreadsheet';
+// ============================================================================
+// CORE COMPONENTS
+// ============================================================================
+export { UniverAdapter } from './core/UniverAdapter';
+export { default as UniverSpreadsheet } from './core/UniverSpreadsheet';
+export { UniverErrorBoundary } from './core/UniverErrorBoundary';
 
-// Core utilities (frequently used)
+// ============================================================================
+// OPERATIONS
+// ============================================================================
+
+// Import/Export Services
 export {
-  columnToLetter,
-  letterToColumn,
-  parseRange,
-  rangeToA1,
-  cellRefToIndices,
-  clearAllCaches,
-  startPeriodicCacheCleanup,
-  stopPeriodicCacheCleanup
-} from './univerUtils';
+  ExportService,
+  type ExportResult,
+  type ExportFormat,
+  getFileExtension,
+  getFilterName
+} from './operations/exportService';
 
-// Alias for backward compatibility
-export { clearAllCaches as clearUtilCaches } from './univerUtils';
-
-// Error handling (essential)
 export {
-  UniverError,
-  UniverValidationError,
-  UniverOperationError,
-  safeUniverOperation,
-  isValidCellRef,
-  isValidRangeRef,
-  normalizeCellRef,
-  normalizeRangeRef,
-  clearValidationCache
-} from './errors';
+  ImportService,
+  type ImportFormat,
+  type ImportResult,
+  type FileMetadata
+} from './operations/importService';
 
-// Spreadsheet operations (core functionality)
+// Bulk Import Operations
+export {
+  bulkLoadSheetData,
+  bulkLoadSheetDataFromMatrix,
+  bulkLoadSheetDataWithOffset,
+  clearSheetData,
+  type ImportCellData,
+  type ImportSheetData,
+  type BulkImportOptions
+} from './operations/bulkImportOperations';
+
+// Facade Operations (Univer API wrappers)
 export {
   getWorkbook,
   updateCell,
   getCellValue,
   getRange,
   getRangeFull,
-  getAllSheetsData,
-  getSelection
-} from './spreadsheetOperations';
+  getSelection,
+  type UniverRef
+} from './operations/facadeOperations';
 
-// Re-export data conversion utilities explicitly for tree shaking
+// Uncertainty Operations (High-level uncertainty propagation)
+export {
+  validateUncertaintySetup,
+  runUncertaintyPropagation,
+  type ValidationResult,
+  type PropagationResult,
+  type Variable
+} from './operations/uncertaintyOperations';
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+
+// A1 Notation & Column Conversion
+export {
+  parseRange,
+  rangeToA1,
+  determineUsedRange,
+  rangesIntersect,
+  type RangeBounds
+} from './utils/univerUtils';
+
+// Range Utilities (re-exported from generic utils for convenience)
+export {
+  extractStartCell,
+  extractEndCell,
+  isSingleCell,
+  boundsToA1StartCell,
+  boundsToA1Range,
+  getRangeRowCount,
+  getRangeColumnCount
+} from './utils/rangeUtils';
+
+// Cell reference utilities
+export {
+  columnToLetter,
+  letterToColumn,
+  parseCellRef,
+  parseRangeOrCell
+} from './utils/cellUtils';
+
+// Data Conversion (Abstract ↔ Univer formats)
 export {
   convertToUniverCellValue,
   convertToUniverData,
+  convertToUniverDataMultiSheet,
   getUniverLocale,
-  convertFromUniverCellData
-} from './dataConversion';
+  convertFromUniverCellData,
+  convertSimpleArrayToCellValues
+} from './utils/dataConversion';
 
-// Re-export custom formulas explicitly for tree shaking
+// Validation
+export {
+  isValidCellRef,
+  isValidRangeRef,
+  normalizeCellRef,
+  normalizeRangeRef,
+  clearValidationCache
+} from './utils/validation';
+
+// Performance Monitoring
+export {
+  withPerformanceMonitoring
+} from './utils/performance';
+
+// ============================================================================
+// ERROR HANDLING
+// ============================================================================
+export {
+  SpreadsheetError,
+  SpreadsheetValidationError,
+  SpreadsheetOperationError,
+  handleSpreadsheetError,
+  safeSpreadsheetOperation
+} from './utils/errors';
+
+// ============================================================================
+// FORMULAS
+// ============================================================================
 export {
   registerCustomFunctions,
   CUSTOM_FUNCTION_NAMES
-} from './customFormulas';
+} from './formulas/customFormulas';
 
-// Re-export table format extraction explicitly for tree shaking
-export type {
-  CellFormatInfo,
-  BorderInfo,
-  ExtractionOptions,
-  FormattedTable
-} from './tableFormatExtraction';
+// ============================================================================
+// EXTERNAL TYPE RE-EXPORTS
+// ============================================================================
 export {
-  TableDataTransformer,
-  extractFormattedTable,
-  createTableTransformer
-} from './tableFormatExtraction';
-// Explicitly re-export from exportService to avoid conflicts
-export {
-  ExportService,
-  type ExportResult,
-  type ExportFormat,
-  type ExportRangeMode,
-  getFileExtension,
-  getFilterName
-} from './exportService';
-// Re-export other exportIntegration items without conflicts
-export {
-  type ExportConfig,
   type ExportOptions
-} from '../../../types/export';
+} from '@/types/export';
 
-// Facade is commonly used, so export directly
 export {
-  SpreadsheetFacade,
-  createSpreadsheetFacade,
-  getSpreadsheetFacade,
-  initializeFacade,
-  resetFacade,
-  type ISpreadsheetFacade
-} from './facade';
-
-// Alias for backward compatibility
-export {
-  SpreadsheetFacade as UniverFacade,
-  createSpreadsheetFacade as createUniverFacade,
-  getSpreadsheetFacade as getUniverFacade,
-  initializeFacade as initializeUniverFacade,
-  resetFacade as resetUniverFacade,
-  type ISpreadsheetFacade as IUniverFacade
-} from './facade';
-
-// Error boundaries for better error isolation
-export { LightweightErrorBoundary, UniverErrorBoundary, useErrorHandler } from './UniverErrorBoundary';
+  ErrorCode,
+  type ErrorResponse,
+  type CommandResult,
+  isErrorResponse,
+  getErrorMessage,
+  getDetailedErrorMessage
+} from '@/types/error';

@@ -1,27 +1,19 @@
-// Markdown format export
+// Markdown format export - simplified
 //
-// Handles exporting data to Markdown table format.
+// Exports data to Markdown table format (2D array)
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use serde_json::Value;
-use super::{ExportConfig, DataStructure};
+use super::ExportConfig;
 
-/// Export data to Markdown format
+/// Export data to Markdown format (simplified - expects 2D array)
 #[tauri::command]
 pub async fn export_to_markdown(
-    data: Vec<Vec<Value>>,
+    data: Vec<serde_json::Value>,
     file_path: String,
-    config: ExportConfig,
+    _config: ExportConfig,
 ) -> Result<(), String> {
-    // Validate data structure - Markdown only supports single-sheet 2D arrays
-    if !matches!(config.data_structure, DataStructure::Array2D) {
-        return Err(format!(
-            "Markdown export only supports single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
-            config.data_structure
-        ));
-    }
-
     if data.is_empty() {
         return Err("No data to export".to_string());
     }
@@ -33,8 +25,13 @@ pub async fn export_to_markdown(
 
     // Process data rows - all rows are treated as data
     for row in data.iter() {
+        let row_array = match row.as_array() {
+            Some(arr) => arr,
+            None => continue,
+        };
+
         // Format row cells
-        let formatted_cells: Vec<String> = row.iter().map(|cell| {
+        let formatted_cells: Vec<String> = row_array.iter().map(|cell| {
             let cell_content = match cell {
                 Value::String(s) => s.clone(),
                 Value::Number(n) => n.to_string(),

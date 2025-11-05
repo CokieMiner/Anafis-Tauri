@@ -36,6 +36,22 @@ export interface SaveSequenceRequest {
   is_pinned: boolean;
 }
 
+export interface BatchImportRequest {
+  sequences: SaveSequenceRequest[];
+}
+
+export interface BatchImportResponse {
+  version: string;
+  successful_imports: number;
+  failed_imports: number;
+  errors: Array<{
+    index: number;
+    sequence_name: string;
+    error: string;
+  }>;
+  imported_ids: string[];
+}
+
 export interface UpdateSequenceRequest {
   id: string;
   name?: string;
@@ -54,10 +70,18 @@ export interface SearchRequest {
   source?: string;
   sort_by: SortBy;
   sort_order: SortOrder;
+  page?: number;
+  page_size?: number;
 }
 
 export interface SequenceListResponse {
+  version: string;
   sequences: DataSequence[];
   total_count: number;
   pinned_count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
 }

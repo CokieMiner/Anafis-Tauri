@@ -20,9 +20,6 @@ pub enum AnaFisError {
 
     #[error("CSV processing error")]
     Csv(#[from] csv::Error),
-
-    #[error("Polars processing error: {0}")]
-    Polars(#[from] polars::error::PolarsError),
 }
 
 impl From<pyo3::PyErr> for AnaFisError {

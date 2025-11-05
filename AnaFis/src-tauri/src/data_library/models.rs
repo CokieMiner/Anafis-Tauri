@@ -43,6 +43,30 @@ pub struct SaveSequenceRequest {
     pub is_pinned: bool,
 }
 
+/// Batch import request for multiple sequences
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatchImportRequest {
+    pub sequences: Vec<SaveSequenceRequest>,
+}
+
+/// Batch import response with results for each sequence
+#[derive(Debug, Clone, Serialize)]
+pub struct BatchImportResponse {
+    pub version: String,
+    pub successful_imports: usize,
+    pub failed_imports: usize,
+    pub errors: Vec<BatchImportError>,
+    pub imported_ids: Vec<String>,
+}
+
+/// Error details for failed batch imports
+#[derive(Debug, Clone, Serialize)]
+pub struct BatchImportError {
+    pub index: usize,
+    pub sequence_name: String,
+    pub error: String,
+}
+
 /// Request to update an existing sequence
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateSequenceRequest {
@@ -62,6 +86,8 @@ pub struct SearchRequest {
     pub source: Option<String>,       // Filter by source
     pub sort_by: SortBy,
     pub sort_order: SortOrder,
+    pub page: Option<usize>,          // Page number (0-based)
+    pub page_size: Option<usize>,     // Number of items per page
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -88,6 +114,8 @@ impl Default for SearchRequest {
             source: None,
             sort_by: SortBy::DateModified,
             sort_order: SortOrder::Descending,
+            page: Some(0),
+            page_size: Some(50),
         }
     }
 }
@@ -95,7 +123,13 @@ impl Default for SearchRequest {
 /// Response containing sequences and metadata
 #[derive(Debug, Clone, Serialize)]
 pub struct SequenceListResponse {
+    pub version: String,
     pub sequences: Vec<DataSequence>,
     pub total_count: usize,
     pub pinned_count: usize,
+    pub page: usize,
+    pub page_size: usize,
+    pub total_pages: usize,
+    pub has_next: bool,
+    pub has_prev: bool,
 }

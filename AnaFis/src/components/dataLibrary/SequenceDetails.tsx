@@ -23,7 +23,7 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import SequenceChart from './SequenceChart';
-import type { DataSequence, SequenceStatistics } from '../../types/dataLibrary';
+import type { DataSequence, SequenceStatistics } from '@/types/dataLibrary';
 
 interface SequenceDetailsProps {
   sequence: DataSequence | null;

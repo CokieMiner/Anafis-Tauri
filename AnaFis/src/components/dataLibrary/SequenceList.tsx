@@ -16,7 +16,7 @@ import {
   CheckBox as CheckBoxIcon,
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
 } from '@mui/icons-material';
-import type { DataSequence } from '../../types/dataLibrary';
+import type { DataSequence } from '@/types/dataLibrary';
 
 // Static styles to prevent recreation
 const CONTAINER_STYLES = {

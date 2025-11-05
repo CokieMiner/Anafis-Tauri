@@ -6,8 +6,8 @@
 
 ## Overview
 
-A lightweight Tauri/Electron application that:
-1. Checks for Python 3.8+ installation
+A lightweight Tauri application that:
+1. Checks for Python 3.13 installation
 2. Installs Python + SymPy if missing
 3. Installs AnaFis main application
 4. Creates desktop shortcuts
@@ -68,7 +68,7 @@ anafis-installer/
    - Download or use bundled Python installer
    - Run Python installer with flags:
      ```
-     python-3.11.x-amd64.exe /quiet InstallAllUsers=1 PrependPath=1
+     python-3.13.x-amd64.exe /quiet InstallAllUsers=1 PrependPath=1
      ```
    - Wait for completion
    - Verify Python is accessible

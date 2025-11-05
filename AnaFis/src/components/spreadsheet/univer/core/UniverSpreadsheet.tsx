@@ -45,41 +45,13 @@ import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
 import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
 import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui';
 
-// LAYER 6: Data validation (depends on Sheets UI, Formula UI, Numfmt)
-import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation';
-import { UniverSheetsDataValidationUIPlugin } from '@univerjs/sheets-data-validation-ui';
-
-// LAYER 7: Conditional formatting (depends on Sheets UI)
-import { UniverSheetsConditionalFormattingPlugin } from '@univerjs/sheets-conditional-formatting';
-import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
-
-// LAYER 8: Filter functionality (depends on Sheets UI)
+// LAYER 6: Filter functionality (depends on Sheets UI)
 import { UniverSheetsFilterPlugin } from '@univerjs/sheets-filter';
 import { UniverSheetsFilterUIPlugin } from '@univerjs/sheets-filter-ui';
 
-// LAYER 9: Find & Replace (depends on UI)
+// LAYER 7: Find & Replace (depends on UI)
 import { UniverFindReplacePlugin } from '@univerjs/find-replace';
 import { UniverSheetsFindReplacePlugin } from '@univerjs/sheets-find-replace';
-
-// LAYER 10: Hyperlinks (depends on Sheets UI)
-import { UniverSheetsHyperLinkPlugin } from '@univerjs/sheets-hyper-link';
-import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
-
-// LAYER 11: Notes/Comments (depends on Sheets UI)
-import { UniverSheetsNotePlugin } from '@univerjs/sheets-note';
-import { UniverSheetsNoteUIPlugin } from '@univerjs/sheets-note-ui';
-
-// LAYER 12: Drawing (depends on Docs, Sheets)
-import { UniverDrawingPlugin } from '@univerjs/drawing';
-import { UniverDocsDrawingPlugin } from '@univerjs/docs-drawing';
-import { UniverDrawingUIPlugin } from '@univerjs/drawing-ui';
-import { UniverSheetsDrawingPlugin } from '@univerjs/sheets-drawing';
-import { UniverSheetsDrawingUIPlugin } from '@univerjs/sheets-drawing-ui';
-
-// LAYER 13: Thread Comments (highest dependencies - must be last)
-import { UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
-import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
-import { UniverSheetsThreadCommentUIPlugin } from '@univerjs/sheets-thread-comment-ui';
 
 // Import locales
 import docsUIEnUS from '@univerjs/docs-ui/locale/en-US';
@@ -89,13 +61,8 @@ import sheetsFormulaUIEnUS from '@univerjs/sheets-formula-ui/locale/en-US';
 import sheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
 import sheetsNumfmtUIEnUS from '@univerjs/sheets-numfmt-ui/locale/en-US';
 import uiEnUS from '@univerjs/ui/locale/en-US';
-import sheetsConditionalFormattingUIEnUS from '@univerjs/sheets-conditional-formatting-ui/locale/en-US';
 import sheetsFilterUIEnUS from '@univerjs/sheets-filter-ui/locale/en-US';
 import findReplaceEnUS from '@univerjs/find-replace/locale/en-US';
-import sheetsHyperLinkUIEnUS from '@univerjs/sheets-hyper-link-ui/locale/en-US';
-import sheetsDrawingUIEnUS from '@univerjs/sheets-drawing-ui/locale/en-US';
-import sheetsThreadCommentUIEnUS from '@univerjs/sheets-thread-comment-ui/locale/en-US';
-import sheetsDataValidationUIEnUS from '@univerjs/sheets-data-validation-ui/locale/en-US';
 
 // Import styles FIRST - before Facade APIs
 // Styles must be loaded before Facade initialization
@@ -117,10 +84,12 @@ import '@univerjs/sheets-ui/facade';
 import '@univerjs/sheets-formula/facade';
 import '@univerjs/sheets-numfmt/facade';
 
-import { registerCustomFunctions } from './customFormulas';
-
-// Import optimized utilities
-import { rangeToA1, cellRefToIndices, parseRange, startPeriodicCacheCleanup, stopPeriodicCacheCleanup } from './univerUtils';
+import { 
+  registerCustomFunctions,
+  rangeToA1,
+  parseCellRef,
+  parseRange
+} from '../index';
 
 interface Props {
     initialData: IWorkbookData;
@@ -173,7 +142,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                     const instanceService = injector.get(IUniverInstanceService);
                     const workbook = instanceService.getFocusedUnit() as Workbook;
                     const activeSheet = workbook.getActiveSheet();
-                    const indices = cellRefToIndices(cellRef);
+                    const indices = parseCellRef(cellRef);
                     if (!indices) { return; }
 
                     const { row, col: colIndex } = indices;
@@ -203,7 +172,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                     const instanceService = injector.get(IUniverInstanceService);
                     const workbook = instanceService.getFocusedUnit() as Workbook;
                     const activeSheet = workbook.getActiveSheet();
-                    const indices = cellRefToIndices(cellRef);
+                    const indices = parseCellRef(cellRef);
                     if (!indices) { return null; }
 
                     const { row, col: colIndex } = indices;
@@ -283,76 +252,36 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                         sheetsUIEnUS,
                         sheetsNumfmtUIEnUS,
                         uiEnUS,
-                        sheetsConditionalFormattingUIEnUS,
                         sheetsFilterUIEnUS,
-                        findReplaceEnUS,
-                        sheetsHyperLinkUIEnUS,
-                        sheetsDrawingUIEnUS,
-                        sheetsThreadCommentUIEnUS,
-                        sheetsDataValidationUIEnUS
+                        findReplaceEnUS
                     ),
                 },
             });
 
-            // Register plugins in the correct dependency order
-            // LAYER 1: Core infrastructure (no dependencies on other plugins)
+            // Register plugins in dependency order (simplified)
+            // Core infrastructure
             univer.registerPlugin(UniverRenderEnginePlugin);
             univer.registerPlugin(UniverFormulaEnginePlugin);
-            univer.registerPlugin(UniverNetworkPlugin); // Only depends on @univerjs/core
+            univer.registerPlugin(UniverNetworkPlugin);
 
-            // LAYER 2: UI and Document foundation
+            // UI foundation
             univer.registerPlugin(UniverUIPlugin, { container: containerIdRef.current });
             univer.registerPlugin(UniverDocsPlugin, { hasScroll: false });
             univer.registerPlugin(UniverDocsUIPlugin);
 
-            // LAYER 3: Base Sheets (depends on Docs, UI, Engines)
+            // Sheets functionality
             univer.registerPlugin(UniverSheetsPlugin);
-            univer.registerPlugin(UniverSheetsUIPlugin); // Depends on: sheets, docs-ui, ui, telemetry
-
-            // LAYER 4: Formula extensions (depends on Sheets UI)
+            univer.registerPlugin(UniverSheetsUIPlugin);
             univer.registerPlugin(UniverSheetsFormulaPlugin);
             univer.registerPlugin(UniverSheetsFormulaUIPlugin);
-
-            // LAYER 5: Number formatting (depends on Sheets UI)
             univer.registerPlugin(UniverSheetsNumfmtPlugin);
             univer.registerPlugin(UniverSheetsNumfmtUIPlugin);
-
-            // LAYER 6: Data validation (depends on Sheets UI, Formula UI, Numfmt)
-            univer.registerPlugin(UniverSheetsDataValidationPlugin);
-            univer.registerPlugin(UniverSheetsDataValidationUIPlugin);
-
-            // LAYER 7: Conditional formatting (depends on Sheets UI)
-            univer.registerPlugin(UniverSheetsConditionalFormattingPlugin);
-            univer.registerPlugin(UniverSheetsConditionalFormattingUIPlugin);
-
-            // LAYER 8: Filter functionality (depends on Sheets UI)
             univer.registerPlugin(UniverSheetsFilterPlugin);
             univer.registerPlugin(UniverSheetsFilterUIPlugin);
 
-            // LAYER 9: Find & Replace (depends on UI)
+            // Find & Replace
             univer.registerPlugin(UniverFindReplacePlugin);
             univer.registerPlugin(UniverSheetsFindReplacePlugin);
-
-            // LAYER 10: Hyperlinks (depends on Sheets UI)
-            univer.registerPlugin(UniverSheetsHyperLinkPlugin);
-            univer.registerPlugin(UniverSheetsHyperLinkUIPlugin);
-
-            // LAYER 11: Notes/Comments (depends on Sheets UI)
-            univer.registerPlugin(UniverSheetsNotePlugin);
-            univer.registerPlugin(UniverSheetsNoteUIPlugin);
-
-            // LAYER 12: Drawing (depends on Docs, Sheets)
-            univer.registerPlugin(UniverDrawingPlugin, { override: [] });
-            univer.registerPlugin(UniverDocsDrawingPlugin);
-            univer.registerPlugin(UniverDrawingUIPlugin);
-            univer.registerPlugin(UniverSheetsDrawingPlugin);
-            univer.registerPlugin(UniverSheetsDrawingUIPlugin);
-
-            // LAYER 13: Thread Comments (depends on Sheets UI and thread-comment base)
-            // Must be last - depends on almost everything including sheets-ui
-            univer.registerPlugin(UniverThreadCommentUIPlugin);
-            univer.registerPlugin(UniverSheetsThreadCommentPlugin);
-            univer.registerPlugin(UniverSheetsThreadCommentUIPlugin);
 
             univerRef.current = univer;
 
@@ -366,124 +295,52 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
             registerCustomFunctions(formulaEngine);
             const commandService = injector.get(ICommandService);
 
-            // Start periodic cache cleanup for long-running sessions  
-            startPeriodicCacheCleanup();
-
             // Disposal flag to prevent handlers from running after cleanup
             let isDisposed = false;
 
-            // Track selection changes
-            const selectionDisposable = commandService.onCommandExecuted((command: ICommandInfo) => {
-                if (isDisposed) { 
-                    return; 
-                } // Guard against post-cleanup execution
-                
+            // Simplified event handling
+            const handleCommand = (command: ICommandInfo) => {
+                if (isDisposed) {return;}
+
+                // Selection changes
                 if (command.id === 'sheet.operation.set-selections') {
                     const params = command.params as { selections?: Array<{ range?: IRange }> };
-                    if (params.selections && params.selections.length > 0) {
-                        const selection = params.selections[0];
-                        if (selection?.range) {
-                            try {
-                                const cellRef = rangeToA1(selection.range);
-                                onSelectionChangeRef.current!(cellRef);
-                            } catch (error) {
-                                console.warn('[UniverSpreadsheet] Error converting selection range to A1:', error);
-                            }
+                    if (params.selections?.[0]?.range) {
+                        try {
+                            const cellRef = rangeToA1(params.selections[0].range);
+                            onSelectionChangeRef.current!(cellRef);
+                        } catch (error) {
+                            console.warn('[UniverSpreadsheet] Error converting selection range:', error);
                         }
                     }
-                }
-            });
-
-            // Helper function to handle cell change events from both command types
-            const handleCellChangeCommand = (command: ICommandInfo, commandType: 'mutation' | 'command') => {
-                if (isDisposed) {return;} // Guard against post-cleanup execution
-                
-                const params = command.params as { range?: IRange; value?: ICellData[][] };
-                if (!params.range) {
-                    // Some internal Univer operations don't provide range - this is normal
                     return;
                 }
 
-                try {
-                    const cellRef = rangeToA1(params.range);
+                // Cell changes and formula interception
+                if (command.id === 'sheet.mutation.set-range-values' || command.id === 'sheet.command.set-range-values') {
+                    const params = command.params as { range?: IRange; value?: ICellData[][] };
+                    if (!params.range) {return;}
 
-                    // For mutation commands, we have the actual cell data
-                    if (commandType === 'mutation' && params.value) {
-                        // Defensive validation: ensure params.value is a valid 2D array with at least one cell
-                        if (!Array.isArray(params.value) || params.value.length === 0) {
-                            if (process.env.NODE_ENV === 'development') {
-                                console.warn('[UniverSpreadsheet] set-range-values: params.value is not a valid array or is empty');
-                            }
-                            return;
+                    try {
+                        const cellRef = rangeToA1(params.range);
+                        const cellValue = params.value?.[0]?.[0];
+
+                        // Handle formula interception
+                        if (cellValue?.v && typeof cellValue.v === 'string' && cellValue.v.startsWith('=')) {
+                            onFormulaInterceptRef.current(cellRef, cellValue.v);
                         }
 
-                        const firstRow = params.value[0];
-                        if (!Array.isArray(firstRow) || firstRow.length === 0) {
-                            if (process.env.NODE_ENV === 'development') {
-                                console.warn('[UniverSpreadsheet] set-range-values: first row is not a valid array or is empty');
-                            }
-                            return;
+                        // Handle cell change for mutations
+                        if (command.id === 'sheet.mutation.set-range-values' && cellValue) {
+                            onCellChangeRef.current(cellRef, cellValue);
                         }
-
-                        const firstCell = firstRow[0];
-                        if (firstCell === undefined) {
-                            if (process.env.NODE_ENV === 'development') {
-                                console.warn('[UniverSpreadsheet] set-range-values: first cell is undefined or null');
-                            }
-                            return;
-                        }
-
-                        const value = firstCell;
-
-                        if (value.v !== undefined && value.v !== null) {
-                            if (typeof value.v !== 'string') {
-                                onCellChangeRef.current(cellRef, value);
-                            } else if (!value.v.startsWith('=')) {
-                                onCellChangeRef.current(cellRef, value);
-                            }
-                        }
-                    } else if (commandType === 'command') {
-                        // For command events, we don't have the cell data but we still need to trigger bounds update
-                        // Create a minimal cell data object to trigger bounds tracking
-                        const minimalCellData: ICellData = { v: null };
-                        onCellChangeRef.current(cellRef, minimalCellData);
+                    } catch (error) {
+                        console.warn('[UniverSpreadsheet] Error handling cell command:', error);
                     }
-                } catch (error) {
-                    console.warn(`[UniverSpreadsheet] Error converting range to A1 in ${commandType} set-range-values:`, error);
                 }
             };
 
-            // Listen to both mutation and command events for comprehensive bounds tracking
-            const afterCommandDisposable = commandService.onCommandExecuted((command: ICommandInfo) => {
-                if (isDisposed) {return;} // Guard against post-cleanup execution
-                
-                if (command.id === 'sheet.mutation.set-range-values') {
-                    handleCellChangeCommand(command, 'mutation');
-                } else if (command.id === 'sheet.command.set-range-values') {
-                    handleCellChangeCommand(command, 'command');
-                }
-            });
-
-            // Separate handler for formula interception to avoid conflicts with cell change handling
-            const editingDisposable = commandService.onCommandExecuted((command: ICommandInfo) => {
-                if (isDisposed) {return;} // Guard against post-cleanup execution
-                
-                // Handle formula interception for both command types
-                if (command.id === 'sheet.command.set-range-values' || command.id === 'sheet.mutation.set-range-values') {
-                    const params = command.params as { range?: IRange; value?: ICellData[][] };
-                    const cellValue = params.value?.[0]?.[0];
-
-                    // Only intercept formulas (strings starting with '=')
-                    if (cellValue?.v && typeof cellValue.v === 'string' && cellValue.v.startsWith('=') && params.range) {
-                        try {
-                            const cellRef = rangeToA1(params.range);
-                            onFormulaInterceptRef.current(cellRef, cellValue.v);
-                        } catch (error) {
-                            console.warn('[UniverSpreadsheet] Error converting range to A1 in formula intercept:', error);
-                        }
-                    }
-                }
-            });
+            const commandDisposable = commandService.onCommandExecuted(handleCommand);
 
             // Notify parent that Univer is ready
             if (onUniverReadyRef.current) {
@@ -498,12 +355,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                     console.log('Cleaning up Univer...');
                 }
 
-                // Stop periodic cache cleanup
-                stopPeriodicCacheCleanup();
-
-                selectionDisposable.dispose();
-                afterCommandDisposable.dispose();
-                editingDisposable.dispose();
+                commandDisposable.dispose();
 
                 if (univerRef.current) {
                     if (process.env.NODE_ENV === 'development') {

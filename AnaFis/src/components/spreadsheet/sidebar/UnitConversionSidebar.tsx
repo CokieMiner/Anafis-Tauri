@@ -25,11 +25,12 @@ import { sidebarStyles } from '@/utils/sidebarStyles';
 import SidebarCard from './SidebarCard';
 import { anafisColors } from '@/themes';
 import { spreadsheetEventBus } from '../SpreadsheetEventBus';
+import { extractStartCell } from '../univer/utils/rangeUtils';
 
 interface UnitConversionSidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef?: React.RefObject<SpreadsheetRef | null>;
+  spreadsheetRef?: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   // Lifted state for persistence
   category: string;
@@ -157,7 +158,7 @@ const rangesOverlap = (range1: string, range2: string): boolean => {
 const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
   open,
   onClose,
-  univerRef,
+  spreadsheetRef,
   onSelectionChange,
   category,
   setCategory,
@@ -376,10 +377,10 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     if (inputType === 'number') {
       numValue = parseFloat(input);
     } else { // inputType === 'cell'
-      if (!univerRef?.current) {
+      if (!spreadsheetRef?.current) {
         throw new Error('Spreadsheet not available');
       }
-      const cellValue = await univerRef.current.getCellValue(input);
+      const cellValue = await spreadsheetRef.current.getCellValue(input);
       if (cellValue === null) {
         throw new Error(`Cell ${input} is empty`);
       }
@@ -397,13 +398,13 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     const isConversionRate = value.trim() === '';
     const prefix = isConversionRate ? `Conversion rate: 1 ${fromUnit} = ` : '';
     setResult(`${prefix}${conversionResult.value.toFixed(6)} ${toUnit}`);
-  }, [fromUnit, toUnit, value, univerRef]);
+  }, [fromUnit, toUnit, value, spreadsheetRef]);
 
   const handleInPlaceReplacement = useCallback(async (cellRef: string) => {
-    if (!univerRef?.current) {
+    if (!spreadsheetRef?.current) {
       throw new Error('Spreadsheet not available');
     }
-    const cellValue = await univerRef.current.getCellValue(cellRef);
+    const cellValue = await spreadsheetRef.current.getCellValue(cellRef);
 
     // Convert calculated result (works for both numbers and formulas)
     const numValue = typeof cellValue === 'number' ? cellValue : parseFloat(String(cellValue));
@@ -421,10 +422,10 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     const convertedValue = numValue * conversionFactor;
 
     // OPTIMIZED: Direct update instead of clear + set (removes double update)
-    await univerRef.current.updateCell(cellRef, { v: convertedValue });
+    await spreadsheetRef.current.updateCell(cellRef, { v: convertedValue });
 
     setResult(`Replaced ${cellRef}: ${numValue} ${fromUnit} → ${convertedValue.toFixed(6)} ${toUnit} (factor: ${conversionFactor.toFixed(6)})`);
-  }, [fromUnit, toUnit, univerRef]);
+  }, [fromUnit, toUnit, spreadsheetRef]);
 
   const handleFillOutput = useCallback(async (fromInput: string, toInput: string, fromType: string, toType: string) => {
     // Get the value to convert
@@ -432,10 +433,10 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     if (fromType === 'number') {
       numValue = parseFloat(fromInput);
     } else { // fromType === 'cell'
-      if (!univerRef?.current) {
+      if (!spreadsheetRef?.current) {
         throw new Error('Spreadsheet not available');
       }
-      const cellValue = await univerRef.current.getCellValue(fromInput);
+      const cellValue = await spreadsheetRef.current.getCellValue(fromInput);
       if (cellValue === null) {
         throw new Error(`Cell ${fromInput} is empty`);
       }
@@ -451,13 +452,13 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     });
 
     // Fill output cells
-    if (!univerRef?.current) {
+    if (!spreadsheetRef?.current) {
       throw new Error('Spreadsheet not available');
     }
 
     if (toType === 'cell') {
       // Single cell output
-      await univerRef.current.updateCell(toInput, { v: conversionResult.value });
+      await spreadsheetRef.current.updateCell(toInput, { v: conversionResult.value });
     } else { // toType === 'range'
       // Range output - use efficient range update instead of individual cells
       const rangeFormat = getRangeFormat(toInput);
@@ -465,11 +466,13 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
       const values: CellValue[][] = Array.from({ length: rangeFormat.rows }, () =>
         Array.from({ length: rangeFormat.cols }, () => ({ v: conversionResult.value }))
       );
-      await univerRef.current.updateRange(toInput, values);
+      // Extract starting cell from range (e.g., "R10:R15" → "R10")
+      const startCell = extractStartCell(toInput);
+      await spreadsheetRef.current.updateRange(startCell, values);
     }
 
-    setResult(`Filled ${toType === 'cell' ? '1 cell' : `${parseRange(toInput).length} cells`} with ${conversionResult.value.toFixed(6)} ${toUnit}`);
-  }, [fromUnit, toUnit, univerRef]);
+    setResult(`Filled ${toType === 'cell' ? '1 cell' : `${getRangeFormat(toInput).rows * getRangeFormat(toInput).cols} cells`} with ${conversionResult.value.toFixed(6)} ${toUnit}`);
+  }, [fromUnit, toUnit, spreadsheetRef]);
 
   const handleSameRangeConversion = useCallback(async (range: string) => {
     // Get conversion factor
@@ -478,12 +481,12 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     });
     const conversionFactor = conversionResult.value;
 
-    if (!univerRef?.current) {
+    if (!spreadsheetRef?.current) {
       throw new Error('Spreadsheet reference not available');
     }
 
     // OPTIMIZED: Read entire range at once
-    const rangeData = await univerRef.current.getRange(range);
+    const rangeData = await spreadsheetRef.current.getRange(range);
 
     // Process and convert all values
     const convertedData = rangeData.map(row =>
@@ -501,8 +504,12 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
       })
     );
 
+    // Extract starting cell from range (e.g., "R10:R15" → "R10")
+    // updateRange expects only the starting cell, not the full range
+    const startCell = extractStartCell(range);
+    
     // OPTIMIZED: Single range update instead of individual cell updates
-    await univerRef.current.updateRange(range, convertedData);
+    await spreadsheetRef.current.updateRange(startCell, convertedData);
 
     const totalCells = rangeData.flat().length;
     const convertedCount = convertedData.flat().filter(cell =>
@@ -510,7 +517,7 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     ).length;
 
     setResult(`Applied conversion factor ${conversionFactor.toFixed(6)} to ${convertedCount}/${totalCells} cells in ${range}`);
-  }, [fromUnit, toUnit, univerRef]);
+  }, [fromUnit, toUnit, spreadsheetRef]);
 
   const handleRangeToRange = useCallback(async (fromRange: string, toRange: string) => {
     const fromCells = parseRange(fromRange);
@@ -540,10 +547,10 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     }
 
     // OPTIMIZED: Read entire range at once instead of individual cells
-    if (!univerRef?.current) {
+    if (!spreadsheetRef?.current) {
       throw new Error('Spreadsheet not available');
     }
-    const rangeData = await univerRef.current.getRange(fromRange);
+    const rangeData = await spreadsheetRef.current.getRange(fromRange);
 
     const values: number[] = [];
     const cellMapping: Array<{ fromCell: string; toCell: string; value: number; isFormula: boolean }> = [];
@@ -619,7 +626,9 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
       }
 
       // Single range update instead of multiple cell updates
-      await univerRef.current.updateRange(toRange, rangeValues);
+      // Extract starting cell from toRange (e.g., "R10:R15" → "R10")
+      const startCell = extractStartCell(toRange);
+      await spreadsheetRef.current.updateRange(startCell, rangeValues);
     } else {
       // Fallback to individual cell updates for irregular mappings
       for (let i = 0; i < cellMapping.length; i++) {
@@ -630,13 +639,13 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
 
         const conversionResult = conversionResults[i];
         if (conversionResult !== undefined) {
-          await univerRef.current.updateCell(mapping.toCell, { v: conversionResult.value });
+          await spreadsheetRef.current.updateCell(mapping.toCell, { v: conversionResult.value });
         }
       }
     }
 
     setResult(`Converted ${values.length} values from ${fromRange} to ${toRange}`);
-  }, [fromUnit, toUnit, univerRef, handleSameRangeConversion]);
+  }, [fromUnit, toUnit, spreadsheetRef, handleSameRangeConversion]);
 
   const applyConversionLogic = useCallback(async (fromInput: string, toInput: string, fromType: string, toType: string) => {
     // Rule 1: Number/Cell + Empty → Display result in sidebar
@@ -680,8 +689,8 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
       return;
     }
 
-    // Check if Facade API is ready for cell operations
-    if (univerRef?.current && !univerRef.current.isFacadeReady()) {
+    // Check if spreadsheet implementation is ready for cell operations
+    if (spreadsheetRef?.current && !spreadsheetRef.current.isReady()) {
       setError('Spreadsheet is not ready for cell operations. Please wait a moment and try again.');
       return;
     }
@@ -703,7 +712,7 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
     } finally {
       setIsConverting(false);
     }
-  }, [value, outputTarget, fromUnit, toUnit, univerRef, getInputType, applyConversionLogic]);
+  }, [value, outputTarget, fromUnit, toUnit, spreadsheetRef, getInputType, applyConversionLogic]);
 
 
 

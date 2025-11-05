@@ -1,33 +1,24 @@
-// Apache Parquet (.parquet) export
+// Apache Parquet (.parquet) export - using arrow directly
 //
-// Handles exporting data to Apache Parquet format.
-// Uses the polars crate for efficient columnar storage.
+// Exports data to Apache Parquet columnar format (2D array)
 
 use std::fs::File;
+use std::sync::Arc;
 use serde_json::Value;
-use polars::prelude::*;
-use super::{ExportConfig, ExportFormat, DataStructure};
+use arrow::array::{ArrayRef, StringArray};
+use arrow::datatypes::{DataType, Field, Schema};
+use arrow::record_batch::RecordBatch;
+use parquet::arrow::ArrowWriter;
+use parquet::file::properties::WriterProperties;
+use super::ExportConfig;
 
-/// Export data to Apache Parquet (.parquet) format
+/// Export data to Apache Parquet (.parquet) format (simplified - expects 2D array)
 #[tauri::command]
 pub async fn export_to_parquet(
     data: Vec<serde_json::Value>,
     file_path: String,
-    config: ExportConfig,
+    _config: ExportConfig,
 ) -> Result<(), String> {
-    // Validate format
-    if !matches!(config.format, ExportFormat::Parquet) {
-        return Err("Invalid format for Parquet export".to_string());
-    }
-
-    // Validate data structure - Parquet only supports single-sheet 2D arrays
-    if !matches!(config.data_structure, DataStructure::Array2D) {
-        return Err(format!(
-            "Parquet export only supports single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
-            config.data_structure
-        ));
-    }
-
     // Determine the maximum number of columns
     let max_cols = data.iter()
         .filter_map(|row| row.as_array())
@@ -39,56 +30,64 @@ pub async fn export_to_parquet(
         return Err("No data to export".to_string());
     }
 
-    // Create columns as Series
-    let mut series_vec: Vec<polars::prelude::Series> = Vec::new();
+    let num_rows = data.len();
+
+    // Create schema with string columns
+    let mut fields = Vec::new();
+    for col_idx in 0..max_cols {
+        let field_name = format!("column_{}", col_idx + 1);
+        fields.push(Field::new(field_name, DataType::Utf8, true));
+    }
+    let schema = Arc::new(Schema::new(fields));
+
+    // Create column arrays
+    let mut columns: Vec<ArrayRef> = Vec::new();
 
     for col_idx in 0..max_cols {
-        let mut string_values: Vec<String> = Vec::new();
+        let mut string_values: Vec<Option<String>> = Vec::with_capacity(num_rows);
 
         for row in &data {
             if let Some(row_array) = row.as_array() {
                 if col_idx < row_array.len() {
                     let cell = &row_array[col_idx];
                     let str_value = match cell {
-                        Value::String(s) => s.clone(),
-                        Value::Number(n) => n.to_string(),
-                        Value::Bool(b) => b.to_string(),
-                        Value::Null => "".to_string(),
-                        _ => cell.to_string(),
+                        Value::String(s) => Some(s.clone()),
+                        Value::Number(n) => Some(n.to_string()),
+                        Value::Bool(b) => Some(b.to_string()),
+                        Value::Null => None,
+                        _ => Some(cell.to_string()),
                     };
                     string_values.push(str_value);
                 } else {
-                    string_values.push("".to_string());
+                    string_values.push(None);
                 }
             } else {
-                string_values.push("".to_string());
+                string_values.push(None);
             }
         }
 
-        // Create series name
-        // Parquet: Always auto-generate column names to preserve all data
-        // include_headers is ignored for Parquet (columnar format with metadata)
-        let series_name = format!("column_{}", col_idx + 1);
-
-        // Create string series
-        let series = Series::new(PlSmallStr::from(&series_name), string_values);
-        series_vec.push(series);
+        // Create StringArray from values
+        let array = StringArray::from(string_values);
+        columns.push(Arc::new(array) as ArrayRef);
     }
 
-    // Create DataFrame from series
-    let columns: Vec<Column> = series_vec.into_iter()
-        .map(|s| s.into())
-        .collect();
-    let mut df = DataFrame::new(columns)
-        .map_err(|e| format!("Failed to create DataFrame: {}", e))?;
+    // Create RecordBatch
+    let batch = RecordBatch::try_new(schema.clone(), columns)
+        .map_err(|e| format!("Failed to create RecordBatch: {}", e))?;
 
     // Write to Parquet file
     let file = File::create(&file_path)
         .map_err(|e| format!("Failed to create file: {}", e))?;
 
-    ParquetWriter::new(file)
-        .finish(&mut df)
-        .map_err(|e| format!("Failed to write Parquet file: {}", e))?;
+    let props = WriterProperties::builder().build();
+    let mut writer = ArrowWriter::try_new(file, schema, Some(props))
+        .map_err(|e| format!("Failed to create Parquet writer: {}", e))?;
+
+    writer.write(&batch)
+        .map_err(|e| format!("Failed to write RecordBatch: {}", e))?;
+
+    writer.close()
+        .map_err(|e| format!("Failed to close Parquet writer: {}", e))?;
 
     Ok(())
 }

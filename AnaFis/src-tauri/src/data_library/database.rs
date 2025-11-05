@@ -257,6 +257,39 @@ impl DataLibraryDatabase {
         
         Ok(sequences)
     }
+
+    /// Get paginated sequences with optional filtering and sorting
+    pub fn get_sequences_paginated(&self, search: &SearchRequest) -> SqliteResult<SequenceListResponse> {
+        let all_sequences = self.get_sequences(search)?;
+        let total_count = all_sequences.len();
+        let pinned_count = all_sequences.iter().filter(|s| s.is_pinned).count();
+
+        // Apply pagination
+        let page = search.page.unwrap_or(0);
+        let page_size = search.page_size.unwrap_or(50);
+        let start_idx = page * page_size;
+        let end_idx = (start_idx + page_size).min(total_count);
+
+        let sequences = if start_idx < total_count {
+            all_sequences[start_idx..end_idx].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        let total_pages = total_count.div_ceil(page_size);
+
+        Ok(SequenceListResponse {
+            version: crate::error::API_VERSION.to_string(),
+            sequences,
+            total_count,
+            pinned_count,
+            page,
+            page_size,
+            total_pages,
+            has_next: page + 1 < total_pages,
+            has_prev: page > 0,
+        })
+    }
     
     /// Get a single sequence by ID
     pub fn get_sequence(&self, id: &str) -> SqliteResult<Option<DataSequence>> {
@@ -459,9 +492,11 @@ impl DataLibraryDatabase {
         Ok(())
     }
     
-    /// Export sequences to JSON format with full metadata
+    /// Export sequences to JSON format
+    /// Returns a JSON array of sequence objects with full metadata
     pub fn export_to_json(&self, sequence_ids: &[String], file_path: &str) -> SqliteResult<()> {
         use std::fs::File;
+        use std::io::Write;
         
         // Fetch all sequences
         let mut sequences = Vec::new();
@@ -475,20 +510,51 @@ impl DataLibraryDatabase {
             return Err(rusqlite::Error::QueryReturnedNoRows);
         }
         
-        // Create export structure
-        let export_data = serde_json::json!({
-            "format": "AnaFis Data Export",
-            "version": "1.0",
-            "exported_at": Utc::now().to_rfc3339(),
-            "sequences": sequences
-        });
-        
-        let file = File::create(file_path)
+        // Convert sequences to JSON
+        let json_data = serde_json::to_string_pretty(&sequences)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         
-        serde_json::to_writer_pretty(file, &export_data)
+        // Write to file
+        let mut file = File::create(file_path)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+        
+        file.write_all(json_data.as_bytes())
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         
         Ok(())
+    }
+    
+    /// Batch import multiple sequences
+    /// Returns results for each sequence, continuing on errors
+    pub fn batch_import_sequences(&self, request: BatchImportRequest) -> SqliteResult<BatchImportResponse> {
+        let mut successful_imports = 0;
+        let mut failed_imports = 0;
+        let mut errors = Vec::new();
+        let mut imported_ids = Vec::new();
+
+        for (index, sequence_request) in request.sequences.into_iter().enumerate() {
+            match self.save_sequence(sequence_request.clone()) {
+                Ok(id) => {
+                    successful_imports += 1;
+                    imported_ids.push(id);
+                }
+                Err(e) => {
+                    failed_imports += 1;
+                    errors.push(BatchImportError {
+                        index,
+                        sequence_name: sequence_request.name,
+                        error: e.to_string(),
+                    });
+                }
+            }
+        }
+
+        Ok(BatchImportResponse {
+            version: crate::error::API_VERSION.to_string(),
+            successful_imports,
+            failed_imports,
+            errors,
+            imported_ids,
+        })
     }
 }

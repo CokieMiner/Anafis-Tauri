@@ -7,6 +7,7 @@ import type {
   SequenceListResponse,
   UpdateSequenceRequest,
 } from '../types/dataLibrary';
+import { type ErrorResponse, isErrorResponse, getErrorMessage } from '../types/error';
 
 // Debounce utility for search operations
 const useDebounce = <T>(value: T, delay: number): T => {
@@ -37,6 +38,14 @@ export const useDataLibrary = () => {
   const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('descending');
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
+
   // Selection state for multi-select export
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -47,14 +56,24 @@ export const useDataLibrary = () => {
   const searchRequest = useMemo((): SearchRequest => ({
     sort_by: sortBy,
     sort_order: sortOrder,
+    page: currentPage,
+    page_size: pageSize,
     ...(debouncedSearchQuery && { query: debouncedSearchQuery }),
     ...(selectedTags.length > 0 && { tags: selectedTags }),
-  }), [debouncedSearchQuery, selectedTags, sortBy, sortOrder]);
+  }), [debouncedSearchQuery, selectedTags, sortBy, sortOrder, currentPage, pageSize]);
 
   const loadSequences = useCallback(async () => {
     try {
-      const response = await invoke<SequenceListResponse>('get_sequences', { search: searchRequest });
+      const response = await invoke<SequenceListResponse | ErrorResponse>('get_sequences', { search: searchRequest });
+      if (isErrorResponse(response)) {
+        setError(getErrorMessage(response));
+        return;
+      }
       setSequences(response.sequences);
+      setTotalCount(response.total_count);
+      setTotalPages(response.total_pages);
+      setHasNextPage(response.has_next);
+      setHasPrevPage(response.has_prev);
       setError(null);
     } catch (err) {
       console.error('Failed to load sequences:', err);
@@ -64,8 +83,12 @@ export const useDataLibrary = () => {
 
   const loadAllTags = useCallback(async () => {
     try {
-      const tags = await invoke<string[]>('get_all_tags');
-      setAllTags(tags);
+      const response = await invoke<string[] | ErrorResponse>('get_all_tags');
+      if (isErrorResponse(response)) {
+        setError(getErrorMessage(response));
+        return;
+      }
+      setAllTags(response);
       setError(null);
     } catch (err) {
       console.error('Failed to load tags:', err);
@@ -75,8 +98,12 @@ export const useDataLibrary = () => {
 
   const loadStatistics = useCallback(async (id: string) => {
     try {
-      const stats = await invoke<SequenceStatistics | null>('get_sequence_stats', { id });
-      setSelectedStats(stats);
+      const response = await invoke<SequenceStatistics | null | ErrorResponse>('get_sequence_stats', { id });
+      if (isErrorResponse(response)) {
+        setError(getErrorMessage(response));
+        return;
+      }
+      setSelectedStats(response);
       setError(null);
     } catch (err) {
       console.error('Failed to load statistics:', err);
@@ -105,7 +132,11 @@ export const useDataLibrary = () => {
 
   const handlePinSequence = useCallback(async (id: string, isPinned: boolean) => {
     try {
-      await invoke('pin_sequence', { id, isPinned: !isPinned });
+      const response = await invoke<void | ErrorResponse>('pin_sequence', { id, isPinned: !isPinned });
+      if (isErrorResponse(response)) {
+        setError(getErrorMessage(response));
+        return;
+      }
       await loadSequences();
       if (selectedSequence?.id === id) {
         setSelectedSequence({ ...selectedSequence, is_pinned: !isPinned });
@@ -118,7 +149,11 @@ export const useDataLibrary = () => {
 
   const handleDeleteSequence = useCallback(async (id: string) => {
     try {
-      await invoke('delete_sequence', { id });
+      const response = await invoke<void | ErrorResponse>('delete_sequence', { id });
+      if (isErrorResponse(response)) {
+        setError(getErrorMessage(response));
+        return;
+      }
       if (selectedSequence?.id === id) {
         setSelectedSequence(null);
         setSelectedStats(null);
@@ -138,7 +173,7 @@ export const useDataLibrary = () => {
 
       // Use Promise.allSettled to handle partial failures gracefully
       const deleteResults = await Promise.allSettled(
-        idsArray.map(id => invoke('delete_sequence', { id }))
+        idsArray.map(id => invoke<void | ErrorResponse>('delete_sequence', { id }))
       );
 
       // Separate successful and failed deletions
@@ -148,7 +183,12 @@ export const useDataLibrary = () => {
       deleteResults.forEach((result, index) => {
         const id = idsArray[index]!;
         if (result.status === 'fulfilled') {
-          successfulIds.push(id);
+          const response = result.value;
+          if (isErrorResponse(response)) {
+            failedDeletions.push({ id, error: getErrorMessage(response) });
+          } else {
+            successfulIds.push(id);
+          }
         } else {
           const error = result.reason instanceof Error ? result.reason.message : String(result.reason);
           failedDeletions.push({ id, error });
@@ -200,7 +240,11 @@ export const useDataLibrary = () => {
   const handleDuplicateSequence = useCallback(async (id: string, name: string) => {
     try {
       const newName = `${name} (copy)`;
-      await invoke('duplicate_sequence', { id, newName });
+      const response = await invoke<string | ErrorResponse>('duplicate_sequence', { id, newName });
+      if (isErrorResponse(response)) {
+        setError(getErrorMessage(response));
+        return;
+      }
       await loadSequences();
     } catch (err) {
       console.error('Failed to duplicate sequence:', err);
@@ -210,7 +254,11 @@ export const useDataLibrary = () => {
 
   const handleUpdateSequence = useCallback(async (request: UpdateSequenceRequest) => {
     try {
-      await invoke('update_sequence', { request });
+      const response = await invoke<void | ErrorResponse>('update_sequence', { request });
+      if (isErrorResponse(response)) {
+        setError(getErrorMessage(response));
+        return;
+      }
       await loadSequences();
 
       // Update selected sequence
@@ -267,6 +315,18 @@ export const useDataLibrary = () => {
     sortOrder,
     error,
     selectedIds,
+
+    // Pagination state
+    currentPage,
+    pageSize,
+    totalCount,
+    totalPages,
+    hasNextPage,
+    hasPrevPage,
+
+    // Pagination setters
+    setCurrentPage,
+    setPageSize,
 
     // Setters
     setSelectedSequence,

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -13,7 +13,6 @@ import {
   FormLabel,
   Select,
   MenuItem,
-  Checkbox,
   CircularProgress,
   Divider,
   SelectChangeEvent
@@ -31,33 +30,27 @@ import {
   ExportSidebarProps,
   ExportFormat,
   ExportRangeMode,
-  JsonFormat,
   ExportOptions
 } from '@/types/export';
-import { ExportService } from '../univer/exportService';
-import { FUniver } from '@univerjs/core/facade';
 
 type FocusedInputType = 'customRange' | 'dataRange' | 'uncertaintyRange' | null;
 
 const ExportSidebar = React.memo<ExportSidebarProps>(({
   open,
   onClose,
-  univerRef,
+  spreadsheetRef,
   onSelectionChange,
+  exportService,
   exportFormat,
   setExportFormat,
   rangeMode,
   setRangeMode,
   customRange,
   setCustomRange,
-  jsonFormat,
-  setJsonFormat,
-  prettyPrint,
-  setPrettyPrint,
   customDelimiter,
   setCustomDelimiter,
-  getTrackedBounds,
 }) => {
+
   // State
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,15 +58,6 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
 
   // Export mode: 'file' or 'library'
   const [exportMode, setExportMode] = useState<'file' | 'library'>('file');
-
-  // Headers option
-  const [includeHeaders, setIncludeHeaders] = useState<boolean>(false);
-
-  // New lossless export options
-  const [includeFormulas, setIncludeFormulas] = useState<boolean>(false);
-  const [includeFormatting, setIncludeFormatting] = useState<boolean>(false);
-  const [includeMetadata, setIncludeMetadata] = useState<boolean>(false);
-  const [useLosslessExtraction, setUseLosslessExtraction] = useState<boolean>(false);
 
   // Data Library export state
   const [libraryName, setLibraryName] = useState('');
@@ -127,11 +111,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
   }, [open]);
 
   // File extension and filter utilities moved to exportService
-
-  // Create export service instance
-  const exportService = useMemo(() => new ExportService(), []);
-
-  // Data Library export logic moved to exportService
+  // Export service is now injected via props for better abstraction
 
   // Handle export to Data Library
   const handleExportToLibrary = useCallback(async () => {
@@ -140,9 +120,9 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
     setIsExporting(true);
 
     try {
-      // Get the univerAPI from the ref
-      const univerAPI = univerRef?.current?.getRawAPI?.();
-      if (!univerAPI) {
+      // Get the spreadsheet API from the ref
+      const spreadsheetAPI = spreadsheetRef?.current;
+      if (!spreadsheetAPI) {
         setError('Spreadsheet API not available');
         setIsExporting(false);
         return;
@@ -155,7 +135,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
         libraryUnit,
         dataRange,
         uncertaintyRange,
-      }, univerAPI as ReturnType<typeof FUniver.newAPI>);
+      }, spreadsheetAPI);
 
       if (result.success) {
         setSuccess(result.message ?? 'Successfully saved to Data Library');
@@ -175,7 +155,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
     } finally {
       setIsExporting(false);
     }
-  }, [libraryName, libraryDescription, libraryTags, libraryUnit, dataRange, uncertaintyRange, exportService, univerRef]);
+  }, [libraryName, libraryDescription, libraryTags, libraryUnit, dataRange, uncertaintyRange, exportService, spreadsheetRef]);
 
   // Handle export action
   const handleExport = useCallback(async () => {
@@ -185,67 +165,23 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
 
     try {
       // Create the discriminated union ExportOptions based on rangeMode
-      const baseOptions = {
-        exportFormat,
-        includeHeaders,
-        losslessExtraction: useLosslessExtraction,
-        includeFormulas,
-        includeFormatting,
-        includeMetadata,
-        jsonFormat,
-        prettyPrint,
-        delimiter: customDelimiter,
+      // Create streamlined export options
+      const options: ExportOptions = {
+        format: exportFormat,
+        rangeMode,
+        ...(rangeMode === 'custom' && { customRange }),
+        ...(exportFormat === 'txt' && { delimiter: customDelimiter }),
         encoding: 'utf8' as const,
-        trackedBounds: getTrackedBounds?.() ?? null,
       };
 
-      let options: ExportOptions;
-      switch (rangeMode) {
-        case 'sheet':
-          options = {
-            ...baseOptions,
-            rangeMode: 'sheet',
-          };
-          break;
-        case 'all':
-          options = {
-            ...baseOptions,
-            rangeMode: 'all',
-          };
-          break;
-        case 'custom':
-          options = {
-            ...baseOptions,
-            rangeMode: 'custom',
-            customRange,
-          };
-          break;
-      }
-
-      const univerAPI = univerRef?.current?.getRawAPI?.();
-      if (!univerAPI) {
+      const spreadsheetAPI = spreadsheetRef?.current;
+      if (!spreadsheetAPI) {
         setError('Spreadsheet API not available');
         setIsExporting(false);
         return;
       }
 
-      // Type guard to validate API shape instead of unsafe assertion
-      const isValidUniverAPI = (api: unknown): api is ReturnType<typeof FUniver.newAPI> => {
-        return (
-          api !== null &&
-          typeof api === 'object' &&
-          'getActiveWorkbook' in api &&
-          typeof (api as Record<string, unknown>).getActiveWorkbook === 'function'
-        );
-      };
-
-      if (!isValidUniverAPI(univerAPI)) {
-        setError('Spreadsheet API is not in the expected format');
-        setIsExporting(false);
-        return;
-      }
-
-      const result = await exportService.exportWithDialog(options, univerAPI);
+      const result = await exportService.exportWithDialog(options, spreadsheetAPI);
 
       if (result.success) {
         setSuccess(result.message ?? 'Export completed successfully');
@@ -257,7 +193,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
     } finally {
       setIsExporting(false);
     }
-  }, [exportFormat, rangeMode, customRange, includeHeaders, useLosslessExtraction, includeFormulas, includeFormatting, includeMetadata, jsonFormat, prettyPrint, customDelimiter, getTrackedBounds, exportService, univerRef]);
+  }, [exportFormat, rangeMode, customRange, customDelimiter, exportService, spreadsheetRef]);
 
   if (!open) { return null; }
 
@@ -288,13 +224,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
             >
               <FormControlLabel
                 value="file"
-                control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
+                control={<Radio sx={{ color: anafisColors.spreadsheet, '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                 label="Export to File"
                 sx={{ color: 'rgba(255, 255, 255, 0.9)', flex: 1 }}
               />
               <FormControlLabel
                 value="library"
-                control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
+                control={<Radio sx={{ color: anafisColors.spreadsheet, '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
                 label="Export to Data Library"
                 sx={{ color: 'rgba(255, 255, 255, 0.9)', flex: 1 }}
               />
@@ -307,7 +243,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
           <SidebarCard title="Export Configuration" defaultExpanded={true}>
             {/* Export Format */}
             <FormControl fullWidth sx={{ mb: 3 }}>
-              <FormLabel component="legend" sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, '&.Mui-focused': { color: '#2196f3' } }}>
+              <FormLabel component="legend" sx={{ color: anafisColors.spreadsheet, mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, '&.Mui-focused': { color: anafisColors.spreadsheet } }}>
                 1. Select Format
               </FormLabel>
               <Select
@@ -318,265 +254,130 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
                   borderRadius: '6px',
                   '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(33, 150, 243, 0.2)' },
                   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2196f3' },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: anafisColors.spreadsheet },
                   '& .MuiSelect-select': { color: 'white' },
-                  '& .MuiSvgIcon-root': { color: '#64b5f6' }
+                  '& .MuiSvgIcon-root': { color: anafisColors.spreadsheet }
                 }}
               >
-                <MenuItem value="csv">CSV (Comma-separated values)</MenuItem>
-                <MenuItem value="tsv">TSV (Tab-separated values)</MenuItem>
-                <MenuItem value="txt">TXT (Custom delimiter)</MenuItem>
-                <MenuItem value="json">JSON (JavaScript Object Notation)</MenuItem>
-                <MenuItem value="xlsx">Excel (.xlsx)</MenuItem>
-                <MenuItem value="anafispread">AnaFis Spreadsheet (.anafispread)</MenuItem>
-                <MenuItem value="parquet">Parquet (.parquet)</MenuItem>
-                <MenuItem value="tex">LaTeX (.tex)</MenuItem>
-                <MenuItem value="html">HTML (.html)</MenuItem>
-                <MenuItem value="markdown">Markdown (.md)</MenuItem>
+                {/* PRIMARY: Lossless native format */}
+                <MenuItem value="anafispread">🎯 AnaFis Spreadsheet (.anafispread) - Lossless</MenuItem>
+
+                {/* SIMPLE INTERCHANGE: Data exchange formats */}
+                <MenuItem value="csv">📊 CSV (Comma-separated values)</MenuItem>
+                <MenuItem value="tsv">📊 TSV (Tab-separated values)</MenuItem>
+                <MenuItem value="txt">📊 TXT (Custom delimiter)</MenuItem>
+                <MenuItem value="parquet">📊 Parquet (.parquet)</MenuItem>
+
+                {/* READ-ONLY DOCUMENTS: Report formats */}
+                <MenuItem value="html">📄 HTML (.html)</MenuItem>
+                <MenuItem value="markdown">📄 Markdown (.md)</MenuItem>
+                <MenuItem value="tex">📄 LaTeX (.tex)</MenuItem>
               </Select>
-
-              {/* Format-specific info */}
-              <Typography sx={{ color: 'rgba(255, 152, 0, 0.8)', fontSize: 11, mt: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {(exportFormat === 'xlsx' || exportFormat === 'anafispread')
-                  ? 'Supports formulas, formatting, and metadata preservation'
-                  : 'Formulas will be evaluated to their calculated values'
-                }
-              </Typography>
             </FormControl>
 
-            {/* Export Range */}
-            <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
-              <FormLabel component="legend" sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, '&.Mui-focused': { color: '#2196f3' } }}>
-                2. Choose Data Range
-              </FormLabel>
-              <RadioGroup
-                value={rangeMode}
-                onChange={(e) => setRangeMode(e.target.value as ExportRangeMode)}
-              >
-                <FormControlLabel
-                  value="sheet"
-                  control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }} />}
-                  label="Current Sheet"
-                  sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                />
-                <FormControlLabel
-                  value="all"
-                  control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }} />}
-                  label="All Sheets"
-                  sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                  disabled={!(exportFormat === 'xlsx' || exportFormat === 'anafispread' || exportFormat === 'json')}
-                />
-                <FormControlLabel
-                  value="custom"
-                  control={<Radio sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }} />}
-                  label="Custom Range"
-                  sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                />
-              </RadioGroup>
-
-              {rangeMode === 'custom' && (
-                <TextField
-                  fullWidth
-                  size="small"
-                  value={customRange}
-                  onChange={(e) => setCustomRange(e.target.value)}
-                  onFocus={() => handleInputFocus('customRange')}
-                  onBlur={handleInputBlur}
-                  placeholder="e.g., A1:D20"
-                  sx={{
-                    mt: 1,
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: focusedInput === 'customRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
-                      borderRadius: '6px',
-                      '& fieldset': { borderColor: focusedInput === 'customRange' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
-                      '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                      '&.Mui-focused fieldset': { borderColor: '#2196f3' },
-                      '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
-                    }
-                  }}
-                />
-              )}
-            </FormControl>
-
-            <Divider sx={{ my: 2, bgcolor: 'rgba(33, 150, 243, 0.2)' }} />
-
-            {/* Lossless Export Options */}
-            {(exportFormat === 'xlsx' || exportFormat === 'anafispread' || exportFormat === 'json') && (
-              <Box sx={{ mb: 3 }}>
-                <FormLabel sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  3. Advanced Options
-                </FormLabel>
-
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={useLosslessExtraction}
-                      onChange={(e) => {
-                        setUseLosslessExtraction(e.target.checked);
-                        if (e.target.checked) {
-                          // Enable advanced options by default for lossless
-                          if (exportFormat === 'xlsx' || exportFormat === 'anafispread') {
-                            setIncludeFormulas(true);
-                            setIncludeFormatting(true);
-                          }
-                          if (exportFormat === 'anafispread') {
-                            setIncludeMetadata(true);
-                          }
-                        }
-                      }}
-                      sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
-                    />
-                  }
-                  label="Advanced Data Extraction"
-                  sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 1, display: 'block' }}
-                />
-
-                {useLosslessExtraction && (
-                  <Box sx={{ ml: 4, mt: 1 }}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={includeFormulas}
-                          onChange={(e) => setIncludeFormulas(e.target.checked)}
-                          sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
-                        />
-                      }
-                      label="Include Formulas"
-                      sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block' }}
-                    />
-
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={includeFormatting}
-                          onChange={(e) => setIncludeFormatting(e.target.checked)}
-                          sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
-                        />
-                      }
-                      label="Include Cell Formatting"
-                      sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block' }}
-                    />
-
-                    {exportFormat === 'anafispread' && (
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={includeMetadata}
-                            onChange={(e) => setIncludeMetadata(e.target.checked)}
-                            sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
-                          />
-                        }
-                        label="Include Cell Metadata"
-                        sx={{ color: 'rgba(255, 255, 255, 0.8)', display: 'block' }}
-                      />
-                    )}
-                  </Box>
-                )}
-
-                <Typography sx={{
-                  color: 'rgba(100, 181, 246, 0.7)',
-                  fontSize: 11,
-                  mt: 1,
-                  fontStyle: 'italic'
-                }}>
-                  {useLosslessExtraction
-                    ? 'Advanced extraction preserves complete spreadsheet structure'
-                    : 'Standard extraction exports cell values only'
-                  }
+            {/* Special message for .anafispread - no options needed */}
+            {exportFormat === 'anafispread' ? (
+              <Box sx={{
+                mt: 3,
+                p: 2,
+                bgcolor: 'rgba(76, 175, 80, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(76, 175, 80, 0.3)'
+              }}>
+                <Typography sx={{ color: '#81c784', fontWeight: 'bold', mb: 1, fontSize: 13 }}>
+                  ✓ Lossless Native Format
                 </Typography>
-              </Box>
-            )}
-
-            {/* Format-specific options */}
-            <Box sx={{ mb: 3 }}>
-              <FormLabel sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, '&.Mui-focused': { color: '#2196f3' } }}>
-                {(exportFormat === 'xlsx' || exportFormat === 'anafispread' || exportFormat === 'json') ? '4. Format Options' : '3. Format Options'}
-              </FormLabel>
-
-              {/* TXT delimiter option */}
-              {exportFormat === 'txt' && (
-                <Box sx={{ mt: 2 }}>
-                  <FormLabel sx={{ color: '#64b5f6', mb: 1, fontSize: 13, '&.Mui-focused': { color: '#2196f3' } }}>
-                    Custom Delimiter
-                  </FormLabel>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    value={customDelimiter}
-                    onChange={(e) => setCustomDelimiter(e.target.value)}
-                    placeholder="Enter delimiter character"
-                    helperText="Examples: | (pipe), ; (semicolon), tab, space"
-                    sx={{
-                      mt: 0.5,
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'rgba(33, 150, 243, 0.05)',
-                        borderRadius: '6px',
-                        '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
-                        '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                        '&.Mui-focused fieldset': { borderColor: '#2196f3' },
-                        '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
-                      },
-                      '& .MuiFormHelperText-root': { color: 'rgba(33, 150, 243, 0.6)', fontSize: 11 }
-                    }}
-                  />
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 12, mb: 1 }}>
+                  The .anafispread format exports the complete workbook including:
+                </Typography>
+                <Box component="ul" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 11, pl: 2, m: 0 }}>
+                  <li>All sheets, cells, formulas, and values</li>
+                  <li>Complete formatting and styles</li>
+                  <li>Merged cells and protection rules</li>
+                  <li>All metadata and resources</li>
                 </Box>
-              )}
-
-              {/* JSON format options */}
-              {exportFormat === 'json' && (
-                <Box sx={{ mt: 2 }}>
-                  <FormControl fullWidth sx={{ mb: 2 }}>
-                    <FormLabel sx={{ color: '#64b5f6', mb: 1, fontSize: 13, '&.Mui-focused': { color: '#2196f3' } }}>
-                      JSON Structure
-                    </FormLabel>
-                    <Select
-                      value={jsonFormat}
-                      onChange={(e: SelectChangeEvent) => setJsonFormat(e.target.value as JsonFormat)}
-                      sx={{
-                        bgcolor: 'rgba(33, 150, 243, 0.05)',
-                        borderRadius: '6px',
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(33, 150, 243, 0.2)' },
-                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#2196f3' },
-                        '& .MuiSelect-select': { color: 'white' },
-                        '& .MuiSvgIcon-root': { color: '#64b5f6' }
-                      }}
-                    >
-                      <MenuItem value="array">2D Array Format</MenuItem>
-                      <MenuItem value="object">Column-based Object</MenuItem>
-                      <MenuItem value="records">Record Array Format</MenuItem>
-                    </Select>
-                  </FormControl>
-
-                  {/* Headers option - only for object and records format */}
-                  {(jsonFormat === 'object' || jsonFormat === 'records') && (
+              </Box>
+            ) : (
+              <>
+                {/* Export Range - Hidden for .anafispread */}
+                <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+                  <FormLabel component="legend" sx={{ color: anafisColors.spreadsheet, mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, '&.Mui-focused': { color: anafisColors.spreadsheet } }}>
+                    2. Choose Data Range
+                  </FormLabel>
+                  <RadioGroup
+                    value={rangeMode}
+                    onChange={(e) => setRangeMode(e.target.value as ExportRangeMode)}
+                  >
                     <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={includeHeaders}
-                          onChange={(e) => setIncludeHeaders(e.target.checked)}
-                          sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
-                        />
-                      }
-                      label="Use first row as column headers"
-                      sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 2 }}
+                      value="sheet"
+                      control={<Radio sx={{ color: anafisColors.spreadsheet, '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
+                      label="Current Sheet"
+                      sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                    />
+                    <FormControlLabel
+                      value="custom"
+                      control={<Radio sx={{ color: anafisColors.spreadsheet, '&.Mui-checked': { color: anafisColors.spreadsheet } }} />}
+                      label="Custom Range"
+                      sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                    />
+                  </RadioGroup>
+
+                  {rangeMode === 'custom' && (
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={customRange}
+                      onChange={(e) => setCustomRange(e.target.value)}
+                      onFocus={() => handleInputFocus('customRange')}
+                      onBlur={handleInputBlur}
+                      placeholder="e.g., A1:D20"
+                      sx={{
+                        mt: 1,
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: focusedInput === 'customRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+                          borderRadius: '6px',
+                          '& fieldset': { borderColor: focusedInput === 'customRange' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
+                          '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                          '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                          '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+                        }
+                      }}
                     />
                   )}
+                </FormControl>
 
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={prettyPrint}
-                        onChange={(e) => setPrettyPrint(e.target.checked)}
-                        sx={{ color: '#64b5f6', '&.Mui-checked': { color: '#2196f3' } }}
-                      />
-                    }
-                    label="Format JSON with indentation"
-                    sx={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                  />
-                </Box>
-              )}
-            </Box>
+                <Divider sx={{ my: 2, bgcolor: 'rgba(33, 150, 243, 0.2)' }} />
+
+                {/* Format-specific options - only custom delimiter for TXT */}
+                {exportFormat === 'txt' && (
+                  <Box sx={{ mb: 3 }}>
+                    <FormLabel sx={{ color: anafisColors.spreadsheet, mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      3. Custom Delimiter
+                    </FormLabel>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={customDelimiter}
+                      onChange={(e) => setCustomDelimiter(e.target.value)}
+                      placeholder="Enter delimiter character (e.g., |, ;, tab)"
+                      helperText="CSV uses comma (,) and TSV uses tab - only TXT allows custom delimiters"
+                      sx={{
+                        mt: 1,
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'rgba(33, 150, 243, 0.05)',
+                          borderRadius: '6px',
+                          '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                          '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                          '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                          '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+                        },
+                        '& .MuiFormHelperText-root': { color: 'rgba(33, 150, 243, 0.6)', fontSize: 11 }
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}
           </SidebarCard>
         )}
 
@@ -591,13 +392,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
               required
               sx={{
                 mb: 2,
-                '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
+                '& .MuiInputLabel-root': { color: anafisColors.spreadsheet, '&.Mui-focused': { color: anafisColors.spreadsheet } },
                 '& .MuiOutlinedInput-root': {
                   bgcolor: 'rgba(33, 150, 243, 0.05)',
                   borderRadius: '6px',
                   '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
                   '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                  '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                   '& input': { color: 'white' }
                 }
               }}
@@ -612,13 +413,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
               rows={2}
               sx={{
                 mb: 2,
-                '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
+                '& .MuiInputLabel-root': { color: anafisColors.spreadsheet, '&.Mui-focused': { color: anafisColors.spreadsheet } },
                 '& .MuiOutlinedInput-root': {
                   bgcolor: 'rgba(33, 150, 243, 0.05)',
                   borderRadius: '6px',
                   '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
                   '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                  '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                   '& textarea': { color: 'white' }
                 }
               }}
@@ -632,13 +433,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
               placeholder="experimental, measurement, analysis"
               sx={{
                 mb: 2,
-                '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
+                '& .MuiInputLabel-root': { color: anafisColors.spreadsheet, '&.Mui-focused': { color: anafisColors.spreadsheet } },
                 '& .MuiOutlinedInput-root': {
                   bgcolor: 'rgba(33, 150, 243, 0.05)',
                   borderRadius: '6px',
                   '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
                   '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                  '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                   '& input': { color: 'white' }
                 }
               }}
@@ -652,13 +453,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
               placeholder="m, kg, s, V, A"
               sx={{
                 mb: 2,
-                '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
+                '& .MuiInputLabel-root': { color: anafisColors.spreadsheet, '&.Mui-focused': { color: anafisColors.spreadsheet } },
                 '& .MuiOutlinedInput-root': {
                   bgcolor: 'rgba(33, 150, 243, 0.05)',
                   borderRadius: '6px',
                   '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
                   '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                  '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                  '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                   '& input': { color: 'white' }
                 }
               }}
@@ -675,16 +476,16 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
                 required
                 sx={{
                   flex: 1,
-                  '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
+                  '& .MuiInputLabel-root': { color: anafisColors.spreadsheet, '&.Mui-focused': { color: anafisColors.spreadsheet } },
                   '& .MuiOutlinedInput-root': {
                     bgcolor: focusedInput === 'dataRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: focusedInput === 'dataRange' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': { borderColor: focusedInput === 'dataRange' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
                     '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                     '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
                   },
-                  '& .MuiFormHelperText-root': { color: '#888', fontSize: '0.75rem' }
+                  '& .MuiFormHelperText-root': { color: 'rgba(33, 150, 243, 0.6)', fontSize: 11 }
                 }}
                 helperText="Entire column: A:A, C:C | Specific range: A1:A100, C5:C50"
               />
@@ -698,23 +499,23 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
                 placeholder="B:B or B1:B100"
                 sx={{
                   flex: 1,
-                  '& .MuiInputLabel-root': { color: '#64b5f6', '&.Mui-focused': { color: '#2196f3' } },
+                  '& .MuiInputLabel-root': { color: anafisColors.spreadsheet, '&.Mui-focused': { color: anafisColors.spreadsheet } },
                   '& .MuiOutlinedInput-root': {
                     bgcolor: focusedInput === 'uncertaintyRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: focusedInput === 'uncertaintyRange' ? '#2196f3' : 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': { borderColor: focusedInput === 'uncertaintyRange' ? anafisColors.spreadsheet : 'rgba(33, 150, 243, 0.2)' },
                     '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                    '&.Mui-focused fieldset': { borderColor: '#2196f3' },
+                    '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
                     '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
                   },
-                  '& .MuiFormHelperText-root': { color: '#888', fontSize: '0.75rem' }
+                  '& .MuiFormHelperText-root': { color: 'rgba(33, 150, 243, 0.6)', fontSize: 11 }
                 }}
                 helperText="Optional uncertainty values (same format as data range)"
               />
             </Box>
 
             <Typography sx={{
-              color: '#64b5f6',
+              color: anafisColors.spreadsheet,
               fontSize: 12,
               mb: 2,
               bgcolor: 'rgba(33, 150, 243, 0.1)',
@@ -725,7 +526,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
               <strong>Range Examples:</strong> A:A (entire column A), 1:1 (entire row 1), A1:A100 (specific range)
             </Typography>
 
-            <Typography sx={{ color: '#888', fontSize: '0.75rem', mb: 2 }}>
+            <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 12, mb: 2 }}>
               Only numeric values from the specified ranges will be saved to the library.
             </Typography>
           </SidebarCard>

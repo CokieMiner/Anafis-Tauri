@@ -12,6 +12,7 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
   - ✅ **Unit Conversion Sidebar**: Convert between different physical units
   - ✅ **Uncertainty Propagation Sidebar**: Calculate error propagation through formulas
   - ✅ **Quick Plot Sidebar**: Instant 2D visualization with ECharts (scatter, line, error bars)
+  - ✅ **Import Sidebar**: Import from files (CSV, TSV, TXT, Parquet, AnaFisSpread) or Data Library with search/filter
   - ✅ **Export Sidebar**: Export data in 10 formats (CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
 - **📈 Fitting Tab**: Robust curve fitting algorithms with interactive visualization and regression analysis *(Coming Soon)*
 - **🧮 Solver Tab**: Intelligent equation solver providing step-by-step mathematical solutions *(Coming Soon)*
@@ -24,6 +25,7 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
   - Visual preview with ECharts
   - Multi-select export (CSV/JSON with metadata)
   - Tag-based organization and filtering
+  - Direct import to spreadsheets via Import Sidebar
 
 ### Additional Tools
 - **🔢 Uncertainty Calculator**: Floating utility window for quick uncertainty calculations and error propagation
@@ -40,14 +42,15 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
   - Future support for 3D plots (echarts-gl) and timeline animations
   - **Note**: Migrated from Plotly.js for improved export reliability and reduced bundle size
 
-### Export System
-- **10 Format Support**: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread
-  - Single-sheet and multi-sheet exports
-  - Configurable options per format
+### Import/Export System
+- **10+ Format Support**: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread
+  - **Import**: CSV, TSV, TXT, Parquet, AnaFisSpread with encoding detection and custom parsing
+  - **Export**: All 10 formats with configurable options
+  - Single-sheet and multi-sheet operations
   - Explicit data structure markers (no implicit detection)
   - Header handling customization for JSON formats
   - Lossless exports for XLSX and AnaFisSpread (formulas, formatting, metadata)
-  - ⚠️ **Testing Status**: Core workflows validated (~80% reliability). Edge cases and complex multi-sheet scenarios may have issues. Please report bugs encountered.
+  - **File Associations**: Double-click .anafispread files to open in AnaFis
 
 ### Key Features
 - **Tab Management**: Single-window interface with drag-to-reorder tabs
@@ -64,13 +67,14 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
 
 ### Backend (Rust)
 - **Tauri 2.x**: Cross-platform desktop application framework
-- **PyO3**: Python integration for advanced mathematical computations
+- **PyO3 0.22.0**: Python integration for advanced mathematical computations
 - **Tokio**: Asynchronous runtime for concurrent operations
 - **Serde**: Serialization framework for data interchange
 - **SQLite (rusqlite)**: Embedded database for Data Library with FTS5 full-text search
 - **Statrs**: Statistical computations (mean, std dev, variance, etc.)
 - **rust_xlsxwriter**: Excel export with formatting support
-- **Polars**: High-performance dataframe library for Parquet export
+- **Arrow 57.0.0 & Parquet 57.0.0**: High-performance columnar data import/export
+- **encoding_rs 0.8**: Character encoding detection for CSV/TXT imports
 - **Optimized Code**: Clippy-compliant with modern Rust idioms and performance improvements
 - **Zero Warnings**: Clean codebase with all linting issues resolved
 
@@ -241,13 +245,20 @@ We welcome contributions! Please:
 ## Roadmap
 
 ### Current Features (v0.1.0)
-- ✅ Basic tab interface with detachable tabs
-- ✅ Spreadsheet functionality with formula support
-- ✅ Python/SymPy integration
-- ✅ Uncertainty calculator
-- ✅ LaTeX preview
-- ✅ Drag & drop tab management
-- ✅ **Unified theme system and consistent UI**
+- ✅ Tab interface with drag-to-reorder functionality
+- ✅ Spreadsheet functionality with formula support (Univer.js)
+- ✅ Python/SymPy integration for symbolic mathematics
+- ✅ Unit conversion sidebar with dimensional analysis
+- ✅ Uncertainty propagation sidebar with error calculations
+- ✅ Quick plot sidebar with ECharts visualization
+- ✅ Import sidebar with file and Data Library support
+- ✅ Export sidebar with 10 format support
+- ✅ Data Library with SQLite backend and FTS5 search
+- ✅ Uncertainty calculator floating window
+- ✅ LaTeX preview window
+- ✅ File associations for .anafispread format
+- ✅ Unified theme system and consistent UI
+- ✅ Comprehensive import/export system
 
 ### Planned Features
 - 🔄 Advanced curve fitting algorithms

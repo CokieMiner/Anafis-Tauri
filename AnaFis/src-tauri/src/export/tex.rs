@@ -1,27 +1,19 @@
-// LaTeX format export
+// LaTeX format export - simplified
 //
-// Handles exporting data to LaTeX table format.
+// Exports data to LaTeX table format (2D array)
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use serde_json::Value;
-use super::{ExportConfig, DataStructure};
+use super::ExportConfig;
 
-/// Export data to LaTeX format
+/// Export data to LaTeX format (simplified - expects 2D array)
 #[tauri::command]
 pub async fn export_to_latex(
-    data: Vec<Vec<Value>>,
+    data: Vec<serde_json::Value>,
     file_path: String,
-    config: ExportConfig,
+    _config: ExportConfig,
 ) -> Result<(), String> {
-    // Validate data structure - LaTeX only supports single-sheet 2D arrays
-    if !matches!(config.data_structure, DataStructure::Array2D) {
-        return Err(format!(
-            "LaTeX export only supports single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
-            config.data_structure
-        ));
-    }
-
     if data.is_empty() {
         return Err("No data to export".to_string());
     }
@@ -38,7 +30,7 @@ pub async fn export_to_latex(
         .map_err(|e| format!("Failed to write LaTeX: {}", e))?;
 
     // Determine number of columns
-    let num_cols = data.iter().map(|row| row.len()).max().unwrap_or(0);
+    let num_cols = data.iter().filter_map(|row| row.as_array().map(|arr| arr.len())).max().unwrap_or(0);
     if num_cols == 0 {
         return Err("No columns found in data".to_string());
     }
@@ -52,8 +44,13 @@ pub async fn export_to_latex(
 
     // Process data rows
     for row in data.iter() {
+        let row_array = match row.as_array() {
+            Some(arr) => arr,
+            None => continue,
+        };
+
         // Format row cells
-        let formatted_cells: Vec<String> = row.iter().map(|cell| {
+        let formatted_cells: Vec<String> = row_array.iter().map(|cell| {
             match cell {
                 Value::String(s) => latex_escape(s),
                 Value::Number(n) => n.to_string(),

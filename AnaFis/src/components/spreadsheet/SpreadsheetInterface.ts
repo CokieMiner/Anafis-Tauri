@@ -3,7 +3,7 @@
 // This file defines the minimal contract the app expects from any spreadsheet
 // UI adapter. The project uses an adapter pattern so the UI component can be
 // swapped (e.g. Univer, AG Grid, Handsontable, or a custom grid) while keeping
-// the rest of the app unaware of the concrete implementation.
+// the app unaware of the concrete implementation.
 //
 // Recommendation (non-breaking): when adding support for asynchronous
 // formula evaluation (for example delegating formula parsing/evaluation to
@@ -15,8 +15,28 @@
 // The code in adapters can still support sync handlers for backward
 // compatibility by checking whether the returned value is a Promise.
 
-// Note: After several iterations, the app has become tightly coupled with Univer.
-// This may limit flexibility for future adapter implementations.
+import { IExportService } from '@/types/export';
+import { IImportService } from '@/types/import';
+
+export interface SpreadsheetCapabilities {
+  // Feature support flags
+  supportsFormulas: boolean;
+  supportsMultipleSheets: boolean;
+  supportsFormatting: boolean;
+  supportsMergedCells: boolean;
+  supportsCharts: boolean;
+  supportsComments: boolean;
+  
+  // Performance characteristics
+  maxRows: number;
+  maxColumns: number;
+  maxSheets: number;
+  
+  // Implementation metadata
+  libraryName: string;
+  libraryVersion: string;
+  adapterVersion: string;
+}
 
 export interface CellValue {
   v?: string | number | boolean | null;
@@ -34,35 +54,34 @@ export interface CellValue {
 }
 
 export interface SpreadsheetRef {
-  // Update a single cell (A1-style reference). Implementations may accept
-  // objects with either { v } for a value or { f } for a formula string.
+  // Core cell operations
   updateCell: (cellRef: string, value: CellValue) => Promise<void>;
-  // Update multiple cells in a single batch operation (more efficient than calling updateCell in a loop)
   batchUpdateCells: (updates: Array<{ cellRef: string; value: CellValue }>) => Promise<void>;
-  
-  // Update an entire range with a 2D array of values (more efficient for large updates)
-  updateRange: (rangeRef: string, values: CellValue[][]) => Promise<void>;
-  
-  // Read the current (calculated) value of a single cell. Returns null when
-  // the cell does not exist or has no value.
   getCellValue: (cellRef: string) => Promise<string | number | null>;
-  // Read a rectangular range. Implementations should return rows in order
-  // (top-to-bottom) and columns left-to-right.
+
+  // Range operations
+  updateRange: (rangeRef: string, values: CellValue[][]) => Promise<void>;
   getRange: (rangeRef: string) => Promise<(string | number)[][]>;
-  // Read a rectangular range with full cell data including formulas, formatting, etc.
   getRangeFull: (rangeRef: string) => Promise<CellValue[][]>;
-  // Get all sheets data for multi-sheet export
-  getAllSheetsData: () => Promise<{ name: string; data: CellValue[][] }[]>;
-  // Get current selection range
+
+  // Selection and state
   getSelection: () => Promise<string | null>;
-  // Get used range of active sheet
-  getUsedRange: () => string;
-  // Get tracked bounds for efficient export (runtime tracking of max modified cells per sheet)
-  getTrackedBounds: () => Record<string, { maxRow: number; maxCol: number }> | null;
-  // Check if Facade API is ready for operations
-  isFacadeReady: () => boolean;
-  // Get raw API for advanced operations (implementation-specific)
-  getRawAPI?: () => unknown;
+  isReady: () => boolean;
+
+  // Multi-sheet support (required for import/export operations)
+  createSheet: (name: string, rows?: number, cols?: number) => Promise<string>;
+  getAllSheets: () => Promise<Array<{ id: string; name: string }>>;
+
+  // Advanced snapshot operations (required for import/export operations)
+  getWorkbookSnapshot: () => Promise<unknown>;
+  loadWorkbookSnapshot: (snapshot: unknown) => Promise<void>;
+
+  // Internal API access (required for advanced operations like used range detection)
+  getImplementationContext: () => { univerInstance?: unknown; facadeInstance?: unknown };
+
+  // Service access (required for import/export operations)
+  getExportService: () => IExportService;
+  getImportService: () => IImportService;
 }
 
 export interface SpreadsheetProps {

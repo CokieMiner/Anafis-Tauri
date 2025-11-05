@@ -43,6 +43,15 @@
     "resources": [
       "python/sympy_calls.py"
     ],
+    "fileAssociations": [
+      {
+        "ext": ["anafispread"],
+        "name": "AnaFis Spreadsheet",
+        "description": "AnaFis Spreadsheet File",
+        "role": "Editor",
+        "mimeType": "application/x-anafis-spreadsheet"
+      }
+    ],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",

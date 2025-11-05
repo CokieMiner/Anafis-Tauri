@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, memo } from 'react';
 import { Box, Typography } from '@mui/material';
 import * as echarts from 'echarts';
-import type { DataSequence } from '../../types/dataLibrary';
+import type { DataSequence } from '@/types/dataLibrary';
 
 interface SequenceChartProps {
   sequence: DataSequence | null;

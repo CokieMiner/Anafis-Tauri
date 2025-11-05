@@ -1,27 +1,19 @@
-// HTML format export
+// HTML format export - simplified
 //
-// Handles exporting data to HTML table format with optional styling.
+// Exports data to HTML table format (2D array)
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use serde_json::Value;
-use super::{ExportConfig, DataStructure};
+use super::ExportConfig;
 
-/// Export data to HTML format
+/// Export data to HTML format (simplified - expects 2D array)
 #[tauri::command]
 pub async fn export_to_html(
-    data: Vec<Vec<Value>>,
+    data: Vec<serde_json::Value>,
     file_path: String,
-    config: ExportConfig,
+    _config: ExportConfig,
 ) -> Result<(), String> {
-    // Validate data structure - HTML only supports single-sheet 2D arrays
-    if !matches!(config.data_structure, DataStructure::Array2D) {
-        return Err(format!(
-            "HTML export only supports single-sheet data (Array2D). Received: {:?}. Please export each sheet separately.",
-            config.data_structure
-        ));
-    }
-
     if data.is_empty() {
         return Err("No data to export".to_string());
     }
@@ -52,9 +44,14 @@ pub async fn export_to_html(
 
     // Process data rows - all rows are treated as data
     for row in data.iter() {
+        let row_array = match row.as_array() {
+            Some(arr) => arr,
+            None => continue,
+        };
+
         html.push_str("<tr>\n");
 
-        for cell in row {
+        for cell in row_array {
             let cell_content = match cell {
                 Value::String(s) => html_escape(s),
                 Value::Number(n) => n.to_string(),

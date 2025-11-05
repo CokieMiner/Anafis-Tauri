@@ -7,6 +7,7 @@ use crate::unit_conversion::core::{
     ConversionPreview, UnitInfo, Dimension
 };
 use std::collections::HashMap;
+use crate::error::{CommandResult, conversion_error, validation_error, internal_error};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DimensionalAnalysisResult {
@@ -31,49 +32,49 @@ pub struct CompatibilityAnalysisResult {
 // ===== BASIC CONVERSION COMMANDS =====
 
 #[command]
-pub async fn convert_value(request: ConversionRequest) -> Result<ConversionResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
-    converter.convert(&request)
+pub async fn convert_value(request: ConversionRequest) -> CommandResult<ConversionResult> {
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
+    converter.convert(&request).map_err(conversion_error)
 }
 
 #[command]
-pub async fn get_conversion_preview(from_unit: String, to_unit: String) -> Result<ConversionPreview, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
+pub async fn get_conversion_preview(from_unit: String, to_unit: String) -> CommandResult<ConversionPreview> {
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
     Ok(converter.get_conversion_preview(&from_unit, &to_unit))
 }
 
 #[command]
-pub async fn check_unit_compatibility(from_unit: String, to_unit: String) -> Result<bool, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
+pub async fn check_unit_compatibility(from_unit: String, to_unit: String) -> CommandResult<bool> {
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
     Ok(converter.check_unit_compatibility(&from_unit, &to_unit))
 }
 
 #[command]
-pub async fn get_available_units() -> Result<HashMap<String, UnitInfo>, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
+pub async fn get_available_units() -> CommandResult<HashMap<String, UnitInfo>> {
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
     Ok(converter.get_available_units())
 }
 
 // ===== QUICK CONVERSION FOR MENU BUTTONS =====
 
 #[command]
-pub async fn quick_convert_value(value: f64, from_unit: String, to_unit: String) -> Result<Option<f64>, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
+pub async fn quick_convert_value(value: f64, from_unit: String, to_unit: String) -> CommandResult<Option<f64>> {
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
     Ok(converter.quick_convert(value, &from_unit, &to_unit))
 }
 
 #[command]
-pub async fn get_conversion_factor(from_unit: String, to_unit: String) -> Result<f64, String> {
+pub async fn get_conversion_factor(from_unit: String, to_unit: String) -> CommandResult<f64> {
     let dummy_request = ConversionRequest {
         value: 1.0,
         from_unit,
         to_unit,
     };
 
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
     match converter.convert(&dummy_request) {
         Ok(result) => Ok(result.conversion_factor),
-        Err(e) => Err(e),
+        Err(e) => Err(conversion_error(e)),
     }
 }
 
@@ -172,20 +173,20 @@ pub async fn analyze_dimensional_compatibility(unit1: String, unit2: String) -> 
 }
 
 #[command]
-pub async fn get_unit_dimensional_formula(unit: String) -> Result<String, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
+pub async fn get_unit_dimensional_formula(unit: String) -> CommandResult<String> {
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
 
     match converter.parse_unit(&unit) {
         Ok(parsed) => Ok(format_dimension(&parsed.dimension)),
-        Err(e) => Err(e)
+        Err(e) => Err(validation_error(e, Some("unit".to_string())))
     }
 }
 
 // ===== UTILITY COMMANDS =====
 
 #[command]
-pub async fn validate_unit_string(unit: String) -> Result<bool, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
+pub async fn validate_unit_string(unit: String) -> CommandResult<bool> {
+    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
 
     match converter.parse_unit(&unit) {
         Ok(_) => Ok(true),
@@ -194,7 +195,7 @@ pub async fn validate_unit_string(unit: String) -> Result<bool, String> {
 }
 
 #[command]
-pub async fn get_supported_categories() -> Result<Vec<String>, String> {
+pub async fn get_supported_categories() -> CommandResult<Vec<String>> {
     Ok(vec![
         "length".to_string(),
         "mass".to_string(),

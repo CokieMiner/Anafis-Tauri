@@ -1,14 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Box, Typography, IconButton, List, ListItemButton, ListItemText, TextField, Button } from '@mui/material';
 import { Close as CloseIcon, Add as AddIcon, Delete as DeleteIcon, PlayArrow as RunIcon } from '@mui/icons-material';
-import { invoke } from '@tauri-apps/api/core';
 import { SpreadsheetRef } from '../SpreadsheetInterface';
 import { useSpreadsheetSelection } from '@/hooks/useSpreadsheetSelection';
 import { sidebarStyles } from '@/utils/sidebarStyles';
 import SidebarCard from './SidebarCard';
 import { anafisColors } from '@/themes';
 import { spreadsheetEventBus } from '../SpreadsheetEventBus';
-import { normalizeRangeRef } from '../univer/errors';
+import { validateUncertaintySetup, runUncertaintyPropagation } from '../univer/index';
 
 interface Variable {
   name: string;
@@ -16,94 +15,6 @@ interface Variable {
   uncertaintyRange: string;
   confidence: number;
 }
-
-// Helper types for optimized validation (moved outside component)
-interface RangeRequest {
-  type: 'value' | 'uncertainty';
-  variableIndex: number;
-  range: string;
-  variableName: string;
-}
-
-interface RangeResult extends RangeRequest {
-  data: (string | number)[][];
-}
-
-// Helper functions moved outside component to prevent recreation
-const collectRangeRequests = (variables: Variable[]): RangeRequest[] => {
-  return variables.flatMap((variable, index) => {
-    const requests: RangeRequest[] = [];
-
-    if (variable.valueRange) {
-      requests.push({
-        type: 'value',
-        variableIndex: index,
-        range: variable.valueRange,
-        variableName: variable.name
-      });
-    }
-
-    if (variable.uncertaintyRange) {
-      requests.push({
-        type: 'uncertainty',
-        variableIndex: index,
-        range: variable.uncertaintyRange,
-        variableName: variable.name
-      });
-    }
-
-    return requests;
-  });
-};
-
-// Check if data contains only numeric values
-const isAllNumericData = (data: (string | number)[][]): boolean => {
-  return data.every(row =>
-    row.every(cell => typeof cell === 'number' && isFinite(cell))
-  );
-};
-
-// Validate all range data in batch
-const validateRangeData = (rangeResults: RangeResult[], variables: Variable[]): void => {
-  // Group results by variable for easier validation
-  const resultsByVariable = new Map<number, { value?: RangeResult; uncertainty?: RangeResult }>();
-
-  for (const result of rangeResults) {
-    if (!resultsByVariable.has(result.variableIndex)) {
-      resultsByVariable.set(result.variableIndex, {});
-    }
-
-    const varResults = resultsByVariable.get(result.variableIndex)!;
-    if (result.type === 'value') {
-      varResults.value = result;
-    } else {
-      varResults.uncertainty = result;
-    }
-  }
-
-  // Validate each variable's data
-  for (const [varIndex, results] of resultsByVariable) {
-    const variable = variables[varIndex]!;
-
-    // Validate value data
-    if (results.value) {
-      if (!isAllNumericData(results.value.data)) {
-        throw new Error(`Variable "${variable.name}" value range contains non-numeric data`);
-      }
-    }
-
-    // Validate uncertainty data and length matching
-    if (results.uncertainty && results.value) {
-      if (!isAllNumericData(results.uncertainty.data)) {
-        throw new Error(`Variable "${variable.name}" uncertainty range contains non-numeric data`);
-      }
-
-      if (results.uncertainty.data.length !== results.value.data.length) {
-        throw new Error(`Variable "${variable.name}": uncertainty range length doesn't match value range`);
-      }
-    }
-  }
-};
 
 // Generate next variable name: a-z, then aa-zz
 const generateNextVariableName = (variableCount: number): string => {
@@ -117,170 +28,6 @@ const generateNextVariableName = (variableCount: number): string => {
     const secondChar = String.fromCharCode(97 + (doubleIndex % 26));
     return firstChar + secondChar;
   }
-};
-
-// Helper functions for range validation and intersection
-interface RangeBounds {
-  startCol: number;
-  startRow: number;
-  endCol: number;
-  endRow: number;
-}
-
-/**
- * Parse a range string into bounds
- */
-function parseRangeBounds(range: string): RangeBounds | null {
-  // Handle single cell: "A1"
-  const singleCellMatch = range.match(/^([A-Z]+)(\d+)$/);
-  if (singleCellMatch) {
-    const col = columnToNumber(singleCellMatch[1]!);
-    const row = parseInt(singleCellMatch[2]!);
-    return { startCol: col, startRow: row, endCol: col, endRow: row };
-  }
-
-  // Handle range: "A1:B5"
-  const rangeMatch = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
-  if (rangeMatch) {
-    const startCol = columnToNumber(rangeMatch[1]!);
-    const startRow = parseInt(rangeMatch[2]!);
-    const endCol = columnToNumber(rangeMatch[3]!);
-    const endRow = parseInt(rangeMatch[4]!);
-    return { startCol, startRow, endCol, endRow };
-  }
-
-  return null;
-}
-
-/**
- * Convert column letter to number (A=1, B=2, ..., Z=26, AA=27, etc.)
- */
-function columnToNumber(col: string): number {
-  let result = 0;
-  for (let i = 0; i < col.length; i++) {
-    result = result * 26 + (col.charCodeAt(i) - 64);
-  }
-  return result;
-}
-
-/**
- * Check if two ranges intersect/overlap
- */
-function rangesIntersect(range1: RangeBounds, range2: RangeBounds): boolean {
-  return !(range1.endCol < range2.startCol ||
-           range2.endCol < range1.startCol ||
-           range1.endRow < range2.startRow ||
-           range2.endRow < range1.startRow);
-}
-
-/**
- * Validate output ranges comprehensively
- */
-async function validateOutputRanges(
-  outputValueRange: string,
-  outputUncertaintyRange: string,
-  variables: Variable[],
-  univerAPI: SpreadsheetRef
-): Promise<void> {
-  // 1. Validate range formats
-  if (!outputValueRange.trim()) {
-    throw new Error('Output value range is required');
-  }
-  if (!outputUncertaintyRange.trim()) {
-    throw new Error('Output uncertainty range is required');
-  }
-
-  try {
-    normalizeRangeRef(outputValueRange);
-  } catch (_error) {
-    throw new Error(`Invalid output value range format: ${outputValueRange}`);
-  }
-
-  try {
-    normalizeRangeRef(outputUncertaintyRange);
-  } catch (_error) {
-    throw new Error(`Invalid output uncertainty range format: ${outputUncertaintyRange}`);
-  }
-
-  // 2. Parse ranges into bounds
-  const valueBounds = parseRangeBounds(outputValueRange);
-  const uncertaintyBounds = parseRangeBounds(outputUncertaintyRange);
-
-  if (!valueBounds) {
-    throw new Error(`Could not parse output value range: ${outputValueRange}`);
-  }
-  if (!uncertaintyBounds) {
-    throw new Error(`Could not parse output uncertainty range: ${outputUncertaintyRange}`);
-  }
-
-  // 3. Check for self-intersection between output ranges
-  if (rangesIntersect(valueBounds, uncertaintyBounds)) {
-    throw new Error('Output value and uncertainty ranges cannot overlap');
-  }
-
-  // 4. Collect all input ranges for overlap checking
-  const inputRanges: RangeBounds[] = [];
-  for (const variable of variables) {
-    if (variable.valueRange) {
-      const bounds = parseRangeBounds(variable.valueRange);
-      if (bounds) {
-        inputRanges.push(bounds);
-      }
-    }
-    if (variable.uncertaintyRange) {
-      const bounds = parseRangeBounds(variable.uncertaintyRange);
-      if (bounds) {
-        inputRanges.push(bounds);
-      }
-    }
-  }
-
-  // 5. Check output ranges don't overlap with input ranges
-  for (const inputRange of inputRanges) {
-    if (rangesIntersect(valueBounds, inputRange)) {
-      throw new Error(`Output value range "${outputValueRange}" overlaps with input data range`);
-    }
-    if (rangesIntersect(uncertaintyBounds, inputRange)) {
-      throw new Error(`Output uncertainty range "${outputUncertaintyRange}" overlaps with input data range`);
-    }
-  }
-
-  // 6. Verify ranges exist and are within sheet bounds by attempting to read them
-  try {
-    await univerAPI.getRange(outputValueRange);
-  } catch (_error) {
-    throw new Error(`Output value range "${outputValueRange}" is not accessible or out of bounds`);
-  }
-
-  try {
-    await univerAPI.getRange(outputUncertaintyRange);
-  } catch (_error) {
-    throw new Error(`Output uncertainty range "${outputUncertaintyRange}" is not accessible or out of bounds`);
-  }
-
-  // 7. Check if ranges are writable (attempt to read and see if we get data)
-  // This is a basic check - more sophisticated protection checking would require
-  // additional API support for protected ranges
-  try {
-    const testData = await univerAPI.getRange(outputValueRange);
-    if (!Array.isArray(testData) || testData.length === 0) {
-      throw new Error(`Output value range "${outputValueRange}" appears to be empty or inaccessible`);
-    }
-  } catch (_error) {
-    throw new Error(`Output value range "${outputValueRange}" is not writable`);
-  }
-
-  try {
-    const testData = await univerAPI.getRange(outputUncertaintyRange);
-    if (!Array.isArray(testData) || testData.length === 0) {
-      throw new Error(`Output uncertainty range "${outputUncertaintyRange}" appears to be empty or inaccessible`);
-    }
-  } catch (_error) {
-    throw new Error(`Output uncertainty range "${outputUncertaintyRange}" is not writable`);
-  }
-
-  // Note: Merged cell handling would require additional API support
-  // For now, we assume the ranges are valid for writing
 }
 
 type FocusedInputType =
@@ -293,7 +40,7 @@ type FocusedInputType =
 interface UncertaintySidebarProps {
   open: boolean;
   onClose: () => void;
-  univerRef: React.RefObject<SpreadsheetRef | null>;
+  spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   onPropagationComplete?: (resultRange: string) => void;
   // Lifted state
@@ -312,7 +59,7 @@ interface UncertaintySidebarProps {
 export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
   open,
   onClose,
-  univerRef,
+  spreadsheetRef,
   onSelectionChange,
   onPropagationComplete,
   variables,
@@ -379,23 +126,6 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
     return unsubscribe;
   }, [open]);
 
-  // Memoized parseRange function to avoid regex recompilation
-  const parseRange = useCallback((range: string): { col: string; row: number } | null => {
-    // Try range format first: "A1:B5"
-    let match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
-    if (match?.[1] && match[2]) {
-      return { col: match[1], row: parseInt(match[2]) };
-    }
-
-    // Try single cell format: "A1"
-    match = range.match(/^([A-Z]+)(\d+)$/);
-    if (match?.[1] && match[2]) {
-      return { col: match[1], row: parseInt(match[2]) };
-    }
-
-    return null;
-  }, []);
-
   const addVariable = useCallback(() => {
     const nextName = generateNextVariableName(variables.length);
     const newVariable: Variable = {
@@ -428,64 +158,26 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
 
   // Optimized parallel validation (memoized)
   const validateRanges = useCallback(async (): Promise<boolean> => {
-    if (!univerRef.current) {
+    const spreadsheetAPI = spreadsheetRef.current;
+    if (!spreadsheetAPI) {
       setError('Spreadsheet not initialized');
       return false;
     }
 
-    // Capture the current API instance to avoid race conditions
-    const univerAPI = univerRef.current;
+    const result = await validateUncertaintySetup(
+      variables,
+      outputValueRange,
+      outputUncertaintyRange,
+      spreadsheetAPI
+    );
 
-    try {
-      // First validate input ranges (existing logic)
-      const rangeRequests = collectRangeRequests(variables);
-
-      if (rangeRequests.length === 0) {
-        setError('No input ranges to validate');
-        return false;
-      }
-
-      // Performance monitoring
-      const startTime = performance.now();
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[UncertaintySidebar] Starting parallel validation of ${rangeRequests.length} input ranges`);
-      }
-
-      // Read all input ranges in parallel
-      const rangeResults = await Promise.all(
-        rangeRequests.map(async (request) => {
-          try {
-            const data = await univerAPI.getRange(request.range);
-            return { ...request, data };
-          } catch (error) {
-            throw new Error(`Failed to read ${request.type} range "${request.range}" for variable "${request.variableName}": ${String(error)}`);
-          }
-        })
-      );
-
-      // Validate all input data in batch
-      validateRangeData(rangeResults, variables);
-
-      // Now validate output ranges comprehensively
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[UncertaintySidebar] Validating output ranges: "${outputValueRange}" and "${outputUncertaintyRange}"`);
-      }
-
-      await validateOutputRanges(outputValueRange, outputUncertaintyRange, variables, univerAPI);
-
-      // Performance logging
-      if (process.env.NODE_ENV === 'development') {
-        const endTime = performance.now();
-        console.log(`[UncertaintySidebar] Complete validation completed in ${(endTime - startTime).toFixed(2)}ms`);
-      }
-
-      return true;
-
-    } catch (err) {
-      setError(`Validation failed: ${String(err)}`);
+    if (!result.isValid) {
+      setError(result.error ?? 'Validation failed');
       return false;
     }
-  }, [variables, univerRef, outputValueRange, outputUncertaintyRange]);
+
+    return true;
+  }, [variables, spreadsheetRef, outputValueRange, outputUncertaintyRange]);
 
   const handlePropagate = useCallback(async () => {
     setError('');
@@ -498,7 +190,7 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
       return;
     }
 
-    if (!univerRef.current) {
+    if (!spreadsheetRef.current) {
       setError('Spreadsheet not initialized');
       return;
     }
@@ -511,55 +203,21 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
         setIsProcessing(false);
         return;
       }
-      // Call backend to generate formulas
-      const result = await invoke<{
-        value_formulas: string[];
-        uncertainty_formulas: string[];
-        success: boolean;
-        error?: string;
-      }>('generate_uncertainty_formulas', {
-        variables: variables.map(v => ({
-          name: v.name,
-          value_range: v.valueRange,
-          uncertainty_range: v.uncertaintyRange,
-          confidence: v.confidence
-        })),
+
+      // Run uncertainty propagation
+      const result = await runUncertaintyPropagation(
+        variables,
         formula,
-        outputConfidence
-      });
+        outputValueRange,
+        outputUncertaintyRange,
+        outputConfidence,
+        spreadsheetRef.current
+      );
 
-      if (!result.success || result.error) {
-        setError(result.error ?? 'Formula generation failed');
+      if (!result.success) {
+        setError(result.error ?? 'Propagation failed');
         return;
       }
-
-      // Parse output ranges to get starting cell (using memoized function)
-      const valueStart = parseRange(outputValueRange);
-      const uncStart = parseRange(outputUncertaintyRange);
-
-      if (!valueStart || !uncStart) {
-        setError('Invalid output range format');
-        return;
-      }
-
-      // Prepare batch updates for value formulas
-      const valueUpdates = result.value_formulas.map((formula, i) => ({
-        cellRef: `${valueStart.col}${valueStart.row + i}`,
-        value: { f: formula }
-      }));
-
-      // Prepare batch updates for uncertainty formulas
-      const uncertaintyUpdates = result.uncertainty_formulas.map((formula, i) => ({
-        cellRef: `${uncStart.col}${uncStart.row + i}`,
-        value: { f: formula }
-      }));
-
-      // Write all formulas in batches (much faster than one-by-one)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Writing ${valueUpdates.length} value formulas and ${uncertaintyUpdates.length} uncertainty formulas in batch`);
-      }
-
-      await univerRef.current.batchUpdateCells([...valueUpdates, ...uncertaintyUpdates]);
 
       onPropagationComplete?.(outputValueRange);
       setError('');
@@ -569,7 +227,7 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
     } finally {
       setIsProcessing(false);
     }
-  }, [variables, formula, outputValueRange, outputUncertaintyRange, outputConfidence, univerRef, validateRanges, parseRange, onPropagationComplete]);
+  }, [variables, formula, outputValueRange, outputUncertaintyRange, outputConfidence, spreadsheetRef, validateRanges, onPropagationComplete]);
 
   if (!open) { return null; }
 

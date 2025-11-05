@@ -11,6 +11,8 @@ import {
   useSensors,
   rectIntersection,
 } from '@dnd-kit/core';
+import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 
 // Components
 import { DraggableTabBar } from './components/DraggableTabBar';
@@ -19,11 +21,18 @@ import AppToolbar from './components/AppToolbar';
 import DragOverlayComponent from './components/DragOverlayComponent';
 import OptimizedTabRenderer from './components/OptimizedTabRenderer';
 
+// Contexts
+import { WorkbookDataProvider } from './contexts/WorkbookDataContext';
+import { useWorkbookData } from './hooks/useWorkbookData';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { useNotification } from './hooks/useNotification';
+
 // Hooks
 import { useTabStore } from './hooks/useTabStore';
 
 // Types
 import type { Tab } from './types/tabs';
+import type { WorkbookData } from './types/import';
 
 // Lazy load tab components for code splitting
 const HomeTab = lazy(() => import('./pages/HomeTab'));
@@ -64,17 +73,17 @@ const TAB_CONTENT_STYLES = {
   margin: 0
 } as const;
 
-
-
 function App() {
   // Store and state
   const { tabs, activeTabId, addTab: storeAddTab, reorderTabs } = useTabStore();
-
-  // Drag state
+  
+  // Contexts
+  const { setPendingWorkbookData } = useWorkbookData();
+  const { showNotification } = useNotification();  // Drag state
   const [draggedTab, setDraggedTab] = useState<Tab | null>(null);
 
   // Ref to store handleAddTab function
-  const handleAddTabRef = useRef<((id: string, title: string, content: React.ReactNode) => void) | null>(null);
+  const handleAddTabRef = useRef<((id: string, title: string, content: React.ReactNode, workbookData?: WorkbookData) => void) | null>(null);
 
   // Memoized tab content factory
   const createTabContent = useCallback((tabType: string, tabId: string) => {
@@ -96,7 +105,7 @@ function App() {
   }, []);
 
   // Memoized add tab handler
-  const handleAddTab = useCallback((id: string, title: string, content: React.ReactNode) => {
+  const handleAddTab = useCallback((id: string, title: string, content: React.ReactNode, workbookData?: WorkbookData) => {
     const tabType = id.split('-')[0] ?? 'home';
     const newTab: Tab = {
       id,
@@ -105,7 +114,12 @@ function App() {
       type: tabType
     };
     storeAddTab(newTab);
-  }, [storeAddTab, createTabContent]);
+    
+    // Store workbook data for later loading if provided
+    if (workbookData) {
+      setPendingWorkbookData(id, workbookData);
+    }
+  }, [storeAddTab, createTabContent, setPendingWorkbookData]);
 
   // Update the ref after handleAddTab is defined
   useEffect(() => {
@@ -125,6 +139,67 @@ function App() {
       storeAddTab(homeTab);
     }
   }, [tabs.length, storeAddTab , createTabContent]);  
+
+  // Listen for file open events from file associations
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unlisten = await listen<string>('open-file', (event) => {
+        const filePath = event.payload;
+        console.log('File open requested:', filePath);
+        
+        // Handle the async operation without returning a promise
+        void (async () => {
+          try {
+            // Import the .anafispread file
+            const result = await invoke<{ success: boolean; message?: string; data?: { workbook: WorkbookData } }>(
+              'import_anafis_spread_direct',
+              { filePath }
+            );
+
+            if (result.success && result.data?.workbook) {
+              // Always create a new spreadsheet tab for each opened file
+              // This allows users to have multiple files open simultaneously
+              const fileName = filePath.split('/').pop()?.replace('.anafispread', '') ?? 'Opened File';
+              const tabId = `spreadsheet-opened-${Date.now()}`;
+              handleAddTabRef.current?.(tabId, fileName, undefined, result.data.workbook);
+            } else if (!result.success) {
+              // Show error notification for failed import
+              const errorMessage = result.message ?? 'Unknown import error';
+              showNotification({
+                type: 'error',
+                message: `Failed to open file "${filePath.split('/').pop()}": ${errorMessage}`
+              });
+            } else {
+              // Show error for successful import but missing workbook data
+              showNotification({
+                type: 'error',
+                message: `Failed to open file "${filePath.split('/').pop()}": Invalid file format or corrupted data`
+              });
+            }
+          } catch (error) {
+            console.error('Failed to open file:', error);
+            // Show user-facing error notification
+            const fileName = filePath.split('/').pop() ?? 'Unknown file';
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            showNotification({
+              type: 'error',
+              message: `Failed to open file "${fileName}": ${errorMessage}`
+            });
+          }
+        })();
+      });
+    };
+
+    void setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [handleAddTab, showNotification]);
   
   // Drag and drop setup
   const sensors = useSensors(useSensor(PointerSensor));
@@ -203,4 +278,12 @@ function App() {
   );
 }
 
-export default React.memo(App);
+const AppWithProviders = () => (
+  <NotificationProvider>
+    <WorkbookDataProvider>
+      <App />
+    </WorkbookDataProvider>
+  </NotificationProvider>
+);
+
+export default React.memo(AppWithProviders);

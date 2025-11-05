@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -11,10 +11,11 @@ import {
   Transform as UnitConverterIcon,
   AutoFixHigh as UncertaintyIcon,
   BarChart as QuickPlotIcon,
-  FileDownload as ExportIcon
+  FileDownload as ExportIcon,
+  FileUpload as ImportIcon
 } from '@mui/icons-material';
 
-import { UniverAdapter } from '../components/spreadsheet/univer';
+import { UniverAdapter as SpreadsheetAdapter } from '../components/spreadsheet/univer';
 import { SpreadsheetRef, WorkbookData, CellValue } from '../components/spreadsheet/SpreadsheetInterface';
 import { spreadsheetEventBus } from '../components/spreadsheet/SpreadsheetEventBus';
 
@@ -22,8 +23,11 @@ import UncertaintySidebar from '../components/spreadsheet/sidebar/UncertaintySid
 import UnitConversionSidebar from '../components/spreadsheet/sidebar/UnitConversionSidebar';
 import QuickPlotSidebar from '../components/spreadsheet/sidebar/QuickPlotSidebar';
 import ExportSidebar from '../components/spreadsheet/sidebar/ExportSidebar';
-import { ExportFormat, ExportRangeMode, JsonFormat } from '../types/export';
+import ImportSidebar from '../components/spreadsheet/sidebar/ImportSidebar';
+import { ExportFormat, ExportRangeMode, IExportService } from '../types/export';
+import { IImportService } from '../types/import';
 import { anafisColors } from '../themes';
+import { useWorkbookData } from '../hooks/useWorkbookData';
 
 interface Variable {
   name: string;
@@ -61,9 +65,9 @@ interface SidebarState {
   exportFormat: ExportFormat;
   exportRangeMode: ExportRangeMode;
   exportCustomRange: string;
-  exportJsonFormat: JsonFormat;
-  exportPrettyPrint: boolean;
   exportCustomDelimiter: string;
+
+
 }
 
 interface SpreadsheetTabProps {
@@ -74,8 +78,11 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
   // Check if we're in a detached window by looking at URL params
   const isDetachedWindow = new URLSearchParams(window.location.search).has('tabId');
 
+  // Workbook data context for proper synchronization
+  const { getPendingWorkbookData, clearPendingWorkbookData } = useWorkbookData();
+
   // Sidebar state management - now using simple local state since tabs stay mounted
-  type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | null;
+  type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | 'import' | null;
   const [activeSidebar, setActiveSidebar] = useState<SidebarType>(null);
 
   // Memoized button styles for performance - create stable style objects for active/inactive states
@@ -155,16 +162,75 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
     quickPlotShowErrorBars: false,
 
     // Export sidebar defaults
-    exportFormat: 'csv',
+    exportFormat: 'anafispread',  // Default to native format for lossless save/restore
     exportRangeMode: 'sheet',
     exportCustomRange: '',
-    exportJsonFormat: 'records',
-    exportPrettyPrint: true,
-    exportCustomDelimiter: '|'
+    exportCustomDelimiter: '|',
+
+
   });
 
   // Spreadsheet state - now persistent per tab
   const spreadsheetRef = useRef<SpreadsheetRef>(null);
+
+  // Get services from the spreadsheet implementation (maintains abstraction)
+  // Must use state because we can't access refs during render
+  const [exportService, setExportService] = useState<IExportService | null>(null);
+  const [importService, setImportService] = useState<IImportService | null>(null);
+
+  // Initialize services after mount (can't access refs during render)
+  useEffect(() => {
+    // Poll for services until spreadsheet is ready
+    const checkServices = () => {
+      if (spreadsheetRef.current) {
+        const expSvc = spreadsheetRef.current.getExportService();
+        const impSvc = spreadsheetRef.current.getImportService();
+        setExportService(expSvc);
+        setImportService(impSvc);
+        return true;
+      }
+      return false;
+    };
+
+    // Try immediately
+    if (checkServices()) {
+      return;
+    }
+
+    // Poll every 100ms if not ready yet
+    const interval = setInterval(() => {
+      if (checkServices()) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []); // Only run once on mount
+
+  // Listen for workbook data loading events (e.g., when opening .anafispread files)
+  useEffect(() => {
+    const handleLoadWorkbookData = (event: CustomEvent<WorkbookData>) => {
+      if (spreadsheetRef.current?.loadWorkbookSnapshot) {
+        void spreadsheetRef.current.loadWorkbookSnapshot(event.detail);
+      }
+    };
+
+    window.addEventListener('load-workbook-data', handleLoadWorkbookData as EventListener);
+
+    return () => {
+      window.removeEventListener('load-workbook-data', handleLoadWorkbookData as EventListener);
+    };
+  }, []);
+
+  // Check for pending workbook data on mount (for proper synchronization)
+  useEffect(() => {
+    const pendingData = getPendingWorkbookData(tabId);
+    if (pendingData && spreadsheetRef.current?.loadWorkbookSnapshot) {
+      void spreadsheetRef.current.loadWorkbookSnapshot(pendingData);
+      // Clear the pending data after loading
+      clearPendingWorkbookData(tabId);
+    }
+  }, [tabId, getPendingWorkbookData, clearPendingWorkbookData]);
 
   // NOTE: Tab synchronization removed - tabs are now local-only
 
@@ -251,11 +317,21 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
           <Button
             variant="outlined"
             size="small"
-            startIcon={<QuickPlotIcon />}
-            onClick={handleOpenQuickPlot}
-            sx={activeSidebar === 'quickPlot' ? toolbarButtonStyles.active : toolbarButtonStyles.inactive}
+            startIcon={<ImportIcon />}
+            onClick={() => setActiveSidebar(prev => prev === 'import' ? null : 'import')}
+            sx={activeSidebar === 'import' ? toolbarButtonStyles.active : toolbarButtonStyles.inactive}
           >
-            Quick Plot
+            Import
+          </Button>
+
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<UnitConverterIcon />}
+            onClick={handleOpenUnitConverter}
+            sx={activeSidebar === 'unitConvert' ? toolbarButtonStyles.active : toolbarButtonStyles.inactive}
+          >
+            Unit Converter
           </Button>
 
           <Button
@@ -271,11 +347,11 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
           <Button
             variant="outlined"
             size="small"
-            startIcon={<UnitConverterIcon />}
-            onClick={handleOpenUnitConverter}
-            sx={activeSidebar === 'unitConvert' ? toolbarButtonStyles.active : toolbarButtonStyles.inactive}
+            startIcon={<QuickPlotIcon />}
+            onClick={handleOpenQuickPlot}
+            sx={activeSidebar === 'quickPlot' ? toolbarButtonStyles.active : toolbarButtonStyles.inactive}
           >
-            Unit Converter
+            Quick Plot
           </Button>
 
           <Button
@@ -334,7 +410,7 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
             }
           }}>
             <Box sx={{ flex: 1, overflow: 'hidden' }}>
-              <UniverAdapter
+              <SpreadsheetAdapter
                 ref={spreadsheetRef}
                 initialData={spreadsheetData}
                 onCellChange={handleCellChange}
@@ -348,7 +424,7 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
               <UncertaintySidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={spreadsheetRef}
+                spreadsheetRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
                 onPropagationComplete={(_resultRange: string) => {
                   // Could refresh spreadsheet or show notification here
@@ -370,7 +446,7 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
               <UnitConversionSidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={spreadsheetRef}
+                spreadsheetRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
                 category={sidebarState.unitConversionCategory}
                 setCategory={(category) => updateSidebarState('unitConversionCategory', category)}
@@ -387,7 +463,7 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
               <QuickPlotSidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={spreadsheetRef}
+                spreadsheetRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
                 xRange={sidebarState.quickPlotXRange}
                 setXRange={(range) => updateSidebarState('quickPlotXRange', range)}
@@ -406,25 +482,31 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
               />
             )}
             {/* Export Sidebar - positioned within spreadsheet */}
-            {activeSidebar === 'export' && (
+            {activeSidebar === 'export' && exportService && (
               <ExportSidebar
                 open={true}
                 onClose={() => setActiveSidebar(null)}
-                univerRef={spreadsheetRef}
+                spreadsheetRef={spreadsheetRef}
                 onSelectionChange={handleSelectionChange}
+                exportService={exportService}
                 exportFormat={sidebarState.exportFormat}
                 setExportFormat={(format) => updateSidebarState('exportFormat', format)}
                 rangeMode={sidebarState.exportRangeMode}
                 setRangeMode={(mode) => updateSidebarState('exportRangeMode', mode)}
                 customRange={sidebarState.exportCustomRange}
                 setCustomRange={(range) => updateSidebarState('exportCustomRange', range)}
-                jsonFormat={sidebarState.exportJsonFormat}
-                setJsonFormat={(format) => updateSidebarState('exportJsonFormat', format)}
-                prettyPrint={sidebarState.exportPrettyPrint}
-                setPrettyPrint={(pretty) => updateSidebarState('exportPrettyPrint', pretty)}
                 customDelimiter={sidebarState.exportCustomDelimiter}
                 setCustomDelimiter={(delimiter) => updateSidebarState('exportCustomDelimiter', delimiter)}
-                getTrackedBounds={() => spreadsheetRef.current?.getTrackedBounds() ?? {}}
+              />
+            )}
+            {/* Import Sidebar - positioned within spreadsheet */}
+            {activeSidebar === 'import' && importService && (
+              <ImportSidebar
+                open={true}
+                onClose={() => setActiveSidebar(null)}
+                spreadsheetRef={spreadsheetRef}
+                onSelectionChange={handleSelectionChange}
+                importService={importService}
               />
             )}
           </Box>

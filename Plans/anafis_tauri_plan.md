@@ -96,7 +96,8 @@ This table outlines the primary libraries and crates intended for use across dif
 | **Core/Symbolic** | `sympy` through PyO3 | | For symbolic manipulation and representing expressions as Directed Acyclic Graphs (DAGs) for efficient updates. |
 | **Compute** | `wgpu` (GPU - planned), `rayon` (CPU) | WebAssembly, Web Workers | For auto-dispatching computations to available hardware (GPU/CPU) and enabling parallel processing for performance-critical tasks. |
 | **Persistence/State** | `tauri-plugin-store`, `serde`, `rusqlite` | Zustand (frontend state) | For saving and restoring application state (e.g., open tabs, user preferences), managing complex frontend state, and persistent data storage with SQLite. |
-| **Export System** | `rust_xlsxwriter`, `csv`, `polars`, `serde_json` | TypeScript types | For exporting data in 10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread. All export logic in Rust. |
+| **Export System** | `rust_xlsxwriter`, `csv`, `arrow`, `parquet`, `serde_json` | TypeScript types | For exporting data in 10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread. All export logic in Rust. Uses Arrow/Parquet (v57.0.0) directly instead of Polars for smaller binary and faster compilation. |
+| **Import System** | `arrow`, `parquet`, `encoding_rs`, `flate2` | TypeScript types | For importing data from CSV, TSV, TXT, Parquet, and AnaFisSpread formats. Custom CSV parser with encoding detection (UTF-8, Windows-1252). Direct Parquet reading with type conversion. |
 | **Utils** | `log`, `env_logger`, `config` | `zod` (validation) | For structured logging, environment-aware configuration management, and data validation. |
 
 ## 5. GUI Sketches
@@ -165,28 +166,32 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 -   [x] 9. Code Quality & Type Safety (ESLint, TypeScript, Clippy - all errors fixed)
 -   [x] 10. Export System Implementation (10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
 -   [x] 11. Export Logic Refactoring (Header handling simplified, explicit data structure markers)
--   [ ] 12. Curve Fitting Tab Foundation (Frontend & Rust integration)
--   [ ] 13. Fitting Algorithms Implementation (Rust backend)
--   [ ] 14. Advanced Visualization (3D plotting with ECharts-GL) integration
--   [ ] 15. Equation Solver Tab Implementation (Frontend & Rust integration)
--   [ ] 16. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration)
--   [ ] 17. Floating Tools Implementation
--   [ ] 18. Statistical Analysis Sidebar (statrs crate + descriptive statistics)
--   [ ] 19. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
--   [ ] 20. Outlier Detection Sidebar (Z-score, IQR methods)
--   [ ] 21. Data Validation Sidebar (real-time validation rules)
--   [ ] 22. Metadata Manager Sidebar (experimental context tracking)
--   [ ] 23. Tab Detaching Re-implementation (Multi-window state synchronization)
--   [ ] 24. Internationalization System setup
--   [ ] 25. Application Settings and Configuration management
--   [ ] 26. Update System Implementation
--   [ ] 27. State Persistence and File Management
--   [ ] 28. Comprehensive Testing Suite (Unit, Integration, E2E) development
--   [ ] 29. Distribution and Packaging (Tauri Bundler) setup
--   [ ] 30. Documentation and User Guide creation
--   [ ] 31. GPU Acceleration and Performance Optimization (Rust/WebAssembly) fine-tuning
--   [ ] 32. UI Polish and Accessibility improvements
--   [ ] 33. Final Integration and Release Preparation
+-   [x] 12. Import System Implementation (CSV, TSV, TXT, Parquet, AnaFisSpread with encoding detection)
+-   [x] 13. Import Sidebar UI (File import + Data Library import with search/filter)
+-   [x] 14. File Association System (.anafispread files open in AnaFis on double-click)
+-   [x] 15. Dependency Optimization (Removed Polars, direct Arrow/Parquet usage, PyO3 0.22.0)
+-   [ ] 16. Curve Fitting Tab Foundation (Frontend & Rust integration)
+-   [ ] 17. Fitting Algorithms Implementation (Rust backend)
+-   [ ] 18. Advanced Visualization (3D plotting with ECharts-GL) integration
+-   [ ] 19. Equation Solver Tab Implementation (Frontend & Rust integration)
+-   [ ] 20. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration)
+-   [ ] 21. Floating Tools Implementation
+-   [ ] 22. Statistical Analysis Sidebar (statrs crate + descriptive statistics)
+-   [ ] 23. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
+-   [ ] 24. Outlier Detection Sidebar (Z-score, IQR methods)
+-   [ ] 25. Data Validation Sidebar (real-time validation rules)
+-   [ ] 26. Metadata Manager Sidebar (experimental context tracking)
+-   [ ] 27. Tab Detaching Re-implementation (Multi-window state synchronization)
+-   [ ] 28. Internationalization System setup
+-   [ ] 29. Application Settings and Configuration management
+-   [ ] 30. Update System Implementation
+-   [ ] 31. State Persistence and File Management
+-   [ ] 32. Comprehensive Testing Suite (Unit, Integration, E2E) development
+-   [ ] 33. Distribution and Packaging (Tauri Bundler) setup
+-   [ ] 34. Documentation and User Guide creation
+-   [ ] 35. GPU Acceleration and Performance Optimization (Rust/WebAssembly) fine-tuning
+-   [ ] 36. UI Polish and Accessibility improvements
+-   [ ] 37. Final Integration and Release Preparation
 
 ## 9. Plan for Tabs (Tauri Edition)
 

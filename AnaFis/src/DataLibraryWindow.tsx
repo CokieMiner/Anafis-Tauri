@@ -21,12 +21,17 @@ import {
   Stack,
   Alert,
   Divider,
+  IconButton,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Delete as DeleteIcon,
   Label as LabelIcon,
   FileDownload as ExportIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  FirstPage as FirstPageIcon,
+  LastPage as LastPageIcon,
 } from '@mui/icons-material';
 import { invoke } from '@tauri-apps/api/core';
 import CustomTitleBar from './components/CustomTitleBar';
@@ -151,6 +156,14 @@ export const DataLibraryWindowContent: React.FC = () => {
     sortOrder,
     error,
     selectedIds,
+    currentPage,
+    pageSize,
+    totalCount,
+    totalPages,
+    hasNextPage,
+    hasPrevPage,
+    setCurrentPage,
+    setPageSize,
     setSelectedSequence,
     setSearchQuery,
     setSortBy,
@@ -358,6 +371,64 @@ export const DataLibraryWindowContent: React.FC = () => {
 
       {/* Divider line */}
       {allTags.length > 0 && <Divider />}
+
+      {/* Pagination controls */}
+      {totalCount > 0 && (
+        <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="body2" color="text.secondary">
+            Showing {sequences.length} of {totalCount} sequences
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FormControl size="small" sx={{ minWidth: 80 }}>
+              <Select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                <MenuItem value={25}>25</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+                <MenuItem value={100}>100</MenuItem>
+              </Select>
+            </FormControl>
+            <Typography variant="body2" color="text.secondary">per page</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton
+                size="small"
+                onClick={() => setCurrentPage(0)}
+                disabled={!hasPrevPage}
+              >
+                <FirstPageIcon />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={!hasPrevPage}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <Typography variant="body2" sx={{ mx: 1 }}>
+                Page {currentPage + 1} of {totalPages}
+              </Typography>
+              <IconButton
+                size="small"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={!hasNextPage}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => setCurrentPage(totalPages - 1)}
+                disabled={!hasNextPage}
+              >
+                <LastPageIcon />
+              </IconButton>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {/* Divider line */}
+      {totalCount > 0 && <Divider />}
 
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ m: 2 }}>

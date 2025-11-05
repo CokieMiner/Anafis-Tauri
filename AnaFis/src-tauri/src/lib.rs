@@ -1,4 +1,5 @@
 // Minimal modules - only what's actually used
+mod error;
 mod uncertainty_calculator;
 mod windows;
 mod utils;
@@ -6,8 +7,9 @@ mod unit_conversion;
 mod scientific;
 mod data_library;
 mod export;
+mod import;
 
-use tauri::Manager;
+use tauri::{Manager, Emitter};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -45,7 +47,7 @@ pub fn run() {
             // Scientific Computation Commands (Sidebar tools)
             scientific::uncertainty_propagation::generate_uncertainty_formulas,
 
-            // Data Library Commands (11 commands)
+            // Data Library Commands (12 commands)
             data_library::commands::save_sequence,
             data_library::commands::get_sequences,
             data_library::commands::get_sequence,
@@ -57,17 +59,16 @@ pub fn run() {
             data_library::commands::get_all_tags,
             data_library::commands::export_sequences_csv,
             data_library::commands::export_sequences_json,
+            data_library::commands::batch_import_sequences,
             
-            // Export Commands (9 commands)
+            // Export Commands (2 commands - dispatcher + snapshot)
             export::export_data,
-            export::text::export_to_text,
-            export::json::export_to_json,
-            export::excel::export_to_excel,
-            export::html::export_to_html,
-            export::markdown::export_to_markdown,
-            export::tex::export_to_latex,
-            export::parquet::export_to_parquet,
-            export::anafispread::export_to_anafis_spread,
+            export::anafispread::export_anafispread,
+            
+            // Import Commands (3 commands)
+            import::import_spreadsheet_file,
+            import::import_anafis_spread_direct,
+            import::get_file_metadata,
             
             // Utility Commands (File Operations)
             utils::file_operations::save_png_file,
@@ -79,6 +80,23 @@ pub fn run() {
             // Initialize logging
             if let Err(e) = utils::init_logging() {
                 eprintln!("Failed to initialize logging: {e}");
+            }
+
+            // Check for file association open (when app is launched with a file)
+            let args: Vec<String> = std::env::args().collect();
+            if args.len() > 1 {
+                let file_path = args[1].clone();
+                if file_path.ends_with(".anafispread") {
+                    utils::log_info(&format!("Opening file from association: {}", file_path));
+                    // We'll emit an event to the frontend to handle the file opening
+                    let app_handle = app.handle().clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.emit("open-file", file_path);
+                        }
+                    });
+                }
             }
 
             // Initialize Data Library
