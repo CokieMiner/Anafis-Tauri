@@ -15,31 +15,31 @@ import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 
 // Components
-import { DraggableTabBar } from './components/DraggableTabBar';
-import CustomTitleBar from './components/CustomTitleBar';
-import AppToolbar from './components/AppToolbar';
-import DragOverlayComponent from './components/DragOverlayComponent';
-import OptimizedTabRenderer from './components/OptimizedTabRenderer';
+import { DraggableTabBar } from '@/shared/components/DraggableTabBar';
+import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import AppToolbar from '@/shared/components/AppToolbar';
+import DragOverlayComponent from '@/shared/components/DragOverlayComponent';
+import OptimizedTabRenderer from '@/shared/components/OptimizedTabRenderer';
 
 // Contexts
-import { WorkbookDataProvider } from './contexts/WorkbookDataContext';
-import { useWorkbookData } from './hooks/useWorkbookData';
-import { NotificationProvider } from './contexts/NotificationContext';
-import { useNotification } from './hooks/useNotification';
+import { WorkbookDataProvider } from '@/core/contexts/WorkbookDataContext';
+import { useWorkbookData } from '@/core/managers/WorkbookDataProvider';
+import { NotificationProvider } from '@/core/contexts/NotificationContext';
+import { useNotification } from '@/core/managers/NotificationManager';
 
-// Hooks
-import { useTabStore } from './hooks/useTabStore';
+// Managers (State Management)
+import { useTabStore } from '@/core/managers/TabStateManager';
 
 // Types
-import type { Tab } from './types/tabs';
-import type { WorkbookData } from './types/import';
+import type { Tab } from '@/core/types/tabs';
+import type { WorkbookData } from '@/core/types/import';
 
 // Lazy load tab components for code splitting
-const HomeTab = lazy(() => import('./pages/HomeTab'));
-const SpreadsheetTab = lazy(() => import('./pages/SpreadsheetTab'));
-const FittingTab = lazy(() => import('./pages/FittingTab'));
-const SolverTab = lazy(() => import('./pages/SolverTab'));
-const MonteCarloTab = lazy(() => import('./pages/MonteCarloTab'));
+const HomeTab = lazy(() => import('@/tabs/home/HomeTab'));
+const SpreadsheetTab = lazy(() => import('@/tabs/spreadsheet/SpreadsheetTab'));
+const FittingTab = lazy(() => import('@/tabs/fitting/FittingTab'));
+const SolverTab = lazy(() => import('@/tabs/solver/SolverTab'));
+const MonteCarloTab = lazy(() => import('@/tabs/montecarlo/MonteCarloTab'));
 
 // Static styles to prevent recreation
 const MAIN_CONTAINER_STYLES = {

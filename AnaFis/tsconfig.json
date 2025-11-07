@@ -22,27 +22,11 @@
     /* Path mapping for cleaner imports */
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "@/components/*": [
-        "src/components/*"
-      ],
-      "@/hooks/*": [
-        "src/hooks/*"
-      ],
-      "@/types/*": [
-        "src/types/*"
-      ],
-      "@/utils/*": [
-        "src/utils/*"
-      ],
-      "@/themes/*": [
-        "src/themes/*"
-      ],
-      "@/pages/*": [
-        "src/pages/*"
-      ]
+      "@/*": ["src/*"],
+      "@core/*": ["src/core/*"],
+      "@shared/*": ["src/shared/*"],
+      "@tabs/*": ["src/tabs/*"],
+      "@windows/*": ["src/windows/*"]
     },
     /* Enhanced linting */
     "strict": true,
@@ -51,8 +35,8 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true,
-    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true, // Disabled for performance
+    "noUncheckedIndexedAccess": true, // Disabled for performance - causes 10x+ slowdown
     /* Additional type checking */
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,

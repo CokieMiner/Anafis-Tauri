@@ -16,13 +16,33 @@ export default defineConfig(() => ({
   // Path resolution for cleaner imports
   resolve: {
     alias: {
+      // Main src alias
       '@': path.resolve(__dirname, './src'),
-      '@/components': path.resolve(__dirname, './src/components'),
-      '@/hooks': path.resolve(__dirname, './src/hooks'),
-      '@/types': path.resolve(__dirname, './src/types'),
-      '@/utils': path.resolve(__dirname, './src/utils'),
-      '@/themes': path.resolve(__dirname, './src/themes'),
-      '@/pages': path.resolve(__dirname, './src/pages'),
+      
+      // Core application logic and global infrastructure
+      '@/core': path.resolve(__dirname, './src/core'),
+      '@/core/types': path.resolve(__dirname, './src/core/types'),
+      '@/core/contexts': path.resolve(__dirname, './src/core/contexts'),
+      '@/core/managers': path.resolve(__dirname, './src/core/managers'),
+      '@/core/utils': path.resolve(__dirname, './src/core/utils'),
+      
+      // Shared components, utilities, and services used across the app
+      '@/shared': path.resolve(__dirname, './src/shared'),
+      '@/shared/components': path.resolve(__dirname, './src/shared/components'),
+      '@/shared/types': path.resolve(__dirname, './src/shared/types'),
+      '@/shared/utils': path.resolve(__dirname, './src/shared/utils'),
+      '@/shared/dataLibrary': path.resolve(__dirname, './src/shared/dataLibrary'),
+      
+      // Tab modules (tab-specific features)
+      '@/tabs': path.resolve(__dirname, './src/tabs'),
+      '@/tabs/home': path.resolve(__dirname, './src/tabs/home'),
+      '@/tabs/spreadsheet': path.resolve(__dirname, './src/tabs/spreadsheet'),
+      '@/tabs/fitting': path.resolve(__dirname, './src/tabs/fitting'),
+      '@/tabs/solver': path.resolve(__dirname, './src/tabs/solver'),
+      '@/tabs/montecarlo': path.resolve(__dirname, './src/tabs/montecarlo'),
+      
+      // Floating windows
+      '@/windows': path.resolve(__dirname, './src/windows'),
     },
     // Deduplicate shared dependencies to prevent multiple instances
     dedupe: [
@@ -239,7 +259,8 @@ export default defineConfig(() => ({
       clientFiles: [
         './src/main.tsx',
         './src/App.tsx',
-        './src/pages/HomeTab.tsx',
+        './src/tabs/home/HomeTab.tsx',
+        './src/tabs/spreadsheet/SpreadsheetTab.tsx',
       ],
     },
   },

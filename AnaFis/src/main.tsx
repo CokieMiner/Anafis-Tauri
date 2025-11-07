@@ -1,9 +1,9 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
+import App from '@/App.tsx'
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
-import { createAnafisTheme } from './themes';
+import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes/index.ts';
 
 // Prevent pinch-to-zoom on trackpad/touchpad
 document.addEventListener('wheel', (e) => {
