@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -14,7 +14,6 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Divider,
   SelectChangeEvent
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -26,7 +25,6 @@ import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsh
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
-import { spreadsheetEventBus } from '@/tabs/spreadsheet/managers/SpreadsheetEventBus';
 import { useExport } from '@/tabs/spreadsheet/components/sidebar/logic/useExport';
 
 type FocusedInputType = 'customRange' | 'dataRange' | 'uncertaintyRange' | null;
@@ -75,44 +73,28 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
 
 
 
-  // Memoized update field function for better performance
-  const updateField = useCallback((inputType: FocusedInputType, selection: string) => {
-    if (inputType === 'customRange') {
-      setCustomRange(selection);
-    } else if (inputType === 'dataRange') {
-      setDataRange(selection);
-    } else if (inputType === 'uncertaintyRange') {
-      setUncertaintyRange(selection);
-    }
-  }, [setCustomRange, setDataRange, setUncertaintyRange]);
-
-  // Stable no-op function to prevent unnecessary re-renders
-  const noopSelectionChange = useCallback(() => {
-    // No-op function for when onSelectionChange is not provided
-  }, []);
-
   const { focusedInput, handleInputFocus, handleInputBlur } = useSpreadsheetSelection<FocusedInputType>({
-    onSelectionChange: onSelectionChange ?? noopSelectionChange,
-    updateField,
+    onSelectionChange: onSelectionChange ?? (() => { }),
+    updateField: React.useCallback((inputType, selection) => {
+      switch (inputType) {
+        case 'customRange':
+          setCustomRange(selection);
+          break;
+        case 'dataRange':
+          setDataRange(selection);
+          break;
+        case 'uncertaintyRange':
+          setUncertaintyRange(selection);
+          break;
+      }
+    }, [setCustomRange, setDataRange, setUncertaintyRange]),
     sidebarDataAttribute: 'data-export-sidebar',
-    handlerName: '__exportSelectionHandler',
-  });
-
-  // Subscribe to spreadsheet selection events via event bus
+  });  // Subscribe to spreadsheet selection events via event bus
   useEffect(() => {
     if (!open) { return; }
 
-    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
-      // Call the window handler that the hook is listening to
-      const handler = window.__exportSelectionHandler;
-      if (handler) {
-        handler(cellRef);
-      }
-      // NOTE: Don't call onSelectionChange here - it would create an infinite loop
-      // since onSelectionChange emits to the event bus, which triggers this handler again
-    });
-
-    return unsubscribe;
+    // No longer needed - selection is handled via context in the hook
+    return;
   }, [open]);
 
   // File extension and filter utilities moved to exportService
@@ -255,7 +237,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
                       onBlur={handleInputBlur}
                       placeholder="e.g., A1:D20"
                       sx={{
-                        mt: 1,
+                        mt: 1, // Add more spacing from the radio buttons
                         '& .MuiOutlinedInput-root': {
                           bgcolor: focusedInput === 'customRange' ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
                           borderRadius: '6px',
@@ -269,35 +251,34 @@ const ExportSidebar = React.memo<ExportSidebarProps>(({
                   )}
                 </FormControl>
 
-                <Divider sx={{ my: 2, bgcolor: 'rgba(33, 150, 243, 0.2)' }} />
-
                 {/* Format-specific options - only custom delimiter for TXT */}
                 {exportFormat === 'txt' && (
-                  <Box sx={{ mb: 3 }}>
-                    <FormLabel sx={{ color: anafisColors.spreadsheet, mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      3. Custom Delimiter
-                    </FormLabel>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={customDelimiter}
-                      onChange={(e) => setCustomDelimiter(e.target.value)}
-                      placeholder="Enter delimiter character (e.g., |, ;, tab)"
-                      helperText="CSV uses comma (,) and TSV uses tab - only TXT allows custom delimiters"
-                      sx={{
-                        mt: 1,
-                        '& .MuiOutlinedInput-root': {
-                          bgcolor: 'rgba(33, 150, 243, 0.05)',
-                          borderRadius: '6px',
-                          '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
-                          '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
-                          '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
-                          '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
-                        },
-                        '& .MuiFormHelperText-root': { color: 'rgba(33, 150, 243, 0.6)', fontSize: 11 }
-                      }}
-                    />
-                  </Box>
+                  <>
+                    <Box sx={{ mb: 3 }}>
+                      <FormLabel sx={{ color: anafisColors.spreadsheet, mb: 1, fontWeight: 'bold', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        3. Custom Delimiter
+                      </FormLabel>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={customDelimiter}
+                        onChange={(e) => setCustomDelimiter(e.target.value)}
+                        placeholder="Enter delimiter character (e.g., |, ;, tab)"
+                        sx={{
+                          mt: 1,
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'rgba(33, 150, 243, 0.05)',
+                            borderRadius: '6px',
+                            '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                            '&:hover fieldset': { borderColor: 'rgba(33, 150, 243, 0.4)' },
+                            '&.Mui-focused fieldset': { borderColor: anafisColors.spreadsheet },
+                            '& input': { color: 'white', fontFamily: 'monospace', fontSize: 13 }
+                          },
+                          '& .MuiFormHelperText-root': { color: 'rgba(33, 150, 243, 0.6)', fontSize: 11 }
+                        }}
+                      />
+                    </Box>
+                  </>
                 )}
               </>
             )}

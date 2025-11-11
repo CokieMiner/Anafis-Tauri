@@ -8,7 +8,8 @@
 
 import { useState, useCallback } from 'react';
 import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { validateUncertaintySetup, runUncertaintyPropagation, type Variable } from '@/tabs/spreadsheet/univer/operations/uncertaintyOperations';
+import { ValidationService, type ValidationResult } from '@/tabs/spreadsheet/univer/utils/ValidationService';
+import { runUncertaintyPropagation, type Variable } from '@/tabs/spreadsheet/univer/operations/uncertaintyOperations';
 
 interface UseUncertaintyPropagationOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
@@ -73,55 +74,60 @@ export function useUncertaintyPropagation({
     }
   }, [variables]);
 
-  // Validate the current setup
-  const validateSetup = useCallback(async (): Promise<boolean> => {
+  // Validate the current setup using consolidated validation service
+  const validateSetup = useCallback(async (): Promise<ValidationResult> => {
     const spreadsheetAPI = spreadsheetRef.current;
     if (!spreadsheetAPI) {
-      setError('Spreadsheet not initialized');
-      return false;
+      return {
+        isValid: false,
+        errors: ['Spreadsheet not initialized'],
+        warnings: []
+      };
     }
 
-    const result = await validateUncertaintySetup(
+    return await ValidationService.validateUncertaintySetup(
       variables,
       outputValueRange,
       outputUncertaintyRange,
       spreadsheetRef.current!
     );
-
-    if (!result.ok) {
-      setError(result.error.message);
-      return false;
-    }
-
-    return true;
   }, [variables, spreadsheetRef, outputValueRange, outputUncertaintyRange]);
 
   // Execute uncertainty propagation
   const propagate = useCallback(async () => {
     setError('');
+    setIsProcessing(true);
 
     // Basic validation
     if (variables.some(v => !v.valueRange)) {
       setError('Fill in all value ranges');
+      setIsProcessing(false);
       return;
     }
     if (!formula || !outputValueRange || !outputUncertaintyRange) {
       setError('Fill in formula and output ranges');
+      setIsProcessing(false);
       return;
     }
 
     if (!spreadsheetRef.current) {
       setError('Spreadsheet not initialized');
+      setIsProcessing(false);
       return;
     }
 
-    setIsProcessing(true);
     try {
       // Validate data before sending to backend
-      const isValid = await validateSetup();
-      if (!isValid) {
+      const validationResult = await validateSetup();
+      if (!validationResult.isValid) {
+        setError(validationResult.errors.join('; '));
         setIsProcessing(false);
         return;
+      }
+
+      // Show warnings if any
+      if (validationResult.warnings.length > 0) {
+        console.warn('Validation warnings:', validationResult.warnings);
       }
 
       // Run uncertainty propagation

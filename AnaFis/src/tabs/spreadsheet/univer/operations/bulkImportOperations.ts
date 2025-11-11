@@ -4,6 +4,10 @@ import type { FWorksheet } from '@univerjs/sheets/facade';
 import { letterToColumn } from '@/tabs/spreadsheet/univer';
 // Import type augmentations
 import '@/tabs/spreadsheet/types/univer-augmentations';
+import {
+  normalizeError,
+  logError
+} from '@/tabs/spreadsheet/univer/utils/errors';
 
 /**
  * Cell data structure for import
@@ -173,11 +177,8 @@ async function unifiedBulkLoadSheetData(
       }
     } catch (error) {
       // Handle errors consistently based on input format
-      if (inputFormat === 'matrix') {
-        console.error('Failed to apply merge data:', error);
-      } else {
-        console.warn('Failed to apply merge data with offset:', error);
-      }
+      const normalizedError = normalizeError(error, 'bulkImportOperations.unifiedBulkLoadSheetData');
+      logError(normalizedError);
     }
   }
 }
@@ -245,7 +246,17 @@ function convertMatrixTo2DArray(
 }
 
 /**
- * Bulk load data into a sheet using direct Univer commands
+ * Bulk load data into a sheet using direct Univer commands.
+ *
+ * Imports data from A1 notation format (cellData as object with string keys like "A1", "B2").
+ * This is the standard import path that converts A1 notation to matrix format internally.
+ * Supports formulas, formatting, and merge data based on options.
+ *
+ * @param univerInstance - The Univer instance to operate on
+ * @param sheet - The target worksheet to load data into
+ * @param sheetData - Sheet data in A1 notation format with cell data and metadata
+ * @param options - Import options controlling what data types to include
+ * @returns Promise that resolves when the bulk import is complete
  */
 export async function bulkLoadSheetData(
   univerInstance: Univer,
@@ -260,8 +271,17 @@ export async function bulkLoadSheetData(
 }
 
 /**
- * Bulk load data from matrix format (optimized path for append mode)
- * Skips A1 notation conversion for better performance
+ * Bulk load data from matrix format (optimized path for append mode).
+ *
+ * Imports data from matrix format (cellDataMatrix as object with numeric row/col keys).
+ * This is the optimized path that skips A1 notation conversion for better performance.
+ * Used primarily in append mode where data comes pre-formatted as matrices.
+ *
+ * @param univerInstance - The Univer instance to operate on
+ * @param sheet - The target worksheet to load data into
+ * @param sheetData - Sheet data in matrix format with numeric coordinates
+ * @param options - Import options controlling what data types to include
+ * @returns Promise that resolves when the bulk import is complete
  */
 export async function bulkLoadSheetDataFromMatrix(
   univerInstance: Univer,
@@ -280,7 +300,19 @@ export async function bulkLoadSheetDataFromMatrix(
 }
 
 /**
- * Bulk load data with offset (for insertAtCell mode)
+ * Bulk load data with offset (for insertAtCell mode).
+ *
+ * Imports data with row and column offsets applied, allowing data to be inserted
+ * at specific positions within the sheet rather than starting at A1. Uses A1
+ * notation format as input and applies offsets during the import process.
+ *
+ * @param univerInstance - The Univer instance to operate on
+ * @param sheet - The target worksheet to load data into
+ * @param sheetData - Sheet data in A1 notation format
+ * @param rowOffset - Number of rows to offset the data placement
+ * @param colOffset - Number of columns to offset the data placement
+ * @param options - Import options controlling what data types to include
+ * @returns Promise that resolves when the bulk import is complete
  */
 export async function bulkLoadSheetDataWithOffset(
   univerInstance: Univer,
@@ -300,7 +332,17 @@ export async function bulkLoadSheetDataWithOffset(
 
 
 /**
- * Clear sheet data by filling with empty cells
+ * Clear sheet data by filling with empty cells.
+ *
+ * Removes all data from a sheet by setting a large range to empty cell objects.
+ * Uses direct Univer commands for efficient bulk clearing. The default dimensions
+ * can be customized but should cover the expected sheet size.
+ *
+ * @param univerInstance - The Univer instance to operate on
+ * @param sheet - The target worksheet to clear
+ * @param maxRows - Maximum number of rows to clear (default: 1000)
+ * @param maxCols - Maximum number of columns to clear (default: 26)
+ * @returns Promise that resolves when the sheet has been cleared
  */
 export async function clearSheetData(
   univerInstance: Univer,

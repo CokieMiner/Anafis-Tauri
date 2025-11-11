@@ -1,33 +1,24 @@
 // Range and cell utilities for spreadsheet operations
 // AnaFis - Unit Conversion Sidebar
 
+import { CellReference } from '@/tabs/spreadsheet/utils/CellReference';
+
 // Cached regex patterns for better performance
 const RANGE_REGEX = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/;
 const CELL_REGEX = /^[A-Z]+\d+$/;
 
 /**
- * Convert column letter to number (A=1, B=2, ..., Z=26, AA=27, etc.)
+ * Convert column letter to number (A=0, B=1, ..., Z=25, AA=26, etc.)
  */
 export const colToNum = (col: string): number => {
-  let result = 0;
-  for (let i = 0; i < col.length; i++) {
-    result = result * 26 + (col.charCodeAt(i) - 65 + 1);
-  }
-  return result;
+  return CellReference.letterToColumn(col);
 };
 
 /**
- * Convert column number to letter (1=A, 2=B, ..., 26=Z, 27=AA, etc.)
+ * Convert column number to letter (0=A, 1=B, ..., 25=Z, 26=AA, etc.)
  */
 export const numToCol = (num: number): string => {
-  let colStr = '';
-  let temp = num;
-  while (temp > 0) {
-    temp--;
-    colStr = String.fromCharCode(65 + (temp % 26)) + colStr;
-    temp = Math.floor(temp / 26);
-  }
-  return colStr;
+  return CellReference.columnToLetter(num);
 };
 
 /**

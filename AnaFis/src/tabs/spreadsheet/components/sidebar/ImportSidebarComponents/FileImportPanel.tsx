@@ -459,6 +459,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                 }
                 helperText="Number of rows to skip from the beginning"
                 sx={{
+                  mt: 1, // Add top margin for more spacing from title
                   mb: 2,
                   '& .MuiInputLabel-root': {
                     color: anafisColors.spreadsheet,

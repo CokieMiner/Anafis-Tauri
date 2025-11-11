@@ -2,6 +2,7 @@
 import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import { parseRange, type RangeBounds } from '@/tabs/spreadsheet/univer/utils/cellUtils';
 import { normalizeRangeRef } from '@/tabs/spreadsheet/univer/utils/validation';
+import { SpreadsheetValidationError } from './errors';
 
 /**
  * Centralized range validation utilities
@@ -14,14 +15,24 @@ export class RangeValidator {
    */
   static validateFormat(range: string): void {
     if (!range || typeof range !== 'string') {
-      throw new Error('Range reference must be a non-empty string');
+      throw new SpreadsheetValidationError(
+        'Range reference must be a non-empty string',
+        'range',
+        'validateFormat',
+        { value: range, type: typeof range }
+      );
     }
 
     try {
       normalizeRangeRef(range.trim());
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Invalid range format';
-      throw new Error(`Invalid range format "${range}": ${message}`);
+      throw new SpreadsheetValidationError(
+        `Invalid range format "${range}": ${message}`,
+        'range',
+        'validateFormat',
+        { range, originalError: message }
+      );
     }
   }
 
@@ -34,15 +45,30 @@ export class RangeValidator {
 
     const bounds = parseRange(range);
     if (!bounds) {
-      throw new Error(`Could not parse range bounds for "${range}"`);
+      throw new SpreadsheetValidationError(
+        `Could not parse range bounds for "${range}"`,
+        'range',
+        'validateBounds',
+        { range, maxRows, maxCols }
+      );
     }
 
     if (bounds.startRow < 0 || bounds.startCol < 0) {
-      throw new Error(`Range "${range}" contains negative coordinates`);
+      throw new SpreadsheetValidationError(
+        `Range "${range}" contains negative coordinates`,
+        'range',
+        'validateBounds',
+        { range, bounds, maxRows, maxCols }
+      );
     }
 
     if (bounds.endRow >= maxRows || bounds.endCol >= maxCols) {
-      throw new Error(`Range "${range}" exceeds sheet bounds (${maxRows}×${maxCols})`);
+      throw new SpreadsheetValidationError(
+        `Range "${range}" exceeds sheet bounds (${maxRows}×${maxCols})`,
+        'range',
+        'validateBounds',
+        { range, bounds, maxRows, maxCols }
+      );
     }
   }
 
@@ -58,11 +84,21 @@ export class RangeValidator {
     const bounds2 = parseRange(range2);
 
     if (!bounds1 || !bounds2) {
-      throw new Error('Could not parse range bounds for overlap check');
+      throw new SpreadsheetValidationError(
+        'Could not parse range bounds for overlap check',
+        'ranges',
+        'validateNoOverlap',
+        { range1, range2, bounds1: !!bounds1, bounds2: !!bounds2 }
+      );
     }
 
     if (this.rangesIntersect(bounds1, bounds2)) {
-      throw new Error(`Ranges "${range1}" and "${range2}" overlap`);
+      throw new SpreadsheetValidationError(
+        `Ranges "${range1}" and "${range2}" overlap`,
+        'ranges',
+        'validateNoOverlap',
+        { range1, range2, bounds1, bounds2 }
+      );
     }
   }
 
@@ -76,7 +112,12 @@ export class RangeValidator {
     try {
       await spreadsheetAPI.getRange(range);
     } catch (error) {
-      throw new Error(`Range "${range}" is not accessible: ${String(error)}`);
+      throw new SpreadsheetValidationError(
+        `Range "${range}" is not accessible: ${String(error)}`,
+        'range',
+        'validateAccessible',
+        { range, error: String(error) }
+      );
     }
   }
 
@@ -90,10 +131,20 @@ export class RangeValidator {
     try {
       const testData = await spreadsheetAPI.getRange(range);
       if (!Array.isArray(testData) || testData.length === 0) {
-        throw new Error(`Range "${range}" appears to be empty or inaccessible`);
+        throw new SpreadsheetValidationError(
+          `Range "${range}" appears to be empty or inaccessible`,
+          'range',
+          'validateWritable',
+          { range, dataLength: Array.isArray(testData) ? testData.length : 'not array' }
+        );
       }
     } catch (error) {
-      throw new Error(`Range "${range}" is not writable: ${String(error)}`);
+      throw new SpreadsheetValidationError(
+        `Range "${range}" is not writable: ${String(error)}`,
+        'range',
+        'validateWritable',
+        { range, error: String(error) }
+      );
     }
   }
 

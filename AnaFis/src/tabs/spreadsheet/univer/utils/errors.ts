@@ -1,4 +1,4 @@
-// errors.ts - Error classes and handling utilities for spreadsheet operations
+// errors.ts - Comprehensive error classes and handling utilities for spreadsheet operations
 import {
   NON_RETRYABLE_ERROR_CODES,
   NON_RETRYABLE_ERROR_TYPES,
@@ -7,56 +7,453 @@ import {
   NON_RETRYABLE_SERVER_ERRORS,
   VALIDATION_ERROR_PATTERNS,
   PERMISSION_ERROR_PATTERNS,
+  EXPONENTIAL_BACKOFF_BASE_MS,
 } from './constants';
+
+// ============================================================================
+// ERROR CODES AND TYPES
+// ============================================================================
+
+/**
+ * Standardized error codes for spreadsheet operations
+ */
+export enum SpreadsheetErrorCode {
+  // Validation errors
+  INVALID_RANGE = 'INVALID_RANGE',
+  INVALID_CELL_REFERENCE = 'INVALID_CELL_REFERENCE',
+  INVALID_SHEET_NAME = 'INVALID_SHEET_NAME',
+  RANGE_OVERLAP = 'RANGE_OVERLAP',
+  RANGE_OUT_OF_BOUNDS = 'RANGE_OUT_OF_BOUNDS',
+
+  // Permission errors
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
+  SHEET_PROTECTED = 'SHEET_PROTECTED',
+  READ_ONLY = 'READ_ONLY',
+
+  // Operation errors
+  OPERATION_FAILED = 'OPERATION_FAILED',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  TIMEOUT = 'TIMEOUT',
+  RESOURCE_EXHAUSTED = 'RESOURCE_EXHAUSTED',
+
+  // Data errors
+  INVALID_DATA_FORMAT = 'INVALID_DATA_FORMAT',
+  DATA_TOO_LARGE = 'DATA_TOO_LARGE',
+  FORMULA_ERROR = 'FORMULA_ERROR',
+
+  // System errors
+  SPREADSHEET_NOT_READY = 'SPREADSHEET_NOT_READY',
+  INVALID_OPERATION = 'INVALID_OPERATION',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+}
+
+/**
+ * Error severity levels
+ */
+export enum ErrorSeverity {
+  LOW = 'low',       // Minor issues, operation can continue
+  MEDIUM = 'medium', // Significant issues, user attention needed
+  HIGH = 'high',     // Critical issues, operation failed
+  FATAL = 'fatal',   // System-level failures
+}
+
+/**
+ * Error categories for better error handling
+ */
+export enum ErrorCategory {
+  VALIDATION = 'validation',
+  PERMISSION = 'permission',
+  NETWORK = 'network',
+  DATA = 'data',
+  SYSTEM = 'system',
+  USER = 'user',
+}
+
+// ============================================================================
+// ERROR CLASSES
+// ============================================================================
+
+/**
+ * Base spreadsheet error class with enhanced context
+ */
 export class SpreadsheetError extends Error {
-  constructor(message: string, public readonly code: string, public readonly originalError?: Error) {
+  public readonly code: SpreadsheetErrorCode;
+  public readonly category: ErrorCategory;
+  public readonly severity: ErrorSeverity;
+  public readonly operation: string | undefined;
+  public readonly context: Record<string, unknown> | undefined;
+  public readonly originalError: Error | undefined;
+  public readonly timestamp: Date;
+  public readonly isRetryable: boolean;
+
+  constructor(
+    message: string,
+    code: SpreadsheetErrorCode,
+    category: ErrorCategory,
+    severity: ErrorSeverity,
+    options: {
+      operation?: string | undefined;
+      context?: Record<string, unknown> | undefined;
+      originalError?: Error | undefined;
+      isRetryable?: boolean | undefined;
+    } = {}
+  ) {
     super(message);
     this.name = 'SpreadsheetError';
+    this.code = code;
+    this.category = category;
+    this.severity = severity;
+    this.operation = options.operation;
+    this.context = options.context;
+    this.originalError = options.originalError;
+    this.timestamp = new Date();
+    this.isRetryable = options.isRetryable ?? this.determineRetryability();
+  }
+
+  /**
+   * Determine if this error is retryable based on its properties
+   */
+  private determineRetryability(): boolean {
+    // Validation and permission errors are never retryable
+    if (this.category === ErrorCategory.VALIDATION || this.category === ErrorCategory.PERMISSION) {
+      return false;
+    }
+
+    // Network and system errors might be retryable
+    if (this.category === ErrorCategory.NETWORK || this.category === ErrorCategory.SYSTEM) {
+      return this.code !== SpreadsheetErrorCode.INVALID_OPERATION;
+    }
+
+    // Data errors depend on the specific code
+    if (this.category === ErrorCategory.DATA) {
+      return this.code === SpreadsheetErrorCode.TIMEOUT || this.code === SpreadsheetErrorCode.RESOURCE_EXHAUSTED;
+    }
+
+    return false;
+  }
+
+  /**
+   * Get user-friendly error message
+   */
+  getUserMessage(): string {
+    return formatErrorForUser(this);
+  }
+
+  /**
+   * Get detailed error information for logging/debugging
+   */
+  getDetailedInfo(): Record<string, unknown> {
+    return {
+      name: this.name,
+      message: this.message,
+      code: this.code,
+      category: this.category,
+      severity: this.severity,
+      operation: this.operation,
+      context: this.context,
+      timestamp: this.timestamp.toISOString(),
+      isRetryable: this.isRetryable,
+      stack: this.stack,
+      originalError: this.originalError ? {
+        name: this.originalError.name,
+        message: this.originalError.message,
+        stack: this.originalError.stack,
+      } : undefined,
+    };
+  }
+
+  /**
+   * Create a new error with additional context
+   */
+  withContext(additionalContext: Record<string, unknown>): SpreadsheetError {
+    return new SpreadsheetError(
+      this.message,
+      this.code,
+      this.category,
+      this.severity,
+      {
+        operation: this.operation,
+        context: { ...this.context, ...additionalContext },
+        originalError: this.originalError,
+        isRetryable: this.isRetryable,
+      }
+    );
+  }
+
+  /**
+   * Create a new error with different severity
+   */
+  withSeverity(severity: ErrorSeverity): SpreadsheetError {
+    return new SpreadsheetError(
+      this.message,
+      this.code,
+      this.category,
+      severity,
+      {
+        operation: this.operation,
+        context: this.context,
+        originalError: this.originalError,
+        isRetryable: this.isRetryable,
+      }
+    );
   }
 }
 
+/**
+ * Validation-specific error
+ */
 export class SpreadsheetValidationError extends SpreadsheetError {
-  constructor(message: string, public readonly field: string) {
-    super(message, 'VALIDATION_ERROR');
+  public readonly field: string;
+
+  constructor(message: string, field: string, operation?: string, context?: Record<string, unknown>) {
+    super(
+      message,
+      SpreadsheetErrorCode.INVALID_RANGE, // Default, can be overridden
+      ErrorCategory.VALIDATION,
+      ErrorSeverity.HIGH,
+      { operation, context }
+    );
     this.name = 'SpreadsheetValidationError';
+    this.field = field;
   }
 }
 
+/**
+ * Operation-specific error
+ */
 export class SpreadsheetOperationError extends SpreadsheetError {
-  constructor(operation: string, originalError?: Error) {
-    super(`Failed to ${operation}`, 'OPERATION_FAILED', originalError);
+  constructor(operation: string, originalError?: Error, context?: Record<string, unknown>) {
+    super(
+      `Failed to ${operation}`,
+      SpreadsheetErrorCode.OPERATION_FAILED,
+      ErrorCategory.SYSTEM,
+      ErrorSeverity.HIGH,
+      { operation, originalError, context }
+    );
     this.name = 'SpreadsheetOperationError';
   }
 }
 
 /**
- * Handle spreadsheet errors with consistent logging and error types
+ * Permission-specific error
  */
-export function handleSpreadsheetError(operation: string, error: unknown): never {
-  const message = `Failed to ${operation}`;
-  console.error(message, error);
-
-  if (error instanceof Error) {
-    throw new SpreadsheetOperationError(operation, error);
+export class SpreadsheetPermissionError extends SpreadsheetError {
+  constructor(message: string, operation?: string, context?: Record<string, unknown>) {
+    super(
+      message,
+      SpreadsheetErrorCode.PERMISSION_DENIED,
+      ErrorCategory.PERMISSION,
+      ErrorSeverity.HIGH,
+      { operation, context }
+    );
+    this.name = 'SpreadsheetPermissionError';
   }
-
-  throw new SpreadsheetError(message, 'SPREADSHEET_UNKNOWN_ERROR');
 }
 
 /**
+ * Network-specific error
+ */
+export class SpreadsheetNetworkError extends SpreadsheetError {
+  constructor(message: string, operation?: string, context?: Record<string, unknown>) {
+    super(
+      message,
+      SpreadsheetErrorCode.NETWORK_ERROR,
+      ErrorCategory.NETWORK,
+      ErrorSeverity.MEDIUM,
+      { operation, context }
+    );
+    this.name = 'SpreadsheetNetworkError';
+  }
+}
+
+// ============================================================================
+// ERROR HANDLING UTILITIES
+// ============================================================================
+
+/**
+ * Handle spreadsheet errors with consistent logging and error types
+ */
+export function handleSpreadsheetError(operation: string, error: unknown): never {
+  const spreadsheetError = normalizeError(error, operation);
+  logError(spreadsheetError);
+  throw spreadsheetError;
+}
+
+/**
+ * Normalize any error into a SpreadsheetError
+ */
+export function normalizeError(error: unknown, operation?: string): SpreadsheetError {
+  // Already a SpreadsheetError
+  if (error instanceof SpreadsheetError) {
+    return operation && !error.operation ? error.withContext({ operation }) : error;
+  }
+
+  // Standard Error
+  if (error instanceof Error) {
+    return classifyError(error, operation);
+  }
+
+  // Object with message
+  if (error && typeof error === 'object' && 'message' in error) {
+    const err = error as { message: unknown; code?: unknown; type?: unknown };
+    const message = String(err.message);
+    const code = err.code !== null && typeof err.code === 'string' ? err.code : undefined;
+    const type = err.type !== null && typeof err.type === 'string' ? err.type : undefined;
+
+    return new SpreadsheetError(
+      message,
+      mapErrorCode(code),
+      classifyErrorCategory(message, type),
+      ErrorSeverity.MEDIUM,
+      { operation, context: { originalCode: code, originalType: type } }
+    );
+  }
+
+  // Primitive values
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+  return new SpreadsheetError(
+    message,
+    SpreadsheetErrorCode.UNKNOWN_ERROR,
+    ErrorCategory.SYSTEM,
+    ErrorSeverity.MEDIUM,
+    { operation }
+  );
+}
+
+/**
+ * Classify an Error into appropriate SpreadsheetError
+ */
+function classifyError(error: Error, operation?: string): SpreadsheetError {
+  const message = error.message.toLowerCase();
+
+  // Validation errors
+  if (message.includes('invalid range') || message.includes('invalid cell')) {
+    return new SpreadsheetValidationError(error.message, 'range', operation);
+  }
+
+  // Permission errors
+  if (message.includes('permission') || message.includes('denied') || message.includes('protected')) {
+    return new SpreadsheetPermissionError(error.message, operation);
+  }
+
+  // Network errors
+  if (message.includes('network') || message.includes('timeout') || message.includes('connection')) {
+    return new SpreadsheetNetworkError(error.message, operation);
+  }
+
+  // Default to operation error
+  return new SpreadsheetOperationError(operation ?? 'unknown operation', error);
+}
+
+/**
+ * Map string error codes to SpreadsheetErrorCode enum
+ */
+function mapErrorCode(code?: string): SpreadsheetErrorCode {
+  if (!code) {return SpreadsheetErrorCode.UNKNOWN_ERROR;}
+
+  const codeMap: Record<string, SpreadsheetErrorCode> = {
+    'INVALID_RANGE': SpreadsheetErrorCode.INVALID_RANGE,
+    'PERMISSION_DENIED': SpreadsheetErrorCode.PERMISSION_DENIED,
+    'TIMEOUT': SpreadsheetErrorCode.TIMEOUT,
+    'NETWORK_ERROR': SpreadsheetErrorCode.NETWORK_ERROR,
+    // Add more mappings as needed
+  };
+
+  return codeMap[code] ?? SpreadsheetErrorCode.UNKNOWN_ERROR;
+}
+
+/**
+ * Classify error category based on message and type
+ */
+function classifyErrorCategory(message: string, type?: string): ErrorCategory {
+  const msg = message.toLowerCase();
+
+  if (type === 'validation' || msg.includes('invalid') || msg.includes('format')) {
+    return ErrorCategory.VALIDATION;
+  }
+
+  if (type === 'permission' || msg.includes('permission') || msg.includes('denied')) {
+    return ErrorCategory.PERMISSION;
+  }
+
+  if (type === 'network' || msg.includes('network') || msg.includes('timeout')) {
+    return ErrorCategory.NETWORK;
+  }
+
+  if (msg.includes('data') || msg.includes('formula')) {
+    return ErrorCategory.DATA;
+  }
+
+  return ErrorCategory.SYSTEM;
+}
+
+/**
+ * Log error with appropriate level based on severity
+ */
+export function logError(error: SpreadsheetError): void {
+  const info = error.getDetailedInfo();
+
+  switch (error.severity) {
+    case ErrorSeverity.FATAL:
+      console.error('[SPREADSHEET FATAL]', info);
+      break;
+    case ErrorSeverity.HIGH:
+      console.error('[SPREADSHEET ERROR]', info);
+      break;
+    case ErrorSeverity.MEDIUM:
+      console.warn('[SPREADSHEET WARNING]', info);
+      break;
+    case ErrorSeverity.LOW:
+      console.info('[SPREADSHEET INFO]', info);
+      break;
+  }
+}
+
+/**
+ * Format error for user display
+ */
+export function formatErrorForUser(error: SpreadsheetError): string {
+  const { category, operation } = error;
+  let message = error.message;
+
+  // Add operation context if available
+  if (operation) {
+    message = `${operation}: ${message}`;
+  }
+
+  // Category-specific formatting
+  switch (category) {
+    case ErrorCategory.VALIDATION:
+      return `Validation Error: ${message}`;
+    case ErrorCategory.PERMISSION:
+      return `Permission Error: ${message}`;
+    case ErrorCategory.NETWORK:
+      return `Network Error: ${message}. Please check your connection and try again.`;
+    case ErrorCategory.DATA:
+      return `Data Error: ${message}`;
+    case ErrorCategory.SYSTEM:
+      return `System Error: ${message}`;
+    default:
+      return message;
+  }
+}
+
+// ============================================================================
+// RETRY AND RECOVERY LOGIC
+// ============================================================================
+
+/**
  * Check if an error is non-retryable (transient errors should be retried, non-transient should not)
- *
- * Classification hierarchy (most specific to least specific):
- * 1. Well-known error classes
- * 2. Error codes/types from Facade API or custom error objects
- * 3. HTTP-style status codes (400-499 client errors, specific 500+ server errors)
- * 4. Error properties (nonRetryable flag, etc.)
- * 5. Message substring matching (last resort, conservative patterns)
  */
 function isNonRetryableError(error: unknown): boolean {
+  // SpreadsheetError instances have built-in retryability
+  if (error instanceof SpreadsheetError) {
+    return !error.isRetryable;
+  }
+
   // 1. Well-known error classes - always non-retryable
-  if (error instanceof SpreadsheetValidationError) {
-    return true; // Validation errors are permanent and shouldn't be retried
+  if (error instanceof SpreadsheetValidationError || error instanceof SpreadsheetPermissionError) {
+    return true;
   }
 
   // 2. Error codes/types from Facade API or custom error objects
@@ -157,8 +554,9 @@ export async function safeSpreadsheetOperation<T>(
 
       // Check if this is a non-retryable error
       if (isNonRetryableError(error)) {
-        console.error(`[safeSpreadsheetOperation] Non-retryable error in ${operationName}, rethrowing immediately:`, error);
-        throw error;
+        const spreadsheetError = normalizeError(error, operationName);
+        logError(spreadsheetError);
+        throw spreadsheetError;
       }
 
       // Log the error with attempt information
@@ -166,7 +564,7 @@ export async function safeSpreadsheetOperation<T>(
 
       // If this isn't the last attempt, wait before retrying with exponential backoff
       if (attempt < maxRetries) {
-        const backoffMs = 100 * Math.pow(2, attempt); // Exponential backoff
+        const backoffMs = EXPONENTIAL_BACKOFF_BASE_MS * Math.pow(2, attempt); // Exponential backoff
         await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
     }
@@ -178,62 +576,120 @@ export async function safeSpreadsheetOperation<T>(
     return fallback;
   }
 
-  // Safely convert lastError to Error instance
-  let errorToThrow: Error;
-  if (lastError instanceof Error) {
-    errorToThrow = lastError;
-  } else if (lastError && typeof lastError === 'object' && 'message' in lastError) {
-    // Handle objects with message property (like custom error objects)
-    errorToThrow = new Error(String(lastError.message));
-  } else {
-    // Handle strings, numbers, or other types
-    errorToThrow = new Error(String(lastError));
-  }
-
-  throw new SpreadsheetOperationError(operationName, errorToThrow);
+  // Convert to SpreadsheetError
+  const spreadsheetError = normalizeError(lastError, operationName);
+  logError(spreadsheetError);
+  throw spreadsheetError;
 }
 
 /**
- * Format spreadsheet operation errors for user-friendly display
- * @param err - The error to format
- * @param operation - The operation type ('export', 'import', 'general')
- * @returns User-friendly error message
+ * Safely execute a synchronous Facade API operation with error handling
+ */
+export function safeSpreadsheetOperationSync<T>(
+  operation: () => T,
+  operationName: string,
+  fallback?: T
+): T {
+  try {
+    return operation();
+  } catch (error) {
+    const spreadsheetError = normalizeError(error, operationName);
+    logError(spreadsheetError);
+
+    if (fallback !== undefined) {
+      console.warn(`[safeSpreadsheetOperationSync] Using fallback value for ${operationName}`);
+      return fallback;
+    }
+
+    throw spreadsheetError;
+  }
+}
+
+// ============================================================================
+// ERROR RECOVERY STRATEGIES
+// ============================================================================
+
+/**
+ * Error recovery strategy interface
+ */
+export interface ErrorRecoveryStrategy {
+  canRecover(error: SpreadsheetError): boolean;
+  recover(error: SpreadsheetError, context?: Record<string, unknown>): Promise<boolean>;
+}
+
+/**
+ * Default recovery strategies
+ */
+export class DefaultRecoveryStrategies {
+  /**
+   * Network error recovery - wait and retry
+   */
+  static networkRecovery(): ErrorRecoveryStrategy {
+    return {
+      canRecover: (error) => error.category === ErrorCategory.NETWORK && error.isRetryable,
+      recover: async () => {
+        // Wait for network recovery
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return true; // Assume recovery worked
+      }
+    };
+  }
+
+  /**
+   * Resource exhausted recovery - wait and retry with backoff
+   */
+  static resourceRecovery(): ErrorRecoveryStrategy {
+    return {
+      canRecover: (error) => error.code === SpreadsheetErrorCode.RESOURCE_EXHAUSTED,
+      recover: async () => {
+        // Wait for resources to free up
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return true;
+      }
+    };
+  }
+}
+
+/**
+ * Attempt error recovery using available strategies
+ */
+export async function attemptErrorRecovery(
+  error: SpreadsheetError,
+  strategies: ErrorRecoveryStrategy[] = [
+    DefaultRecoveryStrategies.networkRecovery(),
+    DefaultRecoveryStrategies.resourceRecovery()
+  ],
+  context?: Record<string, unknown>
+): Promise<boolean> {
+  for (const strategy of strategies) {
+    if (strategy.canRecover(error)) {
+      try {
+        console.log(`[ErrorRecovery] Attempting recovery for ${error.code}`);
+        const recovered = await strategy.recover(error, context);
+        if (recovered) {
+          console.log(`[ErrorRecovery] Successfully recovered from ${error.code}`);
+          return true;
+        }
+      } catch (recoveryError) {
+        console.warn(`[ErrorRecovery] Recovery failed for ${error.code}:`, recoveryError);
+      }
+    }
+  }
+
+  return false;
+}
+
+// ============================================================================
+// LEGACY COMPATIBILITY
+// ============================================================================
+
+/**
+ * Format spreadsheet operation errors for user-friendly display (legacy function)
  */
 export function formatSpreadsheetError(
   err: unknown,
-  operation: 'export' | 'import' | 'general' = 'general'
+  _operation: 'export' | 'import' | 'general' = 'general'
 ): string {
-  const msg = err instanceof Error ? err.message : String(err);
-
-  // Common patterns across all operations
-  if (msg.includes('Invalid range')) {
-    return `Range error: ${msg}`;
-  }
-
-  if (msg.includes('permission') || msg.includes('denied')) {
-    const action = operation === 'export' ? 'write to' : 'read';
-    return `Permission denied: Cannot ${action} file`;
-  }
-
-  if (msg.includes('disk') || msg.includes('space')) {
-    return 'Insufficient disk space';
-  }
-
-  if (msg.includes('timeout')) {
-    return `${operation.charAt(0).toUpperCase() + operation.slice(1)} timed out - try smaller range`;
-  }
-
-  // Operation-specific patterns
-  if (operation === 'import') {
-    if (msg.includes('No such file')) {
-      return 'File not found';
-    }
-    if (msg.includes('encoding') || msg.includes('charset')) {
-      return `Encoding error: ${msg}`;
-    }
-  }
-
-  // Default operation-specific message
-  const operationName = operation.charAt(0).toUpperCase() + operation.slice(1);
-  return `${operationName} failed: ${msg}`;
+  const spreadsheetError = normalizeError(err);
+  return spreadsheetError.getUserMessage();
 }

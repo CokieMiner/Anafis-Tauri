@@ -153,6 +153,7 @@ export function useUnitConversion({
     isConverting,
     lastResult,
     availableUnits: getUnitsForCategory(category),
+    units: availableUnits, // Full units record for lookup
     unitCategories,
 
     // Actions

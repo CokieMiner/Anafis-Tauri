@@ -5,13 +5,13 @@ import {
   TextField,
   Button,
   Alert,
-  RadioGroup,
   FormLabel,
   CircularProgress,
   Chip,
   Checkbox,
   FormControlLabel,
-  Radio,
+  ListItemButton,
+  ListItemText,
 } from '@mui/material';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { invoke } from '@tauri-apps/api/core';
@@ -323,120 +323,111 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
             No sequences available in data library
           </Typography>
         ) : (
-          <RadioGroup
-            value={selectedSequence ?? ''}
-            onChange={(e) => setSelectedSequence(e.target.value)}
-            sx={{
-              maxHeight: '400px',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              pr: 0.5,
-              '&::-webkit-scrollbar': { width: '6px' },
-              '&::-webkit-scrollbar-track': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '3px',
+          <Box sx={{ 
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            minHeight: 0,
+            maxHeight: '200px', // Limit to show about 3 sequences
+            pr: 0.5,
+            backgroundColor: 'transparent',
+            /* webkit-based scrollbar styling */
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(255, 255, 255, 0.3)',
+              borderRadius: '4px',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
               },
-              '&::-webkit-scrollbar-thumb': {
-                bgcolor: 'rgba(33, 150, 243, 0.3)',
-                borderRadius: '3px',
-                '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.5)' },
-              },
-            }}
-          >
+            },
+            /* Firefox scrollbar */
+            scrollbarWidth: 'thin' as const,
+            scrollbarColor: 'rgba(255,255,255,0.3) rgba(255,255,255,0.1)',
+            /* Reserve gutter where supported to keep content visible when overlay scrollbars appear */
+            scrollbarGutter: 'stable',
+          }}>
             {availableSequences.map((seq) => (
-              <Box
+              <ListItemButton
                 key={seq.id}
+                selected={selectedSequence === seq.id}
+                onClick={() => setSelectedSequence(seq.id)}
                 sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  mb: 1,
-                  p: 1,
+                  flexShrink: 0, // Prevent expansion to fill space
+                  maxHeight: '60px', // Compact height to fit 3 sequences
+                  px: 1,
+                  py: 0.75,
+                  mb: 0.5,
                   borderRadius: '6px',
-                  bgcolor:
-                    selectedSequence === seq.id
-                      ? 'rgba(33, 150, 243, 0.15)'
-                      : anafisColors.ui.paper,
-                  border: '1px solid',
-                  borderColor:
-                    selectedSequence === seq.id
-                      ? 'rgba(33, 150, 243, 0.4)'
-                      : anafisColors.ui.border,
-                  cursor: 'pointer',
+                  border: selectedSequence === seq.id ? `1px solid ${anafisColors.spreadsheet}` : '1px solid rgba(255, 255, 255, 0.2)',
+                  bgcolor: selectedSequence === seq.id ? 'rgba(33, 150, 243, 0.15)' : 'transparent',
+                  color: selectedSequence === seq.id ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
                   transition: 'all 0.2s',
                   '&:hover': {
-                    bgcolor:
-                      selectedSequence === seq.id
-                        ? 'rgba(33, 150, 243, 0.15)'
-                        : 'rgba(255, 255, 255, 0.05)',
-                    borderColor:
-                      selectedSequence === seq.id
-                        ? 'rgba(33, 150, 243, 0.4)'
-                        : 'rgba(255, 255, 255, 0.15)',
+                    bgcolor: selectedSequence === seq.id ? 'rgba(33, 150, 243, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    borderColor: selectedSequence === seq.id ? anafisColors.spreadsheet : 'rgba(255, 255, 255, 0.4)',
+                    color: '#ffffff',
+                    transform: 'translateY(-1px)',
+                    boxShadow: selectedSequence === seq.id ? `0 2px 8px rgba(33, 150, 243, 0.3)` : '0 2px 8px rgba(255, 255, 255, 0.1)'
                   },
+                  '&.Mui-selected': {
+                    bgcolor: 'rgba(33, 150, 243, 0.15) !important',
+                    borderColor: `${anafisColors.spreadsheet} !important`,
+                    color: '#ffffff !important',
+                    '&:hover': {
+                      bgcolor: 'rgba(33, 150, 243, 0.2) !important'
+                    }
+                  }
                 }}
-                onClick={() => setSelectedSequence(seq.id)}
               >
-                <Radio
-                  value={seq.id}
-                  sx={{
-                    color: 'rgba(33, 150, 243, 0.5)',
-                    '&.Mui-checked': {
-                      color: anafisColors.spreadsheet,
-                    },
-                    py: 0.5,
-                    pr: 1,
-                  }}
-                />
-                <Box sx={{ flex: 1, pt: 0.5 }}>
-                  <Typography
-                    sx={{
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: anafisColors.ui.text.primary,
-                      mb: 0.5,
-                    }}
-                  >
-                    {seq.name}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 11,
-                      color: anafisColors.ui.text.tertiary,
-                    }}
-                  >
-                    {seq.data.length} points
-                    {seq.uncertainties ? ` • ${seq.uncertainties.length} uncertainties` : ''}
-                    {seq.unit ? ` • ${seq.unit}` : ''}
-                  </Typography>
-                  {seq.tags.length > 0 && (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 0.5,
-                        mt: 0.5,
-                      }}
-                    >
-                      {seq.tags.map((tag) => (
-                        <Chip
-                          key={tag}
-                          label={tag}
-                          size="small"
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25 }}>
+                      <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'inherit' }}>
+                        {seq.name}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>
+                        {seq.data.length} points
+                        {seq.uncertainties ? ` • ${seq.uncertainties.length} uncertainties` : ''}
+                        {seq.unit ? ` • ${seq.unit}` : ''}
+                      </Typography>
+                      {seq.tags.length > 0 && (
+                        <Box
                           sx={{
-                            height: 18,
-                            fontSize: 10,
-                            bgcolor: 'rgba(33, 150, 243, 0.2)',
-                            color: 'rgba(33, 150, 243, 0.9)',
-                            '& .MuiChip-label': { px: 1 },
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 0.5,
+                            mt: 0.25,
                           }}
-                        />
-                      ))}
+                        >
+                          {seq.tags.map((tag) => (
+                            <Chip
+                              key={tag}
+                              label={tag}
+                              size="small"
+                              sx={{
+                                height: 16,
+                                fontSize: 9,
+                                bgcolor: 'rgba(33, 150, 243, 0.2)',
+                                color: 'rgba(33, 150, 243, 0.9)',
+                                '& .MuiChip-label': { px: 0.75 },
+                              }}
+                            />
+                          ))}
+                        </Box>
+                      )}
                     </Box>
-                  )}
-                </Box>
-              </Box>
+                  }
+                />
+              </ListItemButton>
             ))}
-          </RadioGroup>
+          </Box>
         )}
       </SidebarCard>
 

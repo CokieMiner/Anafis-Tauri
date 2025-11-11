@@ -54,8 +54,8 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
 
-    // TODO: Send to error reporting service
-    // reportError(error, errorInfo, this.state.errorId);
+    // Error reporting is handled through user-initiated bug reports only
+    // No automatic error collection or telemetry - users must manually report bugs
   }
 
   handleRetry = () => {

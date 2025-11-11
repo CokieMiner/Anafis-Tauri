@@ -28,7 +28,6 @@ import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sideb
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
-import { spreadsheetEventBus } from '@/tabs/spreadsheet/managers/SpreadsheetEventBus';
 import { useQuickPlot } from '@/tabs/spreadsheet/components/sidebar/logic/useQuickPlot';
 
 // Icon aliases for clarity
@@ -116,7 +115,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
   // Use the spreadsheet selection hook
   const { focusedInput, handleInputFocus, handleInputBlur } = useSpreadsheetSelection<FocusedInputType>({
     onSelectionChange: onSelectionChange ?? (() => { }),
-    updateField: (inputType, selection) => {
+    updateField: React.useCallback((inputType, selection) => {
       switch (inputType) {
         case 'xRange':
           setXRange(selection);
@@ -128,26 +127,16 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(({
           setErrorRange(selection);
           break;
       }
-    },
+    }, [setXRange, setYRange, setErrorRange]),
     sidebarDataAttribute: 'data-quick-plot-sidebar',
-    handlerName: '__quickPlotSelectionHandler',
   });
 
   // Subscribe to spreadsheet selection events via event bus
   React.useEffect(() => {
     if (!open) { return; }
 
-    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
-      // Call the window handler that the hook is listening to
-      const handler = window.__quickPlotSelectionHandler;
-      if (handler) {
-        handler(cellRef);
-      }
-      // NOTE: Don't call onSelectionChange here - it would create an infinite loop
-      // since onSelectionChange emits to the event bus, which triggers this handler again
-    });
-
-    return unsubscribe;
+    // No longer needed - selection is handled via context in the hook
+    return;
   }, [open]);
 
   // Handle save to library

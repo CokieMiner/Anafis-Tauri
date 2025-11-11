@@ -7,6 +7,7 @@
 import type { IRegisterFunctionService } from '@univerjs/sheets-formula';
 import type { FormulaFunctionValueType, FormulaFunctionResultValueType } from '@univerjs/engine-formula';
 import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
+import { SpreadsheetValidationError } from '@/tabs/spreadsheet/univer/utils/errors';
 
 /**
  * Gamma function approximation using Lanczos approximation
@@ -100,7 +101,12 @@ function digamma(x: number): number {
 function lambertW(x: number): number {
     // CORRECTED: Function is defined for x ≥ -1/e
     if (x < -1/Math.E) {
-        throw new Error(ERROR_MESSAGES.LAMBERT_W_UNDEFINED);
+        throw new SpreadsheetValidationError(
+            ERROR_MESSAGES.LAMBERT_W_UNDEFINED,
+            'x',
+            'lambertW',
+            { value: x, domain: 'x ≥ -1/e' }
+        );
     }
 
     // Special case for the boundary
@@ -146,7 +152,12 @@ function lambertW(x: number): number {
  */
 function hermite(n: number, x: number): number {
     if (n < 0 || n !== Math.floor(n)) {
-        throw new Error(ERROR_MESSAGES.HERMITE_NEGATIVE_DEGREE);
+        throw new SpreadsheetValidationError(
+            ERROR_MESSAGES.HERMITE_NEGATIVE_DEGREE,
+            'n',
+            'hermite',
+            { value: n, constraint: 'n ≥ 0 and integer' }
+        );
     }
 
     if (n === 0) {return 1;}
@@ -171,7 +182,12 @@ function hermite(n: number, x: number): number {
 function elliptic_k(k: number): number {
     if (Math.abs(k) >= 1) {
         if (k === 1 || k === -1) {return Infinity;}
-        throw new Error(ERROR_MESSAGES.MODULUS_OUT_OF_RANGE);
+        throw new SpreadsheetValidationError(
+            ERROR_MESSAGES.MODULUS_OUT_OF_RANGE,
+            'k',
+            'elliptic_k',
+            { value: k, constraint: '|k| < 1' }
+        );
     }
     
     if (k === 0) {return Math.PI / 2;}
@@ -204,7 +220,12 @@ function elliptic_k(k: number): number {
  */
 function zeta(s: number): number {
     if (s === 1) {
-        throw new Error(ERROR_MESSAGES.ZETA_FUNCTION_POLE);
+        throw new SpreadsheetValidationError(
+            ERROR_MESSAGES.ZETA_FUNCTION_POLE,
+            's',
+            'zeta',
+            { value: s, constraint: 's ≠ 1' }
+        );
     }
     
     if (s === 2) {
@@ -223,7 +244,12 @@ function zeta(s: number): number {
         // For s <= 1, use functional equation approximation
         // ζ(s) = 2^s π^{s-1} sin(π s / 2) Γ(1-s) ζ(1-s)
         // This is complex, so for now throw error for s <= 1 except s=2
-        throw new Error(ERROR_MESSAGES.ZETA_FUNCTION_LIMITATION);
+        throw new SpreadsheetValidationError(
+            ERROR_MESSAGES.ZETA_FUNCTION_LIMITATION,
+            's',
+            'zeta',
+            { value: s, constraint: 's > 1' }
+        );
     }
 }
 

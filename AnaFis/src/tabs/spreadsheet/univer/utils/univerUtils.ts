@@ -2,6 +2,7 @@
 import { IRange } from '@univerjs/core';
 import { columnToLetter, RangeBounds } from './cellUtils';
 import { ERROR_MESSAGES } from './constants';
+import { SpreadsheetValidationError } from './errors';
 
 // Type for the facade API instance
 type FacadeAPI = ReturnType<typeof import('@univerjs/core/facade').FUniver.newAPI>;
@@ -33,7 +34,12 @@ export function determineUsedRange(facadeAPI: FacadeAPI): string {
   try {
     const workbook = facadeAPI.getActiveWorkbook();
     if (!workbook) {
-      throw new Error('No active workbook available');
+      throw new SpreadsheetValidationError(
+        'No active workbook available',
+        'workbook',
+        'determineUsedRange',
+        { operation: 'getActiveWorkbook' }
+      );
     }
 
     // Get the active sheet using the Facade API
@@ -95,7 +101,17 @@ export function rangeToA1(range: IRange): string {
   // Add null checks for range properties
   if (typeof range.startColumn !== 'number' || typeof range.startRow !== 'number' ||
       typeof range.endColumn !== 'number' || typeof range.endRow !== 'number') {
-    throw new Error(ERROR_MESSAGES.INVALID_RANGE_OBJECT);
+    throw new SpreadsheetValidationError(
+      ERROR_MESSAGES.INVALID_RANGE_OBJECT,
+      'range',
+      'rangeToA1',
+      {
+        startColumn: range.startColumn,
+        startRow: range.startRow,
+        endColumn: range.endColumn,
+        endRow: range.endRow
+      }
+    );
   }
 
   const startCol = columnToLetter(range.startColumn);

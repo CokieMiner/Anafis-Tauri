@@ -160,7 +160,14 @@ export const SidebarCard = React.memo<SidebarCardProps>(({
 
       {/* Content */}
       {(!collapsible || expanded) && (
-        <Box>
+        // allow nested scrollable children to be constrained
+        <Box sx={{ 
+          flex: 1, 
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden' // Add this to contain the scrolling
+        }}>
           {children}
         </Box>
       )}

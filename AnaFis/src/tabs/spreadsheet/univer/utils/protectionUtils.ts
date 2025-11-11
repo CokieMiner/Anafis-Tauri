@@ -4,6 +4,7 @@
 
 import { ERROR_MESSAGES } from './constants';
 import { ICommandService, IUniverInstanceService, IPermissionService } from '@univerjs/core';
+import { SpreadsheetOperationError } from './errors';
 export interface ProtectionResource {
   name: string;
   data: string;
@@ -52,7 +53,11 @@ export async function applyProtectionRules(
     // Validate focused workbook exists and get unitId
     const workbook = instanceService.getFocusedUnit();
     if (!workbook) {
-      throw new Error(ERROR_MESSAGES.NO_ACTIVE_WORKBOOK_PROTECTION);
+      throw new SpreadsheetOperationError(
+        'applyProtectionRules',
+        new Error(ERROR_MESSAGES.NO_ACTIVE_WORKBOOK_PROTECTION),
+        { operation: 'getFocusedUnit' }
+      );
     }
 
     const expectedUnitId = workbook.getUnitId();
@@ -60,7 +65,11 @@ export async function applyProtectionRules(
 
     // Check for cancellation before starting
     if (signal.aborted) {
-      throw new Error(ERROR_MESSAGES.PROTECTION_APPLICATION_CANCELLED);
+      throw new SpreadsheetOperationError(
+        'applyProtectionRules',
+        new Error(ERROR_MESSAGES.PROTECTION_APPLICATION_CANCELLED),
+        { operation: 'checkAbortSignal', aborted: signal.aborted }
+      );
     }
 
     for (const resource of resources) {

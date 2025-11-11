@@ -1,261 +1,365 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useReducer } from 'react';
+import { useSelectionContext } from './useSelectionContext';
+import { CellReference } from '@/tabs/spreadsheet/utils/CellReference';
 
-interface UseSpreadsheetSelectionOptions<T> {
-  /**
-   * Callback to handle selection changes from the spreadsheet
-   */
-  onSelectionChange?: (selection: string) => void;
-
-  /**
-   * Function to update the appropriate field with the selected range
-   */
-  updateField: (inputType: T, selection: string) => void;
-
-  /**
-   * Data attribute for the sidebar container (e.g., 'data-unit-converter-sidebar')
-   */
-  sidebarDataAttribute: string;
-
-  /**
-   * Name of the global window handler (e.g., '__unitConverterSelectionHandler')
-   */
-  handlerName: string;
+// Simplified cache interfaces
+interface ParsedCell {
+  col: string;
+  row: number;
+  colNum: number;
 }
 
-interface UseSpreadsheetSelectionReturn<T> {
-  /**
-   * The currently focused input field
-   */
+interface ParsedRange {
+  start: ParsedCell;
+  end: ParsedCell;
+  minCol: number;
+  maxCol: number;
+  minRow: number;
+  maxRow: number;
+}
+
+// Simplified UI state (only what triggers re-renders)
+interface UIState<T> {
   focusedInput: T | null;
-
-  /**
-   * Call when an input field receives focus to enter selection mode
-   */
-  handleInputFocus: (inputType: T) => void;
-
-  /**
-   * Call when an input field loses focus
-   */
-  handleInputBlur: () => void;
-
-  /**
-   * Whether selection mode is currently active
-   */
   isSelectionMode: boolean;
 }
 
-/**
- * Custom hook for managing spreadsheet range selection in sidebar inputs
- * 
- * This hook provides a smart selection mode that:
- * - Activates when an input is focused
- * - Stays active even when the input blurs (so users can click on spreadsheet)
- * - Updates the input as the user drags to expand ranges
- * - Automatically exits when clicking a different single cell (not part of the current range)
- * - Exits when clicking sidebar interactive elements (buttons, selects, etc.)
- * 
- * @example
- * ```tsx
- * const { focusedInput, handleInputFocus, handleInputBlur } = useSpreadsheetSelection({
- *   onSelectionChange,
- *   updateField: (inputType, selection) => {
- *     if (inputType === 'value') setValue(selection);
- *   },
- *   sidebarDataAttribute: 'data-unit-converter-sidebar',
- *   handlerName: '__unitConverterSelectionHandler'
- * });
- * 
- * <TextField
- *   onFocus={() => handleInputFocus('value')}
- *   onBlur={handleInputBlur}
- * />
- * ```
- */
+// Internal state (mutable, doesn't trigger re-renders)
+interface InternalState {
+  lastSelection: string;
+  anchorCell: string;
+  isActive: boolean;
+}
+
+type UIAction<T> =
+  | { type: 'ENTER_SELECTION_MODE'; inputType: T }
+  | { type: 'EXIT_SELECTION_MODE' };
+
+function uiReducer<T>(
+  state: UIState<T>,
+  action: UIAction<T>
+): UIState<T> {
+  switch (action.type) {
+    case 'ENTER_SELECTION_MODE':
+      return {
+        focusedInput: action.inputType,
+        isSelectionMode: true,
+      };
+    case 'EXIT_SELECTION_MODE':
+      return {
+        focusedInput: null,
+        isSelectionMode: false,
+      };
+    default:
+      return state;
+  }
+}
+
+// Simplified cache - just Maps with basic size limits
+class SimpleRangeCache {
+  private cellCache = new Map<string, ParsedCell>();
+  private rangeCache = new Map<string, ParsedRange>();
+  private columnCache = new Map<string, number>();
+  private readonly maxSize = 1000;
+
+  parseCell(cell: string): ParsedCell | null {
+    const cached = this.cellCache.get(cell);
+    if (cached) {
+      return cached;
+    }
+
+    const match = cell.match(/^([A-Z]+)(\d+)$/);
+    if (!match?.[1] || !match[2]) {
+      return null;
+    }
+
+    const col = match[1];
+    const row = parseInt(match[2], 10);
+    const colNum = this.colToNum(col);
+
+    const parsedCell: ParsedCell = { col, row, colNum };
+    this.setCache('cell', cell, parsedCell);
+    return parsedCell;
+  }
+
+  colToNum(col: string): number {
+    const cached = this.columnCache.get(col);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const num = CellReference.letterToColumn(col);
+    this.setCache('column', col, num);
+    return num;
+  }
+
+  parseRange(range: string): ParsedRange | null {
+    const cached = this.rangeCache.get(range);
+    if (cached) {
+      return cached;
+    }
+
+    // Single cell range
+    if (!range.includes(':')) {
+      const cell = this.parseCell(range);
+      if (!cell) {
+        return null;
+      }
+
+      const parsedRange: ParsedRange = {
+        start: cell,
+        end: cell,
+        minCol: cell.colNum,
+        maxCol: cell.colNum,
+        minRow: cell.row,
+        maxRow: cell.row
+      };
+      this.setCache('range', range, parsedRange);
+      return parsedRange;
+    }
+
+    // Multi-cell range
+    const rangeParts = range.split(':');
+    if (rangeParts.length !== 2) {
+      return null;
+    }
+
+    const [startStr, endStr] = rangeParts;
+    if (!startStr || !endStr) {
+      return null;
+    }
+
+    const start = this.parseCell(startStr);
+    const end = this.parseCell(endStr);
+    if (!start || !end) {
+      return null;
+    }
+
+    const parsedRange: ParsedRange = {
+      start,
+      end,
+      minCol: Math.min(start.colNum, end.colNum),
+      maxCol: Math.max(start.colNum, end.colNum),
+      minRow: Math.min(start.row, end.row),
+      maxRow: Math.max(start.row, end.row)
+    };
+
+    this.setCache('range', range, parsedRange);
+    return parsedRange;
+  }
+
+  private setCache(type: 'cell' | 'range' | 'column', key: string, value: ParsedCell | ParsedRange | number): void {
+    if (type === 'cell') {
+      if (this.cellCache.size >= this.maxSize) {
+        this.cellCache.clear();
+      }
+      this.cellCache.set(key, value as ParsedCell);
+    } else if (type === 'range') {
+      if (this.rangeCache.size >= this.maxSize) {
+        this.rangeCache.clear();
+      }
+      this.rangeCache.set(key, value as ParsedRange);
+    } else {
+      if (this.columnCache.size >= this.maxSize) {
+        this.columnCache.clear();
+      }
+      this.columnCache.set(key, value as number);
+    }
+  }
+
+  clear(): void {
+    this.cellCache.clear();
+    this.rangeCache.clear();
+    this.columnCache.clear();
+  }
+
+  get stats() {
+    return {
+      cellCache: { size: this.cellCache.size, maxSize: this.maxSize },
+      rangeCache: { size: this.rangeCache.size, maxSize: this.maxSize },
+      columnCache: { size: this.columnCache.size, maxSize: this.maxSize },
+      totalEntries: this.cellCache.size + this.rangeCache.size + this.columnCache.size
+    };
+  }
+}
+
+interface UseSpreadsheetSelectionOptions<T> {
+  onSelectionChange?: (selection: string) => void;
+  updateField: (inputType: T, selection: string) => void;
+  sidebarDataAttribute: string;
+}
+
+interface UseSpreadsheetSelectionReturn<T> {
+  focusedInput: T | null;
+  handleInputFocus: (inputType: T) => void;
+  handleInputBlur: () => void;
+  isSelectionMode: boolean;
+  getCacheStats: () => {
+    cellCache: { size: number; maxSize: number; };
+    rangeCache: { size: number; maxSize: number; };
+    columnCache: { size: number; maxSize: number; };
+    totalEntries: number;
+  };
+}
+
 export function useSpreadsheetSelection<T>({
   onSelectionChange,
   updateField,
   sidebarDataAttribute,
-  handlerName,
 }: UseSpreadsheetSelectionOptions<T>): UseSpreadsheetSelectionReturn<T> {
-  const [focusedInput, setFocusedInput] = useState<T | null>(null);
-  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
-  const lastSelectionRef = useRef<string>('');
-  const anchorCellRef = useRef<string>(''); // Store the first cell clicked
-  const isActiveRef = useRef<boolean>(false); // Immediate flag to prevent race conditions
+  const { registerHandler } = useSelectionContext();
 
-  // Listen to selection changes and update focused input
+  // UI state - only what needs to trigger re-renders
+  const [uiState, dispatch] = useReducer(uiReducer<T>, {
+    focusedInput: null,
+    isSelectionMode: false,
+  });
+
+  // Internal state - all mutable state in one place
+  const internalStateRef = useRef<InternalState>({
+    lastSelection: '',
+    anchorCell: '',
+    isActive: false,
+  });
+
+  // Simplified cache
+  const cacheRef = useRef<SimpleRangeCache>(new SimpleRangeCache());
+
+  // Helper to update internal state
+  const updateInternalState = useCallback((updates: Partial<InternalState>) => {
+    Object.assign(internalStateRef.current, updates);
+  }, []);
+
+  // Check if anchor cell is within range
+  const isAnchorInRange = useCallback((range: string): boolean => {
+    const state = internalStateRef.current;
+    if (!state.anchorCell) {
+      return false;
+    }
+
+    // Quick check for exact match
+    if (range === state.anchorCell) {
+      return true;
+    }
+
+    // Parse anchor cell
+    const anchorBounds = cacheRef.current.parseCell(state.anchorCell);
+    if (!anchorBounds) {
+      return false;
+    }
+
+    // Parse range
+    const parsedRange = cacheRef.current.parseRange(range);
+    if (!parsedRange) {
+      return false;
+    }
+
+    // Check bounds
+    return (
+      anchorBounds.colNum >= parsedRange.minCol &&
+      anchorBounds.colNum <= parsedRange.maxCol &&
+      anchorBounds.row >= parsedRange.minRow &&
+      anchorBounds.row <= parsedRange.maxRow
+    );
+  }, []);
+
+  // Handle selection changes
   useEffect(() => {
-    if (!onSelectionChange) {return;}
+    if (!onSelectionChange) {
+      return;
+    }
 
     const handleSelection = (selection: string) => {
-      // CRITICAL: Check the ref first to prevent race conditions
-      if (!isActiveRef.current) {
+      const state = internalStateRef.current;
+      if (!state.isActive || !uiState.isSelectionMode || !uiState.focusedInput) {
         return;
       }
 
-      // Skip if no input is focused or not in selection mode
-      if (!focusedInput || !isSelectionMode) {
+      if (selection === state.lastSelection) {
         return;
       }
 
-      // Skip if selection hasn't changed (reduces unnecessary updates during drag)
-      if (selection === lastSelectionRef.current) {
-        return;
-      }
-
-      // Helper function to parse cell reference (e.g., "B12" -> { col: "B", row: 12 })
-      const parseCell = (cell: string): { col: string; row: number } | null => {
-        const match = cell.match(/^([A-Z]+)(\d+)$/);
-        if (!match?.[1] || !match[2]) {return null;}
-        return { col: match[1], row: parseInt(match[2], 10) };
-      };
-
-      // Helper function to convert column letter to number (A=1, B=2, ..., Z=26, AA=27, etc.)
-      const colToNum = (col: string): number => {
-        let num = 0;
-        for (let i = 0; i < col.length; i++) {
-          num = num * 26 + (col.charCodeAt(i) - 64);
-        }
-        return num;
-      };
-
-      // Helper function to check if anchor cell is in the range
-      const isAnchorInRange = (range: string, anchor: string): boolean => {
-        if (range === anchor) {return true;} // Single cell match
-
-        if (!range.includes(':')) {return range === anchor;} // Single cell range
-
-        const rangeParts = range.split(':');
-        if (rangeParts.length !== 2) {return false;}
-        
-        const [start, end] = rangeParts;
-        if (!start || !end) {return false;}
-        
-        const anchorParsed = parseCell(anchor);
-        const startParsed = parseCell(start);
-        const endParsed = parseCell(end);
-
-        if (!anchorParsed || !startParsed || !endParsed) {return false;}
-
-        // Convert columns to numbers for comparison
-        const anchorCol = colToNum(anchorParsed.col);
-        const startCol = colToNum(startParsed.col);
-        const endCol = colToNum(endParsed.col);
-
-        // Determine the actual bounds (start might be > end depending on drag direction)
-        const minCol = Math.min(startCol, endCol);
-        const maxCol = Math.max(startCol, endCol);
-        const minRow = Math.min(startParsed.row, endParsed.row);
-        const maxRow = Math.max(startParsed.row, endParsed.row);
-
-        // Check if anchor is within the rectangular bounds
-        return (
-          anchorCol >= minCol &&
-          anchorCol <= maxCol &&
-          anchorParsed.row >= minRow &&
-          anchorParsed.row <= maxRow
-        );
-      };
-
-      // If this is the first selection, store it as anchor
-      if (!anchorCellRef.current) {
-        // Store the first cell of the selection as anchor
+      // Set anchor cell on first selection
+      if (!state.anchorCell) {
         const firstCell = selection.split(':')[0];
         if (!firstCell) {
           console.warn('Invalid selection format:', selection);
           return;
         }
-        anchorCellRef.current = firstCell;
-        lastSelectionRef.current = selection;
-        updateField(focusedInput, selection);
+        updateInternalState({ anchorCell: firstCell, lastSelection: selection });
+        updateField(uiState.focusedInput, selection);
         return;
       }
 
-      // CRITICAL: Check if anchor cell is in the new selection BEFORE updating
-      if (!isAnchorInRange(selection, anchorCellRef.current)) {
-        // Anchor cell is not in the new range - exit selection mode immediately
-        // Set ref FIRST to immediately block subsequent events
-        isActiveRef.current = false;
-        setIsSelectionMode(false);
-        setFocusedInput(null);
-        anchorCellRef.current = '';
-        lastSelectionRef.current = '';
+      // Check if selection still contains anchor
+      if (!isAnchorInRange(selection)) {
+        updateInternalState({
+          isActive: false,
+          lastSelection: '',
+          anchorCell: ''
+        });
+        dispatch({ type: 'EXIT_SELECTION_MODE' });
         return;
       }
 
-      // Anchor is in the range - update the field
-      lastSelectionRef.current = selection;
-      updateField(focusedInput, selection);
+      updateInternalState({ lastSelection: selection });
+      updateField(uiState.focusedInput, selection);
     };
 
-    // Register the handler on window (typed via window.d.ts augmentation)
-    type WindowHandlerKeys = keyof Pick<Window, 
-      '__exportSelectionHandler' | 
-      '__importSelectionHandler' | 
-      '__uncertaintySidebarSelectionHandler' | 
-      '__quickPlotSelectionHandler' | 
-      '__unitConverterSelectionHandler'
-    >;
-    
-    (window as Record<WindowHandlerKeys, ((cellRef: string) => void) | undefined>)[handlerName as WindowHandlerKeys] = handleSelection;
+    const unregister = registerHandler(sidebarDataAttribute, handleSelection);
+    return unregister;
+  }, [uiState.focusedInput, uiState.isSelectionMode, onSelectionChange, updateField, isAnchorInRange, dispatch, registerHandler, sidebarDataAttribute, updateInternalState]);
 
-    return () => {
-      delete (window as Record<WindowHandlerKeys, ((cellRef: string) => void) | undefined>)[handlerName as WindowHandlerKeys];
-    };
-  }, [focusedInput, isSelectionMode, onSelectionChange, updateField, handlerName]);
-
-  // Exit selection mode when clicking on sidebar elements (buttons, etc.)
+  // Exit selection mode on sidebar clicks
   useEffect(() => {
     const handleSidebarClick = (e: MouseEvent) => {
-      if (!isSelectionMode) {return;} // Early exit if not in selection mode
-      
+      if (!uiState.isSelectionMode) {
+        return;
+      }
+
       const sidebar = document.querySelector(`[${sidebarDataAttribute}]`);
       const target = e.target as HTMLElement;
 
-      // Check if clicking on a button, select, or other interactive element in the sidebar
       if (sidebar?.contains(target)) {
         const isInteractiveElement = target.closest('button, select, .MuiAutocomplete-root');
         if (isInteractiveElement) {
-          // Set ref FIRST to immediately block subsequent events
-          isActiveRef.current = false;
-          setIsSelectionMode(false);
-          setFocusedInput(null);
-          lastSelectionRef.current = '';
-          anchorCellRef.current = '';
+          updateInternalState({
+            isActive: false,
+            lastSelection: '',
+            anchorCell: ''
+          });
+          dispatch({ type: 'EXIT_SELECTION_MODE' });
         }
       }
     };
 
-    if (isSelectionMode) {
+    if (uiState.isSelectionMode) {
       document.addEventListener('click', handleSidebarClick, { passive: true });
     }
-    
+
     return () => {
       document.removeEventListener('click', handleSidebarClick);
     };
-  }, [sidebarDataAttribute, isSelectionMode]);
+  }, [sidebarDataAttribute, uiState.isSelectionMode, dispatch, updateInternalState]);
 
-  // Input focus handler - enter selection mode
   const handleInputFocus = useCallback((inputType: T) => {
-    setFocusedInput(inputType);
-    setIsSelectionMode(true);
-    // Set ref FIRST to immediately allow events
-    isActiveRef.current = true;
-    // Reset tracking refs when entering selection mode
-    lastSelectionRef.current = '';
-    anchorCellRef.current = '';
-  }, []);
+    updateInternalState({
+      lastSelection: '',
+      anchorCell: '',
+      isActive: true
+    });
+    dispatch({ type: 'ENTER_SELECTION_MODE', inputType });
+  }, [dispatch, updateInternalState]);
 
-  // Input blur handler - keep selection mode active
   const handleInputBlur = useCallback(() => {
-    // DON'T exit selection mode on blur!
-    // The user needs to be able to click on spreadsheet without losing selection mode
+    // Keep selection mode active on blur
   }, []);
 
   return {
-    focusedInput,
+    focusedInput: uiState.focusedInput,
     handleInputFocus,
     handleInputBlur,
-    isSelectionMode,
+    isSelectionMode: uiState.isSelectionMode,
+    getCacheStats: () => cacheRef.current.stats,
   };
 }

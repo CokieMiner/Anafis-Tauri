@@ -10,8 +10,7 @@ declare module '@univerjs/core/facade' {
 
 // Augment worksheet types to include merge data methods
 declare module '@univerjs/sheets/facade' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface FWorksheet {}
+  // Empty augmentation - FWorksheet interface exists but may need extension points
 }
 
 // Augment internal Univer worksheet types for merge data operations

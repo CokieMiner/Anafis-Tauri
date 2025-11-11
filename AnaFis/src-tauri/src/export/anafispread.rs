@@ -25,7 +25,7 @@ const FORMAT_VERSION: u32 = 1;
 /// Export data to AnaFis Spreadsheet (.anafispread) format
 /// 
 /// This format accepts the full IWorkbookData JSON snapshot from Univer's workbook.save()
-/// and stores it with compression and optional encryption for complete lossless save/restore.
+/// and stores it with compression for complete lossless save/restore.
 #[tauri::command]
 pub async fn export_anafispread(
     data: Value,
@@ -39,7 +39,6 @@ pub async fn export_anafispread(
         "version": "1.0",
         "format": "anafis_spreadsheet",
         "compressed": true,
-        "encrypted": false,  // TODO: Add encryption support
         "metadata": {
             "created": chrono::Utc::now().to_rfc3339(),
             "creator": "AnaFis",

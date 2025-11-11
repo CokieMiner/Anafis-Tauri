@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Box, Typography, IconButton, List, ListItemButton, ListItemText, TextField, Button } from '@mui/material';
+import { Box, Typography, IconButton, ListItemButton, ListItemText, TextField, Button, CircularProgress } from '@mui/material';
 import { Close as CloseIcon, Add as AddIcon, Delete as DeleteIcon, PlayArrow as RunIcon } from '@mui/icons-material';
 import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
-import { spreadsheetEventBus } from '@/tabs/spreadsheet/managers/SpreadsheetEventBus';
 import { useUncertaintyPropagation } from '@/tabs/spreadsheet/components/sidebar/logic/useUncertaintyPropagation';
 
 type FocusedInputType =
@@ -56,16 +55,24 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
 
   const [selectedVariable, setSelectedVariable] = useState<number>(0);
 
+  // Adjust selectedVariable when variables are removed
+  React.useEffect(() => {
+    if (selectedVariable >= variables.length && variables.length > 0) {
+      setSelectedVariable(variables.length - 1);
+    }
+  }, [variables.length, selectedVariable]);
+
   // Memoized current variable for performance
-  const currentVariable = useMemo(() =>
-    variables[selectedVariable],
-    [variables, selectedVariable]
-  );
+  const currentVariable = useMemo(() => {
+    if (variables.length === 0) {return null;}
+    const validIndex = Math.min(selectedVariable, variables.length - 1);
+    return variables[validIndex];
+  }, [variables, selectedVariable]);
 
   // Use the spreadsheet selection hook
   const { handleInputFocus, handleInputBlur } = useSpreadsheetSelection<FocusedInputType>({
     onSelectionChange: onSelectionChange ?? (() => { }),
-    updateField: (inputType, selection) => {
+    updateField: React.useCallback((inputType, selection) => {
       if (!inputType) { return; }
 
       switch (inputType.type) {
@@ -82,32 +89,19 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
           setOutputUncertaintyRange(selection);
           break;
       }
-    },
+    }, [updateVariable, setOutputValueRange, setOutputUncertaintyRange]),
     sidebarDataAttribute: 'data-uncertainty-sidebar',
-    handlerName: '__uncertaintySidebarSelectionHandler'
   });
 
   // Subscribe to spreadsheet selection events via event bus
   React.useEffect(() => {
     if (!open) { return; }
 
-    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
-      // Call the window handler that the hook is listening to
-      const handler = window.__uncertaintySidebarSelectionHandler;
-      if (handler) {
-        handler(cellRef);
-      }
-      // NOTE: Don't call onSelectionChange here - it would create an infinite loop
-      // since onSelectionChange emits to the event bus, which triggers this handler again
-    });
-
-    return unsubscribe;
+    // No longer needed - selection is handled via context in the hook
+    return;
   }, [open]);
 
   if (!open) { return null; }
-
-  // Return early if no current variable
-  if (!currentVariable) { return null; }
 
   return (
     <Box
@@ -131,24 +125,55 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
       {/* Main Content */}
       <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden', gap: 1.5, p: 1.5 }}>
         {/* Variables List */}
-        <SidebarCard title="Variables" sx={{ width: 140, flexShrink: 0, mx: 0.5 }}>
+  <SidebarCard title="Variables" sx={{ width: 140, flexShrink: 0, mx: 0.5, display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '100%', minHeight: 0, overflow: 'hidden' }}>
           <Button
             fullWidth
             size="small"
             startIcon={<AddIcon sx={{ fontSize: 16 }} />}
             onClick={addVariable}
-            sx={sidebarStyles.button.secondary}
+            sx={{ ...sidebarStyles.button.secondary, flexShrink: 0 }}
           >
             Add Variable
           </Button>
 
-          <List dense sx={{ mt: 1.5 }}>
+          <Box sx={{ 
+            mt: 1.5, 
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            minHeight: 0,
+            pr: 0.5,
+            backgroundColor: 'transparent',
+            /* webkit-based scrollbar styling */
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(255, 255, 255, 0.3)',
+              borderRadius: '4px',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              },
+            },
+            /* Firefox scrollbar */
+            scrollbarWidth: 'thin' as const,
+            scrollbarColor: 'rgba(255,255,255,0.3) rgba(255,255,255,0.1)',
+            /* Reserve gutter where supported to keep content visible when overlay scrollbars appear */
+            scrollbarGutter: 'stable',
+          }}>
             {variables.map((variable, index) => (
               <ListItemButton
                 key={index}
                 selected={selectedVariable === index}
                 onClick={() => setSelectedVariable(index)}
                 sx={{
+                  flexShrink: 0, // Prevent expansion to fill space
+                  maxHeight: '60px', // Limit maximum height
                   px: 1,
                   py: 0.75,
                   mb: 0.5,
@@ -188,12 +213,13 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
                 />
               </ListItemButton>
             ))}
-          </List>
+          </Box>
         </SidebarCard>
         {/* Variable Configuration */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {/* Variable Details */}
-          <SidebarCard title={`Variable ${currentVariable.name}`} sx={{ mx: 0.5 }}>
+          {currentVariable && (
+            <SidebarCard title={`Variable ${currentVariable.name}`} sx={{ mx: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
                 <Typography sx={{ ...sidebarStyles.text.label, minWidth: 'fit-content' }}>
@@ -208,14 +234,16 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
                     maxWidth: 80,
                     ...sidebarStyles.input
                   }}
-                  inputProps={{
-                    style: {
-                      color: anafisColors.spreadsheet,
-                      fontFamily: 'monospace',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textAlign: 'center',
-                      padding: '4px 8px'
+                  slotProps={{
+                    input: {
+                      style: {
+                        color: anafisColors.spreadsheet,
+                        fontFamily: 'monospace',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        textAlign: 'center',
+                        padding: '4px 8px'
+                      }
                     }
                   }}
                 />
@@ -288,6 +316,7 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
               />
             </Box>
           </SidebarCard>
+          )}
 
           {/* Formula */}
           <SidebarCard title="Formula" sx={{ mx: 0.5 }}>
@@ -368,6 +397,12 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
               >
                 {isProcessing ? 'Processing...' : 'Propagate'}
               </Button>
+              
+              {isProcessing && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+                  <CircularProgress size={20} sx={{ color: anafisColors.spreadsheet }} />
+                </Box>
+              )}
             </Box>
 
             {error && (

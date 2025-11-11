@@ -23,8 +23,7 @@ import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsh
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
-import { spreadsheetEventBus } from '@/tabs/spreadsheet/managers/SpreadsheetEventBus';
-import { useUnitData } from '@/tabs/spreadsheet/components/sidebar/logic/useUnitData';
+import { useUnitConversion } from '@/tabs/spreadsheet/components/sidebar/logic/useUnitConversion';
 import { useSpreadsheetUnitConversion } from '@/tabs/spreadsheet/components/sidebar/logic/useSpreadsheetUnitConversion';
 
 interface UnitConversionSidebarProps {
@@ -42,9 +41,6 @@ interface UnitConversionSidebarProps {
   value: string;
   setValue: (value: string) => void;
 }
-
-type FocusedInputType = 'value' | 'outputTarget' | null;
-
 
 
 const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
@@ -67,7 +63,7 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
   const [outputTarget, setOutputTarget] = useState<string>('');
 
   // Use the extracted hooks
-  const { categories, availableUnits, getFilteredUnits, loadCategories, loadUnits } = useUnitData();
+  const { unitCategories: categories, units } = useUnitConversion({ onSelectionChange: onSelectionChange ?? (() => {}) });
   const {
     result,
     error,
@@ -83,62 +79,50 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
   });
 
   // Use the spreadsheet selection hook
-  const { focusedInput, handleInputFocus, handleInputBlur } = useSpreadsheetSelection<FocusedInputType>({
+    const { focusedInput, handleInputFocus, handleInputBlur } = useSpreadsheetSelection<string | null>({
     onSelectionChange: onSelectionChange ?? (() => { }),
-    updateField: (inputType, selection) => {
-      switch (inputType) {
-        case 'value':
-          setValue(selection);
-          break;
-        case 'outputTarget':
-          setOutputTarget(selection);
-          break;
+    updateField: React.useCallback((inputType, selection) => {
+      if (inputType === 'value') {
+        setValue(selection);
+      } else if (inputType === 'outputTarget') {
+        setOutputTarget(selection);
       }
-    },
+    }, [setValue, setOutputTarget]),
     sidebarDataAttribute: 'data-unit-converter-sidebar',
-    handlerName: '__unitConverterSelectionHandler'
   });
 
   // Filtered units computation
   const filteredUnitsComputed = useMemo(() => {
-    return getFilteredUnits(category, searchQuery);
-  }, [getFilteredUnits, category, searchQuery]);
+    let filtered = Object.values(units);
+
+    // Filter by category if not "All"
+    if (category && category !== 'All') {
+      filtered = filtered.filter(unit => unit.category === category);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(unit =>
+        unit.symbol.toLowerCase().includes(query) ||
+        unit.name.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort alphabetically by symbol
+    return filtered.sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [units, category, searchQuery]);
 
   // Subscribe to spreadsheet selection events via event bus
   useEffect(() => {
     if (!open) { return; }
 
-    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
-      // Call the window handler that the hook is listening to
-      const handler = window.__unitConverterSelectionHandler;
-      if (handler) {
-        handler(cellRef);
-      }
-    });
-
-    return unsubscribe;
+    // No longer needed - selection is handled via context in the hook
+    return;
   }, [open]);
 
-  // Load categories on mount
-  useEffect(() => {
-    if (open) {
-      void loadCategories();
-    }
-  }, [open, loadCategories]);
-
-  // Auto-select "All" category when categories are loaded
-  useEffect(() => {
-    if (open && categories.length > 0 && (!category || category === '')) {
-      setCategory('All');
-    }
-  }, [open, categories, category, setCategory]);
-
-  // Load units when category changes
-  useEffect(() => {
-    if (category) {
-      void loadUnits();
-    }
-  }, [category, loadUnits]);
+  // Load categories on mount - handled by useUnitConversion hook
+  // Load units when category changes - handled by useUnitConversion hook
 
   // Check unit compatibility when both units are selected
   useEffect(() => {
@@ -472,9 +456,8 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
             />
 
             <List dense sx={{ maxHeight: 450, overflow: 'auto' }}>
-              {filteredUnitsComputed.slice(0, 50).map((symbol) => {
-                const unitInfo = availableUnits[symbol];
-                if (!unitInfo) { return null; }
+              {filteredUnitsComputed.slice(0, 50).map((unitInfo) => {
+                const { symbol, name } = unitInfo;
 
                 return (
                   <ListItemButton
@@ -506,7 +489,7 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
                       }
                       secondary={
                         <Typography sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.7)' }}>
-                          {unitInfo.name}
+                          {name}
                         </Typography>
                       }
                     />

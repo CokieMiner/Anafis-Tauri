@@ -2,10 +2,16 @@
  * Constants used throughout the univer spreadsheet implementation
  */
 
-// Excel column conversion constants
-export const EXCEL_ALPHABET_SIZE = 26;
-export const ASCII_UPPERCASE_A = 65;
-export const EXCEL_COLUMN_OFFSET = 1;
+// Default sheet dimensions
+export const DEFAULT_SHEET_ROWS = 1000;
+export const DEFAULT_SHEET_COLS = 52;
+
+// Default workbook dimensions (fallback values for data conversion)
+export const DEFAULT_WORKBOOK_ROWS = 1000;
+export const DEFAULT_WORKBOOK_COLS = 52;
+
+// Performance tuning constants
+export const EXPONENTIAL_BACKOFF_BASE_MS = 100;
 
 // Error messages
 export const ERROR_MESSAGES = {

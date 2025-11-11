@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -14,7 +14,6 @@ import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsh
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
-import { spreadsheetEventBus } from '@/tabs/spreadsheet/managers/SpreadsheetEventBus';
 import { useImport } from '@/tabs/spreadsheet/components/sidebar/logic/useImport';
 import { FileImportPanel } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/FileImportPanel';
 import { LibraryImportPanel } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/LibraryImportPanel';
@@ -50,23 +49,22 @@ const ImportSidebar = React.memo<ImportSidebarProps>(({
   });
 
   // Spreadsheet selection hook for range inputs
-  const updateField = useCallback((inputType: FocusedInputType, selection: string) => {
-    if (inputType === 'targetRange') {
-      setTargetRange(selection);
-    } else if (inputType === 'libraryDataRange') {
-      setLibraryDataRange(selection);
-    } else if (inputType === 'libraryUncertaintyRange') {
-      setLibraryUncertaintyRange(selection);
-    }
-  }, [setTargetRange, setLibraryDataRange, setLibraryUncertaintyRange]);
-
-  const noopSelectionChange = useCallback(() => { }, []);
-
   const { focusedInput, handleInputFocus, handleInputBlur } = useSpreadsheetSelection<FocusedInputType>({
-    onSelectionChange: onSelectionChange ?? noopSelectionChange,
-    updateField,
+    onSelectionChange: onSelectionChange ?? (() => { }),
+    updateField: React.useCallback((inputType, selection) => {
+      switch (inputType) {
+        case 'targetRange':
+          setTargetRange(selection);
+          break;
+        case 'libraryDataRange':
+          setLibraryDataRange(selection);
+          break;
+        case 'libraryUncertaintyRange':
+          setLibraryUncertaintyRange(selection);
+          break;
+      }
+    }, [setTargetRange, setLibraryDataRange, setLibraryUncertaintyRange]),
     sidebarDataAttribute: 'data-import-sidebar',
-    handlerName: '__importSelectionHandler',
   });
 
   // Subscribe to spreadsheet selection events
@@ -75,14 +73,8 @@ const ImportSidebar = React.memo<ImportSidebarProps>(({
       return;
     }
 
-    const unsubscribe = spreadsheetEventBus.on('selection-change', (cellRef) => {
-      const handler = window.__importSelectionHandler;
-      if (handler) {
-        handler(cellRef);
-      }
-    });
-
-    return unsubscribe;
+    // No longer needed - selection is handled via context in the hook
+    return;
   }, [open]);
 
   if (!open) {

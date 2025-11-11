@@ -106,7 +106,8 @@ export {
   SpreadsheetError,
   SpreadsheetValidationError,
   SpreadsheetOperationError,
-  safeSpreadsheetOperation
+  safeSpreadsheetOperation,
+  safeSpreadsheetOperationSync
 } from './utils/errors';
 
 // ============================================================================

@@ -9,6 +9,8 @@
  * - Internal coordinates use 0-based indexing for array operations
  */
 
+import { CellReference } from './CellReference';
+
 /**
  * Extract the starting cell from a range reference.
  *
@@ -93,56 +95,25 @@ export function getRangeColumnCount(rangeRef: string): number {
 
   if (!startColMatch || !endColMatch) {return 1;}
 
-  // Convert column letters to numbers (A=1, B=2, ..., Z=26, AA=27, etc.)
-  const columnToNumber = (col: string): number => {
-    let result = 0;
-    for (let i = 0; i < col.length; i++) {
-      result = result * 26 + (col.charCodeAt(i) - 64);
-    }
-    return result;
-  };
-
-  const startCol = columnToNumber(startColMatch[0].toUpperCase());
-  const endCol = columnToNumber(endColMatch[0].toUpperCase());
+  const startCol = CellReference.letterToColumn(startColMatch[0].toUpperCase());
+  const endCol = CellReference.letterToColumn(endColMatch[0].toUpperCase());
 
   return Math.abs(endCol - startCol) + 1;
 }
 
-/**
- * Convert bounds to A1 notation start cell.
- *
- * @param bounds - Range bounds with startCol, startRow, endCol, endRow
- * @returns A1 notation cell reference for the start position
- */
 export function boundsToA1StartCell(bounds: { startCol: number; startRow: number }): string {
-  // Convert column number to letter (1-based to A-based)
-  const columnToLetter = (col: number): string => {
-    let result = '';
-    while (col > 0) {
-      col--; // Adjust for 1-based indexing
-      result = String.fromCharCode(65 + (col % 26)) + result;
-      col = Math.floor(col / 26);
-    }
-    return result || 'A';
-  };
-
-  const colLetter = columnToLetter(bounds.startCol + 1); // Convert to 1-based
-  const rowNumber = bounds.startRow + 1; // Convert to 1-based
+  // Convert 0-based bounds to 1-based for A1 notation
+  const colLetter = CellReference.columnToLetter(bounds.startCol);
+  const rowNumber = bounds.startRow + 1;
 
   return `${colLetter}${rowNumber}`;
 }
 
-/**
- * Convert bounds to A1 notation range.
- *
- * @param bounds - Range bounds with startCol, startRow, endCol, endRow
- * @returns A1 notation range reference
- */
 export function boundsToA1Range(bounds: { startCol: number; startRow: number; endCol: number; endRow: number }): string {
   const startCell = boundsToA1StartCell(bounds);
 
   // Convert end column and row to 1-based
-  const endColLetter = boundsToA1StartCell({ startCol: bounds.endCol, startRow: 0 }).replace(/\d+$/, '');
+  const endColLetter = CellReference.columnToLetter(bounds.endCol);
   const endRowNumber = bounds.endRow + 1;
 
   return `${startCell}:${endColLetter}${endRowNumber}`;

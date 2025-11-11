@@ -1,8 +1,9 @@
 // dataConversion.ts - Data conversion utilities for Facade API
 import { IWorkbookData, ICellData, LocaleType, Nullable, IStyleData, IObjectMatrixPrimitiveType } from '@univerjs/core';
-import { WorkbookData, CellValue } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import { WorkbookData, CellValue, SpreadsheetStyle } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import { parseCellRef } from '@/tabs/spreadsheet/univer';
-import { ERROR_MESSAGES } from './constants';
+import { ERROR_MESSAGES, DEFAULT_WORKBOOK_ROWS, DEFAULT_WORKBOOK_COLS } from './constants';
+import { SpreadsheetOperationError, logError } from './errors';
 
 /**
  * Type guard to check if a value is a valid cell style
@@ -100,7 +101,11 @@ function convertCellDataToMatrix(cellDataRecord: Record<string, unknown>): IObje
       // Set the cell data at the specific row and column
       cellData[row][col] = convertCellValueToICellData(cellValue as CellValue);
     } else {
-      console.warn(`Invalid cell reference: ${cellRef}`);
+      logError(new SpreadsheetOperationError(
+        'convertCellDataToMatrix',
+        new Error(`Invalid cell reference: ${cellRef}`),
+        { cellRef, operation: 'parseCellRef' }
+      ));
     }
   });
   
@@ -115,7 +120,11 @@ export function convertToUniverData(data: WorkbookData): IWorkbookData {
   const sheet = data.sheets[sheetId];
 
   if (!sheet) {
-    throw new Error(ERROR_MESSAGES.SHEET_ID_NOT_FOUND(sheetId));
+    throw new SpreadsheetOperationError(
+      'convertToUniverData',
+      new Error(ERROR_MESSAGES.SHEET_ID_NOT_FOUND(sheetId)),
+      { sheetId, availableSheets: Object.keys(data.sheets) }
+    );
   }
 
   const cellData = sheet.cellData ? convertCellDataToMatrix(sheet.cellData) : {};
@@ -124,7 +133,7 @@ export function convertToUniverData(data: WorkbookData): IWorkbookData {
   const styles: Record<string, Nullable<IStyleData>> = {};
   if (data.styles && typeof data.styles === 'object') {
     Object.entries(data.styles).forEach(([key, value]) => {
-      styles[key] = value as Nullable<IStyleData>;
+      styles[key] = convertSpreadsheetStyleToIStyleData(value);
     });
   }
 
@@ -139,8 +148,8 @@ export function convertToUniverData(data: WorkbookData): IWorkbookData {
         id: sheetId,
         name: sheet.name,
         cellData,
-        rowCount: sheet.rowCount ?? 1000,
-        columnCount: sheet.columnCount ?? 26,
+        rowCount: sheet.rowCount ?? DEFAULT_WORKBOOK_ROWS,
+        columnCount: sheet.columnCount ?? DEFAULT_WORKBOOK_COLS,
       }
     },
     sheetOrder: data.sheetOrder ?? [sheetId],
@@ -155,12 +164,12 @@ export function convertToUniverDataMultiSheet(data: WorkbookData): IWorkbookData
   const styles: Record<string, Nullable<IStyleData>> = {};
   if (data.styles && typeof data.styles === 'object') {
     Object.entries(data.styles).forEach(([key, value]) => {
-      styles[key] = value as Nullable<IStyleData>;
+      styles[key] = convertSpreadsheetStyleToIStyleData(value);
     });
   }
 
   // Convert all sheets
-  const sheets: Record<string, unknown> = {};
+  const sheets: Record<string, Record<string, unknown>> = {};
   const sheetOrder: string[] = [];
 
   Object.entries(data.sheets).forEach(([sheetId, sheet]) => {
@@ -171,8 +180,8 @@ export function convertToUniverDataMultiSheet(data: WorkbookData): IWorkbookData
       id: sheetId,
       name: sheet.name,
       cellData,
-      rowCount: sheet.rowCount ?? 1000,
-      columnCount: sheet.columnCount ?? 26,
+      rowCount: sheet.rowCount ?? DEFAULT_WORKBOOK_ROWS,
+      columnCount: sheet.columnCount ?? DEFAULT_WORKBOOK_COLS,
     };
     
     // Copy over additional properties from sheet (like mergeData, etc.)
@@ -261,11 +270,11 @@ export function convertFromUniverCellData(cellData: ICellData): CellValue {
   };
 
   // Only add properties if they have actual values (not undefined)
-  if (cellData.f) {
+  if (cellData.f !== undefined) {
     result.f = cellData.f;
   }
 
-  if (cellData.s) {
+  if (cellData.s !== undefined) {
     result.style = cellData.s;
   }
 
@@ -295,4 +304,22 @@ export function convertFromUniverCellData(cellData: ICellData): CellValue {
   }
 
   return result;
+}
+
+/**
+ * Convert abstract SpreadsheetStyle to Univer IStyleData
+ * This function handles the abstraction layer conversion for styles
+ */
+export function convertSpreadsheetStyleToIStyleData(style: SpreadsheetStyle): IStyleData {
+  const univerStyle = style as unknown as IStyleData;
+  return univerStyle;
+}
+
+/**
+ * Convert Univer IStyleData to abstract SpreadsheetStyle
+ * This function handles the reverse conversion for abstraction
+ */
+export function convertIStyleDataToSpreadsheetStyle(style: IStyleData): SpreadsheetStyle {
+  const abstractStyle = style as unknown as SpreadsheetStyle;
+  return abstractStyle;
 }

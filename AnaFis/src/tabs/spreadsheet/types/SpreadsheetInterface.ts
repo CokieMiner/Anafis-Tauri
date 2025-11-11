@@ -1,5 +1,4 @@
 // SpreadsheetInterface.ts - Abstract interface for any spreadsheet library
-import { IStyleData } from '@univerjs/core';
 //
 // This file defines the minimal contract the app expects from any spreadsheet
 // UI adapter. The project uses an adapter pattern so the UI component can be
@@ -18,6 +17,63 @@ import { IStyleData } from '@univerjs/core';
 
 import { ExportService } from '@/core/types/export';
 import { ImportService } from '@/core/types/import';
+
+// ============================================================================
+// ABSTRACT STYLE TYPES (Library-Independent)
+// ============================================================================
+
+/**
+ * Abstract style data interface that doesn't depend on any specific spreadsheet library.
+ * This allows the abstraction layer to be library-agnostic while still supporting
+ * comprehensive styling capabilities.
+ */
+export interface SpreadsheetStyle {
+  // Font properties
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: 'normal' | 'bold' | 'lighter' | 'bolder' | number;
+  fontStyle?: 'normal' | 'italic' | 'oblique';
+  fontColor?: string;
+  fontDecoration?: Array<'underline' | 'line-through' | 'overline'>;
+
+  // Fill/background properties
+  backgroundColor?: string;
+  backgroundPattern?: {
+    type: 'solid' | 'stripes' | 'dots' | 'grid';
+    color?: string;
+    patternColor?: string;
+  };
+
+  // Border properties
+  borderTop?: BorderStyle;
+  borderBottom?: BorderStyle;
+  borderLeft?: BorderStyle;
+  borderRight?: BorderStyle;
+
+  // Alignment properties
+  horizontalAlign?: 'left' | 'center' | 'right' | 'justify' | 'distributed';
+  verticalAlign?: 'top' | 'middle' | 'bottom' | 'justify' | 'distributed';
+  textWrap?: boolean;
+  textRotation?: number; // degrees, -90 to 90
+
+  // Number formatting
+  numberFormat?: string; // Format pattern like "#,##0.00" or "YYYY-MM-DD"
+
+  // Cell protection
+  locked?: boolean;
+  hidden?: boolean;
+
+  // Additional style properties (extensible for different libraries)
+  [key: string]: unknown;
+}
+
+/**
+ * Border style specification
+ */
+export interface BorderStyle {
+  style: 'none' | 'thin' | 'medium' | 'dashed' | 'dotted' | 'thick' | 'double' | 'hair' | 'mediumDashed' | 'dashDot' | 'mediumDashDot' | 'dashDotDot' | 'mediumDashDotDot' | 'slantDashDot';
+  color?: string;
+}
 
 export interface SpreadsheetCapabilities {
   // Feature support flags
@@ -41,7 +97,7 @@ export interface SpreadsheetCapabilities {
 
 export interface CellValue {
   v?: string | number | boolean | null;
-  f?: string; // formula
+  f?: string | null; // formula
   meta?: {
     custom?: unknown; // Custom document data (cellData.p) - keep flexible for various formats
     cellType?: unknown; // Cell value type (cellData.t) - keep flexible for various formats
@@ -66,6 +122,9 @@ export interface SpreadsheetRef {
   getRange: (rangeRef: string) => Promise<(string | number)[][]>;
   getRangeFull: (rangeRef: string) => Promise<CellValue[][]>;
 
+  // Direct formula insertion (performance optimization)
+  insertFormulas: (rangeOrStartCell: string, formulas: string[] | string[][], direction?: 'vertical' | 'horizontal') => Promise<void>;
+
   // Selection and state
   getSelection: () => Promise<string | null>;
   isReady: () => boolean;
@@ -73,6 +132,7 @@ export interface SpreadsheetRef {
   // Multi-sheet support (required for import/export operations)
   createSheet: (name: string, rows?: number, cols?: number) => Promise<string>;
   getAllSheets: () => Promise<Array<{ id: string; name: string }>>;
+  deleteSheet: (sheetId: string) => Promise<void>;
 
   // Advanced snapshot operations (required for import/export operations)
   getWorkbookSnapshot: () => Promise<unknown>;
@@ -115,6 +175,7 @@ export interface SpreadsheetProps {
   // or return a Promise to support async evaluation via backend/Rust/WASM.
   onFormulaIntercept: (cellRef: string, formula: string) => void;
   onSelectionChange?: (cellRef: string) => void;
+  onReady?: () => void; // Called when the spreadsheet adapter is fully initialized and ready
   tabId?: string; // Optional tab ID for instance tracking
 }
 
@@ -124,7 +185,7 @@ export interface WorkbookData {
   name: string;
   appVersion?: string;
   locale?: string; // Abstract locale identifier
-  styles?: Record<string, IStyleData>;
+  styles?: Record<string, SpreadsheetStyle>;
   sheets: Record<string, SheetData>;
   sheetOrder?: string[];
   // Allow additional properties for different spreadsheet libraries
@@ -147,7 +208,7 @@ export interface WorkbookSnapshot {
   name?: string;
   appVersion?: string;
   locale?: string;
-  styles?: Record<string, IStyleData>;
+  styles?: Record<string, SpreadsheetStyle>;
   sheets: Record<string, unknown>; // More permissive to accept different sheet formats
   sheetOrder?: unknown;
   resources?: unknown;

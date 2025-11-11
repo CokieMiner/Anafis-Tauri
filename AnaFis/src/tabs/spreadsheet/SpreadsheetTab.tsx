@@ -6,7 +6,6 @@ import {
 
 import { UniverAdapter as SpreadsheetAdapter } from '@/tabs/spreadsheet/univer';
 import { SpreadsheetRef, WorkbookData, CellValue } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { spreadsheetEventBus } from '@/tabs/spreadsheet/managers/SpreadsheetEventBus';
 
 import UncertaintySidebar from '@/tabs/spreadsheet/components/sidebar/UncertaintySidebar';
 import UnitConversionSidebar from '@/tabs/spreadsheet/components/sidebar/UnitConversionSidebar';
@@ -15,87 +14,37 @@ import ExportSidebar from '@/tabs/spreadsheet/components/sidebar/ExportSidebar';
 import ImportSidebar from '@/tabs/spreadsheet/components/sidebar/ImportSidebar';
 import SpreadsheetSidebarToolbar from '@/tabs/spreadsheet/components/SpreadsheetSidebarToolbar';
 import { SidebarErrorBoundary, SpreadsheetErrorBoundary } from '@/shared/components/error-boundaries';
-import { ExportService } from '@/core/types/export';
-import { ImportService } from '@/core/types/import';
 import { useWorkbookData } from '@/core/managers/WorkbookDataProvider';
+import { SelectionProvider } from '@/tabs/spreadsheet/managers/SelectionContext';
+import { useSelectionContext } from '@/tabs/spreadsheet/managers/useSelectionContext';
+import { DEFAULT_SHEET_ROWS, DEFAULT_SHEET_COLS } from '@/tabs/spreadsheet/univer/utils/constants';
+import { useSidebarState } from '@/tabs/spreadsheet/managers/SidebarStateManager';
 
 interface SpreadsheetTabProps {
   tabId: string;
 }
 
-const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
+const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
+  const { notifySelection } = useSelectionContext();
   // Check if we're in a detached window by looking at URL params
   const isDetachedWindow = new URLSearchParams(window.location.search).has('tabId');
 
   // Workbook data context for proper synchronization
   const { getPendingWorkbookData, clearPendingWorkbookData } = useWorkbookData();
 
-  // Sidebar state management - now using simple local state since tabs stay mounted
-  type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | 'import' | null;
-  const [activeSidebar, setActiveSidebar] = useState<SidebarType>(null);
-
-  // Consolidated sidebar state - better performance and organization
-  // Uncertainty sidebar state - REMOVED: now managed by useUncertaintyPropagation hook
-
-  // Unit conversion sidebar state
-  const [unitConversionCategory, setUnitConversionCategory] = useState<string>('');
-  const [unitConversionFromUnit, setUnitConversionFromUnit] = useState<string>('');
-  const [unitConversionToUnit, setUnitConversionToUnit] = useState<string>('');
-  const [unitConversionValue, setUnitConversionValue] = useState<string>('1');
-
-  // Export sidebar state - REMOVED: now managed by useExport hook
+  // Use centralized sidebar state management
+  const { state: sidebarState, actions: sidebarActions } = useSidebarState();
 
   // Spreadsheet state - now persistent per tab
   const spreadsheetRef = useRef<SpreadsheetRef>(null);
 
-  // Get services from the spreadsheet implementation (maintains abstraction)
-  // Must use state because we can't access refs during render
-  const [exportService, setExportService] = useState<ExportService | null>(null);
-  const [importService, setImportService] = useState<ImportService | null>(null);
-
   // Initialize services after mount (can't access refs during render)
-  useEffect(() => {
-    // Poll for services until spreadsheet is ready
-    const checkServices = () => {
-      if (spreadsheetRef.current) {
-        const expSvc = spreadsheetRef.current.getExportService();
-        const impSvc = spreadsheetRef.current.getImportService();
-        setExportService(expSvc);
-        setImportService(impSvc);
-        return true;
-      }
-      return false;
-    };
+  const handleSpreadsheetReady = useCallback(() => {
+    sidebarActions.initializeServices(spreadsheetRef);
+  }, [sidebarActions]);
 
-    // Try immediately
-    if (checkServices()) {
-      return;
-    }
-
-    // Poll every 100ms if not ready yet
-    const interval = setInterval(() => {
-      if (checkServices()) {
-        clearInterval(interval);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, []); // Only run once on mount
-
-  // Listen for workbook data loading events (e.g., when opening .anafispread files)
-  useEffect(() => {
-    const handleLoadWorkbookData = (event: CustomEvent<WorkbookData>) => {
-      if (spreadsheetRef.current?.loadWorkbookSnapshot) {
-        void spreadsheetRef.current.loadWorkbookSnapshot(event.detail);
-      }
-    };
-
-    window.addEventListener('load-workbook-data', handleLoadWorkbookData as EventListener);
-
-    return () => {
-      window.removeEventListener('load-workbook-data', handleLoadWorkbookData as EventListener);
-    };
-  }, []);
+  // NOTE: Window event listener for load-workbook-data removed - App.tsx now handles file opening directly
+  // File association is handled by creating tabs with workbook data in App.tsx
 
   // Check for pending workbook data on mount (for proper synchronization)
   useEffect(() => {
@@ -127,8 +76,8 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
           id: sheetId,
           name: 'Sheet1',
           cellData: {},
-          rowCount: 1000,
-          columnCount: 26,
+          rowCount: DEFAULT_SHEET_ROWS,
+          columnCount: DEFAULT_SHEET_COLS,
         }
       },
       sheetOrder: [sheetId],
@@ -150,21 +99,20 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
 
   const handleSelectionChange = useCallback((cellRef: string) => {
     // Emit selection change event to all interested subscribers (sidebars)
-    spreadsheetEventBus.emit('selection-change', cellRef);
-  }, []);
+    notifySelection(cellRef);
+  }, [notifySelection]);
 
   // Handle sidebar toggle from toolbar
-  const handleSidebarToggle = useCallback((sidebar: SidebarType) => {
-    setActiveSidebar(sidebar);
-  }, []);
+  const handleSidebarToggle = useCallback((sidebar: import('@/tabs/spreadsheet/managers/SidebarStateManager').SidebarType) => {
+    sidebarActions.setActiveSidebar(sidebar);
+  }, [sidebarActions]);
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* NOTE: Conflict resolution and error UI removed - no longer applicable for local-only tabs */}
 
-      {/* Main Toolbar - show in both main window and detached windows */}
       <SpreadsheetSidebarToolbar 
-        activeSidebar={activeSidebar}
+        activeSidebar={sidebarState.activeSidebar}
         onSidebarToggle={handleSidebarToggle}
         isDetachedWindow={isDetachedWindow}
       />
@@ -207,15 +155,16 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
                 onCellChange={handleCellChange}
                 onFormulaIntercept={handleFormulaIntercept}
                 onSelectionChange={handleSelectionChange}
+                onReady={handleSpreadsheetReady}
                 tabId={tabId}
               />
             </Box>
             {/* Uncertainty Propagation Sidebar - positioned within spreadsheet */}
-            {activeSidebar === 'uncertainty' && (
-              <SidebarErrorBoundary sidebarName="Uncertainty Propagation" onClose={() => setActiveSidebar(null)}>
+            {sidebarState.activeSidebar === 'uncertainty' && (
+              <SidebarErrorBoundary sidebarName="Uncertainty Propagation" onClose={() => sidebarActions.setActiveSidebar(null)}>
                 <UncertaintySidebar
                   open={true}
-                  onClose={() => setActiveSidebar(null)}
+                  onClose={() => sidebarActions.setActiveSidebar(null)}
                   spreadsheetRef={spreadsheetRef}
                   onSelectionChange={handleSelectionChange}
                   onPropagationComplete={(_resultRange: string) => {
@@ -225,56 +174,56 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
               </SidebarErrorBoundary>
             )}
             {/* Unit Conversion Sidebar - positioned within spreadsheet */}
-            {activeSidebar === 'unitConvert' && (
-              <SidebarErrorBoundary sidebarName="Unit Conversion" onClose={() => setActiveSidebar(null)}>
+            {sidebarState.activeSidebar === 'unitConvert' && (
+              <SidebarErrorBoundary sidebarName="Unit Conversion" onClose={() => sidebarActions.setActiveSidebar(null)}>
                 <UnitConversionSidebar
                   open={true}
-                  onClose={() => setActiveSidebar(null)}
+                  onClose={() => sidebarActions.setActiveSidebar(null)}
                   spreadsheetRef={spreadsheetRef}
                   onSelectionChange={handleSelectionChange}
-                  category={unitConversionCategory}
-                  setCategory={setUnitConversionCategory}
-                  fromUnit={unitConversionFromUnit}
-                  setFromUnit={setUnitConversionFromUnit}
-                  toUnit={unitConversionToUnit}
-                  setToUnit={setUnitConversionToUnit}
-                  value={unitConversionValue}
-                  setValue={setUnitConversionValue}
+                  category={sidebarState.unitConversion.category}
+                  setCategory={sidebarActions.setUnitConversionCategory}
+                  fromUnit={sidebarState.unitConversion.fromUnit}
+                  setFromUnit={sidebarActions.setUnitConversionFromUnit}
+                  toUnit={sidebarState.unitConversion.toUnit}
+                  setToUnit={sidebarActions.setUnitConversionToUnit}
+                  value={sidebarState.unitConversion.value}
+                  setValue={sidebarActions.setUnitConversionValue}
                 />
               </SidebarErrorBoundary>
             )}
             {/* Quick Plot Sidebar - positioned within spreadsheet */}
-            {activeSidebar === 'quickPlot' && (
-              <SidebarErrorBoundary sidebarName="Quick Plot" onClose={() => setActiveSidebar(null)}>
+            {sidebarState.activeSidebar === 'quickPlot' && (
+              <SidebarErrorBoundary sidebarName="Quick Plot" onClose={() => sidebarActions.setActiveSidebar(null)}>
                 <QuickPlotSidebar
                   open={true}
-                  onClose={() => setActiveSidebar(null)}
+                  onClose={() => sidebarActions.setActiveSidebar(null)}
                   spreadsheetRef={spreadsheetRef}
                   onSelectionChange={handleSelectionChange}
                 />
               </SidebarErrorBoundary>
             )}
             {/* Export Sidebar - positioned within spreadsheet */}
-            {activeSidebar === 'export' && exportService && (
-              <SidebarErrorBoundary sidebarName="Export" onClose={() => setActiveSidebar(null)}>
+            {sidebarState.activeSidebar === 'export' && sidebarState.services.exportService && (
+              <SidebarErrorBoundary sidebarName="Export" onClose={() => sidebarActions.setActiveSidebar(null)}>
                 <ExportSidebar
                   open={true}
-                  onClose={() => setActiveSidebar(null)}
+                  onClose={() => sidebarActions.setActiveSidebar(null)}
                   spreadsheetRef={spreadsheetRef}
                   onSelectionChange={handleSelectionChange}
-                  exportService={exportService}
+                  exportService={sidebarState.services.exportService}
                 />
               </SidebarErrorBoundary>
             )}
             {/* Import Sidebar - positioned within spreadsheet */}
-            {activeSidebar === 'import' && importService && (
-              <SidebarErrorBoundary sidebarName="Import" onClose={() => setActiveSidebar(null)}>
+            {sidebarState.activeSidebar === 'import' && sidebarState.services.importService && (
+              <SidebarErrorBoundary sidebarName="Import" onClose={() => sidebarActions.setActiveSidebar(null)}>
                 <ImportSidebar
                   open={true}
-                  onClose={() => setActiveSidebar(null)}
+                  onClose={() => sidebarActions.setActiveSidebar(null)}
                   spreadsheetRef={spreadsheetRef}
                   onSelectionChange={handleSelectionChange}
-                  importService={importService}
+                  importService={sidebarState.services.importService}
                 />
               </SidebarErrorBoundary>
             )}
@@ -283,6 +232,14 @@ const SpreadsheetTab: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
       </Box>
       </SpreadsheetErrorBoundary>
     </Box>
+  );
+};
+
+const SpreadsheetTab: React.FC<SpreadsheetTabProps> = (props) => {
+  return (
+    <SelectionProvider>
+      <SpreadsheetContent {...props} />
+    </SelectionProvider>
   );
 };
 

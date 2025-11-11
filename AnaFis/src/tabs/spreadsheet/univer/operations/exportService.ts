@@ -2,12 +2,22 @@
 // Supports: CSV, TSV, TXT, Parquet, HTML, Markdown, TeX, AnaFisSpread
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { safeSpreadsheetOperation, formatSpreadsheetError } from '@/tabs/spreadsheet/univer';
+import { SpreadsheetRef, WorkbookSnapshot } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import { safeSpreadsheetOperation } from '@/tabs/spreadsheet/univer';
 import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
 import type { ExportOptions } from '@/core/types/export';
 import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
-import { Result, ok, err } from '@/core/types/result';
+import { Result, ok, err, isErr } from '@/core/types/result';
+import {
+  normalizeError,
+  logError,
+  SpreadsheetValidationError,
+  SpreadsheetOperationError
+} from '@/tabs/spreadsheet/univer/utils/errors';
+
+// Type definitions for better type safety
+type CellValue = string | number | null;
+type DataTable = CellValue[][];
 
 export type ExportFormat = 'csv' | 'tsv' | 'txt' | 'parquet' | 'html' | 'markdown' | 'tex' | 'anafispread';
 
@@ -35,7 +45,15 @@ const FILE_FILTERS: Record<ExportFormat, { name: string; extensions: string[] }>
 
 export class ExportService implements ExportService {
   /**
-   * Main export with file dialog
+   * Export spreadsheet data with a native file save dialog.
+   *
+   * Shows a system file dialog for the user to choose where to save the exported file,
+   * then performs the export operation. Supports all export formats with appropriate
+   * file filters and default extensions.
+   *
+   * @param options - Export configuration including format, range mode, and custom range
+   * @param spreadsheetAPI - Reference to the spreadsheet API for data access
+   * @returns Promise resolving to Result with export success details or error
    */
   async exportWithDialog(options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<Result<ExportResult, ExportError>> {
     try {
@@ -51,15 +69,23 @@ export class ExportService implements ExportService {
 
       return this.exportToFile(filePath, options, spreadsheetAPI);
     } catch (error) {
-      return err({
-        message: `Export failed: ${error instanceof Error ? error.message : String(error)}`,
-        code: 'DIALOG_ERROR'
-      });
+      const spreadsheetError = normalizeError(error, 'exportWithDialog');
+      logError(spreadsheetError);
+      return err({ message: spreadsheetError.message, code: spreadsheetError.code });
     }
   }
 
   /**
-   * Export to specific file path
+   * Export spreadsheet data directly to a specified file path.
+   *
+   * Performs the complete export pipeline: data extraction, cleaning, and backend
+   * processing. Handles special cases like AnaFisSpread format (workbook snapshots)
+   * and standard formats (2D array data).
+   *
+   * @param filePath - Absolute path where the exported file will be saved
+   * @param options - Export configuration including format, range mode, and custom range
+   * @param spreadsheetAPI - Reference to the spreadsheet API for data access
+   * @returns Promise resolving to Result with export success details or error
    */
   async exportToFile(filePath: string, options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<Result<ExportResult, ExportError>> {
     try {
@@ -69,8 +95,14 @@ export class ExportService implements ExportService {
         return err({ message: ERROR_MESSAGES.NO_DATA_TO_EXPORT, code: 'NO_DATA' });
       }
 
-      // For anafispread, pass workbook snapshot directly
+      // For anafispread, validate and pass workbook snapshot directly
       if (options.format === 'anafispread') {
+        // Validate snapshot structure before export
+        const validation = this.validateWorkbookSnapshot(data);
+        if (isErr(validation)) {
+          return err({ message: validation.error, code: 'INVALID_SNAPSHOT' });
+        }
+        
         await invoke('export_anafispread', { data, filePath });
         return ok({ message: `Successfully exported to ${filePath}`, filePath });
       }
@@ -95,9 +127,11 @@ export class ExportService implements ExportService {
 
       return ok({ message, filePath });
     } catch (error) {
+      const spreadsheetError = normalizeError(error, 'exportToFile');
+      logError(spreadsheetError);
       return err({
-        message: this.formatError(error),
-        code: 'EXPORT_FAILED'
+        message: spreadsheetError.message,
+        code: spreadsheetError.code
       });
     }
   }
@@ -120,19 +154,126 @@ export class ExportService implements ExportService {
   }
 
   /**
+   * Validate workbook snapshot structure before export
+   * Prevents corrupted or malformed snapshots from being saved
+   */
+  private validateWorkbookSnapshot(snapshot: unknown): Result<WorkbookSnapshot, string> {
+    try {
+      // Basic type check
+      if (!snapshot || typeof snapshot !== 'object') {
+        return err('Snapshot is not a valid object');
+      }
+
+      const obj = snapshot as Record<string, unknown>;
+
+      // Required fields validation
+      if (typeof obj.id !== 'string' || obj.id.trim() === '') {
+        return err('Snapshot missing required field: id (must be non-empty string)');
+      }
+
+      if (typeof obj.name !== 'string' || obj.name.trim() === '') {
+        return err('Snapshot missing required field: name (must be non-empty string)');
+      }
+
+      if (!obj.sheets || typeof obj.sheets !== 'object') {
+        return err('Snapshot missing required field: sheets (must be object)');
+      }
+
+      const sheets = obj.sheets as Record<string, unknown>;
+      const sheetIds = Object.keys(sheets);
+
+      if (sheetIds.length === 0) {
+        return err('Snapshot must contain at least one sheet');
+      }
+
+      // Validate each sheet
+      for (const [sheetId, sheetData] of Object.entries(sheets)) {
+        if (!sheetData || typeof sheetData !== 'object') {
+          return err(`Sheet '${sheetId}' is not a valid object`);
+        }
+
+        const sheet = sheetData as Record<string, unknown>;
+
+        if (typeof sheet.id !== 'string' || sheet.id.trim() === '') {
+          return err(`Sheet '${sheetId}' missing required field: id`);
+        }
+
+        if (typeof sheet.name !== 'string' || sheet.name.trim() === '') {
+          return err(`Sheet '${sheetId}' missing required field: name`);
+        }
+
+        // Optional fields validation (if present, must be valid)
+        if (sheet.cellData !== undefined && typeof sheet.cellData !== 'object') {
+          return err(`Sheet '${sheetId}' has invalid cellData (must be object if present)`);
+        }
+
+        if (sheet.mergeData !== undefined && !Array.isArray(sheet.mergeData)) {
+          return err(`Sheet '${sheetId}' has invalid mergeData (must be array if present)`);
+        }
+
+        if (sheet.rowCount !== undefined && (typeof sheet.rowCount !== 'number' || sheet.rowCount < 0)) {
+          return err(`Sheet '${sheetId}' has invalid rowCount (must be non-negative number if present)`);
+        }
+
+        if (sheet.columnCount !== undefined && (typeof sheet.columnCount !== 'number' || sheet.columnCount < 0)) {
+          return err(`Sheet '${sheetId}' has invalid columnCount (must be non-negative number if present)`);
+        }
+      }
+
+      // Optional workbook-level fields validation
+      if (obj.appVersion !== undefined && typeof obj.appVersion !== 'string') {
+        return err('Snapshot has invalid appVersion (must be string if present)');
+      }
+
+      if (obj.locale !== undefined && typeof obj.locale !== 'string') {
+        return err('Snapshot has invalid locale (must be string if present)');
+      }
+
+      if (obj.styles !== undefined && typeof obj.styles !== 'object') {
+        return err('Snapshot has invalid styles (must be object if present)');
+      }
+
+      if (obj.sheetOrder !== undefined && !Array.isArray(obj.sheetOrder)) {
+        return err('Snapshot has invalid sheetOrder (must be array if present)');
+      }
+
+      if (obj.resources !== undefined && !Array.isArray(obj.resources)) {
+        return err('Snapshot has invalid resources (must be array if present)');
+      }
+
+      // If we get here, validation passed
+      return ok(snapshot as WorkbookSnapshot);
+
+    } catch (error) {
+      return err(`Snapshot validation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
    * Determine export range using direct internal API access
    * No fallbacks - forces proper fixes when internal API access fails
    */
   private async determineRange(options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<string> {
     if (options.rangeMode === 'custom') {
       if (!options.customRange) {
-        throw new Error(ERROR_MESSAGES.CUSTOM_RANGE_REQUIRED);
+        throw new SpreadsheetValidationError(
+          ERROR_MESSAGES.CUSTOM_RANGE_REQUIRED,
+          'customRange',
+          'determineRange',
+          { rangeMode: options.rangeMode }
+        );
       }
       try {
         RangeValidator.validateFormat(options.customRange);
         return options.customRange;
       } catch (error) {
-        throw new Error(`Invalid range: ${error instanceof Error ? error.message : String(error)}`);
+        const originalError = error instanceof Error ? error : new Error(String(error));
+        throw new SpreadsheetValidationError(
+          `Invalid range: ${originalError.message}`,
+          'customRange',
+          'determineRange',
+          { rangeMode: options.rangeMode, customRange: options.customRange }
+        );
       }
     }
 
@@ -141,93 +282,99 @@ export class ExportService implements ExportService {
     try {
       return await spreadsheetAPI.getUsedRange();
     } catch (error) {
-      // Fail fast - no graceful degradation that could hide real issues
-      throw new Error(`Failed to determine used range via internal API: ${error instanceof Error ? error.message : String(error)}`);
+      const originalError = error instanceof Error ? error : new Error(String(error));
+      throw new SpreadsheetOperationError(
+        'determineRange',
+        originalError,
+        { rangeMode: options.rangeMode, operation: 'getUsedRange' }
+      );
     }
   }
 
   /**
    * Clean data: remove trailing empty rows/columns
-   * Single-pass algorithm: O(rows×cols) instead of O(2×rows×cols)
+   * Single-pass algorithm: O(rows×cols) - mark data locations then build result
    */
-  private cleanData(data: (string | number | null)[][]): (string | number | null)[][] {
+  private cleanData(data: DataTable): DataTable {
     if (!Array.isArray(data) || data.length === 0) {
       return [];
     }
 
+    let firstRow = -1;
     let lastRow = -1;
-    let lastCol = -1;
-    const result: (string | number | null)[][] = [];
+    const rowHasData: boolean[] = new Array<boolean>(data.length).fill(false);
+    const colHasData: (boolean | undefined)[] = [];
 
-    // Single pass: find bounds AND build result simultaneously
+    // Single pass: mark all rows and columns that contain data
     for (let r = 0; r < data.length; r++) {
-      if (!Array.isArray(data[r])) { continue; }
-      const sourceRow = data[r] as (string | number | null)[];
-
-      let rowLastCol = -1;
-      const cleanRow: (string | number | null)[] = [];
-
-      for (let c = 0; c < sourceRow.length; c++) {
-        const value = sourceRow[c] ?? null;
-        cleanRow.push(value);
-
-        if (this.isNonEmpty(value)) {
-          rowLastCol = c;
-          lastRow = r;
-        }
+      if (!Array.isArray(data[r])) {
+        continue;
       }
 
-      // Update global lastCol if this row extends further
-      if (rowLastCol > lastCol) {
-        lastCol = rowLastCol;
+      const row = data[r] as CellValue[];
+      for (let c = 0; c < row.length; c++) {
+        const value = row[c] ?? null;
+        // Empty strings and whitespace are considered content
+        if (value !== null) {
+          if (firstRow === -1) {
+            firstRow = r;
+          }
+          lastRow = Math.max(lastRow, r);
+          rowHasData[r] = true;
+          colHasData[c] = true;
+        }
+      }
+    }
+
+    if (firstRow === -1) {
+      return [];
+    }
+
+    // Find actual last column with data (trim trailing empty columns)
+    let actualLastCol = -1;
+    for (let c = colHasData.length - 1; c >= 0; c--) {
+      if (colHasData[c]) {
+        actualLastCol = c;
+        break;
+      }
+    }
+
+    if (actualLastCol === -1) {
+      return [];
+    }
+
+    // Build result: include only rows from firstRow to lastRow, columns 0 to actualLastCol
+    const result: DataTable = [];
+    for (let r = firstRow; r <= lastRow; r++) {
+      if (!Array.isArray(data[r])) {
+        // Pad missing rows with nulls
+        result.push(new Array(actualLastCol + 1).fill(null) as CellValue[]);
+        continue;
+      }
+
+      const sourceRow = data[r] as CellValue[];
+      const cleanRow: CellValue[] = [];
+
+      // Include all columns up to actualLastCol, padding with nulls if necessary
+      for (let c = 0; c <= actualLastCol; c++) {
+        const value = c < sourceRow.length ? (sourceRow[c] ?? null) : null;
+        cleanRow.push(value);
       }
 
       result.push(cleanRow);
     }
 
-    if (lastRow === -1) { return []; }
-
-    // Single slice at the end to trim empty rows and columns
-    // Optimize padding to avoid unnecessary array copying
-    const finalLastCol = lastCol;
-    return result
-      .slice(0, lastRow + 1)
-      .map(row => {
-        if (row.length > finalLastCol + 1) {
-          // Row is longer than needed, slice it
-          return row.slice(0, finalLastCol + 1);
-        } else if (row.length < finalLastCol + 1) {
-          // Row is shorter, pad with nulls
-          const padded = [...row];
-          while (padded.length <= finalLastCol) {
-            padded.push(null);
-          }
-          return padded;
-        } else {
-          // Row is exactly the right length
-          return row;
-        }
-      });
-  }
-
-  /**
-   * Check if cell is non-empty
-   */
-  private isNonEmpty(value: string | number | null): boolean {
-    if (value === null) {return false;}
-    if (typeof value === 'string') {return value.trim().length > 0;}
-    return true;
-  }
-
-  /**
-   * Format errors for display
-   */
-  private formatError(err: unknown): string {
-    return formatSpreadsheetError(err, 'export');
-  }
-
-  /**
-   * Export to Data Library
+    return result;
+  }  /**
+   * Export spreadsheet data to the AnaFis Data Library.
+   *
+   * Extracts numeric data and uncertainties from specified ranges, validates the data,
+   * and saves it as a named sequence in the Data Library with metadata like tags,
+   * units, and description.
+   *
+   * @param options - Data Library export configuration including name, description, ranges, etc.
+   * @param spreadsheetAPI - Reference to the spreadsheet API for data access
+   * @returns Promise resolving to Result with save confirmation or error
    */
   async exportToDataLibrary(options: {
     libraryName: string;
@@ -294,9 +441,11 @@ export class ExportService implements ExportService {
         message: `Saved '${options.libraryName}' (${dataExtraction.length} points)`
       });
     } catch (error) {
+      const spreadsheetError = normalizeError(error, 'exportToDataLibrary');
+      logError(spreadsheetError);
       return err({
-        message: `Data Library save failed: ${error instanceof Error ? error.message : String(error)}`,
-        code: 'LIBRARY_SAVE_FAILED'
+        message: spreadsheetError.message,
+        code: spreadsheetError.code
       });
     }
   }
@@ -310,9 +459,13 @@ export class ExportService implements ExportService {
       const numbers: number[] = [];
 
       for (const row of data) {
-        if (!Array.isArray(row)) {continue;}
+        if (!Array.isArray(row)) {
+          continue;
+        }
         for (const cell of row) {
-          if (cell === '') {continue;}
+          if (cell === '') {
+            continue;
+          }
 
           let num: number;
           if (typeof cell === 'number') {
