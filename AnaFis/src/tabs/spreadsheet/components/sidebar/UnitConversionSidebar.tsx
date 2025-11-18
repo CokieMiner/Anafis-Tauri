@@ -440,8 +440,10 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(({
               placeholder="Search units..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+              slotProps={{
+                input: {
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                }
               }}
               sx={{
                 mb: 1,

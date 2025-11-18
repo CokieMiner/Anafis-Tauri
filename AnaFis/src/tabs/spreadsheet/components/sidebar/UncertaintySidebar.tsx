@@ -307,11 +307,9 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
                 fullWidth
                 sx={sidebarStyles.input}
                 slotProps={{
-                  input: {
-                    style: { color: 'white', fontFamily: 'monospace', fontSize: 12 },
-                    inputProps: { min: 50, max: 99.9, step: 0.1 }
-                  },
-                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
+                  input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
+                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } },
+                  htmlInput: { min: 50, max: 99.9, step: 0.1 }
                 }}
               />
             </Box>
@@ -380,11 +378,9 @@ export const UncertaintySidebar = React.memo<UncertaintySidebarProps>(({
                 fullWidth
                 sx={sidebarStyles.input}
                 slotProps={{
-                  input: {
-                    style: { color: 'white', fontFamily: 'monospace', fontSize: 12 },
-                    inputProps: { min: 50, max: 99.9, step: 0.1 }
-                  },
-                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } }
+                  input: { style: { color: 'white', fontFamily: 'monospace', fontSize: 12 } },
+                  inputLabel: { style: { color: 'rgba(255,255,255,0.7)', fontSize: 12 } },
+                  htmlInput: { min: 50, max: 99.9, step: 0.1 }
                 }}
               />
               <Button

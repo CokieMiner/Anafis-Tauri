@@ -184,7 +184,6 @@ export const DataLibraryWindowContent: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   // Loading states for delete operations
@@ -298,27 +297,19 @@ export const DataLibraryWindowContent: React.FC = () => {
 
     try {
       const { save } = await import('@tauri-apps/plugin-dialog');
-      const extension = exportFormat === 'csv' ? '.csv' : '.json';
       const filePath = await save({
         filters: [{
-          name: exportFormat.toUpperCase(),
-          extensions: [exportFormat]
+          name: 'CSV',
+          extensions: ['csv']
         }],
-        defaultPath: `anafis_export${extension}`
+        defaultPath: `anafis_export.csv`
       });
 
       if (filePath) {
-        if (exportFormat === 'csv') {
-          await invoke('export_sequences_csv', {
-            sequenceIds: Array.from(selectedIds),
-            filePath
-          });
-        } else {
-          await invoke('export_sequences_json', {
-            sequenceIds: Array.from(selectedIds),
-            filePath
-          });
-        }
+        await invoke('export_sequences_csv', {
+          sequenceIds: Array.from(selectedIds),
+          filePath
+        });
 
         setExportDialogOpen(false);
         handleSelectNone();
@@ -552,38 +543,11 @@ export const DataLibraryWindowContent: React.FC = () => {
         <DialogTitle>Export Sequences</DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
-            Export {selectedIds.size} sequence{selectedIds.size > 1 ? 's' : ''} to a universal format
+            Export {selectedIds.size} sequence{selectedIds.size > 1 ? 's' : ''} to CSV format
           </Typography>
 
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Export Format</InputLabel>
-            <Select
-              value={exportFormat}
-              label="Export Format"
-              onChange={(e: SelectChangeEvent) => setExportFormat(e.target.value as 'csv' | 'json')}
-            >
-              <MenuItem value="csv">
-                <Box>
-                  <Typography variant="body1">CSV (Comma-Separated Values)</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Universal format - Excel, MATLAB, Python, R, Origin, Igor Pro
-                  </Typography>
-                </Box>
-              </MenuItem>
-              <MenuItem value="json">
-                <Box>
-                  <Typography variant="body1">JSON (JavaScript Object Notation)</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Web-friendly format with full metadata - Python, JavaScript, Julia
-                  </Typography>
-                </Box>
-              </MenuItem>
-            </Select>
-          </FormControl>
           <Alert severity="info" sx={{ mt: 2 }}>
-            {exportFormat === 'csv'
-              ? 'CSV format: Each sequence becomes a column with headers. Uncertainties included as separate columns.'
-              : 'JSON format: Preserves all metadata including tags, descriptions, units, and timestamps.'}
+            CSV format: Each sequence becomes a column with headers. Uncertainties included as separate columns.
           </Alert>
         </DialogContent>
         <DialogActions>

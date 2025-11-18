@@ -5,6 +5,8 @@
 **Complexity**: High  
 **Dependencies**: DSP libraries (Rust), scipy algorithms
 
+**Note**: Implementation planned after completion of Graphs & Fitting tab. Will leverage existing ECharts integration for preview plots and follow established Rust-first architecture pattern.
+
 ---
 
 ## Purpose

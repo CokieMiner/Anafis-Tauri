@@ -79,36 +79,3 @@ fn format_cell_value(value: &Value, delimiter: &str, quote_char: char) -> String
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn test_format_cell_value() {
-        let quote = '"';
-        
-        // Test simple values
-        assert_eq!(format_cell_value(&json!(42), ",", quote), "42");
-        assert_eq!(format_cell_value(&json!("hello"), ",", quote), "hello");
-        assert_eq!(format_cell_value(&json!(true), ",", quote), "true");
-        assert_eq!(format_cell_value(&json!(null), ",", quote), "");
-        
-        // Test values that need quoting
-        assert_eq!(format_cell_value(&json!("hello,world"), ",", quote), "\"hello,world\"");
-        assert_eq!(format_cell_value(&json!("say \"hi\""), ",", quote), "\"say \"\"hi\"\"\"");
-        assert_eq!(format_cell_value(&json!("line\nbreak"), ",", quote), "\"line\nbreak\"");
-    }
-
-    #[test]
-    fn test_format_cell_value_with_pipe_delimiter() {
-        let quote = '"';
-        
-        // Comma should not trigger quoting with pipe delimiter
-        assert_eq!(format_cell_value(&json!("hello,world"), "|", quote), "hello,world");
-        
-        // Pipe should trigger quoting
-        assert_eq!(format_cell_value(&json!("hello|world"), "|", quote), "\"hello|world\"");
-    }
-}

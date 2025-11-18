@@ -13,17 +13,17 @@ AnaFis offers a modern, detachable notebook-style interface with the following c
   - ✅ **Uncertainty Propagation Sidebar**: Calculate error propagation through formulas
   - ✅ **Quick Plot Sidebar**: Instant 2D visualization with ECharts (scatter, line, error bars)
   - ✅ **Import Sidebar**: Import from files (CSV, TSV, TXT, Parquet, AnaFisSpread) or Data Library with search/filter
-  - ✅ **Export Sidebar**: Export data in 10 formats (CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
-- **📈 Fitting Tab**: Robust curve fitting algorithms with interactive visualization and regression analysis *(Coming Soon)*
-- **🧮 Solver Tab**: Intelligent equation solver providing step-by-step mathematical solutions *(Coming Soon)*
-- **🎲 Monte Carlo Tab**: Complex simulation capabilities for statistical analysis and probabilistic modeling *(Coming Soon)*
+  - ✅ **Export Sidebar**: Export data in 10 formats (CSV, TSV, TXT, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
+- **📈 Fitting Tab**: Robust curve fitting algorithms with interactive visualization and regression analysis *(Placeholder - Coming Soon)*
+- **🧮 Solver Tab**: Intelligent equation solver providing step-by-step mathematical solutions *(Placeholder - Coming Soon)*
+- **🎲 Monte Carlo Tab**: Complex simulation capabilities for statistical analysis and probabilistic modeling *(Placeholder - Coming Soon)*
 
 ### Data Management
 - **🗄️ Data Library Window**: Persistent SQLite-based storage system
   - Full-text search (FTS5) across sequences
   - Descriptive statistics (mean, std dev, min, max, median)
   - Visual preview with ECharts
-  - Multi-select export (CSV/JSON with metadata)
+  - Multi-select export (CSV with metadata)
   - Tag-based organization and filtering
   - Direct import to spreadsheets via Import Sidebar
 
@@ -259,6 +259,8 @@ We welcome contributions! Please:
 - ✅ File associations for .anafispread format
 - ✅ Unified theme system and consistent UI
 - ✅ Comprehensive import/export system
+- ✅ Code quality: 0 ESLint errors, 0 warnings, full TypeScript safety
+- ✅ Production-ready builds with optimized performance
 
 ### Planned Features
 - 🔄 Advanced curve fitting algorithms

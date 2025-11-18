@@ -1,16 +1,18 @@
 # Sidebar Implementation Plans - Index
 
-**Date**: January 2025  
-**Branch**: univer-spreadsheet  
-**Status**: Phase 0 Complete, Phase 1 In Progress
+**Date**: November 2025  
+**Branch**: master  
+**Status**: Core Infrastructure Complete, Basic Sidebars Implemented
 
-**Latest Update**: 2025-10-11 - Migrating from Plotly to ECharts for all plotting
+**Latest Update**: 2025-11-17 - Updated with plugin architecture for uncertainty propagation and current graphs/fitting implementation tasks
 
 ---
 
 ## Overview
 
 This directory contains detailed implementation plans for all sidebars, tabs, and global UI components in the AnaFis application. Each component follows the established architecture pattern where **Univer.js** is the single source of truth and sidebars extract, process, and write back data.
+
+**Key Update**: Automatic uncertainty propagation will be implemented as a **Univer plugin** rather than cell modifications, enabling correlated uncertainty support while maintaining architectural integrity.
 
 ### 🎯 Key Decision: ECharts Migration
 
@@ -28,19 +30,17 @@ See **[ECHARTS_MIGRATION.md](./ECHARTS_MIGRATION.md)** for detailed rationale an
 
 ## Component Files
 
-### ✅ Already Implemented
-- **Uncertainty Propagation Sidebar** - Propagate uncertainties through formulas
-- **Unit Conversion Sidebar** - Convert between different units
-- **Data Library Window** - 🗄️ SQLite-based persistent storage with FTS5 search, statistics, preview, CSV/JSON export (Phase 0 - Core Infrastructure COMPLETE)
+### ✅ Actually Implemented
+- **Uncertainty Propagation Sidebar** - ✅ COMPLETE - Propagate uncertainties through formulas with Rust backend
+- **Unit Conversion Sidebar** - ✅ COMPLETE - Convert between different units with comprehensive unit support
+- **Data Library Window** - ✅ COMPLETE - SQLite-based persistent storage with FTS5 search, statistics, preview, CSV/JSON export
 - **Quick Plot Sidebar** - ✅ COMPLETE - Simple 2D scatter/line plots with ECharts, error bars, PNG/SVG export, save to Data Library
 - **Import Sidebar** - ✅ COMPLETE - Import from files (CSV, TSV, TXT, Parquet, AnaFisSpread) or Data Library with search/filter/tag UI
 - **Export Sidebar** - ✅ COMPLETE - Export data in 10 formats (CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
 
-### 📋 In Progress
+### 📋 Not Yet Implemented
 
-None - Phase 1 Complete!
-
-### 📋 Planned Implementations
+#### Sidebars
 
 #### Sidebars
 
@@ -50,6 +50,7 @@ None - Phase 1 Complete!
    - **Features**: Descriptive statistics, distribution analysis, correlation, confidence intervals
    - **Dependencies**: statrs (Rust), nalgebra (Rust)
    - **File**: `02_statistical_analysis_sidebar.md`
+   - **Status**: 📋 **NOT YET IMPLEMENTED** - Rust backend exists, UI component missing
    - **Note**: All calculations in Rust, TypeScript UI only
 
 
@@ -69,22 +70,6 @@ None - Phase 1 Complete!
    - **File**: `04_outlier_detection_sidebar.md`
    - **Note**: All outlier detection algorithms (Z-Score, Modified Z-Score, IQR) and statistics (mean, median, MAD, IQR) in Rust, TypeScript UI only
 
-5. **[Data Validation Sidebar](./05_data_validation_sidebar.md)** ✔️
-
-   - **Priority**: Medium
-   - **Complexity**: Medium
-   - **Features**: Validation rules (numeric, pattern, list, type check), real-time checking via Rust
-   - **Dependencies**: regex, chrono (Rust backend)
-   - **File**: `05_data_validation_sidebar.md`
-   - **Note**: All validation logic in Rust for performance, TypeScript UI only
-
-6. **[Metadata Manager Sidebar](./06_metadata_manager_sidebar.md)** 📋
-   - **Priority**: Low
-   - **Complexity**: Medium
-   - **Features**: Experimental context, instrument info, calibration data, full-text search
-   - **Dependencies**: SQLite (rusqlite), chrono, uuid, serde_json (Rust backend)
-   - **File**: `06_metadata_manager_sidebar.md`
-   - **Note**: All storage and search in Rust/SQLite with FTS5, TypeScript UI only
 
 7. **[Import System](./../../IMPORT_SYSTEM.md)** 📥
    - **Priority**: ✅ COMPLETE
@@ -119,6 +104,16 @@ None - Phase 1 Complete!
    - **File**: `../../monte_carlo_uncertainty_function.md`
    - **Note**: MONTECARLO() function for formulas without analytical derivatives
 
+#### Plugin Architecture
+
+13. **[Uncertainty Propagation Plugin](./../../uncertanty_cell_plan.md)** 🔬
+   - **Priority**: High
+   - **Complexity**: High
+   - **Features**: Automatic uncertainty propagation via Univer plugin, correlated uncertainties, covariance matrix support
+   - **Dependencies**: Univer.js plugin API, enhanced Rust uncertainty backend
+   - **File**: `../../uncertanty_cell_plan.md`
+   - **Status**: 🔄 DESIGN COMPLETE - Plugin architecture designed to replace deprecated cell-based approach
+
 #### Tabs
 
 11. **[Graphs & Fitting Tab](./09_graphs_and_fitting_tab.md)** 📊📉
@@ -127,6 +122,7 @@ None - Phase 1 Complete!
    - **Features**: Advanced 2D/3D plotting from Data Library, n-dimensional curve fitting, fit comparison, residuals
    - **Dependencies**: echarts, ✅ Data Library (DONE!), nalgebra, levenberg-marquardt
    - **File**: `09_graphs_and_fitting_tab.md`
+   - **Status**: � **NOT YET IMPLEMENTED** - Placeholder component exists, full implementation pending
 
 #### Windows
 
@@ -147,28 +143,39 @@ None - Phase 1 Complete!
    - Global toolbar integration
    - See implementation: `src-tauri/src/data_library/`, `src/DataLibraryWindow.tsx`
 
-### Phase 1: Quick Visualization ✅ COMPLETE
-2. ✅ **Quick Plot Sidebar** - Simple 2D previews for rapid feedback
+### Phase 1: Basic Spreadsheet Sidebars ✅ MOSTLY COMPLETE
+**IMPLEMENTED**
+2. ✅ **Uncertainty Propagation Sidebar** - Error propagation through formulas
+   - Rust backend with uncertainty calculation algorithms
+   - TypeScript UI for formula input and result display
+   - See implementation: `src/tabs/spreadsheet/components/sidebar/UncertaintySidebar.tsx`, `src-tauri/src/uncertainty_calculator/`
+
+3. ✅ **Unit Conversion Sidebar** - Physical unit conversions
+   - Comprehensive unit database with dimensional analysis
+   - Real-time conversion preview and validation
+   - See implementation: `src/tabs/spreadsheet/components/sidebar/UnitConversionSidebar.tsx`, `src-tauri/src/unit_conversion/`
+
+4. ✅ **Quick Plot Sidebar** - Simple 2D previews for rapid feedback
    - Apache ECharts integration (500KB, reliable PNG/SVG export)
    - Scatter, line, and error bar plots
    - Dark/light theme support with auto-scaling axes
    - Save to Data Library integration
-   - See implementation: `src/components/spreadsheet/QuickPlotSidebar.tsx`
+   - See implementation: `src/tabs/spreadsheet/components/sidebar/QuickPlotSidebar.tsx`
 
 ### Phase 1.5: Import/Export System ✅ COMPLETE
-3. ✅ **Import Sidebar** - File and Data Library import
+5. ✅ **Import Sidebar** - File and Data Library import
    - CSV, TSV, TXT, Parquet, AnaFisSpread format support
    - Custom CSV parser with encoding detection (UTF-8, Windows-1252)
    - Direct Arrow/Parquet usage (v57.0.0) without Polars
    - Data Library integration with search/filter/tag UI
    - File association system (.anafispread files open in AnaFis)
-   - See implementation: `src/components/spreadsheet/ImportSidebar.tsx`, `src-tauri/src/import/`
+   - See implementation: `src/tabs/spreadsheet/components/sidebar/ImportSidebar.tsx`, `src-tauri/src/import/`
    
-4. ✅ **Export Sidebar** - Multi-format export
+6. ✅ **Export Sidebar** - Multi-format export
    - 10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread
    - Configurable options per format
    - Lossless exports (formulas, formatting, metadata)
-   - See implementation: `src/components/spreadsheet/ExportSidebar.tsx`, `src-tauri/src/export/`
+   - See implementation: `src/tabs/spreadsheet/components/sidebar/ExportSidebar.tsx`, `src-tauri/src/export/`
 
 ### Phase 2: Code Quality & Linting ✅ COMPLETE
 - ✅ **All ESLint errors fixed** (0 errors)
@@ -179,15 +186,24 @@ None - Phase 1 Complete!
 - ✅ **React hooks dependencies corrected** (useCallback, useEffect)
 - ✅ **Proper ECharts types** (CustomSeriesRenderItemParams, SeriesOption[])
 
-### Phase 3: Advanced Analysis (NEXT - Weeks 2-3)
-5. **Graphs & Fitting Tab** - Advanced plotting and curve fitting (depends on Data Library)
+### Phase 3: Advanced Analysis (Next)
+7. **Statistical Analysis Sidebar** - Complements plotting, essential for data analysis
+8. **Graphs & Fitting Tab** - Advanced plotting and curve fitting (depends on Data Library)
 
-### Phase 4: Statistical Analysis (Week 4)
-6. **Statistical Analysis Sidebar** - Complements plotting, essential for data analysis
+### Phase 3.5: Plugin Architecture (High Priority)
+6. **Uncertainty Propagation Plugin** - Automatic uncertainty with correlations
+   - ✅ **Design Complete**: Plugin architecture to work around Univer constraints
+   - 🔄 **Basic Plugin Framework**: Data types, renderers, registration
+   - 🔄 **Formula Integration**: Intercept calculations, Rust backend calls
+   - 🔄 **Correlation Support**: Covariance matrices, enhanced propagation
+   - 🔄 **Advanced Features**: Complex formulas, unit propagation
 
-### Phase 5: Data Quality (Weeks 5-6)
-7. **Data Smoothing Sidebar** - Prepare data for analysis
-8. **Outlier Detection Sidebar** - Data quality control
+### Phase 4: Statistical Analysis (Next)
+7. **Statistical Analysis Sidebar** - Complements plotting, essential for data analysis
+
+### Phase 5: Data Quality (Future)
+8. **Data Smoothing Sidebar** - Prepare data for analysis
+9. **Outlier Detection Sidebar** - Data quality control
 
 ### Phase 6: Data Management (Weeks 7-8)
 9. **Data Validation Sidebar** - Prevent bad data entry
@@ -269,8 +285,8 @@ const writeData = async (range: string, values: any[][]) => {
 ### NPM Packages
 ```bash
 # Visualization
-npm install plotly.js react-plotly.js
-npm install @types/plotly.js -D
+npm install echarts
+npm install @types/echarts -D
 
 # Utilities
 npm install file-saver
@@ -280,19 +296,19 @@ npm install @types/file-saver -D
 ### Rust Crates
 ```toml
 [dependencies]
-statrs = "0.16"              # Statistics
-rust_xlsxwriter = "0.64"     # Excel export
+statrs = "0.18.0"            # Statistics
+rust_xlsxwriter = "0.91.0"   # Excel export
 csv = "1.3"                  # CSV handling
 serde_json = "1.0"           # JSON for .anafis format
-nalgebra = "0.32"            # Linear algebra for fitting
-levenberg-marquardt = "0.12" # Curve fitting algorithm
-rusqlite = "0.31"            # SQLite for Data Library
+nalgebra = "0.34.1"          # Linear algebra for fitting
+levenberg-marquardt = "0.15.0" # Curve fitting algorithm
+rusqlite = "0.37.0"          # SQLite for Data Library
 uuid = "1.6"                 # UUID generation
-chrono = "0.4"               # Date/time handling
+chrono = "0.4.42"            # Date/time handling
 arrow = "57.0.0"             # Columnar data import
 parquet = "57.0.0"           # Parquet file support
 encoding_rs = "0.8"          # Character encoding detection
-pyo3 = "0.22.0"              # Python integration
+pyo3 = "0.27.1"              # Python integration
 ```
 
 ---
@@ -336,21 +352,22 @@ Each sidebar must:
    - ✅ Rust + SQLite backend with FTS5
    - ✅ TypeScript UI with Material-UI
    - ✅ Multi-select and CSV/JSON export with metadata
-3. ✅ **Quick Plot Sidebar** - FULLY IMPLEMENTED
-   - ✅ Apache ECharts integration (migrated from Plotly)
-   - ✅ Scatter/Line/Error bar plots with auto-scaling
-   - ✅ PNG/SVG export with dark/light themes
-   - ✅ Save to Data Library integration
+3. ✅ **Basic Sidebars** - MOSTLY IMPLEMENTED
+   - ✅ Uncertainty Propagation Sidebar
+   - ✅ Unit Conversion Sidebar  
+   - ✅ Quick Plot Sidebar (ECharts)
+   - ✅ Import Sidebar
+   - ✅ Export Sidebar
 4. ✅ **Code Quality** - COMPLETE
    - ✅ All ESLint errors fixed (0 errors, 0 warnings)
    - ✅ All TypeScript compilation errors resolved
    - ✅ Rust Clippy warnings fixed
    - ✅ Removed all `any` types, added proper ECharts types
    - ✅ Fixed React hooks dependencies
-5. **NEXT**: Implement Graphs & Fitting Tab (09) - requires Data Library ✅
-6. Implement remaining sidebars following the phase order (02-06)
-7. ✅ Update SpreadsheetTab UI - already has toolbar buttons for Uncertainty, Unit Conversion, Quick Plot, Import, Export
-8. ~~Implement Rust backend commands for fitting and statistics~~ (partial - statistics done in Data Library, import/export complete)
+5. **NEXT**: Implement Statistical Analysis Sidebar (Rust backend exists, needs UI component)
+6. **FUTURE**: Implement Graphs & Fitting Tab (requires Data Library integration)
+7. ✅ Update SpreadsheetTab UI - already has toolbar buttons for all implemented sidebars
+8. ~~Implement Rust backend commands for fitting and statistics~~ (statistics backend done, fitting backend planned)
 9. Write tests for each component
 
 ---

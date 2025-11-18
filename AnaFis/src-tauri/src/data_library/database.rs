@@ -1,4 +1,9 @@
-// Database operations for Data Library
+//! Data Library Database Operations
+//!
+//! This module handles all database operations for the data library functionality.
+//! It provides CRUD operations for storing and retrieving data sequences with
+//! associated metadata and statistics.
+
 use rusqlite::{params, Connection, Result as SqliteResult};
 use std::sync::Mutex;
 use uuid::Uuid;
@@ -488,38 +493,6 @@ impl DataLibraryDatabase {
             writeln!(file, "{}", row.join(","))
                 .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         }
-        
-        Ok(())
-    }
-    
-    /// Export sequences to JSON format
-    /// Returns a JSON array of sequence objects with full metadata
-    pub fn export_to_json(&self, sequence_ids: &[String], file_path: &str) -> SqliteResult<()> {
-        use std::fs::File;
-        use std::io::Write;
-        
-        // Fetch all sequences
-        let mut sequences = Vec::new();
-        for id in sequence_ids {
-            if let Some(seq) = self.get_sequence(id)? {
-                sequences.push(seq);
-            }
-        }
-        
-        if sequences.is_empty() {
-            return Err(rusqlite::Error::QueryReturnedNoRows);
-        }
-        
-        // Convert sequences to JSON
-        let json_data = serde_json::to_string_pretty(&sequences)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-        
-        // Write to file
-        let mut file = File::create(file_path)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-        
-        file.write_all(json_data.as_bytes())
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         
         Ok(())
     }

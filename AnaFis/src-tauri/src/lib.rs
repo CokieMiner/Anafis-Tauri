@@ -4,7 +4,7 @@ mod uncertainty_calculator;
 mod windows;
 mod utils;
 mod unit_conversion;
-mod scientific;
+pub mod scientific;
 mod data_library;
 mod export;
 mod import;
@@ -47,6 +47,9 @@ pub fn run() {
             // Scientific Computation Commands (Sidebar tools)
             scientific::uncertainty_propagation::generate_uncertainty_formulas,
 
+            // Statistical Analysis Commands (New sidebar)
+            scientific::commands::perform_comprehensive_statistical_analysis,
+            
             // Data Library Commands (12 commands)
             data_library::commands::save_sequence,
             data_library::commands::get_sequences,
@@ -58,7 +61,6 @@ pub fn run() {
             data_library::commands::duplicate_sequence,
             data_library::commands::get_all_tags,
             data_library::commands::export_sequences_csv,
-            data_library::commands::export_sequences_json,
             data_library::commands::batch_import_sequences,
             
             // Export Commands (2 commands - dispatcher + snapshot)

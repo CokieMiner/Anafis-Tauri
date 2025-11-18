@@ -137,17 +137,6 @@ pub fn export_sequences_csv(
 }
 
 #[tauri::command]
-pub fn export_sequences_json(
-    sequence_ids: Vec<String>,
-    file_path: String,
-    state: State<DataLibraryState>,
-) -> CommandResult<()> {
-    let db = state.0.lock().map_err(|e| internal_error(format!("Failed to lock database: {}", e)))?;
-    db.export_to_json(&sequence_ids, &file_path)
-        .map_err(|e| export_error(format!("Failed to export to JSON: {}", e)))
-}
-
-#[tauri::command]
 pub fn batch_import_sequences(
     request: BatchImportRequest,
     state: State<DataLibraryState>,

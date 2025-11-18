@@ -4,7 +4,7 @@ import { ExportService } from '@/core/types/export';
 import { ImportService } from '@/core/types/import';
 import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
-export type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | 'import' | null;
+export type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | 'import' | 'statistics' | null;
 
 export interface SidebarState {
   activeSidebar: SidebarType;

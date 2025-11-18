@@ -1,9 +1,11 @@
        # Graphs & Fitting Tab 📊�
 
-**Status**: Planned  
+**Status**: 🔄 **IN PROGRESS**  
 **Priority**: High  
 **Complexity**: High  
 **Dependencies**: ECharts, Data Library, nalgebra, levenberg-marquardt
+
+**Current Focus**: Implementing basic plotting component with ECharts integration, followed by fitting backend and UI components.
 
 ---
 
@@ -13,6 +15,14 @@ Unified tab for creating publication-quality plots and performing curve fitting.
 
 **Note**: Uses **ECharts 6.0** (already integrated in QuickPlotSidebar) for all visualizations. Extends existing plotting infrastructure with curve fitting capabilities.
 
+**Current Implementation Tasks**:
+- [ ] **Basic Plotting Component**: Implement ECharts 2D scatter/line plots with error bars from data library
+- [ ] **Expression Parser**: Add math expression parser (fasteval/meval) for user-defined functions like 'a*exp(-x/b) + c'
+- [ ] **Fitting Backend**: Implement nonlinear least squares fitting using argmin's Levenberg-Marquardt with uncertainty propagation
+- [ ] **Fitting UI Components**: Build UI for data selection, fit functions, initial guesses
+- [ ] **Plotting-Fitting Integration**: Overlay fit curves on data plots, show residuals, display fit parameters with uncertainties
+- [ ] **Physics-Specific Functions**: Add exponential decay, damped oscillation, power laws as presets
+
 ---
 
 ## Features
@@ -21,11 +31,24 @@ Unified tab for creating publication-quality plots and performing curve fitting.
 - **Create named plots** from Data Library sequences
 - **2D plots**: Scatter, Line, Scatter+Line, Bar (ECharts types: 'scatter', 'line', 'bar')
 - **3D plots**: 3D Scatter, 3D Surface (ECharts GL components)
+- **Statistical plots**: QQ plots, Box plots, Histogram (integrated with statistical analysis)
+- **Correlation plots**: Scatter plots with regression lines and correlation coefficients
+- **Residual plots**: For regression diagnostics and model validation
 - **Multi-plot support**: Multiple series on same ECharts instance with visibility toggles
 - **Data validation**: Prevent length mismatches
 - **Plot layers/groups**: Organize and bulk hide/show plot series
 - **Interactive controls**: Zoom, pan, dataZoom, toolbox (ECharts built-in)
 - **Export**: PNG, SVG (ECharts saveAsImage feature)
+
+### Advanced Statistical Visualizations
+- **QQ Plots**: Quantile-quantile plots for normality assessment with reference lines
+- **Box Plots**: Box-and-whisker plots for distribution comparison and outlier detection
+- **Correlation Scatter Plots**: Interactive scatter plots with regression lines, confidence bands, and correlation statistics
+- **Residual Plots**: Diagnostic plots for regression analysis showing residuals vs fitted values, residuals vs predictors, and Q-Q plots of residuals
+- **Distribution Overlays**: Multiple distribution curves on histograms for comparison
+- **Statistical Annotations**: Automatic display of p-values, R², correlation coefficients on plots
+
+**Note**: These advanced statistical visualizations complement the Statistical Analysis Sidebar by providing dedicated plotting interfaces for statistical diagnostics and correlation analysis.
 
 ### Fit Sub-Tab
 - **Select plot to fit** from active plots (ECharts series)

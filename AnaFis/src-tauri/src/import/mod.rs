@@ -1,11 +1,13 @@
-// Import module for spreadsheet file imports
-// 
-// Supported formats:
-// - LOSSLESS: anafispread (native format - full IWorkbookData snapshots)
-// - TEXT INTERCHANGE: csv, tsv, txt (for external application data)
-// - COLUMNAR: parquet (efficient binary columnar format)
-//
-// Handles parsing and converting various file formats to Univer-compatible workbook data
+//! Data Import Module
+//!
+//! This module handles importing data from various file formats into the application.
+//!
+//! ## Supported Formats
+//! - **LOSSLESS**: anafispread (native format - full IWorkbookData snapshots)
+//! - **TEXT INTERCHANGE**: csv, tsv, txt (for external application data)
+//! - **COLUMNAR**: parquet (efficient binary columnar format)
+//!
+//! The module handles parsing and converting various file formats to Univer-compatible workbook data.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

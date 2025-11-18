@@ -1,3 +1,9 @@
+//! Uncertainty Calculator Module
+//!
+//! This module provides uncertainty propagation calculations using symbolic differentiation
+//! and numerical methods. It integrates with Python's SymPy for symbolic math operations
+//! and provides caching for performance optimization.
+
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use lru::LruCache;

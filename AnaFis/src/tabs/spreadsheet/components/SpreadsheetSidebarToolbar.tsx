@@ -12,12 +12,13 @@ import {
   AutoFixHigh as UncertaintyIcon,
   BarChart as QuickPlotIcon,
   FileDownload as ExportIcon,
-  FileUpload as ImportIcon
+  FileUpload as ImportIcon,
+  Assessment as StatisticsIcon
 } from '@mui/icons-material';
 
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 
-type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | 'import' | null;
+type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | 'import' | 'statistics' | null;
 
 interface SpreadsheetSidebarToolbarProps {
   activeSidebar: SidebarType;
@@ -123,6 +124,16 @@ const SpreadsheetSidebarToolbar: React.FC<SpreadsheetSidebarToolbarProps> = ({
           sx={activeSidebar === 'quickPlot' ? toolbarButtonStyles.active : toolbarButtonStyles.inactive}
         >
           Quick Plot
+        </Button>
+
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<StatisticsIcon />}
+          onClick={() => onSidebarToggle(activeSidebar === 'statistics' ? null : 'statistics')}
+          sx={activeSidebar === 'statistics' ? toolbarButtonStyles.active : toolbarButtonStyles.inactive}
+        >
+          Statistics
         </Button>
 
         <Button

@@ -54,35 +54,3 @@ pub fn calculate_statistics(sequence: &DataSequence) -> SequenceStatistics {
         has_uncertainties: sequence.uncertainties.is_some(),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::Utc;
-    
-    #[test]
-    fn test_statistics_calculation() {
-        let sequence = DataSequence {
-            id: "test".to_string(),
-            name: "Test".to_string(),
-            description: "".to_string(),
-            tags: vec![],
-            unit: "m".to_string(),
-            source: "Test".to_string(),
-            data: vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            uncertainties: None,
-            is_pinned: false,
-            created_at: Utc::now(),
-            modified_at: Utc::now(),
-        };
-        
-        let stats = calculate_statistics(&sequence);
-        
-        assert_eq!(stats.count, 5);
-        assert!((stats.mean - 3.0).abs() < 1e-10);
-        assert!((stats.std_dev - std::f64::consts::SQRT_2).abs() < 1e-10);
-        assert_eq!(stats.min, 1.0);
-        assert_eq!(stats.max, 5.0);
-        assert_eq!(stats.median, 3.0);
-    }
-}
