@@ -147,8 +147,11 @@ impl TimeSeriesAnalysisCoordinator {
             if !peaks.is_empty() {
                 // Find the peak with highest power
                 let (freq, _) = peaks.iter()
-                    .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
-                    .unwrap();
+                    .max_by(|a, b| match a.1.partial_cmp(&b.1) {
+                        Some(ord) => ord,
+                        None => std::cmp::Ordering::Equal,
+                    })
+                    .expect("peaks is not empty");
                 let period_est = if *freq > 0.0 { (1.0 / freq).round() as usize } else { 0 };
                 (*freq, if period_est > 0 { Some(period_est) } else { None })
             } else {
@@ -264,7 +267,10 @@ impl TimeSeriesAnalysisCoordinator {
         }
 
         // Sort by power (descending)
-        peaks.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        peaks.sort_by(|a, b| match b.1.partial_cmp(&a.1) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         // Return top peaks
         Ok(peaks.into_iter().take(5).collect())

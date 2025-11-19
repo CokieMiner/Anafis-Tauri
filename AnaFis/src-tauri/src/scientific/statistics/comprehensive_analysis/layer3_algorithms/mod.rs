@@ -8,4 +8,4 @@ pub mod time_series;
 pub mod matrix_ops;
 pub mod uncertainty;
 pub mod robust_regression;
-pub mod faer_matrix_ops;
+pub mod hypothesis_testing;

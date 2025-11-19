@@ -26,10 +26,10 @@ impl RandomSampling {
     }
 
     /// Generate normal random sample
-    pub fn normal_sample(rng: &mut Pcg64, mean: f64, std: f64) -> f64 {
+    pub fn normal_sample(rng: &mut Pcg64, mean: f64, std: f64) -> Result<f64, String> {
         use rand_distr::{Normal, Distribution};
-        let normal = Normal::new(mean, std).unwrap();
-        normal.sample(rng)
+        let normal = Normal::new(mean, std).map_err(|e| format!("Invalid normal distribution parameters: {}", e))?;
+        Ok(normal.sample(rng))
     }
 
     /// Shuffle a vector in place
@@ -39,16 +39,20 @@ impl RandomSampling {
     }
 
     /// Sample with replacement (bootstrap sampling)
-    pub fn sample_with_replacement<T: Clone>(rng: &mut Pcg64, data: &[T], size: usize) -> Vec<T> {
+    pub fn sample_with_replacement<T: Clone>(rng: &mut Pcg64, data: &[T], size: usize) -> Result<Vec<T>, String> {
         use rand_distr::{Uniform, Distribution};
 
-        let dist = Uniform::new(0, data.len()).unwrap();
+        if data.is_empty() {
+            return Err("Cannot sample from empty data".to_string());
+        }
+
+        let dist = Uniform::new(0, data.len()).map_err(|e| format!("Invalid uniform distribution: {}", e))?;
         let mut result = Vec::with_capacity(size);
         for _ in 0..size {
             let idx = dist.sample(rng);
             result.push(data[idx].clone());
         }
-        result
+        Ok(result)
     }
 
     /// Sample without replacement

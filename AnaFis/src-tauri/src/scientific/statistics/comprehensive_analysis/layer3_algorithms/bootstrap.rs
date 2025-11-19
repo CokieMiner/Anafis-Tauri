@@ -3,7 +3,7 @@ use statrs::distribution::ContinuousCDF;
 use rand_pcg::Pcg64;
 use rand::{Rng, SeedableRng};
 use rayon::prelude::*;
-use crate::scientific::statistics::comprehensive_analysis::traits::{ProgressCallback, NoOpProgressCallback};
+use crate::scientific::statistics::comprehensive_analysis::traits::ProgressCallback;
 
 #[derive(Debug, Clone)]
 pub struct BootstrapConvergence {
@@ -16,20 +16,61 @@ pub struct BootstrapConvergence {
 pub struct BootstrapEngine;
 
 impl BootstrapEngine {
-    /// Bootstrap confidence intervals for any statistic
-    pub fn confidence_intervals<F>(
-        data: &[f64],
-        statistic_fn: F,
-        confidence_level: f64,
+    /// Generic bootstrap runner that takes a sampling function
+    fn run_bootstrap<F, S, P>(
+        _data: &[f64],
+        statistic_fn: &F,
+        sampling_fn: S,
         n_bootstrap: usize,
-        _rng: &mut Pcg64,
-    ) -> Result<(f64, f64), String>
+        progress_callback: Option<&P>,
+        progress_message: &str,
+    ) -> Result<Vec<f64>, String>
     where
         F: Fn(&[f64]) -> f64 + Send + Sync,
+        S: Fn(&mut Pcg64) -> Vec<f64> + Send + Sync,
+        P: ProgressCallback + ?Sized,
     {
-        Self::confidence_intervals_with_progress(data, statistic_fn, confidence_level, n_bootstrap, &NoOpProgressCallback)
+        // Generate random seeds for parallel RNGs using thread_rng for better entropy
+        let mut seed_rng = rand::rng();
+        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
+
+        let bootstrap_statistics: Vec<f64> = seeds.into_par_iter()
+            .enumerate()
+            .map(|(i, seed)| {
+                if let Some(callback) = progress_callback {
+                    if i % 1000 == 0 { // Report progress every 1000 iterations
+                        callback.report_progress(i, n_bootstrap, progress_message);
+                    }
+                }
+                let mut thread_rng = Pcg64::seed_from_u64(seed);
+                let sample = sampling_fn(&mut thread_rng);
+                statistic_fn(&sample)
+            })
+            .collect();
+
+        if let Some(callback) = progress_callback {
+            callback.report_progress(n_bootstrap, n_bootstrap, &format!("{} completed", progress_message.to_lowercase()));
+        }
+
+        Ok(bootstrap_statistics)
     }
 
+    /// Standard bootstrap sampling function
+    fn standard_bootstrap_sample(data: &[f64]) -> impl Fn(&mut Pcg64) -> Vec<f64> + '_ {
+        move |rng: &mut Pcg64| {
+            RandomSampling::sample_with_replacement(rng, data, data.len()).unwrap()
+        }
+    }
+
+    /// Block bootstrap sampling function
+    fn block_bootstrap_sample_fn(data: &[f64]) -> impl Fn(&mut Pcg64) -> Vec<f64> + '_ {
+        let n = data.len();
+        let block_size = ((n as f64).sqrt() as usize).max(1);
+        let n_blocks = n.div_ceil(block_size);
+        move |rng: &mut Pcg64| {
+            Self::block_bootstrap_sample(rng, data, block_size, n_blocks, n)
+        }
+    }
     /// Bootstrap confidence intervals with progress reporting
     pub fn confidence_intervals_with_progress<F, P>(
         data: &[f64],
@@ -66,25 +107,20 @@ impl BootstrapEngine {
         F: Fn(&[f64]) -> f64 + Send + Sync,
         P: ProgressCallback,
     {
-        // Generate random seeds for parallel RNGs using thread_rng for better entropy
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
+        let bootstrap_statistics = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::standard_bootstrap_sample(data),
+            n_bootstrap,
+            Some(progress_callback),
+            "Computing bootstrap samples...",
+        )?;
 
-        let mut bootstrap_statistics: Vec<f64> = seeds.into_par_iter()
-            .enumerate()
-            .map(|(i, seed)| {
-                if i % 1000 == 0 { // Report progress every 1000 iterations
-                    progress_callback.report_progress(i, n_bootstrap, "Computing bootstrap samples...");
-                }
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = RandomSampling::sample_with_replacement(&mut thread_rng, data, data.len());
-                statistic_fn(&sample)
-            })
-            .collect();
-
-        progress_callback.report_progress(n_bootstrap, n_bootstrap, "Bootstrap sampling completed");
-
-        bootstrap_statistics.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut bootstrap_statistics = bootstrap_statistics;
+        bootstrap_statistics.sort_by(|a, b| match a.partial_cmp(b) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         let lower_percentile = (1.0 - confidence_level) / 2.0;
         let upper_percentile = 1.0 - lower_percentile;
@@ -110,30 +146,20 @@ impl BootstrapEngine {
         F: Fn(&[f64]) -> f64 + Send + Sync,
         P: ProgressCallback,
     {
-        let n = data.len();
-        // Choose block size as approximately sqrt(n) for balance between bias and variance
-        let block_size = ((n as f64).sqrt() as usize).max(1);
-        let n_blocks = n.div_ceil(block_size); // Ceiling division
+        let bootstrap_statistics = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::block_bootstrap_sample_fn(data),
+            n_bootstrap,
+            Some(progress_callback),
+            "Computing block bootstrap samples...",
+        )?;
 
-        // Generate random seeds for parallel RNGs
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
-
-        let mut bootstrap_statistics: Vec<f64> = seeds.into_par_iter()
-            .enumerate()
-            .map(|(i, seed)| {
-                if i % 1000 == 0 { // Report progress every 1000 iterations
-                    progress_callback.report_progress(i, n_bootstrap, "Computing block bootstrap samples...");
-                }
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = Self::block_bootstrap_sample(&mut thread_rng, data, block_size, n_blocks, n);
-                statistic_fn(&sample)
-            })
-            .collect();
-
-        progress_callback.report_progress(n_bootstrap, n_bootstrap, "Block bootstrap sampling completed");
-
-        bootstrap_statistics.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut bootstrap_statistics = bootstrap_statistics;
+        bootstrap_statistics.sort_by(|a, b| match a.partial_cmp(b) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         let lower_percentile = (1.0 - confidence_level) / 2.0;
         let upper_percentile = 1.0 - lower_percentile;
@@ -192,17 +218,14 @@ impl BootstrapEngine {
     where
         F: Fn(&[f64]) -> f64 + Send + Sync,
     {
-        // Generate random seeds for parallel RNGs using thread_rng for better entropy
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
-
-        let bootstrap_statistics: Vec<f64> = seeds.into_par_iter()
-            .map(|seed| {
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = RandomSampling::sample_with_replacement(&mut thread_rng, data, data.len());
-                statistic_fn(&sample)
-            })
-            .collect();
+        let bootstrap_statistics = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::standard_bootstrap_sample(data),
+            n_bootstrap,
+            None::<&dyn crate::scientific::statistics::comprehensive_analysis::traits::ProgressCallback>,
+            "",
+        )?;
 
         let mean_bootstrap = bootstrap_statistics.iter().sum::<f64>() / n_bootstrap as f64;
         let variance_bootstrap = bootstrap_statistics.iter()
@@ -221,20 +244,14 @@ impl BootstrapEngine {
     where
         F: Fn(&[f64]) -> f64 + Send + Sync,
     {
-        let n = data.len();
-        let block_size = ((n as f64).sqrt() as usize).max(1);
-        let n_blocks = n.div_ceil(block_size);
-
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
-
-        let bootstrap_statistics: Vec<f64> = seeds.into_par_iter()
-            .map(|seed| {
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = Self::block_bootstrap_sample(&mut thread_rng, data, block_size, n_blocks, n);
-                statistic_fn(&sample)
-            })
-            .collect();
+        let bootstrap_statistics = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::block_bootstrap_sample_fn(data),
+            n_bootstrap,
+            None::<&dyn crate::scientific::statistics::comprehensive_analysis::traits::ProgressCallback>,
+            "",
+        )?;
 
         let mean_bootstrap = bootstrap_statistics.iter().sum::<f64>() / n_bootstrap as f64;
         let variance_bootstrap = bootstrap_statistics.iter()
@@ -272,17 +289,14 @@ impl BootstrapEngine {
     {
         let original_statistic = statistic_fn(data);
 
-        // Generate random seeds for parallel RNGs using thread_rng for better entropy
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
-
-        let bootstrap_statistics: Vec<f64> = seeds.into_par_iter()
-            .map(|seed| {
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = RandomSampling::sample_with_replacement(&mut thread_rng, data, data.len());
-                statistic_fn(&sample)
-            })
-            .collect();
+        let bootstrap_statistics = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::standard_bootstrap_sample(data),
+            n_bootstrap,
+            None::<&dyn crate::scientific::statistics::comprehensive_analysis::traits::ProgressCallback>,
+            "",
+        )?;
 
         let mean_bootstrap = bootstrap_statistics.iter().sum::<f64>() / n_bootstrap as f64;
         let bias = mean_bootstrap - original_statistic;
@@ -300,20 +314,15 @@ impl BootstrapEngine {
         F: Fn(&[f64]) -> f64 + Send + Sync,
     {
         let original_statistic = statistic_fn(data);
-        let n = data.len();
-        let block_size = ((n as f64).sqrt() as usize).max(1);
-        let n_blocks = n.div_ceil(block_size);
 
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
-
-        let bootstrap_statistics: Vec<f64> = seeds.into_par_iter()
-            .map(|seed| {
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = Self::block_bootstrap_sample(&mut thread_rng, data, block_size, n_blocks, n);
-                statistic_fn(&sample)
-            })
-            .collect();
+        let bootstrap_statistics = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::block_bootstrap_sample_fn(data),
+            n_bootstrap,
+            None::<&dyn crate::scientific::statistics::comprehensive_analysis::traits::ProgressCallback>,
+            "",
+        )?;
 
         let mean_bootstrap = bootstrap_statistics.iter().sum::<f64>() / n_bootstrap as f64;
         let bias = mean_bootstrap - original_statistic;
@@ -358,18 +367,20 @@ impl BootstrapEngine {
         let theta_hat = statistic_fn(data);
 
         // 1. Generate bootstrap samples and compute bootstrap statistics in parallel
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
+        let boot_stats = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::standard_bootstrap_sample(data),
+            n_bootstrap,
+            None::<&dyn crate::scientific::statistics::comprehensive_analysis::traits::ProgressCallback>,
+            "",
+        )?;
 
-        let mut boot_stats: Vec<f64> = seeds.into_par_iter()
-            .map(|seed| {
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = RandomSampling::sample_with_replacement(&mut thread_rng, data, n);
-                statistic_fn(&sample)
-            })
-            .collect();
-
-        boot_stats.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut boot_stats = boot_stats;
+        boot_stats.sort_by(|a, b| match a.partial_cmp(b) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         // 2. Calculate bias correction (z0)
         let p_below = boot_stats.iter().filter(|&&x| x < theta_hat).count() as f64 / n_bootstrap as f64;
@@ -428,23 +439,23 @@ impl BootstrapEngine {
         F: Fn(&[f64]) -> f64 + Send + Sync,
     {
         let n = data.len();
-        let block_size = ((n as f64).sqrt() as usize).max(1);
-        let n_blocks = n.div_ceil(block_size);
         let theta_hat = statistic_fn(data);
 
         // 1. Generate bootstrap samples and compute bootstrap statistics in parallel
-        let mut seed_rng = rand::rng();
-        let seeds: Vec<u64> = (0..n_bootstrap).map(|_| seed_rng.random::<u64>()).collect();
+        let boot_stats = Self::run_bootstrap(
+            data,
+            &statistic_fn,
+            Self::block_bootstrap_sample_fn(data),
+            n_bootstrap,
+            None::<&dyn crate::scientific::statistics::comprehensive_analysis::traits::ProgressCallback>,
+            "",
+        )?;
 
-        let mut boot_stats: Vec<f64> = seeds.into_par_iter()
-            .map(|seed| {
-                let mut thread_rng = Pcg64::seed_from_u64(seed);
-                let sample = Self::block_bootstrap_sample(&mut thread_rng, data, block_size, n_blocks, n);
-                statistic_fn(&sample)
-            })
-            .collect();
-
-        boot_stats.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut boot_stats = boot_stats;
+        boot_stats.sort_by(|a, b| match a.partial_cmp(b) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         // 2. Calculate bias correction (z0)
         let p_below = boot_stats.iter().filter(|&&x| x < theta_hat).count() as f64 / n_bootstrap as f64;
@@ -497,13 +508,13 @@ impl BootstrapEngine {
     
     /// Normal quantile function (inverse CDF)
     fn normal_quantile(p: f64, mean: f64, std_dev: f64) -> f64 {
-        let normal = statrs::distribution::Normal::new(mean, std_dev).unwrap();
+        let normal = statrs::distribution::Normal::new(mean, std_dev).expect("Invalid normal parameters");
         normal.inverse_cdf(p)
     }
     
     /// Normal cumulative distribution function
     fn normal_cdf(x: f64, mean: f64, std_dev: f64) -> f64 {
-        let normal = statrs::distribution::Normal::new(mean, std_dev).unwrap();
+        let normal = statrs::distribution::Normal::new(mean, std_dev).expect("Invalid normal parameters");
         normal.cdf(x)
     }
 }

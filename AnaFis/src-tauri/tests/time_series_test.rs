@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::time_series::{ProphetEngine, TimeSeriesForecastingEngine};
+    use anafis_lib::scientific::statistics::comprehensive_analysis::layer3_algorithms::time_series::{ProphetEngine, ProphetConfig, GrowthModel, Holiday};
 
     #[test]
     fn test_prophet_basic_forecasting() {
@@ -49,7 +49,7 @@ mod tests {
     fn test_prophet_with_api() {
         let data = (0..30).map(|i| 10.0 + i as f64 * 0.5 + (i as f64 * 0.3).sin()).collect::<Vec<f64>>();
         let config = ProphetConfig::default();
-        let result = TimeSeriesForecastingEngine::fit_prophet(&data, 5, config);
+        let result = ProphetEngine::fit_prophet(&data, 5, config);
         assert!(result.is_ok());
 
         let forecast = result.unwrap();
@@ -84,7 +84,7 @@ mod tests {
         // Forecasts should approach capacity
         for &f in &forecast.forecasts {
             assert!(f.is_finite());
-            assert!(f >= 0.0 && f <= 120.0); // Should be reasonable
+            assert!((0.0..=120.0).contains(&f)); // Should be reasonable
         }
     }
 

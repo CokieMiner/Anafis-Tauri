@@ -9,25 +9,6 @@ use super::quantiles::Quantiles;
 pub struct Dispersion;
 
 impl Dispersion {
-    /// Compute variance
-    pub fn variance(data: &[f64]) -> f64 {
-        if data.len() < 2 {
-            return 0.0;
-        }
-
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let sum_sq_diff: f64 = data.iter()
-            .map(|x| (x - mean).powi(2))
-            .sum();
-
-        sum_sq_diff / (data.len() - 1) as f64
-    }
-
-    /// Compute standard deviation
-    pub fn std_dev(data: &[f64]) -> f64 {
-        Self::variance(data).sqrt()
-    }
-
     /// Compute range (max - min)
     pub fn range(data: &[f64]) -> f64 {
         if data.is_empty() {

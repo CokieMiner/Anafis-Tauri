@@ -1,7 +1,7 @@
-use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::StatisticalDistributions;
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::SpecialFunctions;
 use statrs::distribution::ContinuousCDF;
-
 use crate::scientific::statistics::types::DistributionFit;
+use super::super::goodness_of_fit::goodness_of_fit;
 
 /// Fit Student's t distribution
 pub fn fit_students_t_distribution(data: &[f64]) -> Result<DistributionFit, String> {
@@ -35,9 +35,10 @@ pub fn fit_students_t_distribution(data: &[f64]) -> Result<DistributionFit, Stri
 
     let log_likelihood = data.iter()
         .map(|&x| {
-            // t-distribution PDF (simplified approximation)
+            // t-distribution PDF (corrected formula)
             let t = (x - mean) / std_dev;
-            let pdf = (1.0 + t.powi(2) / nu).powf(-(nu + 1.0) / 2.0) / (std_dev * beta(nu / 2.0, 0.5).sqrt());
+            let constant = SpecialFunctions::gamma((nu + 1.0) / 2.0) / (std_dev * (nu * std::f64::consts::PI).sqrt() * SpecialFunctions::gamma(nu / 2.0));
+            let pdf = constant * (1.0 + t.powi(2) / nu).powf(-(nu + 1.0) / 2.0);
             pdf.ln()
         })
         .sum::<f64>();
@@ -56,7 +57,7 @@ pub fn fit_students_t_distribution(data: &[f64]) -> Result<DistributionFit, Stri
         log_likelihood,
         aic,
         bic,
-        goodness_of_fit: goodness_of_fit(data, |x| student_t_cdf(x, mean, std_dev, nu)).unwrap(),
+        goodness_of_fit: goodness_of_fit(data, |x| student_t_cdf(x, mean, std_dev, nu))?,
     })
 }
 
@@ -109,54 +110,22 @@ pub fn fit_cauchy_distribution(data: &[f64]) -> Result<DistributionFit, String> 
         log_likelihood,
         aic,
         bic,
-        goodness_of_fit: goodness_of_fit(data, |x| cauchy_cdf(x, median, scale)).unwrap(),
+        goodness_of_fit: goodness_of_fit(data, |x| cauchy_cdf(x, median, scale))?,
     })
 }
 
-/// Compute goodness of fit using Kolmogorov-Smirnov test
-pub fn goodness_of_fit<F>(data: &[f64], cdf: F) -> Result<f64, String>
-    where F: Fn(f64) -> f64,
-    {
-    let mut sorted_data = data.to_vec();
-    sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
-    let n = sorted_data.len() as f64;
-    let mut max_diff: f64 = 0.0;
-
-    for (i, &x) in sorted_data.iter().enumerate() {
-        let empirical_cdf = (i + 1) as f64 / n;
-        let theoretical_cdf = cdf(x);
-        max_diff = max_diff.max((empirical_cdf - theoretical_cdf).abs());
-    }
-
-    Ok(max_diff) // KS statistic
-}
-
-/// Beta function
-fn beta(a: f64, b: f64) -> f64 {
-    use statrs::function::beta;
-    beta::beta(a, b)
-}
-
 /// Student's t CDF using statrs
-fn student_t_cdf(x: f64, location: f64, scale: f64, df: f64) -> f64 {
+fn student_t_cdf(x: f64, location: f64, scale: f64, df: f64) -> Result<f64, String> {
     // Standardize to location 0, scale 1
     let standardized = (x - location) / scale;
 
     // Use statrs StudentsT CDF
-    if let Ok(t_dist) = statrs::distribution::StudentsT::new(0.0, 1.0, df) {
-        t_dist.cdf(standardized)
-    } else {
-        // Fallback to approximation
-        if df > 30.0 {
-            StatisticalDistributions::normal_cdf(standardized, 0.0, 1.0)
-        } else {
-            0.5 + 0.5 * (standardized / (1.0 + standardized * standardized / df).sqrt()).atan() / std::f64::consts::PI * 2.0
-        }
-    }
+    let t_dist = statrs::distribution::StudentsT::new(0.0, 1.0, df)
+        .map_err(|e| format!("Failed to create StudentsT distribution: {}", e))?;
+    Ok(t_dist.cdf(standardized))
 }
 
 /// Cauchy CDF
-fn cauchy_cdf(x: f64, location: f64, scale: f64) -> f64 {
-    0.5 + (1.0 / std::f64::consts::PI) * ((x - location) / scale).atan()
+fn cauchy_cdf(x: f64, location: f64, scale: f64) -> Result<f64, String> {
+    Ok(0.5 + (1.0 / std::f64::consts::PI) * ((x - location) / scale).atan())
 }

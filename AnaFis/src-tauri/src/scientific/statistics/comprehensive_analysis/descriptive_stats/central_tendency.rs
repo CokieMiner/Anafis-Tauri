@@ -10,14 +10,6 @@ use super::quantiles::Quantiles;
 pub struct CentralTendency;
 
 impl CentralTendency {
-    /// Compute arithmetic mean
-    pub fn mean(data: &[f64]) -> f64 {
-        if data.is_empty() {
-            return 0.0;
-        }
-        data.iter().sum::<f64>() / data.len() as f64
-    }
-
     /// Compute median
     pub fn median(data: &[f64]) -> f64 {
         let mut sorted = data.to_vec();

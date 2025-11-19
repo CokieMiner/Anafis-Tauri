@@ -89,8 +89,14 @@ impl CorrelationMethods {
         // Compute medians
         let mut x_sorted = x.to_vec();
         let mut y_sorted = y.to_vec();
-        x_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        y_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        x_sorted.sort_by(|a, b| match a.partial_cmp(b) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
+        y_sorted.sort_by(|a, b| match a.partial_cmp(b) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         let median_x = if x_sorted.len().is_multiple_of(2) {
             (x_sorted[x_sorted.len() / 2 - 1] + x_sorted[x_sorted.len() / 2]) / 2.0
@@ -145,7 +151,10 @@ impl CorrelationMethods {
             .map(|x| (x - median).abs())
             .collect();
 
-        deviations.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        deviations.sort_by(|a, b| match a.partial_cmp(b) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         if deviations.len().is_multiple_of(2) {
             (deviations[deviations.len() / 2 - 1] + deviations[deviations.len() / 2]) / 2.0

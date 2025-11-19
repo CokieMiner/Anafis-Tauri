@@ -1,21 +1,21 @@
-use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::StatisticalDistributions;
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::{UnifiedStats, SpecialFunctions};
 use super::super::moments;
-use argmin::core::{CostFunction, Error, Executor, Gradient, Operator};
-use argmin::solver::neldermead::NelderMead;
-use argmin::solver::quasinewton::LBFGS;
+use argmin::core::{CostFunction, Error, Gradient, Operator};
 use argmin::solver::linesearch::MoreThuenteLineSearch;
+use argmin::solver::quasinewton::LBFGS;
+use argmin::core::Executor;
 use rayon::prelude::*;
-use statrs::distribution::ContinuousCDF;
-
+use super::super::global_optimizer::{GlobalOptimizer, GlobalOptimizationConfig, OptimizationResult};
+use super::super::goodness_of_fit::{goodness_of_fit, gamma_cdf, beta_cdf};
 use crate::scientific::statistics::types::DistributionFit;
 
 /// Cost function for Weibull MLE optimization
 #[derive(Clone)]
-struct WeibullCost<'a> {
-    data: &'a [f64],
+struct WeibullCost {
+    data: Vec<f64>,
 }
 
-impl<'a> CostFunction for WeibullCost<'a> {
+impl CostFunction for WeibullCost {
     type Param = Vec<f64>;
     type Output = f64;
 
@@ -27,20 +27,23 @@ impl<'a> CostFunction for WeibullCost<'a> {
             return Ok(f64::INFINITY);
         }
 
-        let log_likelihood = self.data.iter()
-            .map(|&x| {
-                let pdf = (shape / scale)
-                    * (x / scale).powf(shape - 1.0)
-                    * (-(x / scale).powf(shape)).exp();
-                pdf.ln()
-            })
-            .sum::<f64>();
+        let mut log_likelihood = 0.0;
+        for &x in self.data.iter() {
+            if x <= 0.0 {
+                return Ok(f64::INFINITY); // Weibull is defined for x > 0
+            }
+            let log_pdf = shape.ln() - scale.ln() + (shape - 1.0) * (x.ln() - scale.ln()) - (x / scale).powf(shape);
+            if !log_pdf.is_finite() {
+                return Ok(f64::INFINITY);
+            }
+            log_likelihood += log_pdf;
+        }
 
         Ok(-log_likelihood) // Minimize negative log-likelihood
     }
 }
 
-impl<'a> Operator for WeibullCost<'a> {
+impl Operator for WeibullCost {
     type Param = Vec<f64>;
     type Output = f64;
 
@@ -67,7 +70,7 @@ impl<'a> Operator for WeibullCost<'a> {
     }
 }
 
-impl<'a> Gradient for WeibullCost<'a> {
+impl Gradient for WeibullCost {
     type Param = Vec<f64>;
     type Gradient = Vec<f64>;
 
@@ -112,12 +115,12 @@ pub fn fit_normal_distribution(data: &[f64]) -> Result<DistributionFit, String> 
 
     let log_likelihood = if data.len() > 1000 {
         data.par_iter()
-            .map(|x| StatisticalDistributions::normal_pdf(*x, mean, std_dev).ln())
+            .map(|x| UnifiedStats::normal_pdf(*x, mean, std_dev).ln())
             .sum::<f64>()
     } else {
         data
             .iter()
-            .map(|x| StatisticalDistributions::normal_pdf(*x, mean, std_dev).ln())
+            .map(|x| UnifiedStats::normal_pdf(*x, mean, std_dev).ln())
             .sum::<f64>()
     };
 
@@ -135,8 +138,8 @@ pub fn fit_normal_distribution(data: &[f64]) -> Result<DistributionFit, String> 
         aic,
         bic,
         goodness_of_fit: goodness_of_fit(data, |x| {
-            StatisticalDistributions::normal_cdf(x, mean, std_dev)
-        }).unwrap(),
+            Ok(UnifiedStats::normal_cdf(x, mean, std_dev))
+        })?,
     })
 }
 
@@ -157,14 +160,14 @@ pub fn fit_lognormal_distribution(data: &[f64]) -> Result<DistributionFit, Strin
     let log_likelihood = if data.len() > 1000 {
         data.par_iter()
             .map(|x| {
-                let pdf = StatisticalDistributions::normal_pdf(x.ln(), mu, sigma) / x;
+                let pdf = UnifiedStats::normal_pdf(x.ln(), mu, sigma) / x;
                 pdf.ln()
             })
             .sum::<f64>()
     } else {
         data.iter()
             .map(|x| {
-                let pdf = StatisticalDistributions::normal_pdf(x.ln(), mu, sigma) / x;
+                let pdf = UnifiedStats::normal_pdf(x.ln(), mu, sigma) / x;
                 pdf.ln()
             })
             .sum::<f64>()
@@ -182,8 +185,8 @@ pub fn fit_lognormal_distribution(data: &[f64]) -> Result<DistributionFit, Strin
         bic,
         goodness_of_fit: goodness_of_fit(data, |x| {
             // CDF of log-normal: Φ((ln(x) - μ)/σ)
-            StatisticalDistributions::normal_cdf((x.ln() - mu) / sigma, 0.0, 1.0)
-        }).unwrap(),
+            Ok(UnifiedStats::normal_cdf((x.ln() - mu) / sigma, 0.0, 1.0))
+        })?,
     })
 }
 
@@ -221,11 +224,11 @@ pub fn fit_exponential_distribution(data: &[f64]) -> Result<DistributionFit, Str
         log_likelihood,
         aic,
         bic,
-        goodness_of_fit: goodness_of_fit(data, |x| 1.0 - (-lambda * x).exp()).unwrap(),
+        goodness_of_fit: goodness_of_fit(data, |x| Ok(1.0 - (-lambda * x).exp()))?,
     })
 }
 
-/// Fit Weibull distribution using maximum likelihood via Newton-Raphson
+/// Fit Weibull distribution using maximum likelihood with global optimization
 pub fn fit_weibull_distribution(data: &[f64]) -> Result<DistributionFit, String> {
     if data.iter().any(|x| *x <= 0.0) {
         return Err("Weibull distribution requires positive data".to_string());
@@ -245,79 +248,102 @@ pub fn fit_weibull_distribution(data: &[f64]) -> Result<DistributionFit, String>
     let std_ln = (data_ln.iter().map(|lnx| (lnx - mean_ln).powi(2)).sum::<f64>() / (n - 1.0)).sqrt();
     // Using relation between std of log-values and shape: sigma_ln ≈ π/(sqrt(6)*k)
     let nm_guess = if std_ln > 0.0 { std::f64::consts::PI / (std_ln * 6.0f64.sqrt()) } else { 1.0 };
-    let mom_guess = (variance / mean.powi(2)).sqrt().recip();
-    let shape = if nm_guess.is_finite() && nm_guess > 0.0 { nm_guess } else if mom_guess.is_finite() && mom_guess > 0.0 { mom_guess } else { 1.0 };
+    let mom_guess = (mean.powi(2) / variance).sqrt();
+    let shape = if mom_guess.is_finite() && mom_guess > 0.0 { mom_guess } else if nm_guess.is_finite() && nm_guess > 0.0 { nm_guess } else { 1.0 };
 
-    // Build Nelder-Mead optimization around initial guess and rely on argmin crate (well-tested) rather than a custom Newton-Raphson.
-    let mut mle_shape = if shape.is_finite() && shape > 0.0 { shape } else { 1.0 };
-    let sum_xk = data.iter().map(|xi| xi.powf(mle_shape)).sum::<f64>();
+    // Build initial guess and bounds
+    let sum_xk = data.iter().map(|xi| xi.powf(shape)).sum::<f64>();
     if sum_xk <= 0.0 { return Err("Weibull fit undefined: invalid sums".to_string()); }
-    let mut mle_scale = (sum_xk / n).powf(1.0 / mle_shape);
+    let scale = (sum_xk / n).powf(1.0 / shape);
 
-    // Use argmin's Nelder-Mead as the primary numeric optimizer for MLE (robust / well-tested)
-    let cost = WeibullCost { data };
+    let initial_guess = vec![shape, scale];
+    let bounds = vec![(1e-6, 100.0), (1e-6, data.iter().fold(0.0f64, |a: f64, &b| a.max(b)) * 10.0)];
 
-    // initial param: [shape, scale]
-    let init_param = vec![mle_shape, mle_scale];
-    // Build a small simplex (dim + 1 points) for Nelder-Mead
-    let eps = 1e-6;
-    let simplex: Vec<Vec<f64>> = vec![
-        init_param.clone(),
-        vec![init_param[0] * (1.0 + eps), init_param[1]],
-        vec![init_param[0], init_param[1] * (1.0 + eps)],
-    ];
+    // Use global optimization for robust fitting
+    let cost_fn = WeibullCost { data: data.to_vec() };
+    let config = GlobalOptimizationConfig {
+        num_starts: 5,
+        max_local_iters: 50,
+        tolerance: 1e-8,
+        basin_hopping: true,
+        max_basin_iters: 10,
+        ..Default::default()
+    };
 
-    // Try LBFGS using the analytic gradient first (fast & robust), then fall back to Nelder-Mead
-    // Additional solvers available in argmin crate for future enhancement:
-    // - BFGS: Good for medium-sized problems with analytic gradients
-    // - NonlinearConjugateGradient: Efficient for large-scale problems
-    // - TrustRegion methods: Robust for ill-conditioned problems (requires Hessian)
-    let linesearch = MoreThuenteLineSearch::new();
-    let lbfgs = LBFGS::new(linesearch, 10);
-    let mut accepted = false;
-    if let Ok(res) = Executor::new(cost.clone(), lbfgs).configure(|state| state.param(init_param.clone()).max_iters(50)).run() {
-        if let Some(best) = res.state.best_param {
-            if best.len() >= 2 && best[0].is_finite() && best[1].is_finite() && best[0] > 0.0 && best[1] > 0.0 {
-                mle_shape = best[0];
-                mle_scale = best[1];
-                accepted = true;
-            }
-        }
-    }
+    // Use LBFGS for gradient-based optimization when gradients are available
+    let opt_result = if data.len() >= 50 {
+        // For larger datasets, use LBFGS with gradients for better performance
+        let linesearch = MoreThuenteLineSearch::new();
+        let solver = LBFGS::new(linesearch, 7);
 
-    if !accepted {
-        // Fall back to Nelder-Mead if LBFGS fails
-        let solver = NelderMead::<Vec<f64>, f64>::new(simplex);
-        if let Ok(res) = Executor::new(cost, solver).configure(|state| state.max_iters(50)).run() {
-            if let Some(best) = res.state.best_param {
-                if best.len() >= 2 && best[0].is_finite() && best[1].is_finite() && best[0] > 0.0 && best[1] > 0.0 {
-                    mle_shape = best[0];
-                    mle_scale = best[1];
+        let executor = Executor::new(cost_fn.clone(), solver)
+            .configure(|state| {
+                state
+                    .param(initial_guess.clone())
+                    .max_iters(config.max_local_iters)
+                    .target_cost(config.tolerance)
+            });
+
+        match executor.run() {
+            Ok(result) => {
+                if let Some(best_param) = result.state.best_param {
+                    let best_cost = result.state.best_cost;
+                    // Convert to OptimizationResult format
+                    OptimizationResult {
+                        best_param: best_param.clone(),
+                        best_cost,
+                        num_evaluations: 1,
+                        num_local_opts: 1,
+                        converged: best_cost.is_finite() && best_cost < f64::INFINITY,
+                        all_solutions: vec![(best_param, best_cost)],
+                    }
+                } else {
+                    // Fall back to global optimization
+                    let mut optimizer = GlobalOptimizer::new(cost_fn, config);
+                    optimizer.optimize(&initial_guess, &bounds)?
                 }
             }
+            Err(_) => {
+                // Fall back to global optimization
+                let mut optimizer = GlobalOptimizer::new(cost_fn, config);
+                optimizer.optimize(&initial_guess, &bounds)?
+            }
         }
+    } else {
+        // For smaller datasets, use global optimization
+        let mut optimizer = GlobalOptimizer::new(cost_fn, config);
+        optimizer.optimize(&initial_guess, &bounds)?
+    };
+
+    if !opt_result.converged || opt_result.best_param.len() < 2 {
+        return Err("Weibull global optimization failed to converge".to_string());
     }
 
+    let mle_shape = opt_result.best_param[0];
+    let mle_scale = opt_result.best_param[1];
+
     if (mle_shape <= 0.0 || mle_shape.is_nan()) || (mle_scale <= 0.0 || mle_scale.is_nan()) {
-        return Err("Weibull fit undefined: invalid initial parameter estimates".to_string());
+        return Err("Weibull fit undefined: invalid optimized parameter estimates".to_string());
     }
 
     let log_likelihood = if data.len() > 1000 {
         data.par_iter()
             .map(|&x| {
-                let pdf = (mle_shape / mle_scale)
-                    * (x / mle_scale).powf(mle_shape - 1.0)
-                    * (-(x / mle_scale).powf(mle_shape)).exp();
-                pdf.ln()
+                if x <= 0.0 {
+                    f64::NEG_INFINITY // Handle x <= 0 for Weibull
+                } else {
+                    mle_shape.ln() - mle_scale.ln() + (mle_shape - 1.0) * (x.ln() - mle_scale.ln()) - (x / mle_scale).powf(mle_shape)
+                }
             })
             .sum::<f64>()
     } else {
         data.iter()
             .map(|&x| {
-                let pdf = (mle_shape / mle_scale)
-                    * (x / mle_scale).powf(mle_shape - 1.0)
-                    * (-(x / mle_scale).powf(mle_shape)).exp();
-                pdf.ln()
+                if x <= 0.0 {
+                    f64::NEG_INFINITY
+                } else {
+                    mle_shape.ln() - mle_scale.ln() + (mle_shape - 1.0) * (x.ln() - mle_scale.ln()) - (x / mle_scale).powf(mle_shape)
+                }
             })
             .sum::<f64>()
     };
@@ -336,12 +362,12 @@ pub fn fit_weibull_distribution(data: &[f64]) -> Result<DistributionFit, String>
         aic,
         bic,
         goodness_of_fit: goodness_of_fit(data, |x| {
-            1.0 - (-(x / mle_scale).powf(mle_shape)).exp()
-        }).unwrap(),
+            Ok(1.0 - (-(x / mle_scale).powf(mle_shape)).exp())
+        })?,
     })
 }
 
-/// Fit Gamma distribution using maximum likelihood estimation
+/// Fit Gamma distribution using maximum likelihood estimation with global optimization
 pub fn fit_gamma_distribution(data: &[f64]) -> Result<DistributionFit, String> {
     if data.iter().any(|&x| x <= 0.0) {
         return Err("Gamma distribution requires positive data".to_string());
@@ -365,44 +391,68 @@ pub fn fit_gamma_distribution(data: &[f64]) -> Result<DistributionFit, String> {
 
     let shape_mom = mean * mean / variance;
 
-    // Use Newton-Raphson to solve for shape parameter using digamma function
-    let mut shape = shape_mom;
-    let tolerance = 1e-8;
-    let max_iter = 100;
+    // Use global optimization instead of Newton-Raphson
+    let initial_guess = vec![shape_mom.max(0.1), mean / shape_mom.max(0.1)];
+    let bounds = vec![(1e-6, 100.0), (1e-6, data.iter().fold(0.0f64, |a: f64, &b| a.max(b)) * 10.0)];
 
-    for _ in 0..max_iter {
-        let digamma_k = digamma(shape);
-        let trigamma_k = trigamma(shape);
+    // Create cost function for Gamma MLE
+    #[derive(Clone)]
+    struct GammaCost {
+        data: Vec<f64>,
+    }
 
-        let g = digamma_k - (sum_x.ln() - (sum_x2 / n).ln()) / n;
-        let g_prime = trigamma_k;
+    impl CostFunction for GammaCost {
+        type Param = Vec<f64>;
+        type Output = f64;
 
-        if g_prime.abs() < 1e-12 {
-            break;
-        }
+        fn cost(&self, param: &Self::Param) -> Result<Self::Output, Error> {
+            let shape = param[0];
+            let scale = param[1];
 
-        let delta = g / g_prime;
-        shape -= delta;
+            if shape <= 0.0 || scale <= 0.0 || !shape.is_finite() || !scale.is_finite() {
+                return Ok(f64::INFINITY);
+            }
 
-        if delta.abs() < tolerance {
-            break;
-        }
+            let nll = self.data.iter()
+                .map(|&x| {
+                    // Negative log-likelihood for Gamma: shape*ln(scale) + (shape-1)*ln(x) - scale*x - ln(Γ(shape))
+                    shape * scale.ln() + (shape - 1.0) * x.ln() - scale * x - SpecialFunctions::gamma(shape).ln()
+                })
+                .sum::<f64>();
 
-        if shape <= 0.0 {
-            shape = 1e-6; // Prevent negative shape
+            Ok(-nll) // Minimize negative log-likelihood
         }
     }
 
-    let scale = mean / shape; // MLE scale = mean / shape
+    let cost_fn = GammaCost {
+        data: data.to_vec(),
+    };
+
+    let config = GlobalOptimizationConfig {
+        num_starts: 3,
+        max_local_iters: 50,
+        tolerance: 1e-8,
+        ..Default::default()
+    };
+
+    let mut optimizer = GlobalOptimizer::new(cost_fn, config);
+    let opt_result = optimizer.optimize(&initial_guess, &bounds)?;
+
+    if !opt_result.converged || opt_result.best_param.len() < 2 {
+        return Err("Gamma global optimization failed to converge".to_string());
+    }
+
+    let shape = opt_result.best_param[0];
+    let scale = opt_result.best_param[1];
 
     if (shape <= 0.0 || shape.is_nan()) || (scale <= 0.0 || scale.is_nan()) {
-        return Err("Gamma fit undefined: invalid MLE parameter estimates".to_string());
+        return Err("Gamma fit undefined: invalid optimized parameter estimates".to_string());
     }
 
     let log_likelihood = data.iter()
         .map(|&x| {
             // Gamma PDF: (1/Γ(k)) * (1/θ^k) * x^(k-1) * e^(-x/θ)
-            let pdf = (x / scale).powf(shape - 1.0) * (-x / scale).exp() / (scale * gamma(shape));
+            let pdf = (x / scale).powf(shape - 1.0) * (-x / scale).exp() / (scale * SpecialFunctions::gamma(shape));
             pdf.ln()
         })
         .sum::<f64>();
@@ -420,19 +470,19 @@ pub fn fit_gamma_distribution(data: &[f64]) -> Result<DistributionFit, String> {
         log_likelihood,
         aic,
         bic,
-        goodness_of_fit: goodness_of_fit(data, |x| gamma_cdf(x, shape, scale)).unwrap(),
+        goodness_of_fit: goodness_of_fit(data, |x| gamma_cdf(x, shape, scale))?,
     })
 }
 
-/// Fit Beta distribution using maximum likelihood estimation
+/// Fit Beta distribution using maximum likelihood estimation with global optimization
 pub fn fit_beta_distribution(data: &[f64]) -> Result<DistributionFit, String> {
     if data.iter().any(|&x| x <= 0.0 || x >= 1.0) {
         return Err("Beta distribution requires data in (0,1)".to_string());
     }
 
     let n = data.len() as f64;
-    let sum_log_x = data.iter().map(|x| x.ln()).sum::<f64>();
-    let sum_log_1mx = data.iter().map(|x| (1.0 - x).ln()).sum::<f64>();
+    let _sum_log_x = data.iter().map(|x| x.ln()).sum::<f64>();
+    let _sum_log_1mx = data.iter().map(|x| (1.0 - x).ln()).sum::<f64>();
 
     // Use method of moments as initial estimates
     let mean = data.iter().sum::<f64>() / n;
@@ -454,63 +504,67 @@ pub fn fit_beta_distribution(data: &[f64]) -> Result<DistributionFit, String> {
         beta_param = (1.0 - mean) * 2.0;
     }
 
-    // Newton-Raphson for MLE
-    let tolerance = 1e-8;
-    let max_iter = 100;
+    let initial_guess = vec![alpha, beta_param];
+    let bounds = vec![(1e-6, 100.0), (1e-6, 100.0)];
 
-    for _ in 0..max_iter {
-        let digamma_alpha = digamma(alpha);
-        let digamma_beta = digamma(beta_param);
-        let digamma_sum = digamma(alpha + beta_param);
+    // Create cost function for Beta MLE
+    #[derive(Clone)]
+    struct BetaCost {
+        data: Vec<f64>,
+    }
 
-        let trigamma_alpha = trigamma(alpha);
-        let trigamma_beta = trigamma(beta_param);
-        let trigamma_sum = trigamma(alpha + beta_param);
+    impl CostFunction for BetaCost {
+        type Param = Vec<f64>;
+        type Output = f64;
 
-        // MLE equations:
-        // ψ(α) - ψ(α+β) = (1/n)∑ln(x_i)
-        // ψ(β) - ψ(α+β) = (1/n)∑ln(1-x_i)
-        let g1 = digamma_alpha - digamma_sum - sum_log_x / n;
-        let g2 = digamma_beta - digamma_sum - sum_log_1mx / n;
+        fn cost(&self, param: &Self::Param) -> Result<Self::Output, Error> {
+            let alpha = param[0];
+            let beta_param = param[1];
 
-        // Jacobian
-        let dg1_dalpha = trigamma_alpha - trigamma_sum;
-        let dg1_dbeta = -trigamma_sum;
-        let dg2_dalpha = -trigamma_sum;
-        let dg2_dbeta = trigamma_beta - trigamma_sum;
+            if alpha <= 0.0 || beta_param <= 0.0 || !alpha.is_finite() || !beta_param.is_finite() {
+                return Ok(f64::INFINITY);
+            }
 
-        let det = dg1_dalpha * dg2_dbeta - dg1_dbeta * dg2_dalpha;
-        if det.abs() < 1e-12 {
-            break;
-        }
+            let nll = self.data.iter()
+                .map(|&x| {
+                    // Negative log-likelihood for Beta: (α-1)ln(x) + (β-1)ln(1-x) - ln(B(α,β))
+                    (alpha - 1.0) * x.ln() + (beta_param - 1.0) * (1.0 - x).ln() - SpecialFunctions::beta(alpha, beta_param).ln()
+                })
+                .sum::<f64>();
 
-        let delta_alpha = (g1 * dg2_dbeta - g2 * dg1_dbeta) / det;
-        let delta_beta = (dg1_dalpha * g2 - dg2_dalpha * g1) / det;
-
-        alpha -= delta_alpha;
-        beta_param -= delta_beta;
-
-        if delta_alpha.abs() < tolerance && delta_beta.abs() < tolerance {
-            break;
-        }
-
-        // Prevent negative parameters
-        if alpha <= 1e-6 {
-            alpha = 1e-6;
-        }
-        if beta_param <= 1e-6 {
-            beta_param = 1e-6;
+            Ok(-nll) // Minimize negative log-likelihood
         }
     }
 
+    let cost_fn = BetaCost {
+        data: data.to_vec(),
+    };
+
+    let config = GlobalOptimizationConfig {
+        num_starts: 3,
+        max_local_iters: 50,
+        tolerance: 1e-8,
+        ..Default::default()
+    };
+
+    let mut optimizer = GlobalOptimizer::new(cost_fn, config);
+    let opt_result = optimizer.optimize(&initial_guess, &bounds)?;
+
+    if !opt_result.converged || opt_result.best_param.len() < 2 {
+        return Err("Beta global optimization failed to converge".to_string());
+    }
+
+    let alpha = opt_result.best_param[0];
+    let beta_param = opt_result.best_param[1];
+
     if (alpha <= 0.0 || alpha.is_nan()) || (beta_param <= 0.0 || beta_param.is_nan()) {
-        return Err("Beta fit undefined: invalid MLE parameter estimates".to_string());
+        return Err("Beta fit undefined: invalid optimized parameter estimates".to_string());
     }
 
     let log_likelihood = data.iter()
         .map(|&x| {
             // Beta PDF: x^(α-1) * (1-x)^(β-1) / B(α,β)
-            let pdf = x.powf(alpha - 1.0) * (1.0 - x).powf(beta_param - 1.0) / beta(alpha, beta_param);
+            let pdf = x.powf(alpha - 1.0) * (1.0 - x).powf(beta_param - 1.0) / SpecialFunctions::beta(alpha, beta_param);
             pdf.ln()
         })
         .sum::<f64>();
@@ -528,89 +582,47 @@ pub fn fit_beta_distribution(data: &[f64]) -> Result<DistributionFit, String> {
         log_likelihood,
         aic,
         bic,
-        goodness_of_fit: goodness_of_fit(data, |x| beta_cdf(x, alpha, beta_param)).unwrap(),
+        goodness_of_fit: goodness_of_fit(data, |x| beta_cdf(x, alpha, beta_param))?,
     })
 }
 
-/// Compute goodness of fit using Kolmogorov-Smirnov test
-pub fn goodness_of_fit<F>(data: &[f64], cdf: F) -> Result<f64, String>
-    where F: Fn(f64) -> f64,
-    {
-    let mut sorted_data = data.to_vec();
-    sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let n = sorted_data.len() as f64;
-    let mut max_diff: f64 = 0.0;
+    #[test]
+    fn test_weibull_fitting_with_gradients() {
+        // Generate synthetic Weibull data for testing
+        let shape_true = 2.5;
+        let scale_true = 3.0;
+        let data: Vec<f64> = (0..100)
+            .map(|_| {
+                // Simple Weibull sample generation (not perfect but sufficient for testing)
+                let u: f64 = rand::random();
+                scale_true * (-u.ln()).powf(1.0 / shape_true)
+            })
+            .collect();
 
-    for (i, &x) in sorted_data.iter().enumerate() {
-        let empirical_cdf = (i + 1) as f64 / n;
-        let theoretical_cdf = cdf(x);
-        max_diff = max_diff.max((empirical_cdf - theoretical_cdf).abs());
-    }
+        // Fit Weibull distribution
+        let result = fit_weibull_distribution(&data);
+        assert!(result.is_ok(), "Weibull fitting should succeed");
 
-    Ok(max_diff) // KS statistic
-}
+        let fit = result.unwrap();
+        assert_eq!(fit.distribution_name, "weibull");
+        assert!(fit.parameters.len() == 2);
 
-/// Gamma function approximation
-fn gamma(z: f64) -> f64 {
-    statrs::function::gamma::gamma(z)
-}
+        // Check that parameters are reasonable (should be close to true values)
+        let shape_est = fit.parameters[0].1;
+        let scale_est = fit.parameters[1].1;
 
-/// Beta function
-fn beta(a: f64, b: f64) -> f64 {
-    use statrs::function::beta;
-    beta::beta(a, b)
-}
+        assert!(shape_est > 0.0 && shape_est.is_finite());
+        assert!(scale_est > 0.0 && scale_est.is_finite());
 
-/// Digamma function (derivative of log gamma)
-fn digamma(x: f64) -> f64 {
-    use statrs::function::gamma;
-    gamma::digamma(x)
-}
+        // Check that log-likelihood is finite
+        assert!(fit.log_likelihood.is_finite());
 
-/// Trigamma function (second derivative of log gamma)
-fn trigamma(x: f64) -> f64 {
-    // Approximation using derivative of digamma
-    // trigamma(x) ≈ (digamma(x + h) - digamma(x - h)) / (2h) for small h
-    let h = 1e-5;
-    use statrs::function::gamma;
-    (gamma::digamma(x + h) - gamma::digamma(x - h)) / (2.0 * h)
-}
-
-/// Incomplete gamma function (simplified approximation)
-fn gamma_cdf(x: f64, shape: f64, scale: f64) -> f64 {
-    // Use statrs Gamma CDF if available, otherwise fall back to approximation
-    if let Ok(gamma_dist) = statrs::distribution::Gamma::new(shape, scale) {
-        gamma_dist.cdf(x)
-    } else {
-        // Fallback to normal approximation for large shape
-        if x <= 0.0 {
-            0.0
-        } else {
-            let mean = shape * scale;
-            let variance = shape * scale * scale;
-            let std_dev = variance.sqrt();
-            StatisticalDistributions::normal_cdf(x, mean, std_dev)
-        }
-    }
-}
-
-/// Beta CDF using statrs
-fn beta_cdf(x: f64, alpha: f64, beta: f64) -> f64 {
-    // Use statrs Beta CDF if available
-    if let Ok(beta_dist) = statrs::distribution::Beta::new(alpha, beta) {
-        beta_dist.cdf(x)
-    } else {
-        // Fallback to normal approximation
-        if x <= 0.0 {
-            0.0
-        } else if x >= 1.0 {
-            1.0
-        } else {
-            let mean = alpha / (alpha + beta);
-            let variance = alpha * beta / ((alpha + beta).powi(2) * (alpha + beta + 1.0));
-            let std_dev = variance.sqrt();
-            StatisticalDistributions::normal_cdf(x, mean, std_dev)
-        }
+        // Check that AIC/BIC are finite
+        assert!(fit.aic.is_finite());
+        assert!(fit.bic.is_finite());
     }
 }

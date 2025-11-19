@@ -1,7 +1,7 @@
 //! Output formatting and sanitization
 
 use crate::scientific::statistics::types::{
-    AnalysisOptions, ComprehensiveResult, DescriptiveStatsOutput, NormalityTestOutput, 
+    AnalysisOptions, ComprehensiveResult, DescriptiveStatsOutput, NormalityTestResult, 
     VisualizationSuggestionsOutput, RecommendedPlot, ConfidenceIntervalsOutput, 
     OutlierAnalysisOutput, RobustStatisticsOutput, DistributionAnalysisOutput, 
     DistributionFitOutput, TransformationSuggestionOutput, TimeSeriesAnalysisOutput, 
@@ -38,10 +38,10 @@ impl OutputFormatter {
             }),
             normality_test: results.normality_test.as_ref().and_then(|tests| {
                 tests.first().map(|test| {
-                    NormalityTestOutput {
+                    NormalityTestResult {
                         test_name: test.test_name.clone(),
-                        statistic: test.statistic.and_then(|s| Self::sanitize_numeric_output(s, options.decimal_precision.unwrap_or(10))),
-                        p_value: test.p_value.and_then(|p| Self::sanitize_numeric_output(p, options.decimal_precision.unwrap_or(10))),
+                        statistic: Self::sanitize_numeric_output(test.statistic, options.decimal_precision.unwrap_or(10)).unwrap_or(test.statistic),
+                        p_value: Self::sanitize_numeric_output(test.p_value, options.decimal_precision.unwrap_or(10)).unwrap_or(test.p_value),
                         is_normal: test.is_normal,
                         method: test.test_name.clone(),
                     }
@@ -150,6 +150,8 @@ impl OutputFormatter {
                     cpk: Some(qc.capability_indices.cpk),
                 }
             }),
+            hypothesis_testing: None, // TODO: Implement formatting
+            power_analysis: None, // TODO: Implement formatting
         };
 
         Ok(comprehensive_result)

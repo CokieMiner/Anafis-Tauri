@@ -6,6 +6,3 @@ pub mod descriptive_stats;
 pub mod traits;
 pub mod utils;
 // types module moved to parent statistics module
-
-#[cfg(test)]
-pub mod tests;

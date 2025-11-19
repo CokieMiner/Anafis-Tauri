@@ -27,7 +27,7 @@ impl RootFinding {
             .run()
             .map_err(|e| format!("Root finding failed: {:?}", e))?;
 
-        Ok(*res.state.best_param.as_ref().unwrap())
+        Ok(*res.state.best_param.as_ref().expect("best_param should be set after successful run"))
     }
 
     /// Bisection method (more robust but slower)

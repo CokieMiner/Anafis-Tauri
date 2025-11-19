@@ -3,11 +3,11 @@
 //! This module contains integration tests that validate the complete statistical
 //! analysis pipeline, including ndarray ecosystem integration and full workflow testing.
 
-use crate::scientific::statistics::comprehensive_analysis::{
+use anafis_lib::scientific::statistics::comprehensive_analysis::{
     layer1_command::ComprehensiveAnalysisCommand,
-    layer4_primitives::NdLinearAlgebra,
+    layer4_primitives::LinearAlgebra,
 };
-use crate::scientific::statistics::types::AnalysisOptions;
+use anafis_lib::scientific::statistics::types::AnalysisOptions;
 use ndarray::Array2;
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -64,7 +64,7 @@ fn test_matrix_operations_integration() {
     let ndarray_b = Array2::<f64>::from_shape_fn((size, size), |(_, _)| rng.random::<f64>());
 
     // Test matrix multiplication
-    let ndarray_result = NdLinearAlgebra::matrix_multiply(&ndarray_a, &ndarray_b).unwrap();
+    let ndarray_result = LinearAlgebra::matrix_multiply(&ndarray_a, &ndarray_b).unwrap();
 
     // Verify result dimensions
     assert_eq!(ndarray_result.nrows(), size);
@@ -91,10 +91,10 @@ fn test_large_matrix_operations() {
     let ndarray_b = Array2::<f64>::from_shape_fn((size, size), |(_, _)| rng.random::<f64>());
 
     // Test standard multiplication
-    let ndarray_result = NdLinearAlgebra::matrix_multiply(&ndarray_a, &ndarray_b).unwrap();
+    let ndarray_result = LinearAlgebra::matrix_multiply(&ndarray_a, &ndarray_b).unwrap();
 
     // Test large matrix multiplication (if implemented)
-    let large_result = NdLinearAlgebra::large_matrix_multiply(&ndarray_a, &ndarray_b).unwrap();
+    let large_result = LinearAlgebra::large_matrix_multiply(&ndarray_a, &ndarray_b).unwrap();
 
     // Verify results are consistent
     for i in 0..10 { // Check first 10 elements
@@ -133,7 +133,7 @@ fn test_covariance_matrix_integration() {
     let ndarray_data = Array2::from_shape_vec((n_samples, n_variables), flattened).unwrap();
 
     // Compute covariance matrix
-    let cov_matrix = NdLinearAlgebra::covariance_matrix(&ndarray_data).unwrap();
+    let cov_matrix = LinearAlgebra::covariance_matrix(&ndarray_data).unwrap();
 
     // Verify it's a valid covariance matrix (symmetric, positive semidefinite)
     assert_eq!(cov_matrix.nrows(), n_variables);
@@ -180,7 +180,7 @@ fn test_eigenvalue_decomposition_integration() {
     let ndarray_matrix = (&ndarray_matrix + &ndarray_matrix.t().to_owned()) * 0.5;
 
     // Test eigenvalue decomposition
-    let ndarray_eigen = NdLinearAlgebra::eigenvalue_decomposition(&ndarray_matrix).unwrap();
+    let ndarray_eigen = LinearAlgebra::eigenvalue_decomposition(&ndarray_matrix).unwrap();
 
     // Verify eigenvalues are real and finite
     for &eigenval in &ndarray_eigen.0 {
@@ -205,7 +205,7 @@ fn test_svd_integration() {
     let ndarray_matrix = Array2::<f64>::from_shape_fn((rows, cols), |(_, _)| rng.random::<f64>());
 
     // Test SVD
-    let ndarray_svd = NdLinearAlgebra::svd(&ndarray_matrix).unwrap();
+    let ndarray_svd = LinearAlgebra::svd(&ndarray_matrix).unwrap();
 
     // Verify dimensions
     assert_eq!(ndarray_svd.0.nrows(), rows);
@@ -229,19 +229,19 @@ fn test_error_handling() {
     let a = Array2::<f64>::zeros((5, 3));
     let b = Array2::<f64>::zeros((4, 5));
 
-    let result = NdLinearAlgebra::matrix_multiply(&a, &b);
+    let result = LinearAlgebra::matrix_multiply(&a, &b);
     assert!(result.is_err(), "Matrix multiplication should fail with incompatible dimensions");
 
     // Test with empty matrices
     let empty = Array2::<f64>::zeros((0, 0));
-    let result = NdLinearAlgebra::matrix_multiply(&empty, &empty);
+    let result = LinearAlgebra::matrix_multiply(&empty, &empty);
     // Empty matrix multiplication is actually valid (0x0 * 0x0 = 0x0)
     // So we just verify it doesn't panic
     let _ = result;
 
     // Test covariance with insufficient data
     let small_data = Array2::<f64>::zeros((2, 3)); // Only 2 samples
-    let result = NdLinearAlgebra::covariance_matrix(&small_data);
+    let result = LinearAlgebra::covariance_matrix(&small_data);
     // This might succeed or fail depending on implementation, but shouldn't panic
     // We just verify it doesn't crash
     let _ = result;
@@ -268,7 +268,7 @@ fn test_memory_efficiency() {
     let matrix = Array2::from_shape_vec((n_samples, n_features), data).unwrap();
 
     // Test covariance computation on large dataset
-    let cov_result = NdLinearAlgebra::covariance_matrix(&matrix);
+    let cov_result = LinearAlgebra::covariance_matrix(&matrix);
     assert!(cov_result.is_ok(), "Should handle large covariance matrices");
 
     let cov = cov_result.unwrap();
@@ -284,7 +284,7 @@ fn test_complete_workflow() {
     let mut rng = Pcg64::seed_from_u64(55555);
 
     // Step 1: Generate synthetic data with known properties
-    let n_samples = 200; // Reduced from 2000
+    let n_samples = 200;
     let n_variables = 6;
 
     let mut datasets = Vec::new();

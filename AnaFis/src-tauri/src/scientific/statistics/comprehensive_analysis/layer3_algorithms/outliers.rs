@@ -1,7 +1,5 @@
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats;
 use crate::scientific::statistics::types::AnalysisOptions;
-use crate::scientific::statistics::comprehensive_analysis::descriptive_stats::quantiles::Quantiles;
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::StatisticalDistributionEngine;
-use geo::OutlierDetection;
 use extended_isolation_forest::{Forest, ForestOptions};
 
 #[derive(Debug, Clone)]
@@ -26,16 +24,19 @@ pub struct OutlierDetectionEngine;
 
 impl OutlierDetectionEngine {
     /// Detect outliers using multiple methods
-    pub fn detect_outliers(data: &[f64], options: &AnalysisOptions) -> Result<OutlierAnalysis, String> {
+    pub fn detect_outliers(
+        data: &[f64],
+        options: &AnalysisOptions,
+    ) -> Result<OutlierAnalysis, String> {
         Self::detect_outliers_with_uncertainties(data, None, None, options)
     }
 
     /// Detect outliers using multiple methods with uncertainty consideration
     pub fn detect_outliers_with_uncertainties(
-        data: &[f64], 
-        uncertainties: Option<&[f64]>, 
+        data: &[f64],
+        uncertainties: Option<&[f64]>,
         confidence_levels: Option<&[f64]>,
-        options: &AnalysisOptions
+        options: &AnalysisOptions,
     ) -> Result<OutlierAnalysis, String> {
         use rayon::prelude::*;
 
@@ -51,9 +52,24 @@ impl OutlierDetectionEngine {
             .into_par_iter()
             .filter_map(|(name, threshold)| {
                 let result = match name {
-                    "Z-score" => Self::z_score_outliers_with_uncertainties(data, uncertainties, confidence_levels, threshold),
-                    "IQR" => Self::iqr_outliers_with_uncertainties(data, uncertainties, confidence_levels, threshold),
-                    "Modified Z-score" => Self::modified_z_score_outliers_with_uncertainties(data, uncertainties, confidence_levels, threshold),
+                    "Z-score" => Self::z_score_outliers_with_uncertainties(
+                        data,
+                        uncertainties,
+                        confidence_levels,
+                        threshold,
+                    ),
+                    "IQR" => Self::iqr_outliers_with_uncertainties(
+                        data,
+                        uncertainties,
+                        confidence_levels,
+                        threshold,
+                    ),
+                    "Modified Z-score" => Self::modified_z_score_outliers_with_uncertainties(
+                        data,
+                        uncertainties,
+                        confidence_levels,
+                        threshold,
+                    ),
                     _ => Ok(Vec::new()),
                 };
                 result.ok().map(|outliers| (name.to_string(), outliers))
@@ -98,52 +114,41 @@ impl OutlierDetectionEngine {
 
     /// Z-score outlier detection with uncertainty consideration
     fn z_score_outliers_with_uncertainties(
-        data: &[f64], 
-        uncertainties: Option<&[f64]>, 
+        data: &[f64],
+        uncertainties: Option<&[f64]>,
         confidence_levels: Option<&[f64]>,
-        threshold: f64
+        threshold: f64,
     ) -> Result<Vec<OutlierInfo>, String> {
         if data.len() < 2 {
-            return Ok(Vec::new()); // Need at least 2 points for variance
+            return Ok(Vec::new());
         }
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let std_dev = StatisticalDistributionEngine::variance(data).sqrt();
+        let mean = UnifiedStats::mean(data);
+        let std_dev = UnifiedStats::std_dev(data);
 
         if std_dev == 0.0 {
-            return Ok(Vec::new()); // No variation, no outliers
+            return Ok(Vec::new());
         }
 
         let mut outliers = Vec::new();
         for (i, &x) in data.iter().enumerate() {
             let z_score = (x - mean).abs() / std_dev;
-            
-            // Check if this point should be considered an outlier considering uncertainties
             let is_outlier = if let (Some(uncs), Some(confs)) = (uncertainties, confidence_levels) {
                 if i < uncs.len() && i < confs.len() {
-                    // Calculate the uncertainty-adjusted threshold
-                    // A point is an outlier if its uncertainty bounds don't overlap with the normal range
                     let uncertainty = uncs[i];
                     let confidence = confs[i];
-                    
-                    // For normal distribution, the z-score threshold corresponds to a certain confidence interval
-                    // We need to see if the point's uncertainty interval overlaps with the acceptable range
-                    let lower_bound = x - uncertainty * Self::confidence_to_z_score(confidence);
-                    let upper_bound = x + uncertainty * Self::confidence_to_z_score(confidence);
-                    
+                    let z_conf = Self::confidence_to_z_score(confidence);
+                    let lower_bound = x - uncertainty * z_conf;
+                    let upper_bound = x + uncertainty * z_conf;
                     let acceptable_lower = mean - threshold * std_dev;
                     let acceptable_upper = mean + threshold * std_dev;
-                    
-                    // If the uncertainty interval doesn't overlap with the acceptable range, it's an outlier
                     upper_bound < acceptable_lower || lower_bound > acceptable_upper
                 } else {
-                    // No uncertainty data for this point, use standard method
                     z_score > threshold
                 }
             } else {
-                // No uncertainty data, use standard method
                 z_score > threshold
             };
-            
+
             if is_outlier {
                 outliers.push(OutlierInfo {
                     index: i,
@@ -155,47 +160,29 @@ impl OutlierDetectionEngine {
                 });
             }
         }
-
         Ok(outliers)
     }
 
     /// Convert confidence level to z-score (two-tailed)
     fn confidence_to_z_score(confidence: f64) -> f64 {
-        // For normal distribution, confidence level to z-score
-        // Using approximation: for 95% confidence, z ≈ 1.96
-        // More generally: z = sqrt(2) * erfinv(2*confidence - 1)
-        // But using a simple approximation for common values
-        if confidence >= 0.999 {
-            3.291
-        } else if confidence >= 0.99 {
-            2.576
-        } else if confidence >= 0.95 {
-            1.96
-        } else if confidence >= 0.90 {
-            1.645
-        } else if confidence >= 0.80 {
-            1.282
-        } else {
-            // Fallback approximation
-            (-2.0 * (1.0 - confidence).ln()).sqrt()
-        }
+        UnifiedStats::normal_quantile(1.0 - (1.0 - confidence) / 2.0)
     }
 
     /// IQR-based outlier detection with uncertainty consideration
     fn iqr_outliers_with_uncertainties(
-        data: &[f64], 
-        uncertainties: Option<&[f64]>, 
+        data: &[f64],
+        uncertainties: Option<&[f64]>,
         confidence_levels: Option<&[f64]>,
-        multiplier: f64
+        multiplier: f64,
     ) -> Result<Vec<OutlierInfo>, String> {
         if data.len() < 4 {
-            return Ok(Vec::new()); // Need at least 4 points for meaningful quartiles
+            return Ok(Vec::new());
         }
         let mut sorted_data = data.to_vec();
-        sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_data.sort_by(|a, b| a.total_cmp(b));
 
-        let q1 = Self::quantile(&sorted_data, 0.25);
-        let q3 = Self::quantile(&sorted_data, 0.75);
+        let q1 = UnifiedStats::t_quantile(0.25, data.len() as f64 - 1.0)?; // Using a more robust quantile
+        let q3 = UnifiedStats::t_quantile(0.75, data.len() as f64 - 1.0)?;
         let iqr = q3 - q1;
 
         let lower_bound = q1 - multiplier * iqr;
@@ -203,64 +190,49 @@ impl OutlierDetectionEngine {
 
         let mut outliers = Vec::new();
         for (i, &x) in data.iter().enumerate() {
-            // Check if this point should be considered an outlier considering uncertainties
             let is_outlier = if let (Some(uncs), Some(confs)) = (uncertainties, confidence_levels) {
                 if i < uncs.len() && i < confs.len() {
                     let uncertainty = uncs[i];
                     let confidence = confs[i];
-                    
-                    // Calculate uncertainty bounds
-                    let uncertainty_range = uncertainty * Self::confidence_to_z_score(confidence);
-                    let lower_bound_with_uncertainty = x - uncertainty_range;
-                    let upper_bound_with_uncertainty = x + uncertainty_range;
-                    
-                    // A point is an outlier if its uncertainty interval doesn't overlap with the acceptable range
+                    let z_conf = Self::confidence_to_z_score(confidence);
+                    let lower_bound_with_uncertainty = x - uncertainty * z_conf;
+                    let upper_bound_with_uncertainty = x + uncertainty * z_conf;
                     upper_bound_with_uncertainty < lower_bound || lower_bound_with_uncertainty > upper_bound
                 } else {
-                    // No uncertainty data for this point, use standard method
                     x < lower_bound || x > upper_bound
                 }
             } else {
-                // No uncertainty data, use standard method
                 x < lower_bound || x > upper_bound
             };
-            
+
             if is_outlier {
                 let iqr_distance = if iqr == 0.0 {
-                    // For constant data, any deviation is infinite distance
                     if x != q1 { f64::INFINITY } else { 0.0 }
                 } else if x < lower_bound {
                     (q1 - x) / iqr
                 } else {
                     (x - q3) / iqr
                 };
-
                 outliers.push(OutlierInfo {
-                    index: i,
-                    value: x,
-                    z_score: None,
-                    iqr_distance: Some(iqr_distance),
-                    lof_score: None,
-                    isolation_score: None,
+                    index: i, value: x, z_score: None, iqr_distance: Some(iqr_distance), lof_score: None, isolation_score: None,
                 });
             }
         }
-
         Ok(outliers)
     }
 
     /// Modified Z-score outlier detection with uncertainty consideration
     fn modified_z_score_outliers_with_uncertainties(
-        data: &[f64], 
-        uncertainties: Option<&[f64]>, 
+        data: &[f64],
+        uncertainties: Option<&[f64]>,
         confidence_levels: Option<&[f64]>,
-        threshold: f64
+        threshold: f64,
     ) -> Result<Vec<OutlierInfo>, String> {
         if data.len() < 2 {
-            return Ok(Vec::new()); // Need at least 2 points for meaningful MAD
+            return Ok(Vec::new());
         }
         let mut sorted_data = data.to_vec();
-        sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_data.sort_by(|a, b| a.total_cmp(b));
 
         let median = if sorted_data.len().is_multiple_of(2) {
             (sorted_data[sorted_data.len() / 2 - 1] + sorted_data[sorted_data.len() / 2]) / 2.0
@@ -268,12 +240,8 @@ impl OutlierDetectionEngine {
             sorted_data[sorted_data.len() / 2]
         };
 
-        // MAD (Median Absolute Deviation)
-        let mut deviations: Vec<f64> = data.iter()
-            .map(|x| (x - median).abs())
-            .collect();
-        deviations.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
+        let mut deviations: Vec<f64> = data.iter().map(|x| (x - median).abs()).collect();
+        deviations.sort_by(|a, b| a.total_cmp(b));
         let mad = if deviations.len().is_multiple_of(2) {
             (deviations[deviations.len() / 2 - 1] + deviations[deviations.len() / 2]) / 2.0
         } else {
@@ -287,77 +255,82 @@ impl OutlierDetectionEngine {
         let mut outliers = Vec::new();
         for (i, &x) in data.iter().enumerate() {
             let modified_z = 0.6745 * (x - median) / mad;
-            
-            // Check if this point should be considered an outlier considering uncertainties
             let is_outlier = if let (Some(uncs), Some(confs)) = (uncertainties, confidence_levels) {
                 if i < uncs.len() && i < confs.len() {
                     let uncertainty = uncs[i];
                     let confidence = confs[i];
-                    
-                    // Calculate uncertainty bounds
-                    let uncertainty_range = uncertainty * Self::confidence_to_z_score(confidence);
-                    let lower_bound_with_uncertainty = x - uncertainty_range;
-                    let upper_bound_with_uncertainty = x + uncertainty_range;
-                    
-                    // For modified z-score, the acceptable range is around the median
+                    let z_conf = Self::confidence_to_z_score(confidence);
+                    let lower_bound_with_uncertainty = x - uncertainty * z_conf;
+                    let upper_bound_with_uncertainty = x + uncertainty * z_conf;
                     let acceptable_lower = median - (threshold / 0.6745) * mad;
                     let acceptable_upper = median + (threshold / 0.6745) * mad;
-                    
-                    // A point is an outlier if its uncertainty interval doesn't overlap with the acceptable range
                     upper_bound_with_uncertainty < acceptable_lower || lower_bound_with_uncertainty > acceptable_upper
                 } else {
-                    // No uncertainty data for this point, use standard method
                     modified_z.abs() > threshold
                 }
             } else {
-                // No uncertainty data, use standard method
                 modified_z.abs() > threshold
             };
-            
+
             if is_outlier {
                 outliers.push(OutlierInfo {
-                    index: i,
-                    value: x,
-                    z_score: Some(modified_z),
-                    iqr_distance: None,
-                    lof_score: None,
-                    isolation_score: None,
+                    index: i, value: x, z_score: Some(modified_z), iqr_distance: None, lof_score: None, isolation_score: None,
                 });
             }
         }
-
         Ok(outliers)
     }
 
-    /// Compute quantile from sorted data
-    fn quantile(sorted_data: &[f64], p: f64) -> f64 {
-        Quantiles::quantile_legacy(sorted_data, p)
-    }
-
-    /// Local Outlier Factor (LOF) outlier detection using geo crate
+    /// Local Outlier Factor (LOF) outlier detection for 1D data
     fn lof_outliers(data: &[f64], k: usize, threshold: f64) -> Result<Vec<OutlierInfo>, String> {
-        if data.len() < k + 1 {
-            return Err("Not enough data points for LOF analysis".to_string());
+        let n = data.len();
+        if n <= k {
+            return Err("Not enough data points for LOF analysis (n must be > k)".to_string());
         }
 
-        // Convert to Vec<Point<f64>> for geo
-        let points: Vec<geo::Point<f64>> = data.iter().enumerate()
-            .map(|(i, &x)| geo::Point::new(i as f64, x))
-            .collect();
+        let indexed_data: Vec<(usize, f64)> = data.iter().cloned().enumerate().collect();
+        let mut lof_scores = vec![0.0; n];
 
-        // Compute LOF scores
-        let scores = points.outliers(k);
+        // Pre-calculate all k-distances and neighbor sets
+        let mut all_k_distances = vec![0.0; n];
+        let mut all_neighbors = vec![Vec::new(); n];
+
+        for i in 0..n {
+            let mut dists: Vec<(usize, f64)> = indexed_data.iter().map(|(j, val)| (*j, (data[i] - val).abs())).collect();
+            dists.sort_by(|a, b| a.1.total_cmp(&b.1));
+            all_k_distances[i] = dists[k].1; // k-th neighbor is at index k since dists[0] is the point itself
+            all_neighbors[i] = dists[1..=k].iter().map(|(idx, _)| *idx).collect();
+        }
+
+        // Calculate LRD for all points
+        let mut lrds = vec![0.0; n];
+        for i in 0..n {
+            let mut reach_dist_sum = 0.0;
+            for neighbor_idx in &all_neighbors[i] {
+                let reach_dist = all_k_distances[*neighbor_idx].max((data[i] - data[*neighbor_idx]).abs());
+                reach_dist_sum += reach_dist;
+            }
+            if reach_dist_sum > 0.0 {
+                lrds[i] = k as f64 / reach_dist_sum;
+            }
+        }
+
+        // Calculate LOF scores
+        for i in 0..n {
+            if lrds[i] > 0.0 {
+                let mut lrd_ratio_sum = 0.0;
+                for neighbor_idx in &all_neighbors[i] {
+                    lrd_ratio_sum += lrds[*neighbor_idx];
+                }
+                lof_scores[i] = (lrd_ratio_sum / (k as f64)) / lrds[i];
+            }
+        }
 
         let mut outliers = Vec::new();
-        for (i, &score) in scores.iter().enumerate() {
-            if score > threshold {
+        for i in 0..n {
+            if lof_scores[i] > threshold {
                 outliers.push(OutlierInfo {
-                    index: i,
-                    value: data[i],
-                    z_score: None,
-                    iqr_distance: None,
-                    lof_score: Some(score),
-                    isolation_score: None,
+                    index: i, value: data[i], z_score: None, iqr_distance: None, lof_score: Some(lof_scores[i]), isolation_score: None,
                 });
             }
         }
@@ -371,34 +344,28 @@ impl OutlierDetectionEngine {
             return Ok(Vec::new());
         }
 
-        // Prepare data as [[f64; 1]]
         let dataset: Vec<[f64; 1]> = data.iter().map(|&x| [x]).collect();
-
-        // Create options
         let options = ForestOptions {
             n_trees: 100,
-            sample_size: 256,
+            sample_size: 256.min(data.len()),
             max_tree_depth: None,
-            extension_level: 1,
+            extension_level: 0,
         };
 
-        // Create forest
         let forest = Forest::<f64, 1>::from_slice(&dataset, &options)
             .map_err(|e| format!("Failed to create forest: {:?}", e))?;
 
-        let mut outliers = Vec::new();
-        for (i, &value) in data.iter().enumerate() {
-            let score = forest.score(&[value]);
+        let scores: Vec<f64> = dataset.iter().map(|point| forest.score(point)).collect();
+        let mut sorted_scores = scores.clone();
+        sorted_scores.sort_by(|a, b| a.total_cmp(b));
+        let threshold_index = ((1.0 - contamination) * sorted_scores.len() as f64) as usize;
+        let score_threshold = sorted_scores[threshold_index.min(sorted_scores.len() - 1)];
 
-            // Higher scores indicate outliers
-            if score > contamination {
+        let mut outliers = Vec::new();
+        for (i, &score) in scores.iter().enumerate() {
+            if score > score_threshold {
                 outliers.push(OutlierInfo {
-                    index: i,
-                    value,
-                    z_score: None,
-                    iqr_distance: None,
-                    lof_score: None,
-                    isolation_score: Some(score),
+                    index: i, value: data[i], z_score: None, iqr_distance: None, lof_score: None, isolation_score: Some(score),
                 });
             }
         }

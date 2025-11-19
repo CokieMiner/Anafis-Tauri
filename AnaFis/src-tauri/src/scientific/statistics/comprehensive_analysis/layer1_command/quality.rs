@@ -1,7 +1,7 @@
 //! Data quality assessment and scoring
 
 use crate::scientific::statistics::types::{AnalysisResults, DataQualityOutput};
-use super::super::layer4_primitives::StatisticalPower;
+use super::super::layer4_primitives::UnifiedStats;
 
 /// Data quality assessment utilities
 pub struct QualityAssessor;
@@ -23,7 +23,7 @@ impl QualityAssessor {
             // Compute required sample size based on standard deviation and a default effect size of 0.5*std
             let std_dev = desc_stats.std_dev;
             if std_dev.is_finite() && std_dev > 0.0 {
-                if let Ok(required_n) = StatisticalPower::required_sample_size_for_mean(std_dev, std_dev * 0.5, 0.05, 0.8) {
+                if let Ok(required_n) = UnifiedStats::required_sample_size_for_mean(std_dev, std_dev * 0.5, 0.05, 0.8) {
                     if desc_stats.count < required_n {
                         let penalty: f64 = 40.0 * (1.0 - desc_stats.count as f64 / required_n as f64);
                         score -= penalty.min(40.0);

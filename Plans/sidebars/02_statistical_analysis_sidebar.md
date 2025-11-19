@@ -13,11 +13,9 @@ Based on the capabilities of Igor Pro, Python scientific stack, and R statistica
 
 ### ❌ Major Gaps (High Priority)
 
-1. **Hypothesis Testing Suite**
-   - **Igor Pro**: Complete statistical tests with GUI and scripting
-   - **Python**: SciPy.stats, statsmodels - comprehensive statistical testing
-   - **R**: Base R + extensive packages (car, multcomp, etc.) - most comprehensive
-   - **AnaFis**: ❌ NOT IMPLEMENTED (mentioned in plan but not built)
+- ✓ Hypothesis tests have correct p-values with proper precision reporting ✅ IMPLEMENTED
+- ✓ Effect sizes included with all relevant test results ✅ IMPLEMENTED
+- ✓ Power analysis with accurate non-central distribution approximations ✅ IMPLEMENTED
 
 2. **Regression Analysis**
    - **Igor Pro**: Curve fitting with GUI, extensive built-in functions
@@ -104,7 +102,7 @@ Based on the capabilities of Igor Pro, Python scientific stack, and R statistica
 | **Ease of Use** | High | Low | Medium | Highest |
 | **Uncertainty Quantification** | Low | Medium | Medium | Highest |
 | **Spreadsheet Integration** | Low | Medium | Low | Highest |
-| **Statistical Depth** | High | High | Highest | Low |
+| **Statistical Depth** | High | High | Highest | Medium |
 | **Programming Required** | Medium | High | High | None |
 | **Cost** | High | Free | Free | Free |
 | **Performance** | High | High | Medium | High |
@@ -156,16 +154,16 @@ Provide comprehensive statistical analysis capabilities for experimental data in
 - **Correlation Matrix**: For multivariate datasets
 
 ### Hypothesis Testing
-- **t-Tests**: One-sample, two-sample (paired/unpaired), Welch's unequal variances
-- **ANOVA**: One-way, two-way, repeated measures, MANOVA
-- **Chi-Square Tests**: Goodness-of-fit, test of independence, McNemar's test
+- **t-Tests**: One-sample, two-sample (paired/unpaired), Welch's unequal variances ✅ IMPLEMENTED
+- **ANOVA**: One-way, two-way, repeated measures, MANOVA ✅ PARTIALLY IMPLEMENTED (one-way ANOVA)
+- **Chi-Square Tests**: Goodness-of-fit, test of independence, McNemar's test ✅ IMPLEMENTED
 - **Proportion Tests**: One-sample, two-sample z-tests for proportions
 - **Non-Parametric Tests**: Mann-Whitney U, Wilcoxon signed-rank, Kruskal-Wallis, Friedman test
 
 ### Power Analysis
-- **Sample Size Calculation**: For means, proportions, correlations, ANOVA effects
-- **Power Curves**: Visualization of power vs. sample size/effect size
-- **Post-hoc Power**: Observed power for completed studies
+- **Sample Size Calculation**: For means, proportions, correlations, ANOVA effects ✅ IMPLEMENTED
+- **Power Curves**: Visualization of power vs. sample size/effect size ✅ IMPLEMENTED
+- **Post-hoc Power**: Observed power for completed studies ✅ IMPLEMENTED
 - **Sensitivity Analysis**: Minimum detectable effect sizes
 
 ### Data Visualization
@@ -846,9 +844,10 @@ serde_json = "1.0"
 - ✓ All statistical methods produce accurate results
 - ✓ Bootstrap confidence intervals match theoretical values
 - ✓ Analytical error propagation provides fast uncertainty estimates
-- ✓ Hypothesis tests have correct p-values with proper precision reporting
+- ✓ Hypothesis tests have correct p-values with proper precision reporting ✅ IMPLEMENTED
 - ✓ Normality tests guide appropriate test selection
-- ✓ Effect sizes included with all relevant test results
+- ✓ Effect sizes included with all relevant test results ✅ IMPLEMENTED
+- ✓ Power analysis with accurate non-central distribution approximations ✅ IMPLEMENTED
 - ✓ Data visualizations update in real-time using existing ECharts infrastructure
 - ✓ Performance: Process 10,000 data points in < 500ms
 - ✓ Memory efficient for large datasets
@@ -865,11 +864,11 @@ serde_json = "1.0"
 - Rudra for memory safety analysis
 
 ### Unit Tests
-- Accuracy of all statistical calculations
+- Accuracy of all statistical calculations ✅ IMPLEMENTED (hypothesis testing, power analysis)
 - Bootstrap CI coverage properties
 - Analytical error propagation correctness
-- Hypothesis test p-value distributions and precision
-- Edge cases (small samples, extreme values)
+- Hypothesis test p-value distributions and precision ✅ IMPLEMENTED
+- Edge cases (small samples, extreme values) ✅ IMPLEMENTED
 
 ### Integration Tests
 - End-to-end analysis workflows

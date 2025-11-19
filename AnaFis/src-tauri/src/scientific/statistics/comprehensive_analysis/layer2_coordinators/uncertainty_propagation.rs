@@ -1,6 +1,5 @@
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::StatisticalDistributionEngine;
 use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::uncertainty::UncertaintyPropagationEngine;
-use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::StatisticalDistributions;
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats;
 
 #[derive(Debug, Clone)]
 pub struct UncertaintyAnalysis {
@@ -83,7 +82,7 @@ impl UncertaintyPropagationCoordinator {
         }
 
         // Use standard deviation as uncertainty estimate
-        let std_dev = StatisticalDistributionEngine::variance(data).sqrt();
+        let std_dev = UnifiedStats::variance(data).sqrt();
 
         // Assume constant relative uncertainty
         let relative_uncertainty = std_dev / data.iter().sum::<f64>() * data.len() as f64;
@@ -99,7 +98,7 @@ impl UncertaintyPropagationCoordinator {
         // Sampling uncertainty (standard error of mean) using proper propagation
         let sampling_error = UncertaintyPropagationEngine::propagate_mean_uncertainty(
             data,
-            &vec![StatisticalDistributionEngine::variance(data).sqrt(); data.len()],
+            &vec![UnifiedStats::variance(data).sqrt(); data.len()],
             None, // Assume uncorrelated sampling errors
         )?;
 
@@ -143,7 +142,7 @@ impl UncertaintyPropagationCoordinator {
 
         // Use the first confidence level for mean confidence interval (simplified)
         let mean_confidence = confidence_levels.first().copied().unwrap_or(0.95);
-        let z_score = StatisticalDistributions::normal_quantile((1.0 + mean_confidence) / 2.0, 0.0, 1.0);
+        let z_score = UnifiedStats::normal_quantile((1.0 + mean_confidence) / 2.0);
         let mean_with_uncertainty = (
             mean - z_score * mean_uncertainty,
             mean + z_score * mean_uncertainty,

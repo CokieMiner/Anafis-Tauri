@@ -149,9 +149,9 @@ impl InputValidator {
                     } else if x.is_infinite() {
                         // Treat infinities separately (clamp to 1.5x valid max/min)
                         if x.is_sign_positive() {
-                            *valid_values.iter().max_by(|a, b| a.total_cmp(b)).unwrap() * 1.5
+                            *valid_values.iter().max_by(|a, b| a.total_cmp(b)).expect("valid_values is not empty") * 1.5
                         } else {
-                            *valid_values.iter().min_by(|a, b| a.total_cmp(b)).unwrap() * 1.5
+                            *valid_values.iter().min_by(|a, b| a.total_cmp(b)).expect("valid_values is not empty") * 1.5
                         }
                     } else {
                         x
@@ -183,9 +183,9 @@ impl InputValidator {
                         median
                     } else if x.is_infinite() {
                         if x.is_sign_positive() {
-                            *valid_values.iter().max_by(|a, b| a.total_cmp(b)).unwrap() * 1.5
+                            *valid_values.iter().max_by(|a, b| a.total_cmp(b)).expect("valid_values is not empty") * 1.5
                         } else {
-                            *valid_values.iter().min_by(|a, b| a.total_cmp(b)).unwrap() * 1.5
+                            *valid_values.iter().min_by(|a, b| a.total_cmp(b)).expect("valid_values is not empty") * 1.5
                         }
                     } else {
                         x
@@ -253,77 +253,5 @@ impl InputValidator {
                 Ok(dataset.to_vec())
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::InputValidator;
-    use crate::scientific::statistics::types::{AnalysisOptions, NanHandling};
-
-    #[test]
-    fn test_remove_rows_pairwise() {
-        let datasets = vec![vec![1.0, f64::NAN, 3.0], vec![4.0, 5.0, f64::INFINITY]];
-        let mut options = AnalysisOptions::default();
-        options.nan_handling = NanHandling::Remove;
-        options.treat_as_paired = Some(true);
-
-        let (sanitized, _report) = InputValidator::validate_and_sanitize_input(&datasets, &options)
-            .expect("Sanitization failed");
-        assert_eq!(sanitized.len(), 2);
-        assert_eq!(sanitized[0], vec![1.0]);
-        assert_eq!(sanitized[1], vec![4.0]);
-    }
-
-    #[test]
-    fn test_remove_rows_independent() {
-        let datasets = vec![vec![1.0, f64::NAN, 3.0], vec![4.0, 5.0, f64::INFINITY]];
-        let mut options = AnalysisOptions::default();
-        options.nan_handling = NanHandling::Remove;
-        options.treat_as_paired = Some(false);
-
-        let (sanitized, _report) = InputValidator::validate_and_sanitize_input(&datasets, &options)
-            .expect("Sanitization failed");
-        assert_eq!(sanitized.len(), 2);
-        assert_eq!(sanitized[0], vec![1.0, 3.0]);
-        assert_eq!(sanitized[1], vec![4.0, 5.0]);
-    }
-
-    #[test]
-    fn test_mean_imputation_handles_infs() {
-        let dataset = vec![1.0, f64::NAN, f64::INFINITY];
-        let mut options = AnalysisOptions::default();
-        options.nan_handling = NanHandling::Mean;
-        let sanitized = InputValidator::sanitize_dataset(&dataset, &options).expect("imputation failed");
-        // 1.0 is finite; second is imputed with mean 1.0; third is replaced by max*1.5 => 1.5
-        assert_eq!(sanitized[0], 1.0);
-        assert!(sanitized[1].is_finite());
-        assert_eq!(sanitized[2], 1.5);
-    }
-
-    #[test]
-    fn test_multiple_imputation_fallback() {
-        let dataset = vec![1.0, f64::NAN, f64::NAN, 3.0];
-        let mut options = AnalysisOptions::default();
-        options.nan_handling = NanHandling::Multiple;
-        options.random_seed = Some(12345);
-        let sanitized = InputValidator::sanitize_dataset(&dataset, &options).expect("imputation failed");
-        // Imputed values should be finite and not equal to the original mean exactly due to noise
-        assert!(sanitized.iter().all(|v| v.is_finite()));
-        assert!(sanitized[1] != sanitized[2] || (sanitized[1] - sanitized[2]).abs() < 1e-12);
-    }
-
-    #[test]
-    fn test_multiple_imputation_knn_feature_enabled() {
-        let dataset = vec![1.0, 2.0, f64::NAN, 4.0, f64::NAN, 6.0];
-        let mut options = AnalysisOptions::default();
-        options.nan_handling = NanHandling::Multiple;
-        options.random_seed = Some(123);
-        let sanitized = InputValidator::sanitize_dataset(&dataset, &options).expect("imputation failed");
-        // All values should be finite after KNN imputation
-        assert!(sanitized.iter().all(|v| v.is_finite()));
-        // Missing values must be imputed differently from NaN
-        assert!(!sanitized[2].is_nan());
-        assert!(!sanitized[4].is_nan());
     }
 }

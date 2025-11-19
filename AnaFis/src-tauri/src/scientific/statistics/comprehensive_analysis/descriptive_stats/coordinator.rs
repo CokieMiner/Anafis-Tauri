@@ -6,11 +6,11 @@
 use rand_pcg::Pcg64;
 use crate::scientific::statistics::comprehensive_analysis::descriptive_stats::{
     central_tendency::CentralTendency,
-    dispersion::Dispersion,
     shape_statistics::ShapeStatistics,
     bootstrap_confidence::BootstrapConfidence,
     quantiles::{Quantiles, QuantileMethod},
 };
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::moments;
 use crate::scientific::statistics::types::descriptive::DescriptiveStats;
 
 /// Descriptive Statistics Coordinator
@@ -36,21 +36,31 @@ impl DescriptiveStatsCoordinator {
         }
 
         // Basic descriptive statistics
-        let (mean, variance, skewness, kurtosis) = ShapeStatistics::moments(data);
+        let (mean, variance, skewness, kurtosis) = moments::moments(data)?;
         let std_dev = variance.sqrt();
 
         let mut sorted_data = data.to_vec();
         sorted_data.sort_by(|a, b| a.total_cmp(b));
 
-        let min = Dispersion::min(data);
-        let max = Dispersion::max(data);
-        let range = Dispersion::range(data);
+        let min = data.iter().cloned().fold(f64::INFINITY, f64::min);
+        let max = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let range = max - min;
 
-        let (q1, q3) = Dispersion::quartiles(data);
-        let iqr = Dispersion::iqr(data);
+        let (q1, q3) = {
+            let mut sorted = data.to_vec();
+            sorted.sort_by(|a, b| a.total_cmp(b));
+            (Quantiles::quantile(&sorted, 0.25, QuantileMethod::Type8), Quantiles::quantile(&sorted, 0.75, QuantileMethod::Type8))
+        };
+        let iqr = q3 - q1;
 
         let cv = ShapeStatistics::coefficient_of_variation(mean, std_dev);
-        let mad = Dispersion::median_absolute_deviation(data, CentralTendency::median(data));
+        let mad = {
+            let mut deviations: Vec<f64> = data.iter()
+                .map(|x| (x - sorted_data[data.len() / 2]).abs())
+                .collect();
+            deviations.sort_by(|a, b| a.total_cmp(b));
+            Quantiles::quantile(&deviations, 0.50, QuantileMethod::Type8)
+        };
 
         // Bootstrap confidence intervals if requested
         let confidence_intervals = if let Some(n_samples) = bootstrap_samples {
@@ -79,7 +89,7 @@ impl DescriptiveStatsCoordinator {
         Ok(DescriptiveStats {
             count: data.len(),
             mean,
-            median: CentralTendency::median(data),
+            median: sorted_data[data.len() / 2],
             mode: CentralTendency::modes(data),
             std_dev,
             variance,

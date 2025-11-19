@@ -2,7 +2,6 @@
 
 use super::super::moments;
 use rayon::prelude::*;
-
 use crate::scientific::statistics::types::DistributionFit;
 
 // Import fitting functions from submodules
@@ -18,6 +17,8 @@ use super::continuous_distributions::{
 use super::extreme_distributions::{
     fit_gumbel_distribution,
     fit_pareto_distribution,
+    fit_johnson_su_distribution,
+    fit_burr_distribution,
 };
 
 use super::heavy_tail_distributions::{
@@ -45,9 +46,11 @@ impl StatisticalDistributionEngine {
             fit_gamma_distribution,
             fit_beta_distribution,
             fit_gumbel_distribution,
+            fit_pareto_distribution,
+            fit_johnson_su_distribution,
+            fit_burr_distribution,
             fit_students_t_distribution,
             fit_cauchy_distribution,
-            fit_pareto_distribution,
         ];
 
         // Fit all distributions in parallel
@@ -61,7 +64,10 @@ impl StatisticalDistributionEngine {
             .into_iter()
             .filter(|fit| fit.aic.is_finite())
             .collect::<Vec<_>>();
-        sorted_fits.sort_by(|a, b| a.aic.partial_cmp(&b.aic).unwrap());
+        sorted_fits.sort_by(|a, b| match a.aic.partial_cmp(&b.aic) {
+            Some(ord) => ord,
+            None => std::cmp::Ordering::Equal,
+        });
 
         Ok(sorted_fits)
     }
@@ -69,11 +75,6 @@ impl StatisticalDistributionEngine {
     /// Compute statistical moments (mean, variance, skewness, kurtosis)
     pub fn moments(data: &[f64]) -> Result<(f64, f64, f64, f64), String> {
         moments::moments(data)
-    }
-
-    /// Compute variance of a dataset
-    pub fn variance(data: &[f64]) -> f64 {
-        moments::variance(data)
     }
 
     /// Rank transformation for statistical tests

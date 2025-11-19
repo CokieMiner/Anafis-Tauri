@@ -11,17 +11,17 @@
 
 ## Purpose
 
-Unified tab for creating publication-quality plots and performing curve fitting. Integrates data visualization with statistical fitting in a single workflow. Supports 2D and 3D plotting with n-dimensional curve fitting capabilities.
+Unified tab for creating publication-quality plots and performing full regression analysis. Integrates data visualization with statistical regression analysis in a single workflow. Supports 2D and 3D plotting with n-dimensional regression analysis capabilities.
 
-**Note**: Uses **ECharts 6.0** (already integrated in QuickPlotSidebar) for all visualizations. Extends existing plotting infrastructure with curve fitting capabilities.
+**Note**: Uses **ECharts 6.0** (already integrated in QuickPlotSidebar) for all visualizations. Extends existing plotting infrastructure with regression analysis capabilities.
 
 **Current Implementation Tasks**:
 - [ ] **Basic Plotting Component**: Implement ECharts 2D scatter/line plots with error bars from data library
 - [ ] **Expression Parser**: Add math expression parser (fasteval/meval) for user-defined functions like 'a*exp(-x/b) + c'
-- [ ] **Fitting Backend**: Implement nonlinear least squares fitting using argmin's Levenberg-Marquardt with uncertainty propagation
-- [ ] **Fitting UI Components**: Build UI for data selection, fit functions, initial guesses
-- [ ] **Plotting-Fitting Integration**: Overlay fit curves on data plots, show residuals, display fit parameters with uncertainties
-- [ ] **Physics-Specific Functions**: Add exponential decay, damped oscillation, power laws as presets
+- [ ] **Regression Analysis Backend**: Implement nonlinear least squares regression using argmin's Levenberg-Marquardt with uncertainty propagation
+- [ ] **Regression UI Components**: Build UI for data selection, regression functions, initial guesses
+- [ ] **Plotting-Regression Integration**: Overlay regression curves on data plots, show residuals, display regression parameters with uncertainties
+- [ ] **Physics-Specific Regression Functions**: Add exponential decay, damped oscillation, power laws as presets
 
 ---
 
@@ -53,9 +53,10 @@ Unified tab for creating publication-quality plots and performing curve fitting.
 ### Fit Sub-Tab
 - **Select plot to fit** from active plots (ECharts series)
 - **Fit functions**: Linear, Polynomial, Exponential, Logarithmic, Power, Gaussian, Custom
-- **N-dimensional fitting**: Automatic detection for 2D (Y=f(X)) and 3D (Z=f(X,Y))
+- **User-defined regression functions**: Custom mathematical expressions with parameter fitting
+- **N-dimensional regression analysis**: Full regression analysis for n-dimensional datasets with automatic detection for 2D (Y=f(X)) and 3D (Z=f(X,Y))
 - **Parameter estimation**: Initial guess with auto-calculation
-- **Uncertainty weighting**: Use data uncertainties in fit (error bars from ECharts series)
+- **Uncertainty propagation**: Full uncertainty propagation in regression parameters and goodness-of-fit metrics using data uncertainties
 - **Goodness-of-fit metrics**: R², χ², RMSE
 - **Residuals plot**: Automatic residuals visualization (new ECharts series)
 - **Fit comparison**: Compare multiple fit functions for same data
@@ -294,15 +295,15 @@ Results:
 1. User switches to Fit sub-tab
 2. Selects plot to fit (radio buttons)
 3. System shows plot details (dimensions, data sources)
-4. User chooses fit function
+4. User chooses regression function
 5. (Optional) Sets initial parameter guesses
 6. Chooses weighting method
-7. Clicks "Run Fit"
-8. Backend performs least-squares fit
+7. Clicks "Run Regression"
+8. Backend performs least-squares regression
 9. Results displayed with uncertainties
-10. Fit curve overlaid on plot
+10. Regression curve overlaid on plot
 11. Residuals plot available
-12. Can save fit results to Data Library
+12. Can save regression results to Data Library
 
 ---
 
@@ -675,14 +676,14 @@ statrs = "0.17"                # ✅ Already added (for statistics)
 - ✓ Multiple series visible simultaneously with ECharts legend toggles
 - ✓ Data validation prevents length mismatches
 - ✓ Plot layers allow bulk show/hide of series
-- ✓ 2D fitting works for all function types (Rust backend)
-- ✓ 3D fitting works for planar and polynomial surfaces
+- ✓ 2D regression works for all function types (Rust backend)
+- ✓ 3D regression works for planar and polynomial surfaces
 - ✓ Parameter uncertainties calculated correctly (Rust)
 - ✓ R², χ², RMSE metrics accurate
 - ✓ Residuals plot displays correctly (ECharts series)
-- ✓ Fit comparison shows multiple fit results
+- ✓ Regression comparison shows multiple regression results
 - ✓ Non-intrusive warning when plot data changes
-- ✓ Can save fit results to Data Library
+- ✓ Can save regression results to Data Library
 - ✓ Export works (PNG, SVG via ECharts saveAsImage)
 - ✓ **Seamlessly integrates with existing ECharts infrastructure**
 - ✓ **Reuses QuickPlotSidebar patterns and components**

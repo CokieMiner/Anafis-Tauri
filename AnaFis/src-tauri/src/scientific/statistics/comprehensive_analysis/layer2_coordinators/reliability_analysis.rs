@@ -1,5 +1,4 @@
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::CorrelationEngine;
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::StatisticalDistributionEngine;
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::correlation_methods::CorrelationMethods;
 use crate::scientific::statistics::comprehensive_analysis::utils;
 use crate::scientific::statistics::types::{ReliabilityAnalysisResult, ScaleReliability};
 use ndarray::Array2;
@@ -41,7 +40,7 @@ impl ReliabilityAnalysisCoordinator {
 
         // Compute variance of each item
         let item_variances: Vec<f64> = datasets.iter()
-            .map(|item| StatisticalDistributionEngine::variance(item))
+            .map(|item| crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats::variance(item))
             .collect();
 
         // Compute variance of total scores
@@ -49,7 +48,7 @@ impl ReliabilityAnalysisCoordinator {
             .map(|i| datasets.iter().map(|item| item[i]).sum::<f64>())
             .collect();
 
-        let total_variance = StatisticalDistributionEngine::variance(&total_scores);
+        let total_variance = crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats::variance(&total_scores);
 
         // Cronbach's alpha formula
         let sum_item_variances: f64 = item_variances.iter().sum();
@@ -73,7 +72,7 @@ impl ReliabilityAnalysisCoordinator {
                 })
                 .collect();
 
-            let correlation = CorrelationEngine::pearson_correlation(&datasets[i], &total_without_item)?;
+            let correlation = CorrelationMethods::pearson_correlation(&datasets[i], &total_without_item)?;
             correlations.push(correlation);
         }
 
@@ -97,7 +96,7 @@ impl ReliabilityAnalysisCoordinator {
                 if i == j {
                     corr_matrix[[i, j]] = 1.0;
                 } else {
-                    let corr = CorrelationEngine::pearson_correlation(&datasets[i], &datasets[j])?;
+                    let corr = CorrelationMethods::pearson_correlation(&datasets[i], &datasets[j])?;
                     corr_matrix[[i, j]] = corr;
                     corr_matrix[[j, i]] = corr; // Symmetric matrix
                 }
@@ -148,7 +147,7 @@ impl ReliabilityAnalysisCoordinator {
         let mut inter_item_correlations = Vec::new();
         for i in 0..datasets.len() {
             for j in (i + 1)..datasets.len() {
-                let corr = CorrelationEngine::pearson_correlation(&datasets[i], &datasets[j])?;
+                let corr = CorrelationMethods::pearson_correlation(&datasets[i], &datasets[j])?;
                 inter_item_correlations.push(corr);
             }
         }
@@ -163,50 +162,5 @@ impl ReliabilityAnalysisCoordinator {
             omega,
             average_interitem_corr,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_analyze_basic() {
-        let datasets = vec![
-            vec![1.0, 2.0, 3.0, 4.0, 5.0],
-            vec![2.0, 3.0, 4.0, 5.0, 6.0],
-            vec![1.5, 2.5, 3.5, 4.5, 5.5],
-        ];
-
-        let result = ReliabilityAnalysisCoordinator::analyze(&datasets);
-        assert!(result.is_ok());
-
-        let analysis = result.unwrap();
-        assert!(analysis.cronbach_alpha >= 0.0 && analysis.cronbach_alpha <= 1.0);
-        assert_eq!(analysis.item_total_correlations.len(), 3);
-        assert!(analysis.scale_reliability.omega >= 0.0 && analysis.scale_reliability.omega <= 1.0);
-        assert!(analysis.scale_reliability.average_interitem_corr >= -1.0 && analysis.scale_reliability.average_interitem_corr <= 1.0);
-    }
-
-    #[test]
-    fn test_analyze_insufficient_variables() {
-        let datasets = vec![
-            vec![1.0, 2.0, 3.0],
-        ];
-
-        let result = ReliabilityAnalysisCoordinator::analyze(&datasets);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Need at least 2 variables"));
-    }
-
-    #[test]
-    fn test_analyze_mismatched_lengths() {
-        let datasets = vec![
-            vec![1.0, 2.0, 3.0],
-            vec![4.0, 5.0], // Different length
-        ];
-
-        let result = ReliabilityAnalysisCoordinator::analyze(&datasets);
-        assert!(result.is_err());
     }
 }

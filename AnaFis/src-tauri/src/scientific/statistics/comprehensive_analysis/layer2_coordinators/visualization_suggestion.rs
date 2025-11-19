@@ -1,5 +1,5 @@
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::HypothesisTestingEngine;
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::StatisticalDistributionEngine;
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::CorrelationHypothesisTestingEngine;
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::moments;
 use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::outliers::OutlierDetectionEngine;
 use crate::scientific::statistics::types::AnalysisOptions;
 
@@ -43,7 +43,7 @@ impl VisualizationSuggestionCoordinator {
 
         // Normality check - suggest Q-Q plot
         let normality_tests = if data.len() >= 3 {
-            HypothesisTestingEngine::normality_tests(data)?
+            CorrelationHypothesisTestingEngine::normality_tests(data)?
         } else {
             Vec::new()
         };
@@ -101,7 +101,7 @@ impl VisualizationSuggestionCoordinator {
         let mut suggestions = Vec::new();
 
         // Check for skewness
-        let (_, _, skewness, _) = StatisticalDistributionEngine::moments(data)?;
+        let (_, _, skewness, _) = moments::moments(data)?;
 
         if skewness.abs() > 1.0 {
             if data.iter().all(|&x| x > 0.0) {

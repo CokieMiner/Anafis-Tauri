@@ -1,8 +1,9 @@
 use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::{
-    CorrelationEngine, CorrelationTestResult, HypothesisTestingEngine,
+    correlation_matrix::CorrelationMatrix, CorrelationTestResult, CorrelationHypothesisTestingEngine,
 };
 use crate::scientific::statistics::types::AnalysisOptions;
-use ndarray::Array2;
+use ndarray::{Array1, Array2, Axis, ArrayView, Ix1};
+use ndarray::stack;
 use rand_pcg::Pcg64;
 
 #[derive(Debug, Clone)]
@@ -43,9 +44,23 @@ impl CorrelationAnalysisCoordinator {
             }
         }
 
+        // Convert to ndarray once at the entry point for efficiency
+        
+        let arrays: Vec<Array1<f64>> = datasets
+            .iter()
+            .map(|v| Array1::from_vec(v.clone()))
+            .collect();
+        
+        // Convert Vec<Array1<f64>> to Vec<ArrayView<f64, Ix1>>
+        let array_views: Vec<ArrayView<'_, f64, Ix1>> = arrays.iter().map(|arr| arr.view()).collect();
+
+        // Stack the Array1s along columns (Axis 1) to form the Array2
+        let data_array = stack(Axis(1), array_views.as_slice())
+            .map_err(|e| format!("Failed to create ndarray from datasets: {}", e))?;
+
         // Compute correlation matrix using requested method
         let method_str = options.correlation_method.as_deref().unwrap_or("pearson");
-        let correlation_matrix = CorrelationEngine::compute_matrix_with_method(datasets, method_str, options.biweight_tuning_constant.unwrap_or(9.0))?;
+        let correlation_matrix = CorrelationMatrix::compute_matrix_with_method(data_array.view(), method_str, options.biweight_tuning_constant.unwrap_or(9.0))?;
 
         // Compute correlation tests for all pairs
         let alpha = options.statistical_confidence_level.map(|c| 1.0 - c).or(Some(0.05));
@@ -53,7 +68,7 @@ impl CorrelationAnalysisCoordinator {
         let mut correlation_tests = Vec::new();
         for i in 0..datasets.len() {
             for j in (i + 1)..datasets.len() {
-                let tests = HypothesisTestingEngine::correlation_tests(&datasets[i], &datasets[j], i, j, alpha, n_permutations, rng)?;
+                let tests = CorrelationHypothesisTestingEngine::correlation_tests(&datasets[i], &datasets[j], i, j, alpha, n_permutations, rng)?;
                 correlation_tests.extend(tests);
             }
         }

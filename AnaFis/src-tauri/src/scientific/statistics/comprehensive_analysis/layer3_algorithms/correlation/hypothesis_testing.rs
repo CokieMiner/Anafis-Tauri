@@ -1,10 +1,10 @@
 //! Hypothesis testing functionality for correlations and normality
 
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::StatisticalDistributionEngine;
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::moments;
 use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::RandomSampling;
 use crate::scientific::statistics::types::NormalityTestResult;
 use crate::scientific::statistics::comprehensive_analysis::traits::{ProgressCallback, NoOpProgressCallback};
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::correlation_engine::CorrelationEngine;
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::correlation_methods::CorrelationMethods;
 use crate::scientific::statistics::types::CorrelationTestResult;
 use rand_pcg::Pcg64;
 use rand::{Rng, SeedableRng};
@@ -12,9 +12,9 @@ use statrs::distribution::ContinuousCDF;
 use rayon::prelude::*;
 
 /// Hypothesis testing engine
-pub struct HypothesisTestingEngine;
+pub struct CorrelationHypothesisTestingEngine;
 
-impl HypothesisTestingEngine {
+impl CorrelationHypothesisTestingEngine {
     /// Perform multiple normality tests using robust library implementations
     pub fn normality_tests(data: &[f64]) -> Result<Vec<NormalityTestResult>, String> {
         if data.len() < 3 {
@@ -40,8 +40,8 @@ impl HypothesisTestingEngine {
                 normality::shapiro_wilk(data_vec.clone()).ok().map(|result| {
                     NormalityTestResult {
                         test_name: "Shapiro-Wilk".to_string(),
-                        statistic: Some(result.statistic),
-                        p_value: Some(result.p_value),
+                        statistic: result.statistic,
+                        p_value: result.p_value,
                         is_normal: result.p_value > 0.05,
                         method: "Shapiro-Wilk W test".to_string(),
                     }
@@ -51,8 +51,8 @@ impl HypothesisTestingEngine {
             Some(normality::anderson_darling(data_vec.clone()).ok().map(|result| {
                 NormalityTestResult {
                     test_name: "Anderson-Darling".to_string(),
-                    statistic: Some(result.statistic),
-                    p_value: Some(result.p_value),
+                    statistic: result.statistic,
+                    p_value: result.p_value,
                     is_normal: result.p_value > 0.05,
                     method: "Anderson-Darling A² test".to_string(),
                 }
@@ -61,8 +61,8 @@ impl HypothesisTestingEngine {
             Some(normality::jarque_bera(data_vec.clone()).ok().map(|result| {
                 NormalityTestResult {
                     test_name: "Jarque-Bera".to_string(),
-                    statistic: Some(result.statistic),
-                    p_value: Some(result.p_value),
+                    statistic: result.statistic,
+                    p_value: result.p_value,
                     is_normal: result.p_value > 0.05,
                     method: "Jarque-Bera test".to_string(),
                 }
@@ -72,8 +72,8 @@ impl HypothesisTestingEngine {
                 normality::lilliefors(data_vec.clone()).ok().map(|result| {
                     NormalityTestResult {
                         test_name: "Lilliefors".to_string(),
-                        statistic: Some(result.statistic),
-                        p_value: Some(result.p_value),
+                        statistic: result.statistic,
+                        p_value: result.p_value,
                         is_normal: result.p_value > 0.05,
                         method: "Lilliefors test".to_string(),
                     }
@@ -129,8 +129,8 @@ impl HypothesisTestingEngine {
 
         Ok(NormalityTestResult {
             test_name: "D'Agostino-Pearson".to_string(),
-            statistic: Some(k_squared),
-            p_value: Some(p_value),
+            statistic: k_squared,
+            p_value: p_value,
             is_normal: p_value > 0.05,
             method: "D'Agostino-Pearson omnibus test".to_string(),
         })
@@ -181,7 +181,7 @@ impl HypothesisTestingEngine {
         rng: &mut Pcg64,
     ) -> Result<CorrelationTestResult, String> {
         let n = x.len() as f64;
-        let r = CorrelationEngine::pearson_correlation(x, y)?;
+        let r = CorrelationMethods::pearson_correlation(x, y)?;
 
         // t-statistic for correlation coefficient
         let t_statistic = if (1.0 - r * r) > 0.0 {
@@ -198,7 +198,7 @@ impl HypothesisTestingEngine {
             .map_err(|e| e.to_string())?;
         // For small samples, prefer permutation p-value for robustness
         let p_value = if x.len() <= 50 {
-            Self::permutation_p_value(x, y, |a, b| CorrelationEngine::pearson_correlation(a, b).unwrap_or(0.0), n_permutations, rng)?
+            Self::permutation_p_value(x, y, |a, b| CorrelationMethods::pearson_correlation(a, b).unwrap_or(0.0), n_permutations, rng)?
         } else {
             2.0 * (1.0 - t_dist.cdf(t_statistic.abs()))
         };
@@ -225,8 +225,8 @@ impl HypothesisTestingEngine {
         n_permutations: usize,
         rng: &mut Pcg64,
     ) -> Result<CorrelationTestResult, String> {
-        let x_ranks = StatisticalDistributionEngine::rank_transformation(x);
-        let y_ranks = StatisticalDistributionEngine::rank_transformation(y);
+        let x_ranks = moments::rank_transformation(x);
+        let y_ranks = moments::rank_transformation(y);
 
         Self::pearson_correlation_test(&x_ranks, &y_ranks, var1, var2, alpha, n_permutations, rng).map(|mut result| {
             result.method = "Spearman".to_string();
@@ -247,7 +247,7 @@ impl HypothesisTestingEngine {
         let n = x.len();
         if n < 2 { return Err("Need at least 2 observations".to_string()); }
 
-        let tau = CorrelationEngine::kendall_correlation(x, y)?;
+        let tau = CorrelationMethods::kendall_correlation(x, y)?;
 
         // Approximate variance for Kendall's tau under H0 (no ties correction)
         let n_f = n as f64;
@@ -256,7 +256,7 @@ impl HypothesisTestingEngine {
 
         // Use permutation p-value for Kendall when n small
         let p_value = if n <= 50 {
-            Self::permutation_p_value(x, y, |a, b| CorrelationEngine::kendall_correlation(a, b).unwrap_or(0.0), n_permutations, rng)?
+            Self::permutation_p_value(x, y, |a, b| CorrelationMethods::kendall_correlation(a, b).unwrap_or(0.0), n_permutations, rng)?
         } else {
             let normal = statrs::distribution::Normal::new(0.0, 1.0).map_err(|e| e.to_string())?;
             2.0 * (1.0 - normal.cdf(z.abs()))

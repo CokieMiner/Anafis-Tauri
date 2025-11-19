@@ -44,10 +44,10 @@ impl Quantiles {
 
         // Handle edge cases
         if p <= 0.0 {
-            return *sorted_data.first().unwrap();
+            return sorted_data[0];
         }
         if p >= 1.0 {
-            return *sorted_data.last().unwrap();
+            return sorted_data[sorted_data.len() - 1];
         }
 
         let (m, j) = match method {

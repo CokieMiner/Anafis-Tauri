@@ -2,7 +2,7 @@
 
 use crate::scientific::statistics::types::{AnalysisOptions, AnalysisResults, RequiredAnalyses};
 use super::super::descriptive_stats::DescriptiveStatsCoordinator;
-use super::super::layer3_algorithms::correlation::hypothesis_testing::HypothesisTestingEngine;
+use super::super::layer3_algorithms::correlation::hypothesis_testing::CorrelationHypothesisTestingEngine;
 use super::super::layer2_coordinators::{
     distribution_analysis::DistributionAnalysisCoordinator,
     outlier_analysis::OutlierAnalysisCoordinator,
@@ -12,6 +12,7 @@ use super::super::layer2_coordinators::{
     quality_control::QualityControlCoordinator,
     reliability_analysis::ReliabilityAnalysisCoordinator,
     visualization_suggestion::VisualizationSuggestionCoordinator,
+    hypothesis_testing::{HypothesisTestingCoordinator, PowerAnalysisCoordinator},
 };
 use rand_pcg::Pcg64;
 
@@ -97,7 +98,7 @@ impl AnalysisOrchestrator {
 
         // Normality test
         if required.normality_test {
-            results.normality_test = Some(HypothesisTestingEngine::normality_tests(primary_dataset)?);
+            results.normality_test = Some(CorrelationHypothesisTestingEngine::normality_tests(primary_dataset)?);
         }
 
         // Distribution analysis
@@ -217,6 +218,26 @@ impl AnalysisOrchestrator {
                 secondary_plots: vec![], // Not categorized in coordinator
                 diagnostic_plots: vec![], // Not categorized in coordinator
             });
+        }
+
+        // Hypothesis testing
+        if required.hypothesis_testing {
+            let ht_result = HypothesisTestingCoordinator::analyze(
+                datasets,
+                options,
+                &crate::scientific::statistics::comprehensive_analysis::traits::NoOpProgressCallback,
+            )?;
+            results.hypothesis_testing = Some(ht_result);
+        }
+
+        // Power analysis
+        if required.power_analysis {
+            let pa_result = PowerAnalysisCoordinator::analyze(
+                datasets,
+                options,
+                &crate::scientific::statistics::comprehensive_analysis::traits::NoOpProgressCallback,
+            )?;
+            results.power_analysis = Some(pa_result);
         }
 
         Ok(results)

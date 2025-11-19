@@ -12,3 +12,4 @@ pub mod reliability_analysis;
 pub mod time_series_analysis;
 pub mod uncertainty_propagation;
 pub mod visualization_suggestion;
+pub mod hypothesis_testing;

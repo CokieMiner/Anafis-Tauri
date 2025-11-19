@@ -51,7 +51,7 @@ impl ShapeStatistics {
         }
 
         let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let variance = super::dispersion::Dispersion::variance(data);
+        let variance = crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats::variance(data);
         let std_dev = variance.sqrt();
 
         if std_dev.abs() < 1e-10 {
@@ -74,7 +74,7 @@ impl ShapeStatistics {
         }
 
         let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let variance = super::dispersion::Dispersion::variance(data);
+        let variance = crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats::variance(data);
         let std_dev = variance.sqrt();
 
         if std_dev.abs() < 1e-10 {
@@ -88,15 +88,5 @@ impl ShapeStatistics {
 
         // Excess kurtosis (subtract 3 for normal distribution)
         kurtosis_sum / n - 3.0
-    }
-
-    /// Compute all moments (mean, variance, skewness, kurtosis)
-    pub fn moments(data: &[f64]) -> (f64, f64, f64, f64) {
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let variance = super::dispersion::Dispersion::variance(data);
-        let skewness = Self::skewness(data);
-        let kurtosis = Self::kurtosis(data);
-
-        (mean, variance, skewness, kurtosis)
     }
 }

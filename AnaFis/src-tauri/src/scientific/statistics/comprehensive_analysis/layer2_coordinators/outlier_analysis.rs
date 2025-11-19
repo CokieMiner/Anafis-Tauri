@@ -1,5 +1,6 @@
 use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::outliers::OutlierDetectionEngine;
-use crate::scientific::statistics::types::{AnalysisOptions, OutlierAnalysisResult, RobustStatistics, WinsorizedStatistics, analysis::OutlierAnalysis, analysis::OutlierInfo};
+use crate::scientific::statistics::types::{AnalysisOptions, OutlierAnalysisResult, RobustStatistics, WinsorizedStatistics, analysis::OutlierAnalysis};
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::outliers::OutlierInfo;
 use crate::scientific::statistics::comprehensive_analysis::descriptive_stats::{DescriptiveStatsCoordinator, quantiles::QuantileMethod};
 
 /// Outlier Analysis Coordinator
@@ -24,6 +25,8 @@ impl OutlierAnalysisCoordinator {
                 value: data[idx],
                 z_score: None, // Would need to compute
                 iqr_distance: None, // Would need to compute
+                lof_score: None,
+                isolation_score: None,
             }).collect(),
             threshold: 0.1, // Default threshold
             contamination_rate: outlier_result.outlier_percentage / 100.0,
@@ -69,6 +72,8 @@ impl OutlierAnalysisCoordinator {
                 value: data[idx],
                 z_score: None, // Would need to compute
                 iqr_distance: None, // Would need to compute
+                lof_score: None,
+                isolation_score: None,
             }).collect(),
             threshold: 0.1, // Default threshold
             contamination_rate: outlier_result.outlier_percentage / 100.0,
@@ -131,8 +136,8 @@ impl OutlierAnalysisCoordinator {
         sorted_data.sort_by(|a, b| a.total_cmp(b));
 
     let trim_count = (data.len() as f64 * trim_percent) as usize;
-    let lower_bound = if data.len() > trim_count { sorted_data[trim_count] } else { *sorted_data.first().unwrap() };
-    let upper_bound = if data.len() > trim_count { sorted_data[data.len() - 1 - trim_count] } else { *sorted_data.last().unwrap() };
+    let lower_bound = if data.len() > trim_count { sorted_data[trim_count] } else { sorted_data[0] };
+    let upper_bound = if data.len() > trim_count { sorted_data[data.len() - 1 - trim_count] } else { sorted_data[sorted_data.len() - 1] };
 
         // Winsorize the data
         let winsorized_data: Vec<f64> = data.iter()

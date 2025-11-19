@@ -49,7 +49,7 @@ impl BootstrapConfidence {
 
         let std_dev_ci = Self::bca_confidence_intervals(
             data,
-            |sample| super::dispersion::Dispersion::variance(sample).sqrt(),
+            |sample| crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats::variance(sample).sqrt(),
             confidence_level,
             n_samples,
             rng,
@@ -153,7 +153,7 @@ impl BootstrapConfidence {
 
         let std_dev_ci = Self::uncertainty_aware_bootstrap_statistic(
             data, uncertainties, confidence_levels,
-            |sample| super::dispersion::Dispersion::variance(sample).sqrt(),
+            |sample| crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats::variance(sample).sqrt(),
             confidence_level, n_samples, rng
         )?;
 

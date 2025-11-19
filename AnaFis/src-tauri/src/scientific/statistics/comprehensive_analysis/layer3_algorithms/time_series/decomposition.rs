@@ -1,5 +1,5 @@
 use crate::scientific::statistics::types::*;
-use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::StatisticalDistributions;
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats;
 use statrs::distribution::ContinuousCDF;
 use rayon::prelude::*;
 use statrs::distribution::ChiSquared;
@@ -306,7 +306,7 @@ impl TimeSeriesDecompositionEngine {
         // t-test for slope significance
         let se_slope = (ss_res / (n - 2.0)).sqrt() / (sum_x2 - sum_x * sum_x / n).sqrt();
         let t_statistic = slope / se_slope;
-        let p_value = 2.0 * (1.0 - StatisticalDistributions::t_cdf(t_statistic.abs(), n - 2.0));
+        let p_value = 2.0 * (1.0 - UnifiedStats::t_cdf(t_statistic.abs(), n - 2.0));
 
         Ok(TrendAnalysis {
             trend_present: p_value < 0.05,
@@ -319,22 +319,11 @@ impl TimeSeriesDecompositionEngine {
 
     /// Autocorrelation function
     pub fn autocorrelation(data: &[f64], max_lag: usize) -> Result<Vec<f64>, String> {
-        if data.len() < max_lag + 1 {
-            return Err("Data too short for requested lag".to_string());
-        }
-
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let variance = data.iter().map(|x| (x - mean).powi(2)).sum::<f64>();
-
-        let autocorr: Vec<f64> = (1..=max_lag).into_par_iter().map(|lag| {
-            let mut covariance = 0.0;
-            for i in lag..data.len() {
-                covariance += (data[i] - mean) * (data[i - lag] - mean);
-            }
-            covariance / variance
-        }).collect();
-
-        Ok(autocorr)
+        // Use the centralized correlation module's autocorrelation function
+        let full_acf = crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::correlation_matrix::CorrelationMatrix::autocorrelation(data, max_lag)?;
+        
+        // Return lags 1 to max_lag (excluding lag 0 which is always 1.0) for backward compatibility
+        Ok(full_acf.into_iter().skip(1).collect())
     }
 
     /// Ljung-Box test for overall randomness / lack of autocorrelation

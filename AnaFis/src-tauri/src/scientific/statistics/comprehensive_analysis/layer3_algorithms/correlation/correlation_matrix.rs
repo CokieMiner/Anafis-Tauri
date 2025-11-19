@@ -3,29 +3,23 @@
 use ndarray::{Array2, ArrayView2};
 use ndarray_linalg::Inverse;
 use rayon::prelude::*;
-use statrs::distribution::ContinuousCDF;
 use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::correlation_methods::CorrelationMethods;
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::correlation_utils::ensure_positive_definite;
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats;
 
 /// Correlation matrix operations
 pub struct CorrelationMatrix;
 
 impl CorrelationMatrix {
     /// Compute correlation matrix for multiple variables
-    pub fn correlation_matrix(data: &[Vec<f64>]) -> Result<Array2<f64>, String> {
-        let n_vars = data.len();
+    pub fn correlation_matrix(data: ArrayView2<f64>) -> Result<Array2<f64>, String> {
+        let n_vars = data.ncols();
         if n_vars == 0 {
             return Err("No data provided".to_string());
         }
 
-        let n_obs = data[0].len();
+        let n_obs = data.nrows();
         if n_obs < 2 {
             return Err("Need at least 2 observations for correlation computation".to_string());
-        }
-        for (i, var) in data.iter().enumerate() {
-            if var.len() != n_obs {
-                return Err(format!("Variable {} has {} observations, expected {}", i, var.len(), n_obs));
-            }
         }
 
         let mut matrix = Array2::<f64>::zeros((n_vars, n_vars));
@@ -39,7 +33,9 @@ impl CorrelationMatrix {
                 let corr = if i == j {
                     1.0
                 } else {
-                    CorrelationMethods::pearson_correlation(&data[i], &data[j]).unwrap_or(f64::NAN)
+                    let col_i = data.column(i);
+                    let col_j = data.column(j);
+                    CorrelationMethods::pearson_correlation(col_i.as_slice().unwrap(), col_j.as_slice().unwrap()).unwrap_or(f64::NAN)
                 };
                 (i, j, corr)
             })
@@ -55,18 +51,13 @@ impl CorrelationMatrix {
     }
 
     /// Compute correlation matrix using specified correlation method
-    pub fn compute_matrix_with_method(datasets: &[Vec<f64>], method: &str, biweight_tuning: f64) -> Result<Array2<f64>, String> {
-        let mut correlation_matrix = Self::compute_matrix_with_method_unchecked(datasets, method, biweight_tuning)?;
-
-        // Ensure the matrix is positive semi-definite
-        ensure_positive_definite(&mut correlation_matrix);
-
-        Ok(correlation_matrix)
+    pub fn compute_matrix_with_method(data: ArrayView2<f64>, method: &str, biweight_tuning: f64) -> Result<Array2<f64>, String> {
+        Self::compute_matrix_with_method_unchecked(data, method, biweight_tuning)
     }
 
     /// Compute correlation matrix without positive definiteness check
-    pub fn compute_matrix_with_method_unchecked(datasets: &[Vec<f64>], method: &str, biweight_tuning: f64) -> Result<Array2<f64>, String> {
-        let n_vars = datasets.len();
+    pub fn compute_matrix_with_method_unchecked(data: ArrayView2<f64>, method: &str, biweight_tuning: f64) -> Result<Array2<f64>, String> {
+        let n_vars = data.ncols();
         if n_vars < 2 {
             return Err("Need at least 2 datasets for correlation matrix".to_string());
         }
@@ -83,16 +74,18 @@ impl CorrelationMatrix {
             .into_par_iter()
             .flat_map(|i| {
                 (i + 1..n_vars).into_par_iter().map(move |j| {
+                    let col_i = data.column(i).to_vec();
+                    let col_j = data.column(j).to_vec();
                     let corr = match method {
-                        "pearson" => CorrelationMethods::pearson_correlation(&datasets[i], &datasets[j])
+                        "pearson" => CorrelationMethods::pearson_correlation(&col_i, &col_j)
                             .expect("Correlation computation should not fail for valid datasets"),
-                        "spearman" => CorrelationMethods::spearman_correlation(&datasets[i], &datasets[j])
+                        "spearman" => CorrelationMethods::spearman_correlation(&col_i, &col_j)
                             .expect("Correlation computation should not fail for valid datasets"),
-                        "kendall" => CorrelationMethods::kendall_correlation(&datasets[i], &datasets[j])
+                        "kendall" => CorrelationMethods::kendall_correlation(&col_i, &col_j)
                             .expect("Correlation computation should not fail for valid datasets"),
-                        "biweight" => CorrelationMethods::biweight_midcorrelation_tuned(&datasets[i], &datasets[j], biweight_tuning)
+                        "biweight" => CorrelationMethods::biweight_midcorrelation_tuned(&col_i, &col_j, biweight_tuning)
                             .expect("Correlation computation should not fail for valid datasets"),
-                        _ => CorrelationMethods::pearson_correlation(&datasets[i], &datasets[j])
+                        _ => CorrelationMethods::pearson_correlation(&col_i, &col_j)
                             .expect("Correlation computation should not fail for valid datasets"),
                     };
                     (i, j, corr)
@@ -110,8 +103,8 @@ impl CorrelationMatrix {
     }
 
     /// Compute partial correlations
-    pub fn partial_correlations(data: &[Vec<f64>]) -> Result<Array2<f64>, String> {
-        let n_vars = data.len();
+    pub fn partial_correlations(data: ArrayView2<f64>) -> Result<Array2<f64>, String> {
+        let n_vars = data.ncols();
         if n_vars < 3 {
             return Err("Partial correlations require at least 3 variables".to_string());
         }
@@ -279,12 +272,12 @@ impl CorrelationMatrix {
 
     /// Compute correlation matrix with significance testing
     pub fn correlation_matrix_with_significance(
-        data: &[Vec<f64>],
+        data: ArrayView2<f64>,
         alpha: f64,
     ) -> Result<(Array2<f64>, Array2<bool>), String> {
         let corr_matrix = Self::correlation_matrix(data)?;
-        let n_vars = data.len();
-        let n_obs = data[0].len();
+        let n_vars = data.ncols();
+        let n_obs = data.nrows();
 
         let mut significance_matrix = Array2::<bool>::from_elem((n_vars, n_vars), false);
 
@@ -306,16 +299,17 @@ impl CorrelationMatrix {
 
     /// Approximate quantile of Student's t distribution
     fn students_t_quantile(p: f64, df: usize) -> f64 {
-        // Approximation using normal distribution for large df
-        if df > 30 {
-            let normal = statrs::distribution::Normal::new(0.0, 1.0).unwrap();
-            return normal.inverse_cdf(p);
+        // Use UnifiedStats for accurate quantile calculation
+        match UnifiedStats::t_quantile(p, df as f64) {
+            Ok(quantile) => quantile,
+            Err(_) => {
+                // Fallback to normal approximation for large df
+                if df > 30 {
+                    UnifiedStats::normal_quantile(p)
+                } else {
+                    0.0 // Should not happen with proper error handling
+                }
+            }
         }
-
-        // For small df, use approximation
-        let df_f = df as f64;
-        let z = statrs::distribution::Normal::new(0.0, 1.0).unwrap().inverse_cdf(p);
-        z + (z.powi(3) + z) / (4.0 * df_f) + (5.0 * z.powi(5) + 16.0 * z.powi(3) + 3.0 * z) / (96.0 * df_f.powi(2))
-            + (3.0 * z.powi(7) + 19.0 * z.powi(5) + 17.0 * z.powi(3) - 15.0 * z) / (384.0 * df_f.powi(3))
     }
 }

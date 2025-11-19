@@ -6,7 +6,6 @@ use super::super::layer2_coordinators::quality_control::QualityControlCoordinato
 use super::super::layer2_coordinators::reliability_analysis::ReliabilityAnalysisCoordinator;
 use super::super::layer3_algorithms::time_series::decomposition::TimeSeriesDecompositionEngine;
 use super::super::layer3_algorithms::time_series::stationarity::StationarityEngine;
-use super::super::layer3_algorithms::distribution::StatisticalDistributionEngine;
 
 /// Pattern detection and analysis type determination
 pub struct PatternDetector;
@@ -28,6 +27,8 @@ impl PatternDetector {
             quality_control: Self::detect_process_data(datasets, options)?,
             reliability_analysis: datasets.len() >= 3 && Self::detect_scale_data(datasets, options)?,
             visualization_suggestions: true, // Always provide
+            hypothesis_testing: Self::detect_hypothesis_testing_needs(datasets, options)?,
+            power_analysis: Self::detect_power_analysis_needs(datasets, options)?,
         };
 
         // Override based on options
@@ -42,6 +43,8 @@ impl PatternDetector {
             required.quality_control = analyses.contains(&"quality_control".to_string());
             required.reliability_analysis = analyses.contains(&"reliability_analysis".to_string());
             required.visualization_suggestions = analyses.contains(&"visualization_suggestions".to_string());
+            required.hypothesis_testing = analyses.contains(&"hypothesis_testing".to_string());
+            required.power_analysis = analyses.contains(&"power_analysis".to_string());
         }
 
         Ok(required)
@@ -89,7 +92,7 @@ impl PatternDetector {
 
         // Check for process-like characteristics
         let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let std_dev = StatisticalDistributionEngine::variance(data).sqrt();
+        let std_dev = crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats::variance(data).sqrt();
 
         // Process data often has low coefficient of variation
         let cv = if mean != 0.0 { std_dev / mean.abs() } else { f64::INFINITY };
@@ -119,5 +122,19 @@ impl PatternDetector {
         let min_item_total = rel.item_total_correlations.iter().map(|r| r.abs()).fold(f64::INFINITY, |a, b| a.min(b));
 
         Ok(rel.cronbach_alpha >= alpha_threshold && rel.scale_reliability.omega >= omega_threshold && min_item_total > 0.3)
+    }
+
+    /// Detect if hypothesis testing is appropriate
+    pub fn detect_hypothesis_testing_needs(datasets: &[Vec<f64>], _options: &AnalysisOptions) -> Result<bool, String> {
+        // Hypothesis testing is useful when we have enough data for meaningful tests
+        let min_samples = 5; // Minimum samples for basic t-tests
+        Ok(datasets.iter().all(|d| d.len() >= min_samples) && !datasets.is_empty())
+    }
+
+    /// Detect if power analysis is appropriate
+    pub fn detect_power_analysis_needs(datasets: &[Vec<f64>], _options: &AnalysisOptions) -> Result<bool, String> {
+        // Power analysis is useful for experimental design and interpreting results
+        let min_samples = 10; // Need reasonable sample size for power calculations
+        Ok(datasets.iter().any(|d| d.len() >= min_samples))
     }
 }

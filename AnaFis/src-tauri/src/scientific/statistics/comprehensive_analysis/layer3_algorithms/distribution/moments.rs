@@ -1,5 +1,7 @@
 //! Statistical moments computation
 
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats;
+
 /// Compute statistical moments (mean, variance, skewness, kurtosis)
 pub fn moments(data: &[f64]) -> Result<(f64, f64, f64, f64), String> {
     if data.is_empty() {
@@ -7,10 +9,8 @@ pub fn moments(data: &[f64]) -> Result<(f64, f64, f64, f64), String> {
     }
 
     let n = data.len() as f64;
-    let mean = data.iter().sum::<f64>() / n;
-
-    let variance = data.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0);
-
+    let mean = UnifiedStats::mean(data);
+    let variance = UnifiedStats::variance(data);
     let std_dev = variance.sqrt();
 
     if std_dev == 0.0 {
@@ -26,25 +26,16 @@ pub fn moments(data: &[f64]) -> Result<(f64, f64, f64, f64), String> {
     Ok((mean, variance, skewness, kurtosis))
 }
 
-/// Compute variance of a dataset
-pub fn variance(data: &[f64]) -> f64 {
-    if data.len() < 2 {
-        return 0.0;
-    }
-
-    let mean = data.iter().sum::<f64>() / data.len() as f64;
-    data.iter()
-        .map(|x| (x - mean).powi(2))
-        .sum::<f64>() / ((data.len() - 1) as f64)
-}
-
 /// Rank transformation for statistical tests
 pub fn rank_transformation(data: &[f64]) -> Vec<f64> {
     let mut indexed_data: Vec<(f64, usize)> = data.iter().enumerate()
         .map(|(i, &x)| (x, i))
         .collect();
 
-    indexed_data.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    indexed_data.sort_by(|a, b| match a.0.partial_cmp(&b.0) {
+        Some(ord) => ord,
+        None => std::cmp::Ordering::Equal,
+    });
 
     let mut ranks = vec![0.0; data.len()];
     let mut _current_rank = 1.0;

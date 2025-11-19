@@ -3,7 +3,7 @@
 //! This module provides fundamental linear algebra operations
 //! using BLAS/LAPACK through ndarray-linalg.
 
-use ndarray::{Array2, Array1, s};
+use ndarray::{Array2, Array1, s, Axis};
 use ndarray_linalg::cholesky::Cholesky;
 use ndarray_linalg::eigh::Eigh;
 use ndarray_linalg::svd::SVD;
@@ -62,8 +62,8 @@ impl LinearAlgebra {
         let svd = SVD::svd(matrix, true, true)
             .map_err(|_| "SVD decomposition failed".to_string())?;
 
-        let u = svd.0.unwrap_or_else(|| Array2::eye(matrix.nrows()));
-        let v_t = svd.2.unwrap_or_else(|| Array2::eye(matrix.ncols()));
+        let u = svd.0.ok_or_else(|| "SVD failed to compute left singular vectors".to_string())?;
+        let v_t = svd.2.ok_or_else(|| "SVD failed to compute right singular vectors".to_string())?;
 
         // Return thin SVD: U is m×min(m,n), V^T is min(m,n)×n
         let min_dim = matrix.nrows().min(matrix.ncols());
@@ -128,5 +128,34 @@ impl LinearAlgebra {
     /// Matrix trace
     pub fn trace(matrix: &Array2<f64>) -> f64 {
         matrix.diag().sum()
+    }
+
+    /// Covariance matrix computation using ndarray (more memory efficient for large datasets)
+    pub fn covariance_matrix(data: &Array2<f64>) -> Result<Array2<f64>, String> {
+        if data.nrows() < 2 {
+            return Err("Need at least 2 observations for covariance".to_string());
+        }
+
+        let n = data.nrows() as f64;
+        let mean = data.mean_axis(Axis(0)).ok_or("Failed to compute mean")?;
+
+        // Center the data using broadcasting
+        let centered = data - &mean.insert_axis(Axis(0));
+
+        // Compute covariance matrix
+        let cov = centered.t().dot(&centered) / (n - 1.0);
+        Ok(cov)
+    }
+
+    /// Efficient matrix operations for very large matrices using ndarray's memory layout
+    pub fn large_matrix_multiply(a: &Array2<f64>, b: &Array2<f64>) -> Result<Array2<f64>, String> {
+        // ndarray's dot product is optimized for large matrices
+        Self::matrix_multiply(a, b)
+    }
+
+    /// Memory-efficient eigenvalue computation for large symmetric matrices
+    pub fn large_eigenvalue_decomposition(matrix: &Array2<f64>) -> Result<(Array1<f64>, Array2<f64>), String> {
+        // Use parallel eigenvalue decomposition for large matrices
+        Self::parallel_eigenvalue_decomposition(matrix)
     }
 }

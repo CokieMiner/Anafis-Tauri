@@ -2,8 +2,8 @@ use crate::scientific::statistics::types::NormalityTestResult;
 use argmin::core::{CostFunction, Executor};
 use argmin::solver::brent::BrentRoot;
 use crate::scientific::statistics::types::DistributionFit;
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::fitting::StatisticalDistributionEngine;
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::hypothesis_testing::HypothesisTestingEngine;
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::fitters::distribution_fitting_core::StatisticalDistributionEngine as CoreEngine;
+use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::correlation::hypothesis_testing::CorrelationHypothesisTestingEngine;
 
 
 #[derive(Debug, Clone)]
@@ -77,13 +77,13 @@ impl DistributionAnalysisCoordinator {
 
         // Normality tests (only if sufficient data)
         let normality_tests = if data.len() >= 3 {
-            HypothesisTestingEngine::normality_tests(data)?
+            CorrelationHypothesisTestingEngine::normality_tests(data)?
         } else {
             Vec::new() // Empty vector for small datasets
         };
 
         // Distribution fitting
-        let distribution_fits = StatisticalDistributionEngine::fit_distributions(data)?;
+        let distribution_fits = CoreEngine::fit_distributions(data)?;
 
         // Determine best fit
         let best_fit = distribution_fits.first().cloned();
@@ -114,10 +114,10 @@ impl DistributionAnalysisCoordinator {
         // Get current normality (use Shapiro-Wilk if available, otherwise average)
         let current_normality = normality_tests.iter()
             .find(|test| test.test_name == "Shapiro-Wilk")
-            .and_then(|test| test.p_value)
+            .map(|test| test.p_value)
             .unwrap_or_else(|| {
                 let valid_p_values: Vec<f64> = normality_tests.iter()
-                    .filter_map(|test| test.p_value)
+                    .map(|test| test.p_value)
                     .collect();
                 if valid_p_values.is_empty() {
                     0.0
@@ -129,8 +129,8 @@ impl DistributionAnalysisCoordinator {
         // Try log transformation
         if data.iter().all(|&x| x > 0.0) {
             let log_data: Vec<f64> = data.iter().map(|x| x.ln()).collect();
-            let log_normality = HypothesisTestingEngine::normality_tests(&log_data)?
-                .first().and_then(|test| test.p_value).unwrap_or(0.0);
+            let log_normality = CorrelationHypothesisTestingEngine::normality_tests(&log_data)?
+                .first().map(|test| test.p_value).unwrap_or(0.0);
 
             if log_normality > current_normality {
                 suggestions.push(TransformationSuggestion {
@@ -144,8 +144,8 @@ impl DistributionAnalysisCoordinator {
         // Try square root transformation
         if data.iter().all(|&x| x >= 0.0) {
             let sqrt_data: Vec<f64> = data.iter().map(|x| x.sqrt()).collect();
-            let sqrt_normality = HypothesisTestingEngine::normality_tests(&sqrt_data)?
-                .first().and_then(|test| test.p_value).unwrap_or(0.0);
+            let sqrt_normality = CorrelationHypothesisTestingEngine::normality_tests(&sqrt_data)?
+                .first().map(|test| test.p_value).unwrap_or(0.0);
 
             if sqrt_normality > current_normality {
                 suggestions.push(TransformationSuggestion {
@@ -159,8 +159,8 @@ impl DistributionAnalysisCoordinator {
         // Try Yeo-Johnson transformation (can handle negative values)
         {
             if let Ok(yeojohnson_result) = Self::yeo_johnson_transform_optimized(data) {
-                let yeojohnson_normality = HypothesisTestingEngine::normality_tests(&yeojohnson_result.transformed)?
-                    .first().and_then(|test| test.p_value).unwrap_or(0.0);
+                let yeojohnson_normality = CorrelationHypothesisTestingEngine::normality_tests(&yeojohnson_result.transformed)?
+                    .first().map(|test| test.p_value).unwrap_or(0.0);
 
                 if yeojohnson_normality > current_normality {
                     suggestions.push(TransformationSuggestion {
@@ -213,7 +213,7 @@ impl DistributionAnalysisCoordinator {
             .run()
             .map_err(|e| format!("Yeo-Johnson optimization failed: {:?}", e))?;
         
-        Ok(*res.state().best_param.as_ref().unwrap())
+        Ok(*res.state().best_param.as_ref().expect("best_param should be set after successful run"))
     }
 
     /// Apply Yeo-Johnson transformation with given lambda

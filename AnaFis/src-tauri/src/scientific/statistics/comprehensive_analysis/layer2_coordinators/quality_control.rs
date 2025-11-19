@@ -1,5 +1,4 @@
-use crate::scientific::statistics::comprehensive_analysis::layer3_algorithms::distribution::StatisticalDistributionEngine;
-use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::StatisticalDistributions;
+use crate::scientific::statistics::comprehensive_analysis::layer4_primitives::UnifiedStats;
 
 #[derive(Debug, Clone)]
 pub struct QualityControlAnalysis {
@@ -35,8 +34,8 @@ impl QualityControlCoordinator {
         }
 
         // Control limits (assuming normal distribution)
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let std_dev = StatisticalDistributionEngine::variance(data).sqrt();
+        let mean = UnifiedStats::mean(data);
+        let std_dev = UnifiedStats::std_dev(data);
 
         let control_limits = ControlLimits {
             center_line: mean,
@@ -63,8 +62,8 @@ impl QualityControlCoordinator {
 
     /// Compute process capability indices
     fn compute_process_capability(data: &[f64], lsl: f64, usl: f64) -> Result<ProcessCapability, String> {
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let std_dev = StatisticalDistributionEngine::variance(data).sqrt();
+        let mean = UnifiedStats::mean(data);
+        let std_dev = UnifiedStats::std_dev(data);
 
         let tolerance = usl - lsl;
         let cp = tolerance / (6.0 * std_dev);
@@ -75,8 +74,8 @@ impl QualityControlCoordinator {
         let cpk = cpu.min(cpl);
 
         // PPM defective (simplified)
-        let ppm_defective = (1.0 - StatisticalDistributions::normal_cdf(usl, mean, std_dev) +
-                           StatisticalDistributions::normal_cdf(lsl, mean, std_dev)) * 1_000_000.0;
+        let ppm_defective = (1.0 - UnifiedStats::normal_cdf(usl, mean, std_dev) +
+                           UnifiedStats::normal_cdf(lsl, mean, std_dev)) * 1_000_000.0;
 
         Ok(ProcessCapability {
             cp,
