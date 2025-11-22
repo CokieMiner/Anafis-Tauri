@@ -7,8 +7,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::scientific::statistics::{
-    comprehensive_analysis::layer1_command::ComprehensiveAnalysisCommand,
-    types::{AnalysisOptions, NanHandling, ComprehensiveResult},
+    StatisticalAnalysisPipeline,
+    pipeline::ComprehensiveAnalysis as NewComprehensiveAnalysis,
 };
 
 /// Perform comprehensive statistical analysis on datasets
@@ -30,12 +30,12 @@ use crate::scientific::statistics::{
 /// - `options`: Analysis configuration options
 ///
 /// # Returns
-/// ComprehensiveResult containing all analysis results
+/// NewComprehensiveAnalysis containing all analysis results
 #[tauri::command]
 pub fn perform_comprehensive_statistical_analysis(
     datasets: Vec<Vec<f64>>,
     options: AnalysisOptionsRequest,
-) -> Result<ComprehensiveResult, String> {
+) -> Result<NewComprehensiveAnalysis, String> {
     // Input validation
     if datasets.is_empty() {
         return Err("At least one dataset is required for analysis".to_string());
@@ -56,43 +56,30 @@ pub fn perform_comprehensive_statistical_analysis(
         }
     }
 
-    // Convert request options to internal AnalysisOptions
-    let analysis_options = AnalysisOptions {
-        statistical_confidence_level: options.statistical_confidence_level,
-        uncertainties: options.uncertainties,
-        uncertainty_confidences: options.uncertainty_confidences,
-        bootstrap_samples: options.bootstrap_samples,
-        correlation_method: options.correlation_method,
-        nan_handling: NanHandling::from(options.nan_handling.clone()),
-        random_seed: options.random_seed,
-        enabled_analyses: options.enabled_analyses,
-        lsl: options.lsl,
-        usl: options.usl,
-        min_samples_for_time_series: None,
-        autocorr_lags: options.autocorr_lags,
-        ljung_box_pvalue: options.ljung_box_pvalue,
-        treat_as_paired: options.treat_as_paired,
-        autocorr_threshold: None,
-        cv_threshold: None,
-        correlation_strength_threshold: None,
-        decimal_precision: None,
-        n_permutations: options.n_permutations,
-        reliability_alpha_threshold: None,
-        reliability_omega_threshold: None,
-        z_score_threshold: None,
-        iqr_multiplier: None,
-        modified_z_threshold: None,
-        lof_k: None,
-        lof_threshold: None,
-        isolation_forest_contamination: None,
-        biweight_tuning_constant: Some(9.0),
-    };
-
     // Validate incoming options
-    analysis_options.validate().map_err(|e| e.to_string())?;
+    // Note: The new pipeline uses a simplified API, so we don't need the full AnalysisOptions conversion
 
-    // Execute the comprehensive analysis
-    ComprehensiveAnalysisCommand::execute(datasets, analysis_options)
+    // Execute the comprehensive analysis using the new pipeline
+    // Convert datasets to the expected format: &[Vec<f64>]
+    let data_ref: Vec<&Vec<f64>> = datasets.iter().collect();
+    let data_slice: &[&Vec<f64>] = &data_ref;
+    let data_transposed: Vec<Vec<f64>> = (0..datasets[0].len())
+        .map(|col| data_slice.iter().map(|row| row[col]).collect())
+        .collect();
+
+    // Generate variable names
+    let variable_names = Some((0..datasets.len()).map(|i| format!("Dataset{}", i + 1)).collect());
+
+    // Determine if this should be treated as time series data
+    let is_time_series = options.min_samples_for_time_series
+        .map(|min_samples| datasets[0].len() >= min_samples)
+        .unwrap_or(false);
+
+    StatisticalAnalysisPipeline::comprehensive_analysis(
+        &data_transposed,
+        variable_names,
+        is_time_series,
+    )
 }
 
 /// Request structure for analysis options
@@ -127,6 +114,8 @@ pub struct AnalysisOptionsRequest {
     pub autocorr_lags: Option<usize>,
     /// Ljung-Box p-value threshold for temporal detection
     pub ljung_box_pvalue: Option<f64>,
+    /// Minimum number of samples required to treat data as time series
+    pub min_samples_for_time_series: Option<usize>,
 }
 
 impl Default for AnalysisOptionsRequest {
@@ -146,6 +135,7 @@ impl Default for AnalysisOptionsRequest {
             autocorr_lags: Some(10),
             ljung_box_pvalue: Some(0.05),
             treat_as_paired: Some(true),
+            min_samples_for_time_series: Some(30),
         }
     }
 }

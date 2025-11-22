@@ -228,6 +228,7 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 -   [x] 18. ESLint Configuration (Flat config v9, 0 disable comments, 0 suppressed messages)
 -   [x] 19. TypeScript Strict Mode (100% type coverage, no 'any' types, strict null checks)
 -   [x] 20. Rust Backend Optimization (Clippy compliant, modern Rust idioms)
+-   [x] 21. Statistical Approximations Fixes (Kurtosis formula corrected to use sample variance, skewness test expectations fixed, KS statistic calculation corrected, Burr Type XII PDF missing -ln(lambda) term fixed)
 
 ### 📋 **CURRENT STATUS**
 **Core Infrastructure**: ✅ COMPLETE
@@ -245,7 +246,7 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 - Plugin-based extension architecture to work around Univer constraints
 
 ### 🔄 **PLANNED TASKS**
--   [ ] 21. Statistical Analysis Sidebar Implementation (Contextual interface with 5 analysis types)
+-   [ ] 22. Statistical Analysis Sidebar Implementation (Contextual interface with 5 analysis types)
 -   [ ] 22. Statistical Analysis Backend (Rust functions for all analysis types)
 -   [ ] 23. Weighted Statistics Implementation (χ² analysis, uncertainty propagation)
 -   [ ] 24. Hypothesis Testing Implementation (t-tests, normality tests)

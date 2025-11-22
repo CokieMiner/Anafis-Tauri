@@ -152,57 +152,19 @@ fn calculate_derivatives_with_python(
         Ok(derivatives)
     })
 }
-
+use crate::scientific::statistics::distributions::distribution_functions;
 /// Convert confidence percentage to sigma value using approximation
 /// This approximates the inverse cumulative distribution function of the normal distribution
 fn confidence_to_sigma(confidence: f64) -> f64 {
-    // Convert percentage to proportion (0.5 to 0.999)
+    // Convert percentage to proportion (e.g., 95.0 -> 0.95)
     let p = confidence / 100.0;
+    
+    // Calculate the target quantile for a two-sided interval
+    // e.g., 95% confidence -> 2.5% tails -> 0.975 quantile
+    let target_quantile = 1.0 - (1.0 - p) / 2.0;
 
-    // For two-sided confidence intervals, we want the quantile for (1+p)/2
-    // because p% confidence means (100-p)% outside, so (100-p)/2 on each tail
-    let quantile = (1.0 + p) / 2.0;
-
-    // Approximation of the inverse normal CDF using polynomial approximation
-    // This is a simplified version of the Beasley-Springer-Moro algorithm
-    if quantile <= 0.5 {
-        return 0.0; // Should not happen for confidence > 50%
-    }
-
-    let q = quantile - 0.5;
-    let r = q * q;
-
-    // Coefficients for the approximation
-    let a1 = -3.969683028665376e+01;
-    let a2 = 2.209460984245205e+02;
-    let a3 = -2.759285104469687e+02;
-    let a4 = 1.383_577_518_672_69e2;
-    let a5 = -3.066479806614716e+01;
-    let a6 = 2.506628277459239e+00;
-
-    let b1 = -5.447609879822406e+01;
-    let b2 = 1.615858368580409e+02;
-    let b3 = -1.556989798598866e+02;
-    let b4 = 6.680131188771972e+01;
-    let b5 = -1.328068155288572e+01;
-
-    let mut sigma;
-    if q.abs() < 0.42 {
-        // Central region approximation
-        sigma = q * (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6)
-                  / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1.0);
-    } else {
-        // Tail region approximation
-        let r_sqrt = (-(q.ln())).sqrt();
-        sigma = (((((a1 * r_sqrt + a2) * r_sqrt + a3) * r_sqrt + a4) * r_sqrt + a5) * r_sqrt + a6)
-               / (((((b1 * r_sqrt + b2) * r_sqrt + b3) * r_sqrt + b4) * r_sqrt + b5) * r_sqrt + 1.0);
-
-        if q < 0.0 {
-            sigma = -sigma;
-        }
-    }
-
-    sigma
+    // Use the existing centralized Statrs wrapper
+    distribution_functions::normal_quantile(target_quantile)
 }
 
 /// Convert SymPy derivative expression to Excel formula

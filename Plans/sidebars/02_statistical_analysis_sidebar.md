@@ -13,41 +13,159 @@ Based on the capabilities of Igor Pro, Python scientific stack, and R statistica
 
 ### ❌ Major Gaps (High Priority)
 
-- ✓ Hypothesis tests have correct p-values with proper precision reporting ✅ IMPLEMENTED
-- ✓ Effect sizes included with all relevant test results ✅ IMPLEMENTED
-- ✓ Power analysis with accurate non-central distribution approximations ✅ IMPLEMENTED
+1. **Non-Parametric Hypothesis Testing (Critical Gap)**
+   - **Issue**: Experimental data often violates normality assumptions (verified by Shapiro-Wilk tests). R/Python users immediately switch to non-parametric alternatives, but AnaFis currently relies heavily on parametric tests.
+   - **Impact**: If "Data Quality" check fails normality, users have no "next step" in the pipeline.
+   - **Missing**: Mann-Whitney U, Wilcoxon Signed-Rank, Kruskal-Wallis H, Friedman tests
+   - **Priority**: HIGH (Low effort, high value for robustness)
 
-2. **Regression Analysis**
-   - **Igor Pro**: Curve fitting with GUI, extensive built-in functions
-   - **Python**: scikit-learn, statsmodels - machine learning and statistical modeling
-   - **R**: lm(), glm(), nlme - most sophisticated statistical modeling
-   - **AnaFis**: ❌ NOT IMPLEMENTED (separate sidebar planned)
+2. **General Curve Fitting & GLM**
+   - **Issue**: Robust regression only does linear/polynomial fitting. Experimental scientists need to fit custom physical models (exponential decay, Gaussian peaks, Hill equations).
+   - **Impact**: Cannot fit relationship curves, only distribution PDFs.
+   - **Missing**: Levenberg-Marquardt solver for custom functions f(x, θ), logistic regression, Poisson regression
+   - **R Equivalent**: `nls()`, `glm()`
+   - **Priority**: HIGH (High effort, critical for Physics)
 
-3. **Data Management & Manipulation**
-   - **Igor Pro**: Wave data structures, powerful data manipulation
-   - **Python**: pandas, NumPy - industry standard data manipulation
-   - **R**: dplyr, data.table - most elegant data manipulation syntax
-   - **AnaFis**: ⚠️ PARTIALLY IMPLEMENTED (basic NaN handling only)
+3. **Categorical Data & Formula Interface**
+   - **Issue**: Current ANOVA/regression expects numeric indices, not categorical strings.
+   - **Impact**: Users must manually preprocess categorical data into numbers, breaking "Spreadsheet Native" promise.
+   - **Missing**: Design matrix builder for one-hot/dummy encoding, interaction terms (x₁ × x₂)
+   - **Priority**: HIGH (Medium effort, critical for usability)
+
+4. **Advanced Post-Hoc Tests**
+   - **Issue**: Only Tukey HSD available, but heterogeneous data requires alternatives.
+   - **Impact**: Cannot handle unequal variances detected by Levene/Bartlett tests.
+   - **Missing**: Games-Howell (unequal variances), Dunnett's test (vs control)
+   - **Priority**: MEDIUM (Low effort, handles common experimental designs)
 
 ### ⚠️ Significant Gaps (Medium Priority)
 
-4. **Advanced Plotting & Visualization**
-   - **Igor Pro**: Publication-quality 2D/3D plotting, most intuitive GUI
-   - **Python**: matplotlib, seaborn, plotly - highly customizable
-   - **R**: ggplot2, lattice - most statistically sophisticated plotting
-   - **AnaFis**: ⚠️ BASIC (ECharts integration, needs fitting overlays)
+5. **Multivariate Exploratory Analysis**
+   - **Issue**: PCA exists but no clustering for exploring dataset structure.
+   - **Missing**: K-Means, Hierarchical Clustering with dendrograms, t-SNE/UMAP
+   - **Priority**: MEDIUM
 
-5. **Programming & Automation**
-   - **Igor Pro**: Built-in programming language, macro system
-   - **Python**: Full programming language, extensive ecosystem
-   - **R**: Statistical programming, functional paradigm
-   - **AnaFis**: ❌ NOT IMPLEMENTED (no scripting interface)
+6. **Survival Analysis (Reliability Extensions)**
+   - **Issue**: Reliability module is psychometric-focused, not engineering reliability.
+   - **Missing**: Kaplan-Meier estimators, Log-rank tests, Weibull analysis for reliability
+   - **Priority**: LOW (Specialized use case)
 
-6. **Multivariate Analysis**
-   - **Igor Pro**: PCA, factor analysis, multivariate fitting
-   - **Python**: scikit-learn, statsmodels - machine learning focused
-   - **R**: psych, FactoMineR - most comprehensive statistical methods
-   - **AnaFis**: ❌ NOT IMPLEMENTED (separate sidebar planned)
+### ✅ AnaFis Competitive Advantages
+
+**Built-in Uncertainty Quantification**
+- **AnaFis**: ✅ Native uncertainty propagation, bootstrap CIs
+- **Igor Pro**: ⚠️ Limited uncertainty handling
+- **Python**: ⚠️ Requires manual implementation (uncertainties library)
+- **R**: ⚠️ Requires packages (propagate, errors) - not built-in
+
+**Spreadsheet Integration**
+- **AnaFis**: ✅ Native spreadsheet interface, real-time analysis
+- **Igor Pro**: ⚠️ Separate application, import/export workflow
+- **Python**: ⚠️ Requires Jupyter or separate tools (pandas, xlwings)
+- **R**: ⚠️ Requires RStudio or external tools (openxlsx, readxl)
+
+**User Experience for Non-Programmers**
+- **AnaFis**: ✅ Drag-and-drop, GUI-first, progressive disclosure
+- **Igor Pro**: ⚠️ GUI with learning curve, requires some programming
+- **Python**: ❌ Steep learning curve, requires programming knowledge
+- **R**: ❌ Requires statistical programming knowledge
+
+**Cost & Accessibility**
+- **AnaFis**: ✅ Free, open-source
+- **Igor Pro**: ❌ Expensive commercial license (~$1,000+)
+- **Python**: ✅ Free, open-source ecosystem
+- **R**: ✅ Free, open-source
+
+### 🎯 Updated Competitive Positioning
+
+| Category | Igor Pro | Python | R | AnaFis |
+|----------|----------|--------|----|--------|
+| **Ease of Use** | High | Low | Medium | Highest |
+| **Uncertainty Quantification** | Low | Medium | Medium | Highest |
+| **Spreadsheet Integration** | Low | Medium | Low | Highest |
+| **Statistical Depth** | High | High | Highest | Medium → High* |
+| **Programming Required** | Medium | High | High | None |
+| **Cost** | High | Free | Free | Free |
+| **Performance** | High | High | Medium | High |
+| **Visualization Quality** | Highest | High | High | Medium |
+
+*With non-parametric tests, curve fitting, and GLM implementation
+
+### 💡 Strategic Market Positioning
+
+**AnaFis Target Users**: Experimental scientists and engineers who need:
+- Uncertainty-aware data analysis
+- Spreadsheet-like workflow
+- Professional results without programming
+- Integration with measurement instruments
+
+**Key Differentiators**:
+1. **Uncertainty-First Design**: Built-in error propagation vs. afterthought in others
+2. **Spreadsheet Native**: No export/import friction
+3. **Performance**: Rust backend faster than Python/R for numerical work
+4. **Modern UX**: Intuitive interface vs. programming-heavy alternatives
+
+**Competition Analysis**:
+- **vs Igor Pro**: Free alternative with better uncertainty handling, modern interface
+- **vs Python**: GUI-first approach for non-programmers, uncertainty built-in
+- **vs R**: Spreadsheet integration, uncertainty quantification, easier learning curve
+
+**Market Opportunity**: Fill the gap between powerful but complex tools (Python/R) and expensive/complex commercial software (Igor Pro), targeting scientists who need reliable uncertainty estimates without becoming programmers. 🚀
+
+---
+
+## Updated Roadmap to Feature Parity
+
+### Phase 1: Non-Parametric Tests (Immediate Priority)
+**Effort**: Low | **Impact**: High | **Timeline**: 1-2 weeks
+- Mann-Whitney U Test (independent samples alternative to t-test)
+- Wilcoxon Signed-Rank Test (paired samples alternative to t-test)
+- Kruskal-Wallis H Test (k-groups alternative to ANOVA)
+- Friedman Test (repeated measures alternative to ANOVA)
+- **Why first**: Addresses immediate usability gap when normality fails
+
+### Phase 2: General Curve Fitting (Physics Priority)
+**Effort**: High | **Impact**: Critical | **Timeline**: 3-4 weeks
+- Levenberg-Marquardt solver for custom functions f(x, θ)
+- Support for exponential decay, Gaussian peaks, Hill equations, etc.
+- Parameter uncertainty estimation
+- Goodness-of-fit statistics (R², RMSE, AIC)
+- **Why next**: Essential for fitting physical models in experimental data
+
+### Phase 3: Categorical Data Support (UX Priority)
+**Effort**: Medium | **Impact**: High | **Timeline**: 2-3 weeks
+- Design matrix builder with one-hot encoding
+- Automatic categorical detection and conversion
+- Interaction term generation (x₁ × x₂)
+- Formula interface preparation (Response ~ Treatment + Age)
+- **Why next**: Critical for spreadsheet-native workflow
+
+### Phase 4: Advanced Post-Hoc Tests (Robustness Priority)
+**Effort**: Low | **Impact**: Medium | **Timeline**: 1 week
+- Games-Howell test (unequal variances post-hoc)
+- Dunnett's test (multiple vs control comparisons)
+- Integration with existing Levene/Bartlett variance tests
+- **Why next**: Handles unequal variance cases found by QA checks
+
+### Phase 5: Multivariate Analysis (Exploratory Priority)
+**Effort**: Medium | **Impact**: Medium | **Timeline**: 2-3 weeks
+- K-Means clustering
+- Hierarchical clustering with dendrograms
+- t-SNE/UMAP dimensionality reduction
+- Cluster validation metrics
+- **Why later**: Valuable but not critical for core experimental workflows
+
+### Phase 6: GLM Framework (Advanced Modeling)
+**Effort**: High | **Impact**: High | **Timeline**: 4-6 weeks
+- Logistic regression for binary outcomes
+- Poisson regression for count data
+- GLM diagnostics and model selection
+- Link function support
+- **Why later**: Builds on curve fitting foundation
+
+---
+
+## Hypothesis Testing Updates
 
 ### 🔧 Infrastructure Gaps (Technical)
 
@@ -158,7 +276,8 @@ Provide comprehensive statistical analysis capabilities for experimental data in
 - **ANOVA**: One-way, two-way, repeated measures, MANOVA ✅ PARTIALLY IMPLEMENTED (one-way ANOVA)
 - **Chi-Square Tests**: Goodness-of-fit, test of independence, McNemar's test ✅ IMPLEMENTED
 - **Proportion Tests**: One-sample, two-sample z-tests for proportions
-- **Non-Parametric Tests**: Mann-Whitney U, Wilcoxon signed-rank, Kruskal-Wallis, Friedman test
+- **Non-Parametric Tests**: Mann-Whitney U, Wilcoxon signed-rank, Kruskal-Wallis, Friedman test 🔄 PLANNED (Phase 1)
+- **Post-Hoc Tests**: Tukey HSD ✅ IMPLEMENTED, Games-Howell, Dunnett's test 🔄 PLANNED (Phase 4)
 
 ### Power Analysis
 - **Sample Size Calculation**: For means, proportions, correlations, ANOVA effects ✅ IMPLEMENTED
@@ -320,9 +439,10 @@ type HypothesisTest =
   | 'chi_square_goodness'
   | 'chi_square_independence'
   | 'proportion_test'
-  | 'mann_whitney'
-  | 'wilcoxon_signed_rank'
-  | 'kruskal_wallis';
+  | 'mann_whitney'           // 🔄 PLANNED: Non-parametric alternative to independent t-test
+  | 'wilcoxon_signed_rank'   // 🔄 PLANNED: Non-parametric alternative to paired t-test
+  | 'kruskal_wallis'         // 🔄 PLANNED: Non-parametric alternative to one-way ANOVA
+  | 'friedman';              // 🔄 PLANNED: Non-parametric alternative to repeated measures ANOVA
 
 interface AnalysisConfig {
   type: AnalysisType;
@@ -442,8 +562,10 @@ interface StatisticalAnalysisState {
 where \(E_{ij} = \frac{row_i \cdot column_j}{total}\)
 
 **Non-Parametric Tests**: 
-- Mann-Whitney U: Ranks-based comparison
-- Kruskal-Wallis: Extension of Mann-Whitney to k groups
+- Mann-Whitney U: Ranks-based comparison of independent samples
+- Wilcoxon Signed-Rank: Ranks-based comparison of paired samples  
+- Kruskal-Wallis: Extension of Mann-Whitney to k independent groups
+- Friedman: Ranks-based repeated measures comparison
 
 ### Power Analysis
 
@@ -696,12 +818,17 @@ fn perform_hypothesis_test(data: &[Vec<f64>], test_type: &str, alpha: f64) -> Re
 
 To maintain focus and manage complexity, the following advanced features are recommended as separate sidebars or tabs:
 
-### Regression Analysis Sidebar
-- Simple and multiple linear regression
-- Logistic regression
-- Polynomial regression
-- Diagnostics (residual plots, influence measures, multicollinearity checks)
-- Cross-validation (K-fold CV, leave-one-out CV)
+### Regression Analysis Sidebar 🔄 PLANNED (Phase 2)
+- **General Curve Fitting**: Levenberg-Marquardt solver for custom functions f(x, θ)
+  - Exponential decay: y = A * exp(-k*x) + C
+  - Gaussian peaks: y = A * exp(-(x-μ)²/(2σ²)) + C  
+  - Hill equations: y = V_max * x^n / (K^n + x^n)
+  - Custom user-defined functions
+- **Logistic Regression**: For binary outcomes (Phase 6)
+- **Poisson Regression**: For count data (Phase 6)
+- Parameter uncertainty estimation via bootstrap
+- Goodness-of-fit statistics (R², RMSE, AIC, BIC)
+- Residual analysis and diagnostics
 
 ### Time Series Analysis Tab
 - Autocorrelation functions
@@ -848,6 +975,10 @@ serde_json = "1.0"
 - ✓ Normality tests guide appropriate test selection
 - ✓ Effect sizes included with all relevant test results ✅ IMPLEMENTED
 - ✓ Power analysis with accurate non-central distribution approximations ✅ IMPLEMENTED
+- 🔄 Non-parametric tests available when normality assumptions fail (Phase 1)
+- 🔄 General curve fitting for physical models (Phase 2)
+- 🔄 Categorical data support with automatic encoding (Phase 3)
+- 🔄 Advanced post-hoc tests for unequal variances (Phase 4)
 - ✓ Data visualizations update in real-time using existing ECharts infrastructure
 - ✓ Performance: Process 10,000 data points in < 500ms
 - ✓ Memory efficient for large datasets
@@ -880,5 +1011,21 @@ serde_json = "1.0"
 - Complete user analysis sessions
 - Result interpretation and export
 - Error handling and recovery
+
+---
+
+## Strategic Assessment (Post-Review)
+
+**User Analysis Validation**: The comprehensive gap analysis provided by the user is highly accurate and strategically sound. AnaFis currently excels in uncertainty quantification and spreadsheet integration but lacks critical algorithmic breadth compared to Python/R ecosystems.
+
+**Key Insights**:
+1. **Non-parametric tests are the immediate priority** - Low effort, high impact for experimental data robustness
+2. **Curve fitting is the physics enabler** - Essential for fitting physical models but technically challenging  
+3. **Categorical data support is the UX differentiator** - Critical for maintaining "spreadsheet native" promise
+4. **AnaFis can achieve ~80% feature parity** with Python/R for experimental workflows through focused implementation
+
+**Competitive Positioning**: AnaFis can become the "Excel for Scientists" - combining spreadsheet familiarity with professional statistical rigor, uncertainty quantification, and performance advantages over Python/R.
+
+**Implementation Strategy**: Prioritize robustness (non-parametric tests) → physics enablement (curve fitting) → usability (categorical encoding) → completeness (advanced post-hoc tests).
 
 ---
