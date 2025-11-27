@@ -62,8 +62,8 @@ encoding_rs = "0.8"
 rust_xlsxwriter = "0.92.2"
 
 # ===== DATA PROCESSING =====
-parquet = { version = "57.0.0", features = ["arrow"] }
-arrow = { version = "57.0.0", features = ["prettyprint"] }
+parquet = { version = "57.1.0", features = ["arrow"] }
+arrow = { version = "57.1.0", features = ["prettyprint"] }
 hex = "0.4"
 
 # ===== DATABASE =====
@@ -85,7 +85,7 @@ splines = "5.0.0"
 kiddo = "5.2.2"
 
 # ===== ADVANCED STATISTICAL TESTS =====
-smartcore = { version = "0.4.6" }
+smartcore = { version = "0.4.7" }
 linfa = { version = "0.8.0", features = ["serde"] }
 geo = "0.31.0"
 extended-isolation-forest = "0.2.3"
@@ -98,6 +98,9 @@ meval = "0.2.0"
 num-dual = "0.12.1"
 exmex = "0.20.5"
 r_mathlib = "0.2.0"
+
+# ===== UNCERTAINTY QUANTIFICATION (2024/2025 Research Frontier) =====
+conformal-prediction = "2.0.0"
 
 [dev-dependencies]
 approx = "0.5.1"

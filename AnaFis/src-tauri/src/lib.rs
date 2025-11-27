@@ -1,19 +1,18 @@
 // Minimal modules - only what's actually used
-mod error;
-mod uncertainty_calculator;
-mod windows;
-mod utils;
-mod unit_conversion;
-pub mod scientific;
 mod data_library;
+mod error;
 mod export;
 mod import;
+pub mod scientific;
+mod uncertainty_calculator;
+mod unit_conversion;
+mod utils;
+mod windows;
 
-use tauri::{Manager, Emitter};
+use tauri::{Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             // Uncertainty Calculator Commands (2 commands)
@@ -45,11 +44,8 @@ pub fn run() {
             windows::window_manager::set_window_size,
 
             // Scientific Computation Commands (Sidebar tools)
-            scientific::uncertainty_propagation::generate_uncertainty_formulas,
+            scientific::uncertainty_propagation::generate_uncertainty_formulas
 
-            // Statistical Analysis Commands (New sidebar)
-            scientific::commands::perform_comprehensive_statistical_analysis,
-            
             // Data Library Commands (12 commands)
             data_library::commands::save_sequence,
             data_library::commands::get_sequences,
@@ -62,16 +58,16 @@ pub fn run() {
             data_library::commands::get_all_tags,
             data_library::commands::export_sequences_csv,
             data_library::commands::batch_import_sequences,
-            
+
             // Export Commands (2 commands - dispatcher + snapshot)
             export::export_data,
             export::anafispread::export_anafispread,
-            
+
             // Import Commands (3 commands)
             import::import_spreadsheet_file,
             import::import_anafis_spread_direct,
             import::get_file_metadata,
-            
+
             // Utility Commands (File Operations)
             utils::file_operations::save_png_file,
             utils::file_operations::save_image_from_data_url,
@@ -108,7 +104,10 @@ pub fn run() {
                     utils::log_info("Data Library initialized successfully");
                 }
                 Err(e) => {
-                    utils::log_info(&format!("WARNING: Failed to initialize Data Library: {}", e));
+                    utils::log_info(&format!(
+                        "WARNING: Failed to initialize Data Library: {}",
+                        e
+                    ));
                 }
             }
 
@@ -146,11 +145,14 @@ pub fn run() {
                         }
                         tauri::WindowEvent::Destroyed => {
                             // Main window is being destroyed, close all child windows
-                            let _ = app_handle.get_webview_window("uncertainty-calculator")
+                            let _ = app_handle
+                                .get_webview_window("uncertainty-calculator")
                                 .and_then(|w| w.close().ok());
-                            let _ = app_handle.get_webview_window("settings")
+                            let _ = app_handle
+                                .get_webview_window("settings")
                                 .and_then(|w| w.close().ok());
-                            let _ = app_handle.get_webview_window("latex-preview")
+                            let _ = app_handle
+                                .get_webview_window("latex-preview")
                                 .and_then(|w| w.close().ok());
                         }
                         _ => {}
