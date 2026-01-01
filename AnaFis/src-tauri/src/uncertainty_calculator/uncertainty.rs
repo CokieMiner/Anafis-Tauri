@@ -1,8 +1,8 @@
 //! Uncertainty Calculator Module
 //!
 //! This module provides uncertainty propagation calculations using symbolic differentiation
-//! and numerical methods. It integrates with Python's SymPy for symbolic math operations
-//! and provides caching for performance optimization.
+//! with Symbolica and numerical evaluation with meval. Pure Rust implementation with no
+//! Python dependencies.
 
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
@@ -10,14 +10,10 @@ use lru::LruCache;
 use once_cell::sync::Lazy;
 use std::sync::RwLock;
 use std::num::NonZeroUsize;
-use pyo3::prelude::*;
-use pyo3::types::PyDict;
-use std::fs;
-use std::ffi::CString;
 use tauri::AppHandle;
-use tauri::Manager;
 
-// Numerical uncertainty propagation using finite differences and Monte Carlo methods
+// Import our pure Rust uncertainty propagation modules
+use crate::scientific::uncertainty_propagation::derivatives;
 
 #[derive(Clone)]
 struct SymbolicResult {
@@ -67,172 +63,191 @@ static LATEX_CACHE: Lazy<RwLock<LruCache<String, LatexResult>>> = Lazy::new(|| {
     RwLock::new(LruCache::new(NonZeroUsize::new(100).unwrap()))
 });
 
-static PYTHON_MODULE: Lazy<RwLock<Option<Py<PyModule>>>> = Lazy::new(|| RwLock::new(None));
-
-pub fn initialize_python_module(py: Python, app: &AppHandle) -> PyResult<()> {
-    let mut module_cache = PYTHON_MODULE.write().unwrap();
-    if module_cache.is_none() {
-        // Use Tauri's resource resolver
-        let resource_dir = app.path().resource_dir().map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to get resource dir: {e}")))?;
-
-        let python_file_path = if cfg!(debug_assertions) {
-            // Dev mode: sympy_calls.py is in src-tauri/src directory
-            let exe_path = std::env::current_exe().unwrap();
-            let src_tauri_dir = exe_path.parent().unwrap().parent().unwrap().parent().unwrap();
-            src_tauri_dir.join("python").join("sympy_calls.py")
-        } else {
-            // Release mode: sympy_calls.py is in resource directory
-            resource_dir.join("python/sympy_calls.py")
-        };
-
-        // Clean the path by removing the \\?\ prefix if present
-        let python_file_path_str = python_file_path.display().to_string();
-        let clean_python_file_path_str = python_file_path_str.strip_prefix(r"\\?\").unwrap_or(&python_file_path_str).to_string();
-        let clean_python_file_path = std::path::PathBuf::from(clean_python_file_path_str);
-
-        let python_code = fs::read_to_string(&clean_python_file_path)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Failed to read sympy_calls.py: {e}")))?;
-
-        let code_cstr = CString::new(python_code)?;
-        let filename_cstr = CString::new("sympy_calls.py")?;
-        let module_name_cstr = CString::new("python_formulas")?;
-        let module = PyModule::from_code(
-            py,
-            &code_cstr,
-            &filename_cstr,
-            &module_name_cstr,
-        )?;
-        *module_cache = Some(module.into());
+/// Evaluate a mathematical expression using meval
+///
+/// # Arguments
+/// * `expr_str` - The expression string
+/// * `var_names` - List of variable names
+/// * `var_values` - Corresponding values for each variable
+///
+/// # Returns
+/// The numerical result of the evaluation
+fn evaluate_expression(
+    expr_str: &str,
+    var_names: &[String],
+    var_values: &[f64],
+) -> Result<f64, String> {
+    use meval::Context;
+    
+    // Create evaluation context
+    let mut ctx = Context::new();
+    
+    // Add variables to context
+    for (name, value) in var_names.iter().zip(var_values.iter()) {
+        ctx.var(name, *value);
     }
-    Ok(())
+    
+    // Evaluate expression
+    meval::eval_str_with_context(expr_str, &ctx)
+        .map_err(|e| format!("Failed to evaluate expression '{}': {}", expr_str, e))
 }
 
-pub fn get_python_module(_py: Python) -> PyResult<Py<PyModule>> {
-    let module_cache = PYTHON_MODULE.read().unwrap();
-    if let Some(module) = &*module_cache {
-        Ok(module.clone())
-    } else {
-        Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Python module not initialized"))
+/// Compute symbolic derivatives and numerical evaluations using pure Rust
+///
+/// This replaces the Python/SymPy implementation with Symbolica + meval
+fn compute_symbolic_derivatives_rust(
+    formula: &str,
+    variables: &[String],
+    values: &[f64],
+) -> Result<SymbolicResult, String> {
+    // Normalize formula to lowercase for Symbolica
+    let formula_normalized = formula.to_lowercase();
+    
+    // Calculate symbolic derivatives using Symbolica
+    let derivatives_map = derivatives::calculate_derivatives(&formula_normalized, variables)
+        .map_err(|e| format!("Derivative calculation failed: {}", e))?;
+    
+    // Evaluate the original formula numerically using meval
+    let numerical_value = evaluate_expression(&formula_normalized, variables, values)?;
+    
+    // Check for finite result
+    if !numerical_value.is_finite() {
+        return Err("Expression evaluated to non-finite value (inf or NaN)".to_string());
     }
-}
-
-/// Convert a PyErr into a string, attempting to include a traceback
-fn python_err_to_string(py: Python<'_>, err: PyErr) -> String {
-    // Try to use Python's traceback.format_exception
-    let res = (|| {
-        let traceback = py.import("traceback").ok()?;
-        let etype = err.get_type(py);
-        let evalue = err.value(py);
-        let tb = err.traceback(py);
-        // format_exception may return a list of strings
-        let formatted = traceback.call_method1("format_exception", (etype, evalue, tb)).ok()?;
-        let joined: String = formatted.extract::<Vec<String>>().ok()?.join("");
-        Some(joined)
-    })();
-
-    if let Some(s) = res {
-        s
-    } else {
-        // fallback to the error Display
-        err.to_string()
-    }
-}
-
-/// Compute symbolic derivatives and numerical evaluations using the embedded Python helper
-fn compute_symbolic_derivatives_py(app: &AppHandle, formula: &str, variables: &[String], values: &[f64]) -> Result<SymbolicResult, String> {
-    Python::attach(|py| -> Result<SymbolicResult, String> {
-        initialize_python_module(py, app).map_err(|e| e.to_string())?;
-        let module = get_python_module(py).map_err(|e| e.to_string())?;
-        let func = module.getattr(py, "calculate_symbolic_data").map_err(|e| python_err_to_string(py, e))?;
-        let vars_vec: Vec<String> = variables.to_vec();
-        let vals_vec: Vec<f64> = values.to_vec();
-
-        let res_any = func.call1(py, (formula, vars_vec, vals_vec)).map_err(|e| python_err_to_string(py, e))?;
-        let res_dict = res_any.cast_bound::<PyDict>(py).map_err(|e| python_err_to_string(py, e.into()))?;
-
-        // success flag
-        let success = match res_dict.get_item("success").map_err(|e| e.to_string())? {
-            Some(o) => o.extract::<bool>().map_err(|e| e.to_string())?,
-            None => false,
-        };
-        if !success {
-            let err = match res_dict.get_item("error").map_err(|e| e.to_string())? {
-                Some(o) => o.extract::<String>().map_err(|e| e.to_string())?,
-                None => "Unknown Python error".to_string(),
-            };
-            crate::utils::log_error("Python calculation failed", &std::io::Error::other(err.clone()));
-            return Err(err);
+    
+    // Evaluate each derivative numerically
+    let mut numerical_derivatives = HashMap::new();
+    for (var, deriv_expr) in derivatives_map {
+        let deriv_value = evaluate_expression(&deriv_expr, variables, values)?;
+        
+        // Check for finite derivative
+        if !deriv_value.is_finite() {
+            return Err(format!(
+                "Derivative with respect to '{}' is non-finite (inf or NaN)",
+                var
+            ));
         }
+        
+        numerical_derivatives.insert(var, deriv_value);
+    }
+    
+    Ok(SymbolicResult {
+        numerical_value,
+        numerical_derivatives,
+    })
+}
 
-        // numerical_value may be string or float
-        let numerical_value = match res_dict.get_item("numerical_value").map_err(|e| e.to_string())? {
-            Some(o) => {
-                if let Ok(n) = o.extract::<f64>() { n }
-                else if let Ok(s) = o.extract::<String>() { s.parse::<f64>().map_err(|e| e.to_string())? }
-                else { return Err("numerical_value has unknown type".to_string()) }
+/// Generate LaTeX representation of uncertainty propagation formula using pure Rust
+///
+/// Creates the formula: σ_f = √(Σ(∂f/∂xi · σ_xi)²)
+fn generate_latex_rust(
+    formula: &str,
+    variables: &[String],
+) -> Result<LatexResult, String> {
+    // Normalize formula to lowercase for Symbolica
+    let formula_normalized = formula.to_lowercase();
+    
+    // Calculate symbolic derivatives
+    let derivatives_map = derivatives::calculate_derivatives(&formula_normalized, variables)
+        .map_err(|e| format!("Derivative calculation failed: {}", e))?;
+    
+    // Build uncertainty formula components
+    let mut latex_terms = Vec::new();
+    let mut string_terms = Vec::new();
+    
+    for var in variables {
+        if let Some(deriv_expr) = derivatives_map.get(var) {
+            // Convert derivative expression to LaTeX-friendly format
+            let deriv_latex = expression_to_latex(deriv_expr);
+            let sigma_var_latex = format!("\\sigma_{{{}}}", var);
+            let sigma_var_string = format!("σ_{}", var);
+            
+            // Create term: (∂f/∂xi · σ_xi)²
+            let latex_term = format!("\\left({} \\cdot {}\\right)^2", deriv_latex, sigma_var_latex);
+            let string_term = format!("({} * {})^2", deriv_expr, sigma_var_string);
+            
+            latex_terms.push(latex_term);
+            string_terms.push(string_term);
+        }
+    }
+    
+    // Build final formula
+    let latex = if latex_terms.is_empty() {
+        "0".to_string()
+    } else {
+        format!("\\sqrt{{{}}}", latex_terms.join(" + "))
+    };
+    
+    let string = if string_terms.is_empty() {
+        "0".to_string()
+    } else {
+        format!("sqrt({})", string_terms.join(" + "))
+    };
+    
+    Ok(LatexResult { string, latex })
+}
+
+/// Convert a mathematical expression to LaTeX format
+///
+/// This is a simple converter that handles common mathematical notation
+fn expression_to_latex(expr: &str) -> String {
+    let mut latex = expr.to_string();
+    
+    // Replace operators with LaTeX equivalents
+    latex = latex.replace("**", "^");
+    latex = latex.replace("*", " \\cdot ");
+    latex = latex.replace("sqrt", "\\sqrt");
+    
+    // Wrap exponents in braces
+    // Simple regex-free approach: find ^ and wrap following term
+    let chars: Vec<char> = latex.chars().collect();
+    let mut result = String::new();
+    let mut i = 0;
+    
+    while i < chars.len() {
+        if chars[i] == '^' && i + 1 < chars.len() {
+            result.push('^');
+            i += 1;
+            
+            // Check if next char is already a brace
+            if chars[i] == '{' {
+                // Already wrapped, just continue
+                result.push(chars[i]);
+                i += 1;
+                continue;
             }
-            None => return Err("numerical_value missing".to_string()),
-        };
-        if !numerical_value.is_finite() { return Err("numerical_value is not finite".to_string()) }
-
-        let mut numerical_derivatives = HashMap::new();
-        if let Ok(Some(obj)) = res_dict.get_item("numerical_derivatives") {
-            if let Ok(d) = obj.cast::<PyDict>() {
-                for (k, v) in d.iter() {
-                    let key: String = k.extract().map_err(|e: PyErr| e.to_string())?;
-                    let val: f64 = v.extract().map_err(|e: PyErr| e.to_string())?;
-                    if !val.is_finite() { return Err(format!("numerical_derivative for {key} not finite")); }
-                    numerical_derivatives.insert(key, val);
+            
+            // Wrap the exponent
+            result.push('{');
+            
+            // Single character or number
+            if chars[i].is_alphanumeric() {
+                result.push(chars[i]);
+                i += 1;
+                
+                // Continue if it's a multi-digit number
+                while i < chars.len() && chars[i].is_numeric() {
+                    result.push(chars[i]);
+                    i += 1;
                 }
             }
+            
+            result.push('}');
+        } else {
+            result.push(chars[i]);
+            i += 1;
         }
-
-        Ok(SymbolicResult { numerical_value, numerical_derivatives })
-    })
-}
-
-/// Compute LaTeX using Python helper via PyO3
-fn compute_uncertainty_formula_py(app: &AppHandle, formula: &str, variables: &[String]) -> Result<LatexResult, String> {
-    Python::attach(|py| -> Result<LatexResult, String> {
-        initialize_python_module(py, app).map_err(|e| python_err_to_string(py, e))?;
-        let module = get_python_module(py).map_err(|e| python_err_to_string(py, e))?;
-        let func = module.getattr(py, "generate_latex_data").map_err(|e| python_err_to_string(py, e))?;
-        let vars_vec: Vec<String> = variables.to_vec();
-        let res_any = func.call1(py, (formula, vars_vec)).map_err(|e| python_err_to_string(py, e))?;
-        let res_dict = res_any.cast_bound::<PyDict>(py).map_err(|e| python_err_to_string(py, e.into()))?;
-
-        let success = res_dict
-            .get_item("success").map_err(|e| python_err_to_string(py, e))?
-            .ok_or("Missing 'success' key")?
-            .extract::<bool>()
-            .map_err(|e| python_err_to_string(py, e))?;
-        if !success {
-            let err = res_dict
-                .get_item("error").map_err(|e| python_err_to_string(py, e))?
-                .ok_or("Missing 'error' key")?
-                .extract::<String>()
-                .unwrap_or_else(|_| "Unknown Python error".to_string());
-            return Err(err);
-        }
-
-        let string = res_dict
-            .get_item("string").map_err(|e| python_err_to_string(py, e))?
-            .ok_or("Missing 'string' key")?
-            .extract::<String>()
-            .unwrap_or_default();
-
-        let latex = res_dict
-            .get_item("latex").map_err(|e| python_err_to_string(py, e))?
-            .ok_or("Missing 'latex' key")?
-            .extract::<String>()
-            .unwrap_or_default();
-
-        Ok(LatexResult { string, latex })
-    })
+    }
+    
+    result
 }
 
 #[tauri::command]
-pub async fn calculate_uncertainty(app: AppHandle, formula: String, variables: Vec<Variable>) -> Result<CalculationResult, String> {
+pub async fn calculate_uncertainty(
+    _app: AppHandle,  // Kept for API compatibility, not needed anymore
+    formula: String,
+    variables: Vec<Variable>,
+) -> Result<CalculationResult, String> {
     // Input validation using centralized utilities
     if let Err(e) = crate::utils::validate_formula(&formula) {
         return Err(format!("{e:?}"));
@@ -265,11 +280,10 @@ pub async fn calculate_uncertainty(app: AppHandle, formula: String, variables: V
     }
 
     // Move heavy computation to background thread
-    let app_clone = app.clone();
     let formula_clone = formula.clone();
     let variables_clone = variables.clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        compute_uncertainty_sync(app_clone, formula_clone, variables_clone)
+        compute_uncertainty_sync(formula_clone, variables_clone)
     }).await.map_err(|e| format!("Async computation failed: {e:?}"))?;
 
     match result {
@@ -285,15 +299,16 @@ pub async fn calculate_uncertainty(app: AppHandle, formula: String, variables: V
     }
 }
 
-fn compute_uncertainty_sync(app: AppHandle, formula: String, variables: Vec<Variable>) -> Result<CalculationResult, String> {
+fn compute_uncertainty_sync(formula: String, variables: Vec<Variable>) -> Result<CalculationResult, String> {
     // Extract variable names and values
     let variable_names: Vec<String> = variables.iter().map(|v| v.name.clone()).collect();
     let variable_values: Vec<f64> = variables.iter().map(|v| v.value).collect();
 
-    // Use Python-backed computation exclusively. If Python fails, return the error.
-    let symbolic_result = compute_symbolic_derivatives_py(&app, &formula, &variable_names, &variable_values)?;
+    // Use pure Rust computation with Symbolica + meval
+    let symbolic_result = compute_symbolic_derivatives_rust(&formula, &variable_names, &variable_values)?;
 
-    // Calculate uncertainty
+    // Calculate uncertainty using standard error propagation formula:
+    // σ_f² = Σ((∂f/∂xi)² · σ_xi²)
     let total_uncertainty_squared = variables.iter()
         .filter(|var| var.uncertainty > 0.0)
         .try_fold(0.0, |acc, var| {
@@ -319,7 +334,11 @@ fn compute_uncertainty_sync(app: AppHandle, formula: String, variables: Vec<Vari
 }
 
 #[tauri::command]
-pub async fn generate_latex(app: AppHandle, formula: String, variables: Vec<String>) -> Result<LatexResult, String> {
+pub async fn generate_latex(
+    _app: AppHandle,  // Kept for API compatibility, not needed anymore
+    formula: String,
+    variables: Vec<String>,
+) -> Result<LatexResult, String> {
     // Input validation
     if variables.is_empty() {
         return Err("Please provide at least one variable".into());
@@ -348,11 +367,10 @@ pub async fn generate_latex(app: AppHandle, formula: String, variables: Vec<Stri
     }
 
     // Move computation to background thread
-    let app_clone = app.clone();
     let formula_clone = formula.clone();
     let variables_clone = variables.clone();
     let latex_result = tauri::async_runtime::spawn_blocking(move || {
-        compute_uncertainty_formula_py(&app_clone, &formula_clone, &variables_clone)
+        generate_latex_rust(&formula_clone, &variables_clone)
     }).await.map_err(|e| format!("Async LaTeX computation failed: {e:?}"))?;
 
     match latex_result {
@@ -365,5 +383,58 @@ pub async fn generate_latex(app: AppHandle, formula: String, variables: Vec<Stri
             Ok(result)
         }
         Err(e) => Err(e)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_evaluate_expression_simple() {
+        let result = evaluate_expression("2 + 3", &[], &[]).unwrap();
+        assert_eq!(result, 5.0);
+    }
+
+    #[test]
+    fn test_evaluate_expression_with_variables() {
+        let result = evaluate_expression(
+            "x^2 + y",
+            &["x".to_string(), "y".to_string()],
+            &[3.0, 4.0],
+        ).unwrap();
+        assert_eq!(result, 13.0); // 3² + 4 = 13
+    }
+
+    #[test]
+    fn test_compute_derivatives_simple() {
+        let result = compute_symbolic_derivatives_rust(
+            "x^2",
+            &["x".to_string()],
+            &[3.0],
+        ).unwrap();
+        
+        assert_eq!(result.numerical_value, 9.0); // 3² = 9
+        assert!(result.numerical_derivatives.contains_key("x"));
+        let deriv = result.numerical_derivatives.get("x").unwrap();
+        assert!((deriv - 6.0).abs() < 0.01); // d(x²)/dx = 2x = 2*3 = 6
+    }
+
+    #[test]
+    fn test_expression_to_latex() {
+        let latex = expression_to_latex("x^2 + y");
+        assert!(latex.contains("x^{2}"));
+    }
+
+    #[test]
+    fn test_generate_latex_simple() {
+        let result = generate_latex_rust(
+            "x + y",
+            &["x".to_string(), "y".to_string()],
+        ).unwrap();
+        
+        // Should contain sigma symbols and square root
+        assert!(result.string.contains("sqrt"));
+        assert!(result.latex.contains("\\sqrt"));
     }
 }

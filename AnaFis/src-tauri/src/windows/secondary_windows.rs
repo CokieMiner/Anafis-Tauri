@@ -1,7 +1,6 @@
 // src-tauri/src/secondary_windows.rs
 
 use tauri::{AppHandle, Manager, WindowEvent};
-use pyo3::prelude::*;
 use urlencoding;
 use tokio::time::{timeout, Duration};
 use tokio::sync::Notify;
@@ -28,15 +27,6 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
         existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
         return Ok(());
     }
-
-    // Initialize Python module when opening the uncertainty calculator window
-    // This ensures Python is ready when the first calculation is made
-    let app_clone = app.clone();
-    std::thread::spawn(move || {
-        let _ = Python::attach(|py| -> PyResult<()> {
-            crate::uncertainty_calculator::initialize_python_module(py, &app_clone)
-        });
-    });
 
     let config = WindowConfig {
         title: "Uncertainty Calculator".to_string(),

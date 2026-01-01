@@ -1,9 +1,9 @@
 // src-tauri/src/utils/validation.rs
 use crate::utils::error::AnaFisError;
 use blake3;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use validator::Validate;
-use serde::{Serialize, Deserialize};
 
 /// Validation for variable names using validator crate
 #[derive(Debug, Validate, Serialize, Deserialize)]
@@ -15,10 +15,6 @@ pub struct VariableInput {
 
     #[validate(range(min = 0.0, message = "Uncertainty cannot be negative"))]
     pub uncertainty: f64,
-}
-
-lazy_static::lazy_static! {
-    static ref VARIABLE_NAME_REGEX: regex::Regex = regex::Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*$").unwrap();
 }
 
 /// Validate a formula string
@@ -36,7 +32,8 @@ pub fn validate_formula(formula: &str) -> Result<(), AnaFisError> {
 
 /// Validate a variable using the validator crate
 pub fn validate_variable(variable: &VariableInput) -> Result<(), AnaFisError> {
-    variable.validate()
+    variable
+        .validate()
         .map_err(|e| AnaFisError::Validation(format!("Variable validation failed: {e}")))?;
     Ok(())
 }
@@ -46,7 +43,9 @@ pub fn validate_variables(variables: &[VariableInput]) -> Result<(), AnaFisError
     // Check for duplicate names
     let names: HashSet<&str> = variables.iter().map(|v| v.name.as_str()).collect();
     if names.len() != variables.len() {
-        return Err(AnaFisError::Validation("Duplicate variable names found".into()));
+        return Err(AnaFisError::Validation(
+            "Duplicate variable names found".into(),
+        ));
     }
 
     // Validate each variable

@@ -93,8 +93,9 @@ fn convert_parquet_row_to_json(row: &Row, num_columns: usize) -> Result<Vec<Valu
             }
             parquet::record::Field::Str(s) => Value::String(s.to_string()),
             parquet::record::Field::Bytes(b) => {
-                // Convert bytes to hex string
-                Value::String(format!("0x{}", hex::encode(b.data())))
+                // Convert bytes to hex string (manual formatting to avoid hex crate dependency)
+                let hex_str: String = b.data().iter().map(|byte| format!("{:02x}", byte)).collect();
+                Value::String(format!("0x{}", hex_str))
             }
             parquet::record::Field::Decimal(d) => {
                 // Decimal doesn't implement Display, so format it manually

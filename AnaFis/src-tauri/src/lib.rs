@@ -18,7 +18,6 @@ pub fn run() {
             // Uncertainty Calculator Commands (2 commands)
             uncertainty_calculator::uncertainty::calculate_uncertainty,
             uncertainty_calculator::uncertainty::generate_latex,
-
             // Unit Conversion Commands (12 commands)
             unit_conversion::commands::convert_value,
             unit_conversion::commands::get_conversion_preview,
@@ -31,7 +30,6 @@ pub fn run() {
             unit_conversion::commands::get_unit_dimensional_formula,
             unit_conversion::commands::validate_unit_string,
             unit_conversion::commands::get_supported_categories,
-
             // Window Management Commands (9 commands)
             windows::secondary_windows::open_latex_preview_window,
             windows::secondary_windows::open_uncertainty_calculator_window,
@@ -42,10 +40,8 @@ pub fn run() {
             windows::secondary_windows::open_data_library_window,
             windows::secondary_windows::close_data_library_window,
             windows::window_manager::set_window_size,
-
             // Scientific Computation Commands (Sidebar tools)
-            scientific::uncertainty_propagation::generate_uncertainty_formulas
-
+            scientific::uncertainty_propagation::generate_uncertainty_formulas,
             // Data Library Commands (12 commands)
             data_library::commands::save_sequence,
             data_library::commands::get_sequences,
@@ -58,16 +54,13 @@ pub fn run() {
             data_library::commands::get_all_tags,
             data_library::commands::export_sequences_csv,
             data_library::commands::batch_import_sequences,
-
             // Export Commands (2 commands - dispatcher + snapshot)
             export::export_data,
             export::anafispread::export_anafispread,
-
             // Import Commands (3 commands)
             import::import_spreadsheet_file,
             import::import_anafis_spread_direct,
             import::get_file_metadata,
-
             // Utility Commands (File Operations)
             utils::file_operations::save_png_file,
             utils::file_operations::save_image_from_data_url,
@@ -75,6 +68,9 @@ pub fn run() {
         ])
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Load environment variables from .env file
+            dotenv::dotenv().ok();
+
             // Initialize logging
             if let Err(e) = utils::init_logging() {
                 eprintln!("Failed to initialize logging: {e}");
@@ -111,29 +107,7 @@ pub fn run() {
                 }
             }
 
-            utils::log_info("Using system Python - no embedded Python setup needed");
             utils::log_info(&format!("Dev mode: {}", cfg!(debug_assertions)));
-
-            // Check if Python is available in PATH
-            let current_path = std::env::var("PATH").unwrap_or_default();
-            let has_python = current_path.split(';').any(|path| {
-                let python_path = std::path::Path::new(path).join("python.exe");
-                python_path.exists()
-            });
-
-            if has_python {
-                utils::log_info("SUCCESS: Python found in system PATH");
-            } else {
-                utils::log_info("WARNING: Python not found in system PATH - PyO3 may fail");
-            }
-
-            // Don't set PYTHONHOME or PYTHONPATH - let PyO3 use system Python
-            // Remove any existing Python environment variables that might interfere
-            std::env::remove_var("PYTHONHOME");
-            std::env::remove_var("PYTHONPATH");
-            std::env::remove_var("PYO3_PYTHON");
-
-            utils::log_info("Environment setup complete - using system Python");
 
             // Listen for main window events
             let app_handle = app.handle().clone();
