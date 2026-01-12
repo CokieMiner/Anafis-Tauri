@@ -22,11 +22,21 @@
     /* Path mapping for cleaner imports */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@core/*": ["src/core/*"],
-      "@shared/*": ["src/shared/*"],
-      "@tabs/*": ["src/tabs/*"],
-      "@windows/*": ["src/windows/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@core/*": [
+        "src/core/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@tabs/*": [
+        "src/tabs/*"
+      ],
+      "@windows/*": [
+        "src/windows/*"
+      ]
     },
     /* Enhanced linting */
     "strict": true,
@@ -40,7 +50,9 @@
     /* Additional type checking */
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
-    "types": ["node", "vite/client"]
+    "types": [
+      "vite/client"
+    ]
   },
   "include": [
     "src"

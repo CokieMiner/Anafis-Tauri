@@ -35,17 +35,20 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "rpm"],
+    "targets": [
+      "deb",
+      "rpm"
+    ],
     "icon": [
       "icons/icon.png",
       "icons/icon.ico"
     ],
-    "resources": [
-      "python/sympy_calls.py"
-    ],
+    "resources": [],
     "fileAssociations": [
       {
-        "ext": ["anafispread"],
+        "ext": [
+          "anafispread"
+        ],
         "name": "AnaFis Spreadsheet",
         "description": "AnaFis Spreadsheet File",
         "role": "Editor",
@@ -58,18 +61,8 @@
       "timestampUrl": null
     },
     "linux": {
-      "deb": {
-        "depends": [
-          "python3 (>= 3.13)",
-          "python3-sympy"
-        ]
-      },
-      "rpm": {
-        "depends": [
-          "python3 >= 3.13",
-          "python3-sympy"
-        ]
-      }
+      "deb": {},
+      "rpm": {}
     }
   }
 }
