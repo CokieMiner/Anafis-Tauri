@@ -162,7 +162,7 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
               </Button>
             </Box>
 
-            {process.env.NODE_ENV === 'development' && error?.stack && (
+            {import.meta.env.DEV && error?.stack && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', display: 'block', mb: 1 }}>
                   Stack Trace (Development):

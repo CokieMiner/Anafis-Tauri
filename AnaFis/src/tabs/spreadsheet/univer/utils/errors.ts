@@ -544,7 +544,7 @@ export async function safeSpreadsheetOperation<T>(
       const result = await operation();
 
       // Log successful retry if this wasn't the first attempt
-      if (attempt > 0 && process.env.NODE_ENV === 'development') {
+      if (attempt > 0 && import.meta.env.DEV) {
         console.log(`[safeSpreadsheetOperation] ${operationName} succeeded on attempt ${attempt + 1}`);
       }
 

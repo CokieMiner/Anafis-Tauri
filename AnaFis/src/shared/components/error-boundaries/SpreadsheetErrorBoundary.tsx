@@ -181,7 +181,7 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
               </Button>
             </Box>
 
-            {process.env.NODE_ENV === 'development' && error?.stack && (
+            {import.meta.env.DEV && error?.stack && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', display: 'block', mb: 1 }}>
                   Stack Trace (Development Only):

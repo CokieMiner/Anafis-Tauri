@@ -313,7 +313,7 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
         return new Promise<string>((resolve) => {
           const checkReady = () => {
             const sheet = workbook.getSheets().find(s => s.getSheetId() === newSheet.getSheetId());
-            if (sheet && sheet.getSheetName() === uniqueName) {
+            if (sheet?.getSheetName() === uniqueName) {
               resolve(newSheet.getSheetId());
             } else {
               setTimeout(checkReady, 10);

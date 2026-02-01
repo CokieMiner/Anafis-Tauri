@@ -22,7 +22,7 @@ const SequenceChart: React.FC<SequenceChartProps> = memo(({ sequence }) => {
     });
 
     // Set up responsive resize handling
-    let resizeTimeout: NodeJS.Timeout | null = null;
+    let resizeTimeout: number | undefined = undefined;
     const debouncedResize = () => {
       if (resizeTimeout) {
         clearTimeout(resizeTimeout);

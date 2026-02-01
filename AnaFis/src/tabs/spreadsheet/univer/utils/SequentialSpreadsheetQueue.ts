@@ -17,7 +17,7 @@ export interface QueuedOperation<T = void> {
 export class SequentialSpreadsheetQueue {
   private queue: QueuedOperation<unknown>[] = [];
   private isProcessing = false;
-  private debounceTimer: NodeJS.Timeout | null = null;
+  private debounceTimer: number | undefined = undefined;
   private readonly debounceDelay: number;
 
   constructor(debounceDelay = 50) {
@@ -91,7 +91,7 @@ export class SequentialSpreadsheetQueue {
     return {
       queueLength: this.queue.length,
       isProcessing: this.isProcessing,
-      debounceActive: this.debounceTimer !== null,
+      debounceActive: !!this.debounceTimer,
     };
   }
 
@@ -102,7 +102,7 @@ export class SequentialSpreadsheetQueue {
   clear(): void {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
-      this.debounceTimer = null;
+      this.debounceTimer = undefined;
     }
 
     // Reject all pending operations

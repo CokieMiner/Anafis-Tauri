@@ -23,28 +23,28 @@ export function withPerformanceMonitoring<T extends (...args: unknown[]) => unkn
         return result
           .then((res: Awaited<ReturnType<T>>) => {
             const endTime = performance.now();
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.log(`[Performance] ${operationName} completed in ${(endTime - startTime).toFixed(2)}ms`);
             }
             return res;
           })
           .catch((err: unknown) => {
             const endTime = performance.now();
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.error(`[Performance] ${operationName} failed after ${(endTime - startTime).toFixed(2)}ms:`, err);
             }
             throw err;
           });
       } else {
         const endTime = performance.now();
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.log(`[Performance] ${operationName} took ${(endTime - startTime).toFixed(2)}ms`);
         }
         return result;
       }
     } catch (error) {
       const endTime = performance.now();
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error(`[Performance] ${operationName} failed after ${(endTime - startTime).toFixed(2)}ms:`, error);
       }
       throw error;

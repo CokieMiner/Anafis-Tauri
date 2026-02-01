@@ -43,7 +43,7 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
 
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeTimeoutRef = useRef<number | undefined>(undefined);
 
   const adjustWindowSize = useCallback(async () => {
     if (!containerRef.current) {return;}

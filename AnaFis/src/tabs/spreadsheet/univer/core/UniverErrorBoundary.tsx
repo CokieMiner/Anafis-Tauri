@@ -125,7 +125,7 @@ export class UniverErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
             </p>
           )}
 
-          {process.env.NODE_ENV === 'development' && this.state.error && (
+          {import.meta.env.DEV && this.state.error && (
             <details style={{ marginTop: '15px', textAlign: 'left' }}>
               <summary>Error Details (Development)</summary>
               <pre style={{ 
@@ -138,7 +138,7 @@ export class UniverErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoun
                 maxHeight: '200px'
               }}>
                 {this.state.error.message}
-                {this.state.errorInfo?.componentStack && (
+                {this.state.errorInfo && (
                   `\n\nComponent Stack:${  this.state.errorInfo.componentStack}`
                 )}
               </pre>

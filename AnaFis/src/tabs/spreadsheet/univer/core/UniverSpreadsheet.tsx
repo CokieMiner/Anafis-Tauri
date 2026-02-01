@@ -234,7 +234,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
             isInitializedRef.current = true;
             window.__UNIVER_INSTANCES__.add(containerId);
 
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
                 console.log(`Initializing Univer instance for container: ${containerIdRef.current}`);
                 console.log(`Active instances: ${window.__UNIVER_INSTANCES__.size}`);
             }
@@ -351,14 +351,14 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                 // Set disposal flag FIRST to stop all handlers immediately
                 isDisposed = true;
                 
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.DEV) {
                     console.log('Cleaning up Univer...');
                 }
 
                 commandDisposable.dispose();
 
                 if (univerRef.current) {
-                    if (process.env.NODE_ENV === 'development') {
+                    if (import.meta.env.DEV) {
                         console.log(`Disposing Univer instance for container: ${containerId}`);
                     }
                     univerRef.current.dispose();
@@ -368,7 +368,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
                 // Remove from instance tracking
                 if (window.__UNIVER_INSTANCES__) {
                     window.__UNIVER_INSTANCES__.delete(containerId);
-                    if (process.env.NODE_ENV === 'development') {
+                    if (import.meta.env.DEV) {
                         console.log(`Active instances after cleanup: ${window.__UNIVER_INSTANCES__.size}`);
                     }
                 }

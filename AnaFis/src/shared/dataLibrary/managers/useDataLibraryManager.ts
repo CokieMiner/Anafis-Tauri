@@ -262,7 +262,7 @@ export const useDataLibrary = () => {
       await loadSequences();
 
       // Update selected sequence
-      if (selectedSequence && selectedSequence.id === request.id) {
+      if (selectedSequence?.id === request.id) {
         const updatedSequence = { ...selectedSequence };
         if (request.name !== undefined) {updatedSequence.name = request.name;}
         if (request.description !== undefined) {updatedSequence.description = request.description;}

@@ -56,7 +56,7 @@ function SettingsWindow() {
 
 const renderSettingsWindow = () => {
   // Skip rendering in test environment
-  if (process.env.NODE_ENV === 'test') {
+  if (import.meta.env.MODE === 'test') {
     return;
   }
 

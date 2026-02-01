@@ -79,7 +79,7 @@ export async function applyProtectionRules(
 
           // Re-validate workbook and unitId before each resource to avoid stale references
           const currentWorkbook = instanceService.getFocusedUnit();
-          if (!currentWorkbook || currentWorkbook.getUnitId() !== expectedUnitId) {
+          if (currentWorkbook?.getUnitId() !== expectedUnitId) {
             console.warn('⚠️ Workbook changed during protection application, skipping protection');
             continue;
           }
@@ -114,7 +114,7 @@ export async function applyProtectionRules(
                 for (const protection of protections) {
                   // Re-validate workbook before each command
                   const currentWorkbook = instanceService.getFocusedUnit();
-                  if (!currentWorkbook || currentWorkbook.getUnitId() !== expectedUnitId) {
+                  if (currentWorkbook?.getUnitId() !== expectedUnitId) {
                     console.warn('⚠️ Workbook changed during protection application, skipping this protection');
                     continue;
                   }
