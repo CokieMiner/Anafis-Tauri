@@ -48,6 +48,9 @@ pub enum ErrorCode {
     ValidationError,
     MissingRequiredField,
     InvalidDataType,
+
+    // Window errors
+    WindowError,
 }
 
 /// Standardized error response structure
@@ -66,6 +69,17 @@ pub struct ErrorResponse {
     /// Optional field name if error is related to a specific field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub field: Option<String>,
+}
+
+impl std::fmt::Display for ErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}: {}",
+            serde_json::to_string(&self.code).unwrap_or_else(|_| "UNKNOWN_ERROR".to_string()),
+            self.message
+        )
+    }
 }
 
 /// Type alias for command results using standardized errors
@@ -159,6 +173,16 @@ pub fn export_error(message: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
         version: API_VERSION.to_string(),
         code: ErrorCode::ExportFailed,
+        message: message.into(),
+        details: None,
+        field: None,
+    }
+}
+
+pub fn window_error(message: impl Into<String>) -> ErrorResponse {
+    ErrorResponse {
+        version: API_VERSION.to_string(),
+        code: ErrorCode::WindowError,
         message: message.into(),
         details: None,
         field: None,

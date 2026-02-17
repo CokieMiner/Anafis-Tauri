@@ -21,6 +21,8 @@ import type { DataSequence } from '@/core/types/dataLibrary';
 // Static styles to prevent recreation
 const CONTAINER_STYLES = {
   width: 250,
+  minWidth: 250,
+  flexShrink: 0,
   borderRight: 1,
   borderColor: 'divider',
   overflow: 'auto'

@@ -22,6 +22,7 @@ import {
   Alert,
   Divider,
   IconButton,
+  LinearProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -155,6 +156,7 @@ export const DataLibraryWindowContent: React.FC = () => {
     sortBy,
     sortOrder,
     error,
+    isLoadingSequences,
     selectedIds,
     currentPage,
     pageSize,
@@ -426,9 +428,10 @@ export const DataLibraryWindowContent: React.FC = () => {
           {error}
         </Alert>
       )}
+      {isLoadingSequences && <LinearProgress />}
 
       {/* Main content */}
-      <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', flexGrow: 1, overflowX: 'hidden', overflowY: 'hidden', minWidth: 0 }}>
         <SequenceList
           sequences={sequences}
           selectedSequence={selectedSequence}
@@ -437,7 +440,7 @@ export const DataLibraryWindowContent: React.FC = () => {
           onToggleSelection={handleToggleSelection}
         />
 
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
           <SequenceDetails
             sequence={selectedSequence}
             statistics={selectedStats}

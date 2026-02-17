@@ -1,2 +1,2 @@
-// Scientific computation module for sidebar tools
+// Scientific computation module
 pub mod uncertainty_propagation;

@@ -373,7 +373,7 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
           }
         } catch (error) {
           console.error('Failed to delete sheet:', error);
-          throw new Error(`Failed to delete sheet: ${error instanceof Error ? error.message : String(error)}`);
+          throw new Error(`Failed to delete sheet: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
         }
       },
 

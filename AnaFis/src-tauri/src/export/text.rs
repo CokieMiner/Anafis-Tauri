@@ -2,10 +2,10 @@
 //
 // Exports data to delimited text formats (2D array)
 
+use super::{ExportConfig, ExportFormat};
+use serde_json::Value;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use serde_json::Value;
-use super::{ExportConfig, ExportFormat};
 
 /// Export data to CSV/TSV/TXT format (simplified - expects 2D array)
 #[tauri::command]
@@ -26,8 +26,7 @@ pub async fn export_to_text(
     let line_ending = "\r\n";
 
     // Create file with buffered writer for performance
-    let file = File::create(&file_path)
-        .map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
     let mut writer = BufWriter::new(file);
 
     // Export data rows - each element should be an array
@@ -38,15 +37,17 @@ pub async fn export_to_text(
         };
 
         // Format and write the row
-        let formatted_row: Vec<String> = row_array.iter().map(|cell| {
-            format_cell_value(cell, delimiter, quote_char)
-        }).collect();
+        let formatted_row: Vec<String> = row_array
+            .iter()
+            .map(|cell| format_cell_value(cell, delimiter, quote_char))
+            .collect();
 
         write!(writer, "{}{}", formatted_row.join(delimiter), line_ending)
             .map_err(|e| format!("Failed to write row: {}", e))?;
     }
 
-    writer.flush()
+    writer
+        .flush()
         .map_err(|e| format!("Failed to flush writer: {}", e))?;
 
     Ok(())

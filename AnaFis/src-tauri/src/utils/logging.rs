@@ -1,8 +1,8 @@
 // src-tauri/src/logging.rs
-use tracing::{info, error};
-use tracing_subscriber::{fmt, EnvFilter, prelude::*};
-use std::fs::OpenOptions;
 use anyhow::Result;
+use std::fs::OpenOptions;
+use tracing::info;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 /// Initialize structured logging with file and console output
 pub fn init_logging() -> Result<()> {
@@ -16,29 +16,18 @@ pub fn init_logging() -> Result<()> {
         .open(&log_path)?;
 
     // Setup tracing with both file and console output
-    let file_layer = fmt::layer()
-        .with_writer(file)
-        .with_ansi(false);
+    let file_layer = fmt::layer().with_writer(file).with_ansi(false);
 
-    let console_layer = fmt::layer()
-        .with_writer(std::io::stderr);
+    let console_layer = fmt::layer().with_writer(std::io::stderr);
 
     tracing_subscriber::registry()
-        .with(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("info"))
-        )
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .with(file_layer)
         .with(console_layer)
         .init();
 
     info!(log_file = ?log_path, "Logging initialized");
     Ok(())
-}
-
-/// Log an error with context
-pub fn log_error(context: &str, error: &dyn std::error::Error) {
-    error!(context = context, error = %error, "Error occurred");
 }
 
 /// Log an informational message

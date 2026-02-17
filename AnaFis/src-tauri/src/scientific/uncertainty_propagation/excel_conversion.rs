@@ -1,5 +1,5 @@
 use super::types::ExcelRange;
-use regex::Regex;
+use regex::{NoExpand, Regex};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -73,10 +73,9 @@ pub fn symb_anafis_to_excel(
         }
     }
 
-    // Replace variable names with cell references
-    for (var_name, cell_ref) in var_map {
-        excel_formula = excel_formula.replace(var_name, cell_ref);
-    }
+    // Replace variable names with cell references using identifier boundaries.
+    // This prevents replacing `a` inside `sigma_a` and similar partial matches.
+    excel_formula = replace_identifiers(&excel_formula, var_map);
 
     // Convert operators
     excel_formula = excel_formula.replace("**", "^"); // Power operator
@@ -113,9 +112,20 @@ pub fn symb_anafis_to_excel(
     excel_formula = excel_formula.replace("tan", "TAN");
 
     // Convert less common trig using workarounds
-    excel_formula = excel_formula.replace("cot(", "(1/TAN(");
-    excel_formula = excel_formula.replace("sec(", "(1/COS(");
-    excel_formula = excel_formula.replace("csc(", "(1/SIN(");
+    let cot_regex = Regex::new(r"\bcot\(([^)]+)\)").unwrap();
+    excel_formula = cot_regex
+        .replace_all(&excel_formula, "(1/TAN($1))")
+        .to_string();
+
+    let sec_regex = Regex::new(r"\bsec\(([^)]+)\)").unwrap();
+    excel_formula = sec_regex
+        .replace_all(&excel_formula, "(1/COS($1))")
+        .to_string();
+
+    let csc_regex = Regex::new(r"\bcsc\(([^)]+)\)").unwrap();
+    excel_formula = csc_regex
+        .replace_all(&excel_formula, "(1/SIN($1))")
+        .to_string();
 
     // Convert inverse hyperbolic (must come before regular hyperbolic)
     excel_formula = excel_formula.replace("asinh", "ASINH");
@@ -170,6 +180,26 @@ pub fn symb_anafis_to_excel(
         .replace_all(&excel_formula, "EXP(1)")
         .to_string();
     Ok(excel_formula)
+}
+
+fn replace_identifiers(formula: &str, var_map: &HashMap<String, String>) -> String {
+    let mut output = formula.to_string();
+
+    // Replace longer identifiers first to keep behavior deterministic with overlapping names.
+    let mut pairs: Vec<_> = var_map.iter().collect();
+    pairs.sort_by(|(left, _), (right, _)| {
+        right.len().cmp(&left.len()).then_with(|| left.cmp(right))
+    });
+
+    for (name, replacement) in pairs {
+        let pattern = format!(r"\b{}\b", regex::escape(name));
+        let re = Regex::new(&pattern).expect("escaped identifier pattern must compile");
+        output = re
+            .replace_all(&output, NoExpand(replacement.as_str()))
+            .to_string();
+    }
+
+    output
 }
 
 /// Parse Excel range notation into structured ExcelRange
@@ -261,6 +291,19 @@ mod tests {
 
         let result = symb_anafis_to_excel("sin(x)", &var_map).unwrap();
         assert_eq!(result, "SIN(A1)");
+    }
+
+    #[test]
+    fn test_symb_anafis_to_excel_sigma_identifiers_do_not_get_partial_replacements() {
+        let mut var_map = HashMap::new();
+        var_map.insert("a".to_string(), "A1".to_string());
+        var_map.insert("b".to_string(), "C1".to_string());
+        var_map.insert("sigma_a".to_string(), "B1".to_string());
+        var_map.insert("sigma_b".to_string(), "D1".to_string());
+
+        let result =
+            symb_anafis_to_excel("sqrt(sigma_b**2 + (sigma_a*b*cos(a))**2)", &var_map).unwrap();
+        assert_eq!(result, "SQRT(D1^2 + (B1*C1*COS(A1))^2)");
     }
 
     #[test]

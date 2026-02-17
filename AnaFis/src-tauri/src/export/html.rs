@@ -2,10 +2,10 @@
 //
 // Exports data to HTML table format (2D array)
 
+use super::ExportConfig;
+use serde_json::Value;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use serde_json::Value;
-use super::ExportConfig;
 
 /// Export data to HTML format (simplified - expects 2D array)
 #[tauri::command]
@@ -70,14 +70,15 @@ pub async fn export_to_html(
     html.push_str("</body>\n</html>\n");
 
     // Write to file
-    let file = File::create(&file_path)
-        .map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
     let mut writer = BufWriter::new(file);
 
-    writer.write_all(html.as_bytes())
+    writer
+        .write_all(html.as_bytes())
         .map_err(|e| format!("Failed to write HTML: {}", e))?;
 
-    writer.flush()
+    writer
+        .flush()
         .map_err(|e| format!("Failed to flush writer: {}", e))?;
 
     Ok(())

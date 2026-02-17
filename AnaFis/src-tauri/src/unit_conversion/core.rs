@@ -1,10 +1,10 @@
 // src-tauri/src/unit_conversion/core.rs
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use regex::Regex;
+use super::units::{get_unit_categories, register_all_units};
 use once_cell::sync::Lazy;
-use super::units::{register_all_units, get_unit_categories};
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConversionRequest {
@@ -41,20 +41,25 @@ pub struct ConversionPreview {
 /// Θ = temperature (K), N = amount of substance (mol), J = luminous intensity (cd)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Dimension {
-    pub mass: i32,      // M
-    pub length: i32,    // L
-    pub time: i32,      // T
-    pub current: i32,   // I
+    pub mass: i32,        // M
+    pub length: i32,      // L
+    pub time: i32,        // T
+    pub current: i32,     // I
     pub temperature: i32, // Θ
-    pub amount: i32,    // N
-    pub luminosity: i32, // J
+    pub amount: i32,      // N
+    pub luminosity: i32,  // J
 }
 
 impl Dimension {
     pub fn new() -> Self {
         Dimension {
-            mass: 0, length: 0, time: 0, current: 0,
-            temperature: 0, amount: 0, luminosity: 0
+            mass: 0,
+            length: 0,
+            time: 0,
+            current: 0,
+            temperature: 0,
+            amount: 0,
+            luminosity: 0,
         }
     }
 
@@ -136,27 +141,27 @@ impl UnitConverter {
     }
 
     fn initialize_prefixes(&mut self) {
-        self.prefixes.insert("Y".to_string(), 1e24);   // yotta
-        self.prefixes.insert("Z".to_string(), 1e21);   // zetta
-        self.prefixes.insert("E".to_string(), 1e18);   // exa
-        self.prefixes.insert("P".to_string(), 1e15);   // peta
-        self.prefixes.insert("T".to_string(), 1e12);   // tera
-        self.prefixes.insert("G".to_string(), 1e9);    // giga
-        self.prefixes.insert("M".to_string(), 1e6);    // mega
-        self.prefixes.insert("k".to_string(), 1e3);    // kilo
-        self.prefixes.insert("h".to_string(), 1e2);    // hecto
-        self.prefixes.insert("da".to_string(), 1e1);   // deka
-        self.prefixes.insert("d".to_string(), 1e-1);   // deci
-        self.prefixes.insert("c".to_string(), 1e-2);   // centi
-        self.prefixes.insert("m".to_string(), 1e-3);   // milli
-        self.prefixes.insert("μ".to_string(), 1e-6);   // micro
-        self.prefixes.insert("u".to_string(), 1e-6);   // micro (alternative)
-        self.prefixes.insert("n".to_string(), 1e-9);   // nano
-        self.prefixes.insert("p".to_string(), 1e-12);  // pico
-        self.prefixes.insert("f".to_string(), 1e-15);  // femto
-        self.prefixes.insert("a".to_string(), 1e-18);  // atto
-        self.prefixes.insert("z".to_string(), 1e-21);  // zepto
-        self.prefixes.insert("y".to_string(), 1e-24);  // yocto
+        self.prefixes.insert("Y".to_string(), 1e24); // yotta
+        self.prefixes.insert("Z".to_string(), 1e21); // zetta
+        self.prefixes.insert("E".to_string(), 1e18); // exa
+        self.prefixes.insert("P".to_string(), 1e15); // peta
+        self.prefixes.insert("T".to_string(), 1e12); // tera
+        self.prefixes.insert("G".to_string(), 1e9); // giga
+        self.prefixes.insert("M".to_string(), 1e6); // mega
+        self.prefixes.insert("k".to_string(), 1e3); // kilo
+        self.prefixes.insert("h".to_string(), 1e2); // hecto
+        self.prefixes.insert("da".to_string(), 1e1); // deka
+        self.prefixes.insert("d".to_string(), 1e-1); // deci
+        self.prefixes.insert("c".to_string(), 1e-2); // centi
+        self.prefixes.insert("m".to_string(), 1e-3); // milli
+        self.prefixes.insert("μ".to_string(), 1e-6); // micro
+        self.prefixes.insert("u".to_string(), 1e-6); // micro (alternative)
+        self.prefixes.insert("n".to_string(), 1e-9); // nano
+        self.prefixes.insert("p".to_string(), 1e-12); // pico
+        self.prefixes.insert("f".to_string(), 1e-15); // femto
+        self.prefixes.insert("a".to_string(), 1e-18); // atto
+        self.prefixes.insert("z".to_string(), 1e-21); // zepto
+        self.prefixes.insert("y".to_string(), 1e-24); // yocto
     }
 
     fn initialize_quick_conversions(&mut self) {
@@ -175,15 +180,17 @@ impl UnitConverter {
         mass_conversions.insert("oz_to_g".to_string(), 28.3495);
         mass_conversions.insert("g_to_oz".to_string(), 0.035274);
 
-        self.quick_conversions.insert("length".to_string(), length_conversions);
-        self.quick_conversions.insert("mass".to_string(), mass_conversions);
+        self.quick_conversions
+            .insert("length".to_string(), length_conversions);
+        self.quick_conversions
+            .insert("mass".to_string(), mass_conversions);
     }
 
     /// Parse a unit string into its dimensional components
     pub fn parse_unit(&self, unit_str: &str) -> Result<ParsedUnit, String> {
         // Updated regex to support: ^ (caret), ** (double asterisk), and Unicode superscript (⁻, ⁰-⁹)
         static UNIT_REGEX: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(r"([a-zA-Zμ°]+)((?:\*\*|\^)[⁻⁰¹²³⁴⁵⁶⁷⁸⁹\-\d]+|[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?").unwrap()
+            Regex::new(r"^([a-zA-Zμ°]+)((?:\*\*|\^)[⁻⁰¹²³⁴⁵⁶⁷⁸⁹\-\d]+|[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?$").unwrap()
         });
 
         let mut total_dimension = Dimension::new();
@@ -204,10 +211,10 @@ impl UnitConverter {
         let normalized = unit_str
             .replace("(", "")
             .replace(")", "")
-            .replace("**", "§§")  // Temporary placeholder for **
+            .replace("**", "§§") // Temporary placeholder for **
             .replace("*", " ")
             .replace("·", " ")
-            .replace("§§", "**")  // Restore **
+            .replace("§§", "**") // Restore **
             .replace("/", " / ");
         let parts: Vec<&str> = normalized.split_whitespace().collect();
 
@@ -219,44 +226,46 @@ impl UnitConverter {
                 continue;
             }
 
-            if let Some(captures) = UNIT_REGEX.captures(part) {
-                let unit_part = captures.get(1).unwrap().as_str();
-                let power_part = captures.get(2).map(|m| m.as_str());
+            let Some(captures) = UNIT_REGEX.captures(part) else {
+                return Err(format!("Invalid unit token: {part}"));
+            };
 
-                let power = if let Some(pow_str) = power_part {
-                    // Handle different exponent formats: ^, **, or Unicode superscript
-                    let clean_pow = pow_str
-                        .trim_start_matches("**")  // Handle ** first (two chars)
-                        .trim_start_matches('^');   // Then handle ^
+            let unit_part = captures.get(1).unwrap().as_str();
+            let power_part = captures.get(2).map(|m| m.as_str());
 
-                    // Convert Unicode superscript to regular digits
-                    let normalized_pow = clean_pow
-                        .replace("⁰", "0")
-                        .replace("¹", "1")
-                        .replace("²", "2")
-                        .replace("³", "3")
-                        .replace("⁴", "4")
-                        .replace("⁵", "5")
-                        .replace("⁶", "6")
-                        .replace("⁷", "7")
-                        .replace("⁸", "8")
-                        .replace("⁹", "9")
-                        .replace("⁻", "-");
+            let power = if let Some(pow_str) = power_part {
+                // Handle different exponent formats: ^, **, or Unicode superscript
+                let clean_pow = pow_str
+                    .trim_start_matches("**") // Handle ** first (two chars)
+                    .trim_start_matches('^'); // Then handle ^
 
-                    normalized_pow.parse::<i32>().unwrap_or(1)
-                } else {
-                    1
-                };
+                // Convert Unicode superscript to regular digits
+                let normalized_pow = clean_pow
+                    .replace("⁰", "0")
+                    .replace("¹", "1")
+                    .replace("²", "2")
+                    .replace("³", "3")
+                    .replace("⁴", "4")
+                    .replace("⁵", "5")
+                    .replace("⁶", "6")
+                    .replace("⁷", "7")
+                    .replace("⁸", "8")
+                    .replace("⁹", "9")
+                    .replace("⁻", "-");
 
-                let actual_power = if dividing { -power } else { power };
+                normalized_pow.parse::<i32>().unwrap_or(1)
+            } else {
+                1
+            };
 
-                // Try to find the unit (with potential prefix)
-                if let Some((unit, factor)) = self.parse_unit_with_prefix(unit_part) {
-                    total_dimension = total_dimension.multiply(&unit.dimension.power(actual_power));
-                    total_factor *= factor.powi(actual_power);
-                } else {
-                    return Err(format!("Unknown unit: {unit_part}"));
-                }
+            let actual_power = if dividing { -power } else { power };
+
+            // Try to find the unit (with potential prefix)
+            if let Some((unit, factor)) = self.parse_unit_with_prefix(unit_part) {
+                total_dimension = total_dimension.multiply(&unit.dimension.power(actual_power));
+                total_factor *= factor.powi(actual_power);
+            } else {
+                return Err(format!("Unknown unit: {unit_part}"));
             }
         }
 
@@ -273,8 +282,13 @@ impl UnitConverter {
             return Some((unit, unit.si_factor));
         }
 
-        // Try with prefixes
-        for (prefix, prefix_factor) in &self.prefixes {
+        // Try with prefixes (longest first to avoid partial-prefix ambiguity, e.g. `da` vs `d`)
+        let mut prefixes: Vec<_> = self.prefixes.iter().collect();
+        prefixes.sort_by(|(left, _), (right, _)| {
+            right.len().cmp(&left.len()).then_with(|| left.cmp(right))
+        });
+
+        for (prefix, prefix_factor) in prefixes {
             if unit_str.starts_with(prefix) {
                 let base_unit_str = &unit_str[prefix.len()..];
                 if let Some(base_unit) = self.base_units.get(base_unit_str) {
@@ -317,7 +331,9 @@ impl UnitConverter {
             ("°F", "°Ré") => return Some((value - 32.0) / 2.25),
 
             // Same temperature unit
-            ("°C", "°C") | ("°F", "°F") | ("K", "K") | ("°R", "°R") | ("°Ré", "°Ré") => return Some(value),
+            ("°C", "°C") | ("°F", "°F") | ("K", "K") | ("°R", "°R") | ("°Ré", "°Ré") => {
+                return Some(value)
+            }
             _ => {}
         }
 
@@ -335,11 +351,22 @@ impl UnitConverter {
     /// Advanced conversion using dimensional analysis
     pub fn convert(&self, request: &ConversionRequest) -> Result<ConversionResult, String> {
         // Try quick conversion first for common cases
-        if let Some(quick_result) = self.quick_convert(request.value, &request.from_unit, &request.to_unit) {
+        if let Some(quick_result) =
+            self.quick_convert(request.value, &request.from_unit, &request.to_unit)
+        {
             return Ok(ConversionResult {
                 value: quick_result,
-                formatted_result: self.format_result(request.value, &request.from_unit, quick_result, &request.to_unit),
-                conversion_factor: quick_result / request.value,
+                formatted_result: self.format_result(
+                    request.value,
+                    &request.from_unit,
+                    quick_result,
+                    &request.to_unit,
+                ),
+                conversion_factor: if request.value == 0.0 {
+                    0.0
+                } else {
+                    quick_result / request.value
+                },
             });
         }
 
@@ -361,7 +388,12 @@ impl UnitConverter {
 
         Ok(ConversionResult {
             value: converted_value,
-            formatted_result: self.format_result(request.value, &request.from_unit, converted_value, &request.to_unit),
+            formatted_result: self.format_result(
+                request.value,
+                &request.from_unit,
+                converted_value,
+                &request.to_unit,
+            ),
             conversion_factor,
         })
     }
@@ -417,15 +449,24 @@ impl UnitConverter {
             }
         }
 
-        self.base_units.iter().map(|(symbol, unit)| {
-            let category = category_map.get(symbol).unwrap_or(&"other".to_string()).clone();
-            (symbol.clone(), UnitInfo {
-                symbol: symbol.clone(),
-                name: unit.name.clone(),
-                category,
-                description: format!("SI factor: {}", unit.si_factor),
+        self.base_units
+            .iter()
+            .map(|(symbol, unit)| {
+                let category = category_map
+                    .get(symbol)
+                    .cloned()
+                    .unwrap_or_else(|| "other".to_string());
+                (
+                    symbol.clone(),
+                    UnitInfo {
+                        symbol: symbol.clone(),
+                        name: unit.name.clone(),
+                        category,
+                        description: format!("SI factor: {}", unit.si_factor),
+                    },
+                )
             })
-        }).collect()
+            .collect()
     }
 
     #[allow(dead_code)]
@@ -451,13 +492,25 @@ impl UnitConverter {
         }
     }
 
-    fn format_result(&self, input_value: f64, from_unit: &str, output_value: f64, to_unit: &str) -> String {
+    fn format_result(
+        &self,
+        input_value: f64,
+        from_unit: &str,
+        output_value: f64,
+        to_unit: &str,
+    ) -> String {
         let formatted_output = if output_value.abs() >= 1000000.0 {
             format!("{output_value:.6e}")
         } else if output_value.abs() >= 1.0 {
-            format!("{output_value:.6}").trim_end_matches('0').trim_end_matches('.').to_string()
+            format!("{output_value:.6}")
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string()
         } else if output_value.abs() >= 0.000001 {
-            format!("{output_value:.8}").trim_end_matches('0').trim_end_matches('.').to_string()
+            format!("{output_value:.8}")
+                .trim_end_matches('0')
+                .trim_end_matches('.')
+                .to_string()
         } else {
             format!("{output_value:.6e}")
         };
@@ -469,6 +522,5 @@ impl UnitConverter {
 // Global converter instance
 use std::sync::Mutex;
 
-pub static UNIT_CONVERTER: Lazy<Mutex<UnitConverter>> = Lazy::new(|| {
-    Mutex::new(UnitConverter::new())
-});
+pub static UNIT_CONVERTER: Lazy<Mutex<UnitConverter>> =
+    Lazy::new(|| Mutex::new(UnitConverter::new()));

@@ -9,33 +9,33 @@
 // - First row as header option
 // - Skip rows option
 
+use super::ImportResponse;
+use encoding_rs::{Encoding, UTF_8, WINDOWS_1252};
+use serde_json::Value;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use encoding_rs::{Encoding, UTF_8, WINDOWS_1252};
-use std::collections::HashMap;
-use serde_json::Value;
-use super::ImportResponse;
 
 /// Detect file encoding by reading the first few bytes
 fn detect_encoding(file_path: &str) -> Result<&'static Encoding, String> {
-    let file = File::open(file_path)
-        .map_err(|e| format!("Failed to open file: {}", e))?;
-    
+    let file = File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+
     let mut reader = BufReader::new(file);
     let mut buffer = vec![0u8; 1024];
-    let bytes_read = reader.read_until(b'\n', &mut buffer)
+    let bytes_read = reader
+        .read_until(b'\n', &mut buffer)
         .map_err(|e| format!("Failed to read file: {}", e))?;
-    
+
     // Try to detect encoding based on BOM or content
     if bytes_read >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF {
         return Ok(UTF_8); // UTF-8 with BOM
     }
-    
+
     // Check if it's valid UTF-8
     if std::str::from_utf8(&buffer[..bytes_read]).is_ok() {
         return Ok(UTF_8);
     }
-    
+
     // Default to Windows-1252 (common for legacy files)
     Ok(WINDOWS_1252)
 }
@@ -60,14 +60,17 @@ pub fn parse_delimited_file(
     };
 
     // Read file with detected encoding
-    let file = File::open(file_path)
-        .map_err(|e| format!("Failed to open file: {}", e))?;
-    
+    let file = File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+
     let mut reader = BufReader::new(file);
     let mut lines = Vec::new();
     let mut buffer = Vec::new();
-    
-    while reader.read_until(b'\n', &mut buffer).map_err(|e| format!("Failed to read file: {}", e))? > 0 {
+
+    while reader
+        .read_until(b'\n', &mut buffer)
+        .map_err(|e| format!("Failed to read file: {}", e))?
+        > 0
+    {
         let (decoded, _, had_errors) = encoding.decode(&buffer);
         if had_errors {
             return Err("Encoding error: file contains invalid characters".to_string());
@@ -78,7 +81,7 @@ pub fn parse_delimited_file(
 
     // Skip rows if requested
     let lines: Vec<String> = lines.into_iter().skip(skip_rows).collect();
-    
+
     if lines.is_empty() {
         return Err("File is empty or all rows were skipped".to_string());
     }
@@ -130,8 +133,12 @@ pub fn parse_delimited_file(
     }
 
     // If first row as header, skip it (we'll handle headers in the frontend)
-    let data_start = if first_row_as_header && !rows.is_empty() { 1 } else { 0 };
-    
+    let data_start = if first_row_as_header && !rows.is_empty() {
+        1
+    } else {
+        0
+    };
+
     // Convert to JSON values
     let mut sheet_data: Vec<Vec<Value>> = Vec::new();
     for row in rows.iter().skip(data_start) {
@@ -139,9 +146,10 @@ pub fn parse_delimited_file(
         for field in row {
             // Try to parse as number
             if let Ok(num) = field.parse::<f64>() {
-                json_row.push(Value::Number(serde_json::Number::from_f64(num).unwrap_or_else(|| {
-                    serde_json::Number::from(0)
-                })));
+                json_row.push(Value::Number(
+                    serde_json::Number::from_f64(num)
+                        .unwrap_or_else(|| serde_json::Number::from(0)),
+                ));
             } else {
                 json_row.push(Value::String(field.clone()));
             }
@@ -188,7 +196,15 @@ pub async fn import_txt(
     first_row_as_header: bool,
     encoding: Option<&str>,
 ) -> Result<ImportResponse, String> {
-    let delim_char = delimiter.chars().next()
+    let delim_char = delimiter
+        .chars()
+        .next()
         .ok_or("Delimiter must be at least one character")?;
-    parse_delimited_file(file_path, delim_char, skip_rows, first_row_as_header, encoding)
+    parse_delimited_file(
+        file_path,
+        delim_char,
+        skip_rows,
+        first_row_as_header,
+        encoding,
+    )
 }

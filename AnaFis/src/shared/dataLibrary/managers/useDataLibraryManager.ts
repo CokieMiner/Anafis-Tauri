@@ -37,6 +37,8 @@ export const useDataLibrary = () => {
   const [sortBy, setSortBy] = useState<'name' | 'date_created' | 'date_modified' | 'size'>('date_modified');
   const [sortOrder, setSortOrder] = useState<'ascending' | 'descending'>('descending');
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingSequences, setIsLoadingSequences] = useState(false);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -63,6 +65,7 @@ export const useDataLibrary = () => {
   }), [debouncedSearchQuery, selectedTags, sortBy, sortOrder, currentPage, pageSize]);
 
   const loadSequences = useCallback(async () => {
+    setIsLoadingSequences(true);
     try {
       const response = await invoke<SequenceListResponse | ErrorResponse>('get_sequences', { search: searchRequest });
       if (isErrorResponse(response)) {
@@ -70,6 +73,7 @@ export const useDataLibrary = () => {
         return;
       }
       setSequences(response.sequences);
+      setCurrentPage(response.page);
       setTotalCount(response.total_count);
       setTotalPages(response.total_pages);
       setHasNextPage(response.has_next);
@@ -78,10 +82,13 @@ export const useDataLibrary = () => {
     } catch (err) {
       console.error('Failed to load sequences:', err);
       setError(`Failed to load sequences: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsLoadingSequences(false);
     }
   }, [searchRequest]);
 
   const loadAllTags = useCallback(async () => {
+    setIsLoadingTags(true);
     try {
       const response = await invoke<string[] | ErrorResponse>('get_all_tags');
       if (isErrorResponse(response)) {
@@ -93,6 +100,8 @@ export const useDataLibrary = () => {
     } catch (err) {
       console.error('Failed to load tags:', err);
       setError(`Failed to load tags: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsLoadingTags(false);
     }
   }, []);
 
@@ -111,14 +120,15 @@ export const useDataLibrary = () => {
     }
   }, []);
 
-  // Load data on mount
+  // Load tags on mount
   useEffect(() => {
-    const load = async () => {
-      await loadSequences();
-      await loadAllTags();
-    };
-    void load();
-  }, [loadSequences, loadAllTags]);
+    void loadAllTags();
+  }, [loadAllTags]);
+
+  // Reload sequences when search/filter/sort/pagination changes
+  useEffect(() => {
+    void loadSequences();
+  }, [loadSequences]);
 
   // Load statistics when a sequence is selected
   useEffect(() => {
@@ -277,12 +287,33 @@ export const useDataLibrary = () => {
   }, [selectedSequence, loadSequences]);
 
   const handleToggleTagFilter = useCallback((tag: string) => {
+    setCurrentPage(0);
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter(t => t !== tag));
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
   }, [selectedTags]);
+
+  const handleSetSearchQuery = useCallback((query: string) => {
+    setCurrentPage(0);
+    setSearchQuery(query);
+  }, []);
+
+  const handleSetSortBy = useCallback((value: 'name' | 'date_created' | 'date_modified' | 'size') => {
+    setCurrentPage(0);
+    setSortBy(value);
+  }, []);
+
+  const handleSetSortOrder = useCallback((value: 'ascending' | 'descending') => {
+    setCurrentPage(0);
+    setSortOrder(value);
+  }, []);
+
+  const handleSetPageSize = useCallback((size: number) => {
+    setCurrentPage(0);
+    setPageSize(size);
+  }, []);
 
   // Selection handlers
   const handleToggleSelection = useCallback((id: string) => {
@@ -314,6 +345,8 @@ export const useDataLibrary = () => {
     sortBy,
     sortOrder,
     error,
+    isLoadingSequences,
+    isLoadingTags,
     selectedIds,
 
     // Pagination state
@@ -326,13 +359,13 @@ export const useDataLibrary = () => {
 
     // Pagination setters
     setCurrentPage,
-    setPageSize,
+    setPageSize: handleSetPageSize,
 
     // Setters
     setSelectedSequence,
-    setSearchQuery,
-    setSortBy,
-    setSortOrder,
+    setSearchQuery: handleSetSearchQuery,
+    setSortBy: handleSetSortBy,
+    setSortOrder: handleSetSortOrder,
     setError,
 
     // Actions

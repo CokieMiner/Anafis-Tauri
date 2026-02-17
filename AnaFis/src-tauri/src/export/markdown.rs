@@ -2,10 +2,10 @@
 //
 // Exports data to Markdown table format (2D array)
 
+use super::ExportConfig;
+use serde_json::Value;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use serde_json::Value;
-use super::ExportConfig;
 
 /// Export data to Markdown format (simplified - expects 2D array)
 #[tauri::command]
@@ -19,8 +19,7 @@ pub async fn export_to_markdown(
     }
 
     // Create file with buffered writer
-    let file = File::create(&file_path)
-        .map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
     let mut writer = BufWriter::new(file);
 
     // Process data rows - all rows are treated as data
@@ -31,25 +30,28 @@ pub async fn export_to_markdown(
         };
 
         // Format row cells
-        let formatted_cells: Vec<String> = row_array.iter().map(|cell| {
-            let cell_content = match cell {
-                Value::String(s) => s.clone(),
-                Value::Number(n) => n.to_string(),
-                Value::Bool(b) => b.to_string(),
-                Value::Null => String::new(),
-                _ => cell.to_string(),
-            };
-            // Escape pipe characters in markdown
-            cell_content.replace("|", "\\|")
-        }).collect();
+        let formatted_cells: Vec<String> = row_array
+            .iter()
+            .map(|cell| {
+                let cell_content = match cell {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    Value::Null => String::new(),
+                    _ => cell.to_string(),
+                };
+                // Escape pipe characters in markdown
+                cell_content.replace("|", "\\|")
+            })
+            .collect();
 
         // Write the row
         let row_str = formatted_cells.join(" | ");
-        writeln!(writer, "| {} |", row_str)
-            .map_err(|e| format!("Failed to write row: {}", e))?;
+        writeln!(writer, "| {} |", row_str).map_err(|e| format!("Failed to write row: {}", e))?;
     }
 
-    writer.flush()
+    writer
+        .flush()
         .map_err(|e| format!("Failed to flush writer: {}", e))?;
 
     Ok(())

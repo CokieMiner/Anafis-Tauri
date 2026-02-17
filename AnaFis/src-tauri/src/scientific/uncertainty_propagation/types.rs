@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-/// Represents a variable in the uncertainty calculation
+// ============================================================
+// SPREADSHEET TYPES (for Excel formula generation)
+// ============================================================
+
+/// Represents a variable in the uncertainty calculation (spreadsheet mode)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Variable {
     pub name: String,

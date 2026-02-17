@@ -2,15 +2,15 @@
 //
 // Exports data to Apache Parquet columnar format (2D array)
 
-use std::fs::File;
-use std::sync::Arc;
-use serde_json::Value;
+use super::ExportConfig;
 use arrow::array::{ArrayRef, StringArray};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
 use parquet::arrow::ArrowWriter;
 use parquet::file::properties::WriterProperties;
-use super::ExportConfig;
+use serde_json::Value;
+use std::fs::File;
+use std::sync::Arc;
 
 /// Export data to Apache Parquet (.parquet) format (simplified - expects 2D array)
 #[tauri::command]
@@ -20,7 +20,8 @@ pub async fn export_to_parquet(
     _config: ExportConfig,
 ) -> Result<(), String> {
     // Determine the maximum number of columns
-    let max_cols = data.iter()
+    let max_cols = data
+        .iter()
         .filter_map(|row| row.as_array())
         .map(|arr| arr.len())
         .max()
@@ -76,17 +77,18 @@ pub async fn export_to_parquet(
         .map_err(|e| format!("Failed to create RecordBatch: {}", e))?;
 
     // Write to Parquet file
-    let file = File::create(&file_path)
-        .map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
 
     let props = WriterProperties::builder().build();
     let mut writer = ArrowWriter::try_new(file, schema, Some(props))
         .map_err(|e| format!("Failed to create Parquet writer: {}", e))?;
 
-    writer.write(&batch)
+    writer
+        .write(&batch)
         .map_err(|e| format!("Failed to write RecordBatch: {}", e))?;
 
-    writer.close()
+    writer
+        .close()
         .map_err(|e| format!("Failed to close Parquet writer: {}", e))?;
 
     Ok(())

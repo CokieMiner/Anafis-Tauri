@@ -1,13 +1,13 @@
 // src-tauri/src/unit_conversion/commands.rs
 
-use tauri::command;
-use serde::{Deserialize, Serialize};
+use crate::error::{conversion_error, internal_error, validation_error, CommandResult};
 use crate::unit_conversion::core::{
-    UNIT_CONVERTER, ConversionRequest, ConversionResult,
-    ConversionPreview, UnitInfo, Dimension
+    ConversionPreview, ConversionRequest, ConversionResult, Dimension, UnitConverter, UnitInfo,
+    UNIT_CONVERTER,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::error::{CommandResult, conversion_error, validation_error, internal_error};
+use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DimensionalAnalysisResult {
@@ -29,38 +29,65 @@ pub struct CompatibilityAnalysisResult {
     pub analysis_details: String,
 }
 
+fn with_converter<T>(operation: impl FnOnce(&UnitConverter) -> T) -> CommandResult<T> {
+    let converter = UNIT_CONVERTER
+        .lock()
+        .map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
+    Ok(operation(&converter))
+}
+
+fn with_converter_result<T>(
+    operation: impl FnOnce(&UnitConverter) -> Result<T, String>,
+) -> CommandResult<T> {
+    let converter = UNIT_CONVERTER
+        .lock()
+        .map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
+    operation(&converter).map_err(conversion_error)
+}
+
+fn with_converter_string_result<T>(
+    operation: impl FnOnce(&UnitConverter) -> Result<T, String>,
+) -> Result<T, String> {
+    let converter = UNIT_CONVERTER
+        .lock()
+        .map_err(|e| format!("Failed to lock converter: {e}"))?;
+    operation(&converter)
+}
+
 // ===== BASIC CONVERSION COMMANDS =====
 
 #[command]
 pub async fn convert_value(request: ConversionRequest) -> CommandResult<ConversionResult> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
-    converter.convert(&request).map_err(conversion_error)
+    with_converter_result(|converter| converter.convert(&request))
 }
 
 #[command]
-pub async fn get_conversion_preview(from_unit: String, to_unit: String) -> CommandResult<ConversionPreview> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
-    Ok(converter.get_conversion_preview(&from_unit, &to_unit))
+pub async fn get_conversion_preview(
+    from_unit: String,
+    to_unit: String,
+) -> CommandResult<ConversionPreview> {
+    with_converter(|converter| converter.get_conversion_preview(&from_unit, &to_unit))
 }
 
 #[command]
 pub async fn check_unit_compatibility(from_unit: String, to_unit: String) -> CommandResult<bool> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
-    Ok(converter.check_unit_compatibility(&from_unit, &to_unit))
+    with_converter(|converter| converter.check_unit_compatibility(&from_unit, &to_unit))
 }
 
 #[command]
 pub async fn get_available_units() -> CommandResult<HashMap<String, UnitInfo>> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
-    Ok(converter.get_available_units())
+    with_converter(|converter| converter.get_available_units())
 }
 
 // ===== QUICK CONVERSION FOR MENU BUTTONS =====
 
 #[command]
-pub async fn quick_convert_value(value: f64, from_unit: String, to_unit: String) -> CommandResult<Option<f64>> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
-    Ok(converter.quick_convert(value, &from_unit, &to_unit))
+pub async fn quick_convert_value(
+    value: f64,
+    from_unit: String,
+    to_unit: String,
+) -> CommandResult<Option<f64>> {
+    with_converter(|converter| converter.quick_convert(value, &from_unit, &to_unit))
 }
 
 #[command]
@@ -71,47 +98,42 @@ pub async fn get_conversion_factor(from_unit: String, to_unit: String) -> Comman
         to_unit,
     };
 
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
-    match converter.convert(&dummy_request) {
-        Ok(result) => Ok(result.conversion_factor),
-        Err(e) => Err(conversion_error(e)),
-    }
+    with_converter_result(|converter| {
+        converter
+            .convert(&dummy_request)
+            .map(|result| result.conversion_factor)
+    })
 }
 
 // ===== ADVANCED DIMENSIONAL ANALYSIS =====
 
 #[command]
 pub async fn parse_unit_formula(unit_formula: String) -> Result<DimensionalAnalysisResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
-
-    match converter.parse_unit(&unit_formula) {
-        Ok(parsed) => {
-            Ok(DimensionalAnalysisResult {
-                unit_formula: unit_formula.clone(),
-                dimensional_formula: format_dimension(&parsed.dimension),
-                si_factor: parsed.si_factor,
-                is_valid: true,
-                error_message: None,
-            })
-        }
-        Err(e) => {
-            Ok(DimensionalAnalysisResult {
-                unit_formula: unit_formula.clone(),
-                dimensional_formula: String::new(),
-                si_factor: 0.0,
-                is_valid: false,
-                error_message: Some(e),
-            })
-        }
+    match with_converter_string_result(|converter| converter.parse_unit(&unit_formula)) {
+        Ok(parsed) => Ok(DimensionalAnalysisResult {
+            unit_formula: unit_formula.clone(),
+            dimensional_formula: format_dimension(&parsed.dimension),
+            si_factor: parsed.si_factor,
+            is_valid: true,
+            error_message: None,
+        }),
+        Err(e) => Ok(DimensionalAnalysisResult {
+            unit_formula: unit_formula.clone(),
+            dimensional_formula: String::new(),
+            si_factor: 0.0,
+            is_valid: false,
+            error_message: Some(e),
+        }),
     }
 }
 
 #[command]
-pub async fn analyze_dimensional_compatibility(unit1: String, unit2: String) -> Result<CompatibilityAnalysisResult, String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| format!("Failed to lock converter: {e}"))?;
-
-    let parse1 = converter.parse_unit(&unit1);
-    let parse2 = converter.parse_unit(&unit2);
+pub async fn analyze_dimensional_compatibility(
+    unit1: String,
+    unit2: String,
+) -> Result<CompatibilityAnalysisResult, String> {
+    let parse1 = with_converter_string_result(|converter| converter.parse_unit(&unit1));
+    let parse2 = with_converter_string_result(|converter| converter.parse_unit(&unit2));
 
     match (parse1, parse2) {
         (Ok(parsed1), Ok(parsed2)) => {
@@ -147,38 +169,36 @@ pub async fn analyze_dimensional_compatibility(unit1: String, unit2: String) -> 
                 analysis_details,
             })
         }
-        (Err(e1), _) => {
-            Ok(CompatibilityAnalysisResult {
-                unit1: unit1.clone(),
-                unit2: unit2.clone(),
-                are_compatible: false,
-                unit1_formula: String::new(),
-                unit2_formula: String::new(),
-                conversion_factor: None,
-                analysis_details: format!("Error parsing {unit1}: {e1}"),
-            })
-        }
-        (_, Err(e2)) => {
-            Ok(CompatibilityAnalysisResult {
-                unit1: unit1.clone(),
-                unit2: unit2.clone(),
-                are_compatible: false,
-                unit1_formula: String::new(),
-                unit2_formula: String::new(),
-                conversion_factor: None,
-                analysis_details: format!("Error parsing {unit2}: {e2}"),
-            })
-        }
+        (Err(e1), _) => Ok(CompatibilityAnalysisResult {
+            unit1: unit1.clone(),
+            unit2: unit2.clone(),
+            are_compatible: false,
+            unit1_formula: String::new(),
+            unit2_formula: String::new(),
+            conversion_factor: None,
+            analysis_details: format!("Error parsing {unit1}: {e1}"),
+        }),
+        (_, Err(e2)) => Ok(CompatibilityAnalysisResult {
+            unit1: unit1.clone(),
+            unit2: unit2.clone(),
+            are_compatible: false,
+            unit1_formula: String::new(),
+            unit2_formula: String::new(),
+            conversion_factor: None,
+            analysis_details: format!("Error parsing {unit2}: {e2}"),
+        }),
     }
 }
 
 #[command]
 pub async fn get_unit_dimensional_formula(unit: String) -> CommandResult<String> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
+    let converter = UNIT_CONVERTER
+        .lock()
+        .map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
 
     match converter.parse_unit(&unit) {
         Ok(parsed) => Ok(format_dimension(&parsed.dimension)),
-        Err(e) => Err(validation_error(e, Some("unit".to_string())))
+        Err(e) => Err(validation_error(e, Some("unit".to_string()))),
     }
 }
 
@@ -186,7 +206,9 @@ pub async fn get_unit_dimensional_formula(unit: String) -> CommandResult<String>
 
 #[command]
 pub async fn validate_unit_string(unit: String) -> CommandResult<bool> {
-    let converter = UNIT_CONVERTER.lock().map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
+    let converter = UNIT_CONVERTER
+        .lock()
+        .map_err(|e| internal_error(format!("Failed to lock converter: {e}")))?;
 
     match converter.parse_unit(&unit) {
         Ok(_) => Ok(true),
@@ -196,20 +218,21 @@ pub async fn validate_unit_string(unit: String) -> CommandResult<bool> {
 
 #[command]
 pub async fn get_supported_categories() -> CommandResult<Vec<String>> {
-    Ok(vec![
-        "length".to_string(),
-        "mass".to_string(),
-        "time".to_string(),
-        "velocity".to_string(),
-        "force".to_string(),
-        "energy".to_string(),
-        "power".to_string(),
-        "pressure".to_string(),
-        "frequency".to_string(),
-        "current".to_string(),
-        "temperature".to_string(),
-        "other".to_string(),
-    ])
+    const SUPPORTED_CATEGORIES: [&str; 12] = [
+        "length",
+        "mass",
+        "time",
+        "velocity",
+        "force",
+        "energy",
+        "power",
+        "pressure",
+        "frequency",
+        "current",
+        "temperature",
+        "other",
+    ];
+    Ok(SUPPORTED_CATEGORIES.iter().map(|c| c.to_string()).collect())
 }
 
 // ===== HELPER FUNCTIONS =====
@@ -218,25 +241,53 @@ fn format_dimension(dim: &Dimension) -> String {
     let mut parts = Vec::new();
 
     if dim.mass != 0 {
-        parts.push(if dim.mass == 1 { "M".to_string() } else { format!("M^{}", dim.mass) });
+        parts.push(if dim.mass == 1 {
+            "M".to_string()
+        } else {
+            format!("M^{}", dim.mass)
+        });
     }
     if dim.length != 0 {
-        parts.push(if dim.length == 1 { "L".to_string() } else { format!("L^{}", dim.length) });
+        parts.push(if dim.length == 1 {
+            "L".to_string()
+        } else {
+            format!("L^{}", dim.length)
+        });
     }
     if dim.time != 0 {
-        parts.push(if dim.time == 1 { "T".to_string() } else { format!("T^{}", dim.time) });
+        parts.push(if dim.time == 1 {
+            "T".to_string()
+        } else {
+            format!("T^{}", dim.time)
+        });
     }
     if dim.current != 0 {
-        parts.push(if dim.current == 1 { "I".to_string() } else { format!("I^{}", dim.current) });
+        parts.push(if dim.current == 1 {
+            "I".to_string()
+        } else {
+            format!("I^{}", dim.current)
+        });
     }
     if dim.temperature != 0 {
-        parts.push(if dim.temperature == 1 { "Θ".to_string() } else { format!("Θ^{}", dim.temperature) });
+        parts.push(if dim.temperature == 1 {
+            "Θ".to_string()
+        } else {
+            format!("Θ^{}", dim.temperature)
+        });
     }
     if dim.amount != 0 {
-        parts.push(if dim.amount == 1 { "N".to_string() } else { format!("N^{}", dim.amount) });
+        parts.push(if dim.amount == 1 {
+            "N".to_string()
+        } else {
+            format!("N^{}", dim.amount)
+        });
     }
     if dim.luminosity != 0 {
-        parts.push(if dim.luminosity == 1 { "J".to_string() } else { format!("J^{}", dim.luminosity) });
+        parts.push(if dim.luminosity == 1 {
+            "J".to_string()
+        } else {
+            format!("J^{}", dim.luminosity)
+        });
     }
 
     if parts.is_empty() {

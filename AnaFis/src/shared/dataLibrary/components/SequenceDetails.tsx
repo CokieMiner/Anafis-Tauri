@@ -61,7 +61,7 @@ const SequenceDetails: React.FC<SequenceDetailsProps> = memo(({
   }
 
   return (
-    <Box sx={{ flexGrow: 1, overflow: 'auto', p: 3 }}>
+    <Box sx={{ flexGrow: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', p: 3 }}>
       {/* Sequence header */}
       <Box sx={{ mb: 3 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">

@@ -14,15 +14,15 @@
 // - parquet: Apache Parquet exports
 // - anafispread: Custom AnaFis spreadsheet format
 
-pub mod text;
+pub mod anafispread;
 pub mod html;
 pub mod markdown;
-pub mod tex;
 pub mod parquet;
-pub mod anafispread;
+pub mod tex;
+pub mod text;
 
+use crate::error::{export_error, validation_error, CommandResult};
 use serde::{Deserialize, Serialize};
-use crate::error::{CommandResult, export_error, validation_error};
 
 /// Export format types supported by the application
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,8 +70,6 @@ pub struct ExportOptions {
     pub delimiter: Option<String>,
 }
 
-
-
 /// Frontend config structure (simplified)
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -95,36 +93,37 @@ pub async fn export_data(
             delimiter: config.delimiter,
         },
     };
-    
+
     match export_config.format {
         ExportFormat::Csv | ExportFormat::Tsv | ExportFormat::Txt => {
-            text::export_to_text(data, file_path, export_config).await
+            text::export_to_text(data, file_path, export_config)
+                .await
                 .map_err(|e| export_error(format!("Text export failed: {}", e)))
         }
-        ExportFormat::Parquet => {
-            parquet::export_to_parquet(data, file_path, export_config).await
-                .map_err(|e| export_error(format!("Parquet export failed: {}", e)))
-        }
-        ExportFormat::Html => {
-            html::export_to_html(data, file_path, export_config).await
-                .map_err(|e| export_error(format!("HTML export failed: {}", e)))
-        }
-        ExportFormat::Markdown => {
-            markdown::export_to_markdown(data, file_path, export_config).await
-                .map_err(|e| export_error(format!("Markdown export failed: {}", e)))
-        }
-        ExportFormat::Tex => {
-            tex::export_to_latex(data, file_path, export_config).await
-                .map_err(|e| export_error(format!("LaTeX export failed: {}", e)))
-        }
+        ExportFormat::Parquet => parquet::export_to_parquet(data, file_path, export_config)
+            .await
+            .map_err(|e| export_error(format!("Parquet export failed: {}", e))),
+        ExportFormat::Html => html::export_to_html(data, file_path, export_config)
+            .await
+            .map_err(|e| export_error(format!("HTML export failed: {}", e))),
+        ExportFormat::Markdown => markdown::export_to_markdown(data, file_path, export_config)
+            .await
+            .map_err(|e| export_error(format!("Markdown export failed: {}", e))),
+        ExportFormat::Tex => tex::export_to_latex(data, file_path, export_config)
+            .await
+            .map_err(|e| export_error(format!("LaTeX export failed: {}", e))),
         ExportFormat::AnaFisSpread => {
             // For anafispread, we need to pass the data directly (not as array)
             let workbook_data = if data.len() == 1 {
                 data[0].clone()
             } else {
-                return Err(validation_error("Invalid data format for AnaFis Spreadsheet export".to_string(), Some("data".to_string())));
+                return Err(validation_error(
+                    "Invalid data format for AnaFis Spreadsheet export".to_string(),
+                    Some("data".to_string()),
+                ));
             };
-            anafispread::export_anafispread(workbook_data, file_path).await
+            anafispread::export_anafispread(workbook_data, file_path)
+                .await
                 .map_err(|e| export_error(format!("AnaFis spread export failed: {}", e)))
         }
     }

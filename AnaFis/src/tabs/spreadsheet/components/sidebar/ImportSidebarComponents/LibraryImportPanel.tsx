@@ -26,6 +26,7 @@ import { extractStartCell } from '@/tabs/spreadsheet/utils/rangeUtils';
 import type { CellValue, SpreadsheetRef as SpreadsheetInterface } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import type { ImportResult } from '@/core/types/import';
 import type { DataSequence } from '@/core/types/dataLibrary';
+import { type ErrorResponse, isErrorResponse, getErrorMessage } from '@/core/types/error';
 
 interface LibraryImportPanelProps {
   spreadsheetRef: React.RefObject<SpreadsheetInterface | null>;
@@ -78,15 +79,22 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
     setError(null);
 
     try {
-      const result = await invoke<{ sequences: DataSequence[]; total_count: number; pinned_count: number }>('get_sequences', {
+      const result = await invoke<{ sequences: DataSequence[]; total_count: number; pinned_count: number } | ErrorResponse>('get_sequences', {
         search: {
           query: searchQuery || null,
           tags: selectedTags.length > 0 ? selectedTags : null,
           source: null,
           sort_by: 'name',
-          sort_order: 'ascending'
+          sort_order: 'ascending',
+          page: 0,
+          page_size: 10000,
         }
       });
+
+      if (isErrorResponse(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
 
       setAvailableSequences(result.sequences);
     } catch (err) {
@@ -99,23 +107,26 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
   // Load available tags
   const loadTags = useCallback(async () => {
     try {
-      const tags = await invoke<string[]>('get_all_tags');
+      const tags = await invoke<string[] | ErrorResponse>('get_all_tags');
+      if (isErrorResponse(tags)) {
+        setError(getErrorMessage(tags));
+        return;
+      }
       setAvailableTags(tags);
     } catch (err) {
       console.error('Failed to load tags:', err);
     }
   }, []);
 
-  // Load sequences and tags on mount
+  // Load tags on mount
   useEffect(() => {
-    void loadSequences();
     void loadTags();
-  }, [loadSequences, loadTags]);
+  }, [loadTags]);
 
-  // Reload sequences when search/filter changes
+  // Load/reload sequences when search/filter changes
   useEffect(() => {
     void loadSequences();
-  }, [searchQuery, selectedTags, loadSequences]);
+  }, [loadSequences]);
 
   // Handle import from data library
   const handleImportFromLibrary = useCallback(async () => {

@@ -4,7 +4,6 @@ mod error;
 mod export;
 mod import;
 pub mod scientific;
-mod uncertainty_calculator;
 mod unit_conversion;
 mod utils;
 mod windows;
@@ -15,9 +14,10 @@ use tauri::{Emitter, Manager};
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            // Uncertainty Calculator Commands (2 commands)
-            uncertainty_calculator::uncertainty::calculate_uncertainty,
-            uncertainty_calculator::uncertainty::generate_latex,
+            // Scientific Computation Commands
+            scientific::uncertainty_propagation::calculator::calculate_uncertainty,
+            scientific::uncertainty_propagation::calculator::generate_latex,
+            scientific::uncertainty_propagation::generate_uncertainty_formulas,
             // Unit Conversion Commands (12 commands)
             unit_conversion::commands::convert_value,
             unit_conversion::commands::get_conversion_preview,
@@ -40,8 +40,6 @@ pub fn run() {
             windows::secondary_windows::open_data_library_window,
             windows::secondary_windows::close_data_library_window,
             windows::window_manager::set_window_size,
-            // Scientific Computation Commands (Sidebar tools)
-            scientific::uncertainty_propagation::generate_uncertainty_formulas,
             // Data Library Commands (12 commands)
             data_library::commands::save_sequence,
             data_library::commands::get_sequences,

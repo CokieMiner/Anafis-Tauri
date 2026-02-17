@@ -1,11 +1,11 @@
 // src-tauri/src/secondary_windows.rs
 
-use tauri::{AppHandle, Manager, WindowEvent};
-use urlencoding;
-use tokio::time::{timeout, Duration};
-use tokio::sync::Notify;
-use tracing::{info, error};
 use crate::windows::window_manager::{create_or_focus_window, WindowConfig};
+use tauri::{AppHandle, Manager, WindowEvent};
+use tokio::sync::Notify;
+use tokio::time::{timeout, Duration};
+use tracing::{error, info};
+use urlencoding;
 
 #[tauri::command]
 pub fn close_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
@@ -14,24 +14,21 @@ pub fn close_uncertainty_calculator_window(app: AppHandle) -> Result<(), String>
 }
 
 #[tauri::command]
-pub fn resize_uncertainty_calculator_window(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+pub fn resize_uncertainty_calculator_window(
+    app: AppHandle,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
     crate::windows::window_manager::resize_window(&app, "uncertainty-calculator", width, height)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
-    // First check if window already exists
-    if let Some(existing_window) = app.get_webview_window("uncertainty-calculator") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
-        return Ok(());
-    }
-
     let config = WindowConfig {
         title: "Uncertainty Calculator".to_string(),
         url: "uncertainty-calculator.html".to_string(),
-        width: 600.0, // Wider default to accommodate two-column layout properly
+        width: 600.0,  // Wider default to accommodate two-column layout properly
         height: 670.0, // Increased default height for more content
         resizable: true,
         decorations: false,
@@ -44,25 +41,16 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
         focus_on_create: true,
     };
 
-    create_or_focus_window(&app, "uncertainty-calculator", config)
-        .map_err(|e| e.to_string())
+    create_or_focus_window(&app, "uncertainty-calculator", config).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn close_settings_window(app: AppHandle) -> Result<(), String> {
-    crate::windows::window_manager::close_window(&app, "settings")
-        .map_err(|e| e.to_string())
+    crate::windows::window_manager::close_window(&app, "settings").map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
-    // First check if window already exists
-    if let Some(existing_window) = app.get_webview_window("settings") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
-        existing_window.set_focus().map_err(|e| format!("Failed to focus window: {e}"))?;
-        return Ok(());
-    }
-
     let config = WindowConfig {
         title: "AnaFis Settings".to_string(),
         url: "settings.html".to_string(),
@@ -79,25 +67,16 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
         focus_on_create: true,
     };
 
-    create_or_focus_window(&app, "settings", config)
-        .map_err(|e| e.to_string())
+    create_or_focus_window(&app, "settings", config).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn close_data_library_window(app: AppHandle) -> Result<(), String> {
-    crate::windows::window_manager::close_window(&app, "data-library")
-        .map_err(|e| e.to_string())
+    crate::windows::window_manager::close_window(&app, "data-library").map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
-    // First check if window already exists
-    if let Some(existing_window) = app.get_webview_window("data-library") {
-        existing_window.show().map_err(|e| format!("Failed to show window: {e}"))?;
-        // Don't set focus - let user keep focus on main window
-        return Ok(());
-    }
-
     let config = WindowConfig {
         title: "Data Library".to_string(),
         url: "data-library.html".to_string(),
@@ -114,29 +93,35 @@ pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
         focus_on_create: false,
     };
 
-    create_or_focus_window(&app, "data-library", config)
-        .map_err(|e| e.to_string())
+    create_or_focus_window(&app, "data-library", config).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, title: String) -> Result<(), String> {
+pub async fn open_latex_preview_window(
+    app: AppHandle,
+    latex_formula: String,
+    title: String,
+) -> Result<(), String> {
     // Debug logging
-    info!("Opening LaTeX preview window with formula: {}..., title: {}", 
-             &latex_formula.chars().take(50).collect::<String>(), title);
+    info!(
+        "Opening LaTeX preview window with formula: {}..., title: {}",
+        &latex_formula.chars().take(50).collect::<String>(),
+        title
+    );
 
     // Encode the parameters for URL
     let encoded_formula = urlencoding::encode(&latex_formula);
     let encoded_title = urlencoding::encode(&title);
     let new_url = format!("latex-preview.html?formula={encoded_formula}&title={encoded_title}");
-    
+
     // Check if window already exists and destroy it
     if let Some(existing_window) = app.get_webview_window("latex-preview") {
         info!("Destroying existing LaTeX preview window");
-        
+
         // Create a notify to wait for window destruction
         let notify = std::sync::Arc::new(Notify::new());
         let notify_clone = notify.clone();
-        
+
         // Register the destruction listener BEFORE calling destroy()
         // This ensures the listener is active when destroy() is called
         existing_window.on_window_event(move |event| {
@@ -144,23 +129,31 @@ pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, ti
                 notify_clone.notify_one();
             }
         });
-        
+
         // Create the notified future immediately after registering the listener
         // This prevents missing fast Destroyed events
         let notified_fut = notify.notified();
-        
+
         // Call destroy() and handle the Result properly
         if let Err(destroy_err) = existing_window.destroy() {
-            error!("Failed to destroy existing LaTeX preview window: {}", destroy_err);
-            return Err(format!("Failed to destroy existing window: {}", destroy_err));
+            error!(
+                "Failed to destroy existing LaTeX preview window: {}",
+                destroy_err
+            );
+            return Err(format!(
+                "Failed to destroy existing window: {}",
+                destroy_err
+            ));
         }
-        
+
         // Wait for the window to be fully destroyed with a shorter timeout
         // Treat timeout as a hard failure to prevent race conditions
         match timeout(Duration::from_millis(500), notified_fut).await {
             Ok(_) => info!("Existing LaTeX preview window destroyed successfully"),
             Err(_) => {
-                error!("Timeout waiting for window destruction - window may not be fully destroyed");
+                error!(
+                    "Timeout waiting for window destruction - window may not be fully destroyed"
+                );
                 return Err("Failed to destroy existing window: timeout waiting for destruction confirmation".to_string());
             }
         }
@@ -170,7 +163,7 @@ pub async fn open_latex_preview_window(app: AppHandle, latex_formula: String, ti
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         "latex-preview",
-        tauri::WebviewUrl::App(new_url.into())
+        tauri::WebviewUrl::App(new_url.into()),
     )
     .title(&title)
     .decorations(false)

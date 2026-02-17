@@ -9,38 +9,38 @@
 //!
 //! The module handles parsing and converting various file formats to Univer-compatible workbook data.
 
+use crate::error::{file_not_found, import_error, validation_error, CommandResult};
+use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::env;
-use dirs::home_dir;
-use crate::error::{CommandResult, file_not_found, validation_error, import_error};
+use std::path::{Path, PathBuf};
 
 /// Validate and canonicalize a file path to prevent directory traversal
 /// Returns the canonicalized path if valid, or an error if invalid
 fn validate_and_canonicalize_path(file_path: &str) -> Result<PathBuf, String> {
     // Canonicalize the path to resolve any .. or . components
     let path = Path::new(file_path);
-    let canonical_path = path.canonicalize()
+    let canonical_path = path
+        .canonicalize()
         .map_err(|e| format!("Failed to canonicalize path '{}': {}", file_path, e))?;
 
     // Verify the canonicalized path is within allowed directories
     // For security, restrict to user's home directory and system temp directories
-    let home_dir = home_dir()
-        .ok_or_else(|| "Could not determine home directory".to_string())?;
+    let home_dir = home_dir().ok_or_else(|| "Could not determine home directory".to_string())?;
     let temp_dir = env::temp_dir();
 
-    let allowed_paths = [
-        home_dir.as_path(),
-        temp_dir.as_path(),
-    ];
+    let allowed_paths = [home_dir.as_path(), temp_dir.as_path()];
 
-    let is_allowed = allowed_paths.iter().any(|allowed| {
-        canonical_path.starts_with(allowed)
-    });
+    let is_allowed = allowed_paths
+        .iter()
+        .any(|allowed| canonical_path.starts_with(allowed));
 
     if !is_allowed {
-        return Err(format!("Access denied: path '{}' is outside allowed directories", canonical_path.display()));
+        return Err(format!(
+            "Access denied: path '{}' is outside allowed directories",
+            canonical_path.display()
+        ));
     }
 
     // Verify file exists
@@ -67,7 +67,8 @@ pub struct ImportOptionsFrontend {
     pub delimiter: String,
     #[serde(default)]
     pub encoding: String,
-}/// File metadata extracted from import files
+}
+/// File metadata extracted from import files
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileMetadata {
@@ -105,7 +106,9 @@ pub async fn import_spreadsheet_file(
                 options.skip_rows,
                 false, // We'll handle headers in the frontend
                 Some(&options.encoding),
-            ).await.map_err(|e| import_error(format!("CSV import failed: {}", e)))
+            )
+            .await
+            .map_err(|e| import_error(format!("CSV import failed: {}", e)))
         }
         "tsv" => {
             csv::import_tsv(
@@ -113,7 +116,9 @@ pub async fn import_spreadsheet_file(
                 options.skip_rows,
                 false, // We'll handle headers in the frontend
                 Some(&options.encoding),
-            ).await.map_err(|e| import_error(format!("TSV import failed: {}", e)))
+            )
+            .await
+            .map_err(|e| import_error(format!("TSV import failed: {}", e)))
         }
         "txt" => {
             csv::import_txt(
@@ -122,31 +127,37 @@ pub async fn import_spreadsheet_file(
                 options.skip_rows,
                 false, // We'll handle headers in the frontend
                 Some(&options.encoding),
-            ).await.map_err(|e| import_error(format!("TXT import failed: {}", e)))
+            )
+            .await
+            .map_err(|e| import_error(format!("TXT import failed: {}", e)))
         }
         "anafispread" => {
             // Special case: .anafispread should use direct import
-            Err(import_error("Use import_anafis_spread_direct for .anafispread files".to_string()))
+            Err(import_error(
+                "Use import_anafis_spread_direct for .anafispread files".to_string(),
+            ))
         }
-        "parquet" => {
-            parquet::import_parquet(&canonical_path.to_string_lossy()).await
-                .map_err(|e| import_error(format!("Parquet import failed: {}", e)))
-        }
-        _ => Err(validation_error(format!("Unsupported format: {}", options.format), Some("format".to_string()))),
+        "parquet" => parquet::import_parquet(&canonical_path.to_string_lossy())
+            .await
+            .map_err(|e| import_error(format!("Parquet import failed: {}", e))),
+        _ => Err(validation_error(
+            format!("Unsupported format: {}", options.format),
+            Some("format".to_string()),
+        )),
     }
-}/// Direct import command for .anafispread format
+}
+/// Direct import command for .anafispread format
 /// Returns raw IWorkbookData without conversion for lossless snapshot loading
 #[tauri::command]
-pub async fn import_anafis_spread_direct(
-    file_path: String,
-) -> CommandResult<serde_json::Value> {
+pub async fn import_anafis_spread_direct(file_path: String) -> CommandResult<serde_json::Value> {
     // Validate and canonicalize path to prevent directory traversal
     let canonical_path = validate_and_canonicalize_path(&file_path)
         .map_err(|e| validation_error(e, Some("file_path".to_string())))?;
 
     // Return raw IWorkbookData without any conversion
     // This preserves the complete Univer snapshot structure for lossless restore
-    anafispread::import_anafis_spread(canonical_path.to_string_lossy().to_string()).await
+    anafispread::import_anafis_spread(canonical_path.to_string_lossy().to_string())
+        .await
         .map_err(|e| import_error(format!("AnaFis spread import failed: {}", e)))
 }
 
@@ -178,7 +189,8 @@ pub async fn get_file_metadata(
         "csv" | "tsv" | "txt" => {
             // For text-based formats, read all lines to determine dimensions
             // For TXT, use the provided delimiter or default to "|"
-            match get_text_file_dimensions(&canonical_path, &extension, delimiter.as_deref()).await {
+            match get_text_file_dimensions(&canonical_path, &extension, delimiter.as_deref()).await
+            {
                 Ok((rows, cols)) => (Some(rows), Some(cols)),
                 Err(_) => (None, None), // Silently fail - metadata is optional
             }

@@ -1,6 +1,6 @@
 // src-tauri/src/window_manager.rs
-use tauri::{AppHandle, WebviewWindowBuilder, Manager, WebviewUrl};
-use crate::utils::error::AnaFisError;
+use crate::error::{window_error, CommandResult};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub struct WindowConfig {
     pub title: String,
@@ -41,12 +41,18 @@ impl Default for WindowConfig {
 pub fn create_or_focus_window(
     app: &AppHandle,
     window_id: &str,
-    config: WindowConfig
-) -> Result<(), AnaFisError> {
+    config: WindowConfig,
+) -> CommandResult<()> {
     // Check if window already exists
     if let Some(existing_window) = app.get_webview_window(window_id) {
-        existing_window.show().map_err(|e| AnaFisError::Window(e.to_string()))?;
-        existing_window.set_focus().map_err(|e| AnaFisError::Window(e.to_string()))?;
+        existing_window
+            .show()
+            .map_err(|e| window_error(e.to_string()))?;
+        if config.focus_on_create {
+            existing_window
+                .set_focus()
+                .map_err(|e| window_error(e.to_string()))?;
+        }
         return Ok(());
     }
 
@@ -64,7 +70,7 @@ pub fn create_or_focus_window(
         .closable(true)
         .visible(false) // Initially hidden to prevent white flash
         .background_color(tauri::webview::Color(0, 0, 0, 0)); // Set transparent background in builder
-    
+
     // Apply minimum size constraints if specified
     if let (Some(min_width), Some(min_height)) = (config.min_width, config.min_height) {
         builder = builder.min_inner_size(min_width, min_height);
@@ -73,57 +79,68 @@ pub fn create_or_focus_window(
     } else if let Some(min_height) = config.min_height {
         builder = builder.min_inner_size(config.width * 0.5, min_height);
     }
-    
+
     // Set parent window if specified
     if let Some(parent_label) = &config.parent {
         if let Some(parent_window) = app.get_webview_window(parent_label) {
-            builder = builder.parent(&parent_window)
-                .map_err(|e| AnaFisError::Window(format!("Failed to set parent window: {}", e)))?;
+            builder = builder
+                .parent(&parent_window)
+                .map_err(|e| window_error(format!("Failed to set parent window: {}", e)))?;
         }
     }
-    
-    let window = builder.build()
-        .map_err(|e| AnaFisError::Window(e.to_string()))?;
+
+    let window = builder.build().map_err(|e| window_error(e.to_string()))?;
 
     // Ensure transparent background is set (redundant but safe)
     let _ = window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0)));
 
     // Now show the window
-    window.show().map_err(|e| AnaFisError::Window(e.to_string()))?;
-    
+    window.show().map_err(|e| window_error(e.to_string()))?;
+
     // Only focus if requested
     if config.focus_on_create {
-        window.set_focus().map_err(|e| AnaFisError::Window(e.to_string()))?;
+        window
+            .set_focus()
+            .map_err(|e| window_error(e.to_string()))?;
     }
 
     Ok(())
 }
 
-pub fn close_window(app: &AppHandle, window_id: &str) -> Result<(), AnaFisError> {
+pub fn close_window(app: &AppHandle, window_id: &str) -> CommandResult<()> {
     if let Some(window) = app.get_webview_window(window_id) {
-        window.close().map_err(|e| AnaFisError::Window(e.to_string()))?;
+        window.close().map_err(|e| window_error(e.to_string()))?;
         Ok(())
     } else {
-        Err(AnaFisError::Window(format!("Window '{window_id}' not found")))
+        Err(window_error(format!("Window '{window_id}' not found")))
     }
 }
 
-pub fn resize_window(app: &AppHandle, window_id: &str, width: f64, height: f64) -> Result<(), AnaFisError> {
+pub fn resize_window(
+    app: &AppHandle,
+    window_id: &str,
+    width: f64,
+    height: f64,
+) -> CommandResult<()> {
     if let Some(window) = app.get_webview_window(window_id) {
-        window.set_size(tauri::Size::Physical(
-            tauri::PhysicalSize {
+        window
+            .set_size(tauri::Size::Physical(tauri::PhysicalSize {
                 width: width as u32,
                 height: height as u32,
-            }
-        )).map_err(|e| AnaFisError::Window(e.to_string()))?;
+            }))
+            .map_err(|e| window_error(e.to_string()))?;
         Ok(())
     } else {
-        Err(AnaFisError::Window(format!("Window '{window_id}' not found")))
+        Err(window_error(format!("Window '{window_id}' not found")))
     }
 }
 
 #[tauri::command]
-pub fn set_window_size(app: AppHandle, window_id: String, width: f64, height: f64) -> Result<(), String> {
-    resize_window(&app, &window_id, width, height)
-        .map_err(|e| e.to_string())
+pub fn set_window_size(
+    app: AppHandle,
+    window_id: String,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    resize_window(&app, &window_id, width, height).map_err(|e| e.message)
 }

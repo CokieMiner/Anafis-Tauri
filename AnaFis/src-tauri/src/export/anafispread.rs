@@ -12,25 +12,22 @@
 // - Bytes 8-11:  Format version (u32, little-endian, currently 1)
 // - Bytes 12+:   Gzip-compressed JSON data
 
-use std::fs::File;
-use std::io::{BufWriter, Write};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde_json::Value;
+use std::fs::File;
+use std::io::{BufWriter, Write};
 
 /// Magic number for .anafispread files: "ANAFIS" + version marker
 const MAGIC_NUMBER: &[u8; 8] = b"ANAFIS\x01\x00";
 const FORMAT_VERSION: u32 = 1;
 
 /// Export data to AnaFis Spreadsheet (.anafispread) format
-/// 
+///
 /// This format accepts the full IWorkbookData JSON snapshot from Univer's workbook.save()
 /// and stores it with compression for complete lossless save/restore.
 #[tauri::command]
-pub async fn export_anafispread(
-    data: Value,
-    file_path: String,
-) -> Result<(), String> {
+pub async fn export_anafispread(data: Value, file_path: String) -> Result<(), String> {
     // For .anafispread, we expect the IWorkbookData snapshot directly
     let workbook_data = &data;
 
@@ -48,8 +45,7 @@ pub async fn export_anafispread(
     });
 
     // Write to file with gzip compression (always compressed for .anafispread)
-    let mut file = File::create(&file_path)
-        .map_err(|e| format!("Failed to create file: {}", e))?;
+    let mut file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
 
     // Write magic number to identify file type
     file.write_all(MAGIC_NUMBER)

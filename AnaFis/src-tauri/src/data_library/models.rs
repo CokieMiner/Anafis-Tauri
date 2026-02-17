@@ -1,18 +1,18 @@
 // Data Library Models
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Represents a data sequence stored in the library
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataSequence {
-    pub id: String,           // UUID
+    pub id: String, // UUID
     pub name: String,
     pub description: String,
     pub tags: Vec<String>,
     pub unit: String,
-    pub source: String,       // e.g., "Sheet1, A1:A100"
-    pub data: Vec<f64>,       // Main data values
-    pub uncertainties: Option<Vec<f64>>,  // Optional uncertainty values
+    pub source: String,                  // e.g., "Sheet1, A1:A100"
+    pub data: Vec<f64>,                  // Main data values
+    pub uncertainties: Option<Vec<f64>>, // Optional uncertainty values
     pub is_pinned: bool,
     pub created_at: DateTime<Utc>,
     pub modified_at: DateTime<Utc>,
@@ -81,13 +81,13 @@ pub struct UpdateSequenceRequest {
 /// Request to search sequences
 #[derive(Debug, Clone, Deserialize)]
 pub struct SearchRequest {
-    pub query: Option<String>,        // Full-text search
-    pub tags: Option<Vec<String>>,    // Filter by tags
-    pub source: Option<String>,       // Filter by source
+    pub query: Option<String>,     // Full-text search
+    pub tags: Option<Vec<String>>, // Filter by tags
+    pub source: Option<String>,    // Filter by source
     pub sort_by: SortBy,
     pub sort_order: SortOrder,
-    pub page: Option<usize>,          // Page number (0-based)
-    pub page_size: Option<usize>,     // Number of items per page
+    pub page: Option<usize>,      // Page number (0-based)
+    pub page_size: Option<usize>, // Number of items per page
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -5,7 +5,7 @@ use super::models::{DataSequence, SequenceStatistics};
 pub fn calculate_statistics(sequence: &DataSequence) -> SequenceStatistics {
     let data = &sequence.data;
     let count = data.len();
-    
+
     if count == 0 {
         return SequenceStatistics {
             count: 0,
@@ -17,24 +17,26 @@ pub fn calculate_statistics(sequence: &DataSequence) -> SequenceStatistics {
             has_uncertainties: sequence.uncertainties.is_some(),
         };
     }
-    
+
     // Calculate mean
     let sum: f64 = data.iter().sum();
     let mean = sum / count as f64;
-    
+
     // Calculate standard deviation
-    let variance: f64 = data.iter()
+    let variance: f64 = data
+        .iter()
         .map(|x| {
             let diff = x - mean;
             diff * diff
         })
-        .sum::<f64>() / count as f64;
+        .sum::<f64>()
+        / count as f64;
     let std_dev = variance.sqrt();
-    
+
     // Find min and max
     let min = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
     let max = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    
+
     // Calculate median
     let mut sorted_data = data.clone();
     sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
@@ -43,7 +45,7 @@ pub fn calculate_statistics(sequence: &DataSequence) -> SequenceStatistics {
     } else {
         sorted_data[count / 2]
     };
-    
+
     SequenceStatistics {
         count,
         mean,
