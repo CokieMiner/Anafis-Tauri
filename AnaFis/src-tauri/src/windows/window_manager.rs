@@ -1,5 +1,5 @@
 // src-tauri/src/window_manager.rs
-use crate::error::{window_error, CommandResult};
+use crate::error::{CommandResult, window_error};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub struct WindowConfig {
@@ -81,12 +81,12 @@ pub fn create_or_focus_window(
     }
 
     // Set parent window if specified
-    if let Some(parent_label) = &config.parent {
-        if let Some(parent_window) = app.get_webview_window(parent_label) {
-            builder = builder
-                .parent(&parent_window)
-                .map_err(|e| window_error(format!("Failed to set parent window: {}", e)))?;
-        }
+    if let Some(parent_label) = &config.parent
+        && let Some(parent_window) = app.get_webview_window(parent_label)
+    {
+        builder = builder
+            .parent(&parent_window)
+            .map_err(|e| window_error(format!("Failed to set parent window: {}", e)))?;
     }
 
     let window = builder.build().map_err(|e| window_error(e.to_string()))?;

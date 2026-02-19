@@ -5,7 +5,7 @@
 //! associated metadata and statistics.
 
 use chrono::Utc;
-use rusqlite::{params, Connection, OptionalExtension, Result as SqliteResult, Row};
+use rusqlite::{Connection, OptionalExtension, Result as SqliteResult, Row, params};
 use std::sync::Mutex;
 use uuid::Uuid;
 
@@ -61,24 +61,24 @@ impl DataLibraryDatabase {
             }
         }
 
-        if let Some(tags) = &search.tags {
-            if !tags.is_empty() {
-                let tags_conditions: Vec<String> = tags
-                    .iter()
-                    .map(|tag| {
-                        params.push(format!("%{}%", tag));
-                        format!("tags LIKE ?{}", params.len())
-                    })
-                    .collect();
-                where_clauses.push(format!("({})", tags_conditions.join(" AND ")));
-            }
+        if let Some(tags) = &search.tags
+            && !tags.is_empty()
+        {
+            let tags_conditions: Vec<String> = tags
+                .iter()
+                .map(|tag| {
+                    params.push(format!("%{}%", tag));
+                    format!("tags LIKE ?{}", params.len())
+                })
+                .collect();
+            where_clauses.push(format!("({})", tags_conditions.join(" AND ")));
         }
 
-        if let Some(source) = &search.source {
-            if !source.is_empty() {
-                params.push(source.clone());
-                where_clauses.push(format!("source = ?{}", params.len()));
-            }
+        if let Some(source) = &search.source
+            && !source.is_empty()
+        {
+            params.push(source.clone());
+            where_clauses.push(format!("source = ?{}", params.len()));
         }
 
         let where_sql = if where_clauses.is_empty() {

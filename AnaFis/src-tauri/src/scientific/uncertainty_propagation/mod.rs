@@ -137,18 +137,18 @@ fn generate_uncertainty_formulas_inner(
         // Uncertainty formula: substitute both variables and sigma variables
         let mut sigma_var_map: HashMap<String, String> = var_map.clone();
         for (name, _, unc_range, confidence) in &var_info {
-            if let Some(ref unc_r) = unc_range {
-                if let Some(sigma_cell) = unc_r.cell_at(i) {
-                    // Apply confidence conversion factor
-                    let input_sigma = confidence_to_sigma(*confidence)?;
-                    let conversion_factor = output_sigma / input_sigma;
-                    let converted_sigma = if (conversion_factor - 1.0).abs() < 1e-10 {
-                        sigma_cell.clone()
-                    } else {
-                        format!("({}) * {}", sigma_cell, conversion_factor)
-                    };
-                    sigma_var_map.insert(format!("sigma_{}", name.to_lowercase()), converted_sigma);
-                }
+            if let Some(unc_r) = unc_range
+                && let Some(sigma_cell) = unc_r.cell_at(i)
+            {
+                // Apply confidence conversion factor
+                let input_sigma = confidence_to_sigma(*confidence)?;
+                let conversion_factor = output_sigma / input_sigma;
+                let converted_sigma = if (conversion_factor - 1.0).abs() < 1e-10 {
+                    sigma_cell.clone()
+                } else {
+                    format!("({}) * {}", sigma_cell, conversion_factor)
+                };
+                sigma_var_map.insert(format!("sigma_{}", name.to_lowercase()), converted_sigma);
             }
         }
 

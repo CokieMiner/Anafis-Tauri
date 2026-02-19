@@ -1,9 +1,9 @@
 // src-tauri/src/unit_conversion/commands.rs
 
-use crate::error::{conversion_error, internal_error, validation_error, CommandResult};
+use crate::error::{CommandResult, conversion_error, internal_error, validation_error};
 use crate::unit_conversion::core::{
-    ConversionPreview, ConversionRequest, ConversionResult, Dimension, UnitConverter, UnitInfo,
-    UNIT_CONVERTER,
+    ConversionPreview, ConversionRequest, ConversionResult, Dimension, UNIT_CONVERTER,
+    UnitConverter, UnitInfo,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -147,15 +147,19 @@ pub async fn analyze_dimensional_compatibility(
             let analysis_details = if compatible {
                 format!(
                     "✓ Units are dimensionally compatible\n• {} has dimensional formula: {}\n• {} has dimensional formula: {}\n• Conversion factor: {:.6e}\n• Both units can be converted between each other",
-                    unit1, format_dimension(&parsed1.dimension),
-                    unit2, format_dimension(&parsed2.dimension),
+                    unit1,
+                    format_dimension(&parsed1.dimension),
+                    unit2,
+                    format_dimension(&parsed2.dimension),
                     conversion_factor.unwrap()
                 )
             } else {
                 format!(
                     "✗ Units are dimensionally incompatible\n• {} has dimensional formula: {}\n• {} has dimensional formula: {}\n• These represent different physical quantities and cannot be converted",
-                    unit1, format_dimension(&parsed1.dimension),
-                    unit2, format_dimension(&parsed2.dimension)
+                    unit1,
+                    format_dimension(&parsed1.dimension),
+                    unit2,
+                    format_dimension(&parsed2.dimension)
                 )
             };
 

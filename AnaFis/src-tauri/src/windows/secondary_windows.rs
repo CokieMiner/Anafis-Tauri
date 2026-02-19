@@ -1,9 +1,9 @@
 // src-tauri/src/secondary_windows.rs
 
-use crate::windows::window_manager::{create_or_focus_window, WindowConfig};
+use crate::windows::window_manager::{WindowConfig, create_or_focus_window};
 use tauri::{AppHandle, Manager, WindowEvent};
 use tokio::sync::Notify;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 use tracing::{error, info};
 use urlencoding;
 

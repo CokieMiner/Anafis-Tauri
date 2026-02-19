@@ -1,6 +1,6 @@
 // File operations utilities
 
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use std::fs;
 use std::path::Path;
 

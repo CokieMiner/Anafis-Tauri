@@ -332,7 +332,7 @@ impl UnitConverter {
 
             // Same temperature unit
             ("°C", "°C") | ("°F", "°F") | ("K", "K") | ("°R", "°R") | ("°Ré", "°Ré") => {
-                return Some(value)
+                return Some(value);
             }
             _ => {}
         }

@@ -3,7 +3,7 @@ name = "AnaFis"
 version = "0.1.0"
 description = "Advanced Numerical Analysis and Fitting Interface System"
 authors = ["CokieMiner <pedromamartins@live.com>"]
-edition = "2021"
+edition = "2024"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/CokieMiner/Anafis-Tauri"
 
@@ -64,6 +64,7 @@ chrono = { version = "0.4.43", features = ["serde"] }
 # ===== SCIENTIFIC COMPUTING =====
 statrs = "0.18.0"
 symb_anafis = { version = "0.8.1", features = ["parallel"] }
+nalgebra = "0.34.1"
 
 [dev-dependencies]
 approx = "0.5.1"

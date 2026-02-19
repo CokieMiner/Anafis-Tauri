@@ -21,7 +21,7 @@ pub mod parquet;
 pub mod tex;
 pub mod text;
 
-use crate::error::{export_error, validation_error, CommandResult};
+use crate::error::{CommandResult, export_error, validation_error};
 use serde::{Deserialize, Serialize};
 
 /// Export format types supported by the application

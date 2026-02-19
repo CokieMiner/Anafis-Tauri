@@ -15,6 +15,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             // Scientific Computation Commands
+            scientific::curve_fitting::fit_custom_odr,
             scientific::uncertainty_propagation::calculator::calculate_uncertainty,
             scientific::uncertainty_propagation::calculator::generate_latex,
             scientific::uncertainty_propagation::generate_uncertainty_formulas,

@@ -5,7 +5,7 @@ use tauri::{Manager, State};
 use super::database::DataLibraryDatabase;
 use super::models::*;
 use super::statistics::calculate_statistics;
-use crate::error::{database_error, export_error, internal_error, CommandResult};
+use crate::error::{CommandResult, database_error, export_error, internal_error};
 
 pub struct DataLibraryState(pub Mutex<DataLibraryDatabase>);
 

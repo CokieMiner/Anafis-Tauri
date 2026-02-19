@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use symb_anafis::{parse, uncertainty_propagation, CovEntry, CovarianceMatrix};
+use symb_anafis::{CovEntry, CovarianceMatrix, parse, uncertainty_propagation};
 
 #[derive(Deserialize, Clone)]
 pub struct CalculatorVariable {
@@ -86,7 +86,10 @@ pub fn calculate_uncertainty(
     let cov = CovarianceMatrix::diagonal(cov_entries);
 
     // Calculate uncertainty
-    let var_refs: Vec<&str> = normalized_variable_names.iter().map(|s| s.as_str()).collect();
+    let var_refs: Vec<&str> = normalized_variable_names
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     let sigma_expr = uncertainty_propagation(&expr, &var_refs, Some(&cov))
         .map_err(|e| format!("Uncertainty propagation failed: {:?}", e))?;
 
@@ -112,10 +115,10 @@ pub fn calculate_uncertainty(
             let deriv_str = gradient[i]
                 .evaluate(&values_map, &HashMap::new())
                 .to_string();
-            if let Ok(d) = deriv_str.parse::<f64>() {
-                if d.is_finite() {
-                    derivatives.insert(name.clone(), d);
-                }
+            if let Ok(d) = deriv_str.parse::<f64>()
+                && d.is_finite()
+            {
+                derivatives.insert(name.clone(), d);
             }
         }
     }
