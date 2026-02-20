@@ -1,32 +1,38 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 import {
-  Box,
-  Typography,
-  TextField,
-  Button,
   Alert,
-  FormLabel,
-  CircularProgress,
-  Chip,
+  Box,
+  Button,
   Checkbox,
+  Chip,
+  CircularProgress,
   FormControlLabel,
+  FormLabel,
   ListItemButton,
   ListItemText,
+  TextField,
+  Typography,
 } from '@mui/material';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { invoke } from '@tauri-apps/api/core';
-
-import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
-import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { DataSequence } from '@/core/types/dataLibrary';
+import {
+  type ErrorResponse,
+  getErrorMessage,
+  isErrorResponse,
+} from '@/core/types/error';
+import type { ImportResult } from '@/core/types/import';
 import { RangeValidationWarning } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/RangeValidationWarning';
 import { useImportValidation } from '@/tabs/spreadsheet/components/sidebar/logic/useImportValidation';
+import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
+import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
+import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
+import type {
+  CellValue,
+  SpreadsheetRef as SpreadsheetInterface,
+} from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import { extractStartCell } from '@/tabs/spreadsheet/utils/rangeUtils';
-
-import type { CellValue, SpreadsheetRef as SpreadsheetInterface } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import type { ImportResult } from '@/core/types/import';
-import type { DataSequence } from '@/core/types/dataLibrary';
-import { type ErrorResponse, isErrorResponse, getErrorMessage } from '@/core/types/error';
 
 interface LibraryImportPanelProps {
   spreadsheetRef: React.RefObject<SpreadsheetInterface | null>;
@@ -36,7 +42,11 @@ interface LibraryImportPanelProps {
   setLibraryUncertaintyRange: (range: string) => void;
   onInputFocus: (field: 'libraryDataRange' | 'libraryUncertaintyRange') => void;
   onInputBlur: () => void;
-  focusedInput: 'targetRange' | 'libraryDataRange' | 'libraryUncertaintyRange' | null;
+  focusedInput:
+    | 'targetRange'
+    | 'libraryDataRange'
+    | 'libraryUncertaintyRange'
+    | null;
 }
 
 /**
@@ -53,13 +63,21 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
   onInputBlur,
   focusedInput,
 }) => {
-  const { validateLibraryDataRange, validateLibraryUncertaintyRange } = useImportValidation();
+  const { validateLibraryDataRange, validateLibraryUncertaintyRange } =
+    useImportValidation();
 
   // Data Library import state
-  const [availableSequences, setAvailableSequences] = useState<DataSequence[]>([]);
+  const [availableSequences, setAvailableSequences] = useState<DataSequence[]>(
+    []
+  );
   const [selectedSequence, setSelectedSequence] = useState<string | null>(null);
-  const [libraryDataRangeValidation, setLibraryDataRangeValidation] = useState<ImportResult['rangeValidation'] | null>(null);
-  const [libraryUncertaintyRangeValidation, setLibraryUncertaintyRangeValidation] = useState<ImportResult['rangeValidation'] | null>(null);
+  const [libraryDataRangeValidation, setLibraryDataRangeValidation] = useState<
+    ImportResult['rangeValidation'] | null
+  >(null);
+  const [
+    libraryUncertaintyRangeValidation,
+    setLibraryUncertaintyRangeValidation,
+  ] = useState<ImportResult['rangeValidation'] | null>(null);
   const [includeUncertainties, setIncludeUncertainties] = useState(true);
   const [isLoadingSequences, setIsLoadingSequences] = useState(false);
 
@@ -79,7 +97,14 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
     setError(null);
 
     try {
-      const result = await invoke<{ sequences: DataSequence[]; total_count: number; pinned_count: number } | ErrorResponse>('get_sequences', {
+      const result = await invoke<
+        | {
+            sequences: DataSequence[];
+            total_count: number;
+            pinned_count: number;
+          }
+        | ErrorResponse
+      >('get_sequences', {
         search: {
           query: searchQuery || null,
           tags: selectedTags.length > 0 ? selectedTags : null,
@@ -88,7 +113,7 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
           sort_order: 'ascending',
           page: 0,
           page_size: 10000,
-        }
+        },
       });
 
       if (isErrorResponse(result)) {
@@ -98,7 +123,9 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
 
       setAvailableSequences(result.sequences);
     } catch (err) {
-      setError(`Failed to load sequences: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Failed to load sequences: ${err instanceof Error ? err.message : String(err)}`
+      );
     } finally {
       setIsLoadingSequences(false);
     }
@@ -147,7 +174,9 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
       }
 
       // Get the selected sequence
-      const sequence = availableSequences.find(s => s.id === selectedSequence);
+      const sequence = availableSequences.find(
+        (s) => s.id === selectedSequence
+      );
       if (!sequence) {
         setError('Selected sequence not found');
         return;
@@ -155,40 +184,76 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
 
       // Import data to the data range
       const dataStartCell = extractStartCell(libraryDataRange);
-      const dataArray: CellValue[][] = sequence.data.map(val => [{ v: val }]);
+      const dataArray: CellValue[][] = sequence.data.map((val) => [{ v: val }]);
 
       // Apply data range truncation if needed
       let dataToImport = dataArray;
-      if (libraryDataRangeValidation?.willTruncate && libraryDataRangeValidation.selectedRange) {
-        dataToImport = dataArray.slice(0, libraryDataRangeValidation.selectedRange.rows);
+      if (
+        libraryDataRangeValidation?.willTruncate &&
+        libraryDataRangeValidation.selectedRange
+      ) {
+        dataToImport = dataArray.slice(
+          0,
+          libraryDataRangeValidation.selectedRange.rows
+        );
       }
 
       await spreadsheetAPI.updateRange(dataStartCell, dataToImport);
 
       // Import uncertainties if included and available
-      if (includeUncertainties && sequence.uncertainties && sequence.uncertainties.length > 0) {
+      if (
+        includeUncertainties &&
+        sequence.uncertainties &&
+        sequence.uncertainties.length > 0
+      ) {
         const uncertaintyStartCell = extractStartCell(libraryUncertaintyRange);
-        const uncertaintyArray: CellValue[][] = sequence.uncertainties.map(val => [{ v: val }]);
+        const uncertaintyArray: CellValue[][] = sequence.uncertainties.map(
+          (val) => [{ v: val }]
+        );
 
         // Apply uncertainty range truncation if needed
         let uncertaintyToImport = uncertaintyArray;
-        if (libraryUncertaintyRangeValidation?.willTruncate && libraryUncertaintyRangeValidation.selectedRange) {
-          uncertaintyToImport = uncertaintyArray.slice(0, libraryUncertaintyRangeValidation.selectedRange.rows);
+        if (
+          libraryUncertaintyRangeValidation?.willTruncate &&
+          libraryUncertaintyRangeValidation.selectedRange
+        ) {
+          uncertaintyToImport = uncertaintyArray.slice(
+            0,
+            libraryUncertaintyRangeValidation.selectedRange.rows
+          );
         }
 
-        await spreadsheetAPI.updateRange(uncertaintyStartCell, uncertaintyToImport);
+        await spreadsheetAPI.updateRange(
+          uncertaintyStartCell,
+          uncertaintyToImport
+        );
       }
 
-      setSuccess(`✅ Imported "${sequence.name}" (${sequence.data.length} data points${includeUncertainties && sequence.uncertainties ? `, ${sequence.uncertainties.length} uncertainties` : ''})`);
+      setSuccess(
+        `✅ Imported "${sequence.name}" (${sequence.data.length} data points${includeUncertainties && sequence.uncertainties ? `, ${sequence.uncertainties.length} uncertainties` : ''})`
+      );
     } catch (err) {
-      setError(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Import failed: ${err instanceof Error ? err.message : String(err)}`
+      );
     } finally {
       setIsImporting(false);
     }
-  }, [selectedSequence, availableSequences, includeUncertainties, libraryDataRange, libraryDataRangeValidation, libraryUncertaintyRange, libraryUncertaintyRangeValidation, spreadsheetRef]);
+  }, [
+    selectedSequence,
+    availableSequences,
+    includeUncertainties,
+    libraryDataRange,
+    libraryDataRangeValidation,
+    libraryUncertaintyRange,
+    libraryUncertaintyRangeValidation,
+    spreadsheetRef,
+  ]);
 
   // Get selected sequence
-  const selectedSeq = selectedSequence ? availableSequences.find(s => s.id === selectedSequence) : undefined;
+  const selectedSeq = selectedSequence
+    ? availableSequences.find((s) => s.id === selectedSequence)
+    : undefined;
 
   // Validate library ranges when sequence or ranges change
   useEffect(() => {
@@ -197,9 +262,18 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
   }, [validateLibraryDataRange, libraryDataRange, selectedSeq]);
 
   useEffect(() => {
-    const validation = validateLibraryUncertaintyRange(libraryUncertaintyRange, selectedSeq, includeUncertainties);
+    const validation = validateLibraryUncertaintyRange(
+      libraryUncertaintyRange,
+      selectedSeq,
+      includeUncertainties
+    );
     setLibraryUncertaintyRangeValidation(validation);
-  }, [validateLibraryUncertaintyRange, libraryUncertaintyRange, selectedSeq, includeUncertainties]);
+  }, [
+    validateLibraryUncertaintyRange,
+    libraryUncertaintyRange,
+    selectedSeq,
+    includeUncertainties,
+  ]);
 
   return (
     <>
@@ -276,7 +350,9 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                   color={selectedTags.includes(tag) ? 'primary' : 'default'}
                   onClick={() => {
                     setSelectedTags((prev) =>
-                      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                      prev.includes(tag)
+                        ? prev.filter((t) => t !== tag)
+                        : [...prev, tag]
                     );
                   }}
                   sx={{
@@ -319,7 +395,10 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
       <SidebarCard title="1. Select Sequence" defaultExpanded={true}>
         {isLoadingSequences ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress size={30} sx={{ color: anafisColors.spreadsheet }} />
+            <CircularProgress
+              size={30}
+              sx={{ color: anafisColors.spreadsheet }}
+            />
           </Box>
         ) : availableSequences.length === 0 ? (
           <Typography
@@ -334,36 +413,38 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
             No sequences available in data library
           </Typography>
         ) : (
-          <Box sx={{ 
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflowY: 'auto',
-            minHeight: 0,
-            maxHeight: '200px', // Limit to show about 3 sequences
-            pr: 0.5,
-            backgroundColor: 'transparent',
-            /* webkit-based scrollbar styling */
-            '&::-webkit-scrollbar': {
-              width: '8px',
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '4px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: 'rgba(255, 255, 255, 0.3)',
-              borderRadius: '4px',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflowY: 'auto',
+              minHeight: 0,
+              maxHeight: '200px', // Limit to show about 3 sequences
+              pr: 0.5,
+              backgroundColor: 'transparent',
+              /* webkit-based scrollbar styling */
+              '&::-webkit-scrollbar': {
+                width: '8px',
               },
-            },
-            /* Firefox scrollbar */
-            scrollbarWidth: 'thin' as const,
-            scrollbarColor: 'rgba(255,255,255,0.3) rgba(255,255,255,0.1)',
-            /* Reserve gutter where supported to keep content visible when overlay scrollbars appear */
-            scrollbarGutter: 'stable',
-          }}>
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                },
+              },
+              /* Firefox scrollbar */
+              scrollbarWidth: 'thin' as const,
+              scrollbarColor: 'rgba(255,255,255,0.3) rgba(255,255,255,0.1)',
+              /* Reserve gutter where supported to keep content visible when overlay scrollbars appear */
+              scrollbarGutter: 'stable',
+            }}
+          >
             {availableSequences.map((seq) => (
               <ListItemButton
                 key={seq.id}
@@ -376,36 +457,73 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                   py: 0.75,
                   mb: 0.5,
                   borderRadius: '6px',
-                  border: selectedSequence === seq.id ? `1px solid ${anafisColors.spreadsheet}` : '1px solid rgba(255, 255, 255, 0.2)',
-                  bgcolor: selectedSequence === seq.id ? 'rgba(33, 150, 243, 0.15)' : 'transparent',
-                  color: selectedSequence === seq.id ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                  border:
+                    selectedSequence === seq.id
+                      ? `1px solid ${anafisColors.spreadsheet}`
+                      : '1px solid rgba(255, 255, 255, 0.2)',
+                  bgcolor:
+                    selectedSequence === seq.id
+                      ? 'rgba(33, 150, 243, 0.15)'
+                      : 'transparent',
+                  color:
+                    selectedSequence === seq.id
+                      ? '#ffffff'
+                      : 'rgba(255, 255, 255, 0.7)',
                   transition: 'all 0.2s',
                   '&:hover': {
-                    bgcolor: selectedSequence === seq.id ? 'rgba(33, 150, 243, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                    borderColor: selectedSequence === seq.id ? anafisColors.spreadsheet : 'rgba(255, 255, 255, 0.4)',
+                    bgcolor:
+                      selectedSequence === seq.id
+                        ? 'rgba(33, 150, 243, 0.2)'
+                        : 'rgba(255, 255, 255, 0.05)',
+                    borderColor:
+                      selectedSequence === seq.id
+                        ? anafisColors.spreadsheet
+                        : 'rgba(255, 255, 255, 0.4)',
                     color: '#ffffff',
                     transform: 'translateY(-1px)',
-                    boxShadow: selectedSequence === seq.id ? `0 2px 8px rgba(33, 150, 243, 0.3)` : '0 2px 8px rgba(255, 255, 255, 0.1)'
+                    boxShadow:
+                      selectedSequence === seq.id
+                        ? `0 2px 8px rgba(33, 150, 243, 0.3)`
+                        : '0 2px 8px rgba(255, 255, 255, 0.1)',
                   },
                   '&.Mui-selected': {
                     bgcolor: 'rgba(33, 150, 243, 0.15) !important',
                     borderColor: `${anafisColors.spreadsheet} !important`,
                     color: '#ffffff !important',
                     '&:hover': {
-                      bgcolor: 'rgba(33, 150, 243, 0.2) !important'
-                    }
-                  }
+                      bgcolor: 'rgba(33, 150, 243, 0.2) !important',
+                    },
+                  },
                 }}
               >
                 <ListItemText
                   primary={
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25 }}>
-                      <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'inherit' }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: 0.25,
+                      }}
+                    >
+                      <Typography
+                        component="span"
+                        sx={{ fontSize: 14, fontWeight: 600, color: 'inherit' }}
+                      >
                         {seq.name}
                       </Typography>
-                      <Typography variant="body2" sx={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontSize: 11,
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          lineHeight: 1.2,
+                        }}
+                      >
                         {seq.data.length} points
-                        {seq.uncertainties ? ` • ${seq.uncertainties.length} uncertainties` : ''}
+                        {seq.uncertainties
+                          ? ` • ${seq.uncertainties.length} uncertainties`
+                          : ''}
                         {seq.unit ? ` • ${seq.unit}` : ''}
                       </Typography>
                       {seq.tags.length > 0 && (
@@ -591,7 +709,9 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
         {libraryUncertaintyRangeValidation &&
           includeUncertainties &&
           selectedSeq?.uncertainties && (
-            <RangeValidationWarning validation={libraryUncertaintyRangeValidation} />
+            <RangeValidationWarning
+              validation={libraryUncertaintyRangeValidation}
+            />
           )}
       </SidebarCard>
 

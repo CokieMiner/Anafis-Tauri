@@ -1,40 +1,39 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Typography,
-  TextField,
-  Button,
-  IconButton,
-  Alert,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormControl,
-  FormLabel,
-  Select,
-  MenuItem,
-  CircularProgress,
-  SelectChangeEvent,
-  Chip,
-  Tooltip,
-} from '@mui/material';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import InfoIcon from '@mui/icons-material/Info';
-
-import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
-import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
-import { RangeValidationWarning } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/RangeValidationWarning';
-import { useImportValidation } from '@/tabs/spreadsheet/components/sidebar/logic/useImportValidation';
-
+import {
+  Alert,
+  Button,
+  Chip,
+  CircularProgress,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  IconButton,
+  MenuItem,
+  Radio,
+  RadioGroup,
+  Select,
+  type SelectChangeEvent,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type {
-  ImportFormat,
-  ImportTargetMode,
   AnaFisImportMode,
-  ImportOptions,
   FileMetadata,
+  ImportFormat,
+  ImportOptions,
   ImportResult,
   ImportService,
+  ImportTargetMode,
 } from '@/core/types/import';
+import { RangeValidationWarning } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/RangeValidationWarning';
+import { useImportValidation } from '@/tabs/spreadsheet/components/sidebar/logic/useImportValidation';
+import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
+import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
+import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type { SpreadsheetRef as SpreadsheetInterface } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 interface FileImportPanelProps {
@@ -44,7 +43,11 @@ interface FileImportPanelProps {
   setTargetRange: (range: string) => void;
   onInputFocus: (field: 'targetRange') => void;
   onInputBlur: () => void;
-  focusedInput: 'targetRange' | 'libraryDataRange' | 'libraryUncertaintyRange' | null;
+  focusedInput:
+    | 'targetRange'
+    | 'libraryDataRange'
+    | 'libraryUncertaintyRange'
+    | null;
 }
 
 /**
@@ -64,7 +67,9 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
 
   // File selection state
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [detectedFormat, setDetectedFormat] = useState<ImportFormat | null>(null);
+  const [detectedFormat, setDetectedFormat] = useState<ImportFormat | null>(
+    null
+  );
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
 
   // Import options state
@@ -75,7 +80,9 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
   const [anaFisMode, setAnaFisMode] = useState<AnaFisImportMode>('append');
 
   // Range validation state
-  const [rangeValidation, setRangeValidation] = useState<ImportResult['rangeValidation'] | null>(null);
+  const [rangeValidation, setRangeValidation] = useState<
+    ImportResult['rangeValidation'] | null
+  >(null);
 
   // UI state
   const [isImporting, setIsImporting] = useState(false);
@@ -120,10 +127,16 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
       }
 
       try {
-        const metadata = await importService.getFileMetadata(filePath, delimiter);
+        const metadata = await importService.getFileMetadata(
+          filePath,
+          delimiter
+        );
         setFileMetadata(metadata);
       } catch (metadataErr) {
-        console.error('Failed to refetch file metadata with new delimiter:', metadataErr);
+        console.error(
+          'Failed to refetch file metadata with new delimiter:',
+          metadataErr
+        );
         setError('Failed to update file metadata with new delimiter');
       }
     },
@@ -156,7 +169,11 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
       };
 
       // Import the selected file
-      const result = await importService.importFile(selectedFile, options, spreadsheetRef);
+      const result = await importService.importFile(
+        selectedFile,
+        options,
+        spreadsheetRef
+      );
 
       if (result.ok) {
         setSuccess(result.value.message ?? 'Import completed successfully');
@@ -164,11 +181,23 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
         setError(result.error.message);
       }
     } catch (err) {
-      setError(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Import failed: ${err instanceof Error ? err.message : String(err)}`
+      );
     } finally {
       setIsImporting(false);
     }
-  }, [selectedFile, importFormat, skipRows, customDelimiter, targetMode, targetRange, anaFisMode, importService, spreadsheetRef]);
+  }, [
+    selectedFile,
+    importFormat,
+    skipRows,
+    customDelimiter,
+    targetMode,
+    targetRange,
+    anaFisMode,
+    importService,
+    spreadsheetRef,
+  ]);
 
   // Validate range when target range or mode changes
   useEffect(() => {
@@ -221,19 +250,25 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
                   Supported Formats:
                 </Typography>
-                {supportedFormats.map(({ format, description, extensions }: {
-                  format: ImportFormat;
-                  description: string;
-                  extensions: string[];
-                }) => (
-                  <Typography
-                    key={format}
-                    variant="body2"
-                    sx={{ fontSize: 11, mb: 0.5 }}
-                  >
-                    <strong>.{extensions.join(', .')}</strong> - {description}
-                  </Typography>
-                ))}
+                {supportedFormats.map(
+                  ({
+                    format,
+                    description,
+                    extensions,
+                  }: {
+                    format: ImportFormat;
+                    description: string;
+                    extensions: string[];
+                  }) => (
+                    <Typography
+                      key={format}
+                      variant="body2"
+                      sx={{ fontSize: 11, mb: 0.5 }}
+                    >
+                      <strong>.{extensions.join(', .')}</strong> - {description}
+                    </Typography>
+                  )
+                )}
               </div>
             }
             arrow
@@ -408,7 +443,9 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                 </FormLabel>
                 <RadioGroup
                   value={anaFisMode}
-                  onChange={(e) => setAnaFisMode(e.target.value as AnaFisImportMode)}
+                  onChange={(e) =>
+                    setAnaFisMode(e.target.value as AnaFisImportMode)
+                  }
                 >
                   <FormControlLabel
                     value="append"
@@ -455,7 +492,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                 label="Skip Rows"
                 value={skipRows}
                 onChange={(e) =>
-                  setSkipRows(Math.max(0, parseInt(e.target.value) || 0))
+                  setSkipRows(Math.max(0, parseInt(e.target.value, 10) || 0))
                 }
                 helperText="Number of rows to skip from the beginning"
                 sx={{
@@ -495,7 +532,10 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                   onChange={(e) => {
                     setCustomDelimiter(e.target.value);
                     if (selectedFile) {
-                      void refetchMetadataWithDelimiter(selectedFile, e.target.value);
+                      void refetchMetadataWithDelimiter(
+                        selectedFile,
+                        e.target.value
+                      );
                     }
                   }}
                   placeholder="Enter delimiter (e.g., |, ;, tab)"
@@ -548,7 +588,9 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                 </FormLabel>
                 <RadioGroup
                   value={targetMode}
-                  onChange={(e) => setTargetMode(e.target.value as ImportTargetMode)}
+                  onChange={(e) =>
+                    setTargetMode(e.target.value as ImportTargetMode)
+                  }
                 >
                   <FormControlLabel
                     value="newSheet"
@@ -623,7 +665,9 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                     />
 
                     {/* Range Validation Display */}
-                    {rangeValidation && <RangeValidationWarning validation={rangeValidation} />}
+                    {rangeValidation && (
+                      <RangeValidationWarning validation={rangeValidation} />
+                    )}
                   </>
                 )}
               </FormControl>

@@ -14,7 +14,11 @@ use std::sync::Arc;
 
 /// Export data to Apache Parquet (.parquet) format (simplified - expects 2D array)
 #[tauri::command]
-pub async fn export_to_parquet(
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
+pub fn export_to_parquet(
     data: Vec<serde_json::Value>,
     file_path: String,
     _config: ExportConfig,
@@ -23,7 +27,7 @@ pub async fn export_to_parquet(
     let max_cols = data
         .iter()
         .filter_map(|row| row.as_array())
-        .map(|arr| arr.len())
+        .map(std::vec::Vec::len)
         .max()
         .unwrap_or(0);
 
@@ -74,22 +78,22 @@ pub async fn export_to_parquet(
 
     // Create RecordBatch
     let batch = RecordBatch::try_new(schema.clone(), columns)
-        .map_err(|e| format!("Failed to create RecordBatch: {}", e))?;
+        .map_err(|e| format!("Failed to create RecordBatch: {e}"))?;
 
     // Write to Parquet file
-    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {e}"))?;
 
     let props = WriterProperties::builder().build();
     let mut writer = ArrowWriter::try_new(file, schema, Some(props))
-        .map_err(|e| format!("Failed to create Parquet writer: {}", e))?;
+        .map_err(|e| format!("Failed to create Parquet writer: {e}"))?;
 
     writer
         .write(&batch)
-        .map_err(|e| format!("Failed to write RecordBatch: {}", e))?;
+        .map_err(|e| format!("Failed to write RecordBatch: {e}"))?;
 
     writer
         .close()
-        .map_err(|e| format!("Failed to close Parquet writer: {}", e))?;
+        .map_err(|e| format!("Failed to close Parquet writer: {e}"))?;
 
     Ok(())
 }

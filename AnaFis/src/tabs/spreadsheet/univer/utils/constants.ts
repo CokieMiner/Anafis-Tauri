@@ -23,7 +23,8 @@ export const ERROR_MESSAGES = {
 
   // Workbook/sheet errors
   NO_ACTIVE_WORKBOOK: 'No active workbook available',
-  NO_ACTIVE_WORKBOOK_PROTECTION: 'No active workbook available for protection application',
+  NO_ACTIVE_WORKBOOK_PROTECTION:
+    'No active workbook available for protection application',
   SHEET_NOT_FOUND: 'Sheet not found',
   NO_SHEETS_FOUND: 'No sheets found in snapshot',
 
@@ -47,7 +48,8 @@ export const ERROR_MESSAGES = {
 
   // Formula errors
   LAMBERT_W_UNDEFINED: 'Lambert W function is undefined for x < -1/e',
-  HERMITE_NEGATIVE_DEGREE: 'Hermite polynomial degree must be a non-negative integer',
+  HERMITE_NEGATIVE_DEGREE:
+    'Hermite polynomial degree must be a non-negative integer',
   MODULUS_OUT_OF_RANGE: 'Modulus k must be in (-1, 1)',
   ZETA_FUNCTION_POLE: 'Zeta function has a pole at s = 1',
   ZETA_FUNCTION_LIMITATION: 'Zeta function implementation limited to s > 1',
@@ -58,7 +60,8 @@ export const ERROR_MESSAGES = {
 
   // Validation errors
   INPUT_MUST_BE_NON_EMPTY_STRING: 'Input must be a non-empty string',
-  INVALID_COLUMN_LETTER_FORMAT: (letter: string) => `Invalid column letter format: ${letter}. Must contain only uppercase letters A-Z.`,
+  INVALID_COLUMN_LETTER_FORMAT: (letter: string) =>
+    `Invalid column letter format: ${letter}. Must contain only uppercase letters A-Z.`,
 } as const;
 
 // HTTP status codes for error classification
@@ -86,7 +89,7 @@ export const HTTP_STATUS = {
 } as const;
 
 // Error codes for spreadsheet operations
-export const ERROR_CODES = {
+const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INVALID_RANGE: 'INVALID_RANGE',
   INVALID_CELL_REF: 'INVALID_CELL_REF',

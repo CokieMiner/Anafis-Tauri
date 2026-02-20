@@ -1,4 +1,4 @@
-// src-tauri/build.rs
+//! Build script for `AnaFis`
 fn main() {
-    tauri_build::build()
+    tauri_build::build();
 }

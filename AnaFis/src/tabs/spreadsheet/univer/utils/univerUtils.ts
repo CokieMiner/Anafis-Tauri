@@ -1,31 +1,33 @@
 // univerUtils.ts - Consolidated utility functions for Facade API
-import { IRange } from '@univerjs/core';
-import { columnToLetter, RangeBounds } from './cellUtils';
+import type { IRange } from '@univerjs/core';
+import { columnToLetter } from './cellUtils';
 import { ERROR_MESSAGES } from './constants';
 import { SpreadsheetValidationError } from './errors';
 
 // Type for the facade API instance
-type FacadeAPI = ReturnType<typeof import('@univerjs/core/facade').FUniver.newAPI>;
+type FacadeAPI = ReturnType<
+  typeof import('@univerjs/core/facade').FUniver.newAPI
+>;
 
 /**
  * Determine the used range using Univer's Facade API
- * 
+ *
  * Uses the public Facade API methods:
  * - getDataRange() returns a FRange from A1 to last cell with data
  * - getLastRow() and getLastColumn() provide explicit bounds
- * 
+ *
  * This approach:
  * - ✅ 100% accurate - includes ALL data, no loss
  * - ✅ Handles sparse data correctly (e.g., data at A1, C1, B2 → range A1:C2)
  * - ✅ Efficient (no manual scanning)
  * - ✅ Public Facade API (stable, documented)
- * 
+ *
  * Example with sparse data:
  *   Data: 1 at A1, 3 at C1, 5 at E1, 6 at F1
  *          2 at A2
  *          4 at A3
  *   Result: A1:F3 (includes all empty cells within bounds)
- * 
+ *
  * @param facadeAPI The facade API instance
  * @returns The used range in A1 notation (A1:A1 if empty, otherwise actual bounds)
  * @throws Error if workbook/sheet access fails
@@ -63,7 +65,7 @@ export function determineUsedRange(facadeAPI: FacadeAPI): string {
     const lastRow = sheet.getLastRow();
     const lastCol = sheet.getLastColumn();
 
-        // If sheet is empty, both will be -1 or 0
+    // If sheet is empty, both will be -1 or 0
     if (lastRow < 0 || lastCol < 0) {
       return 'A1:A1';
     }
@@ -85,22 +87,16 @@ export function determineUsedRange(facadeAPI: FacadeAPI): string {
 }
 
 /**
- * Check if two ranges intersect/overlap
- */
-export function rangesIntersect(range1: RangeBounds, range2: RangeBounds): boolean {
-  return !(range1.endCol < range2.startCol ||
-    range2.endCol < range1.startCol ||
-    range1.endRow < range2.startRow ||
-    range2.endRow < range1.startRow);
-}
-
-/**
  * Convert IRange to A1 notation
  */
 export function rangeToA1(range: IRange): string {
   // Add null checks for range properties
-  if (typeof range.startColumn !== 'number' || typeof range.startRow !== 'number' ||
-      typeof range.endColumn !== 'number' || typeof range.endRow !== 'number') {
+  if (
+    typeof range.startColumn !== 'number' ||
+    typeof range.startRow !== 'number' ||
+    typeof range.endColumn !== 'number' ||
+    typeof range.endRow !== 'number'
+  ) {
     throw new SpreadsheetValidationError(
       ERROR_MESSAGES.INVALID_RANGE_OBJECT,
       'range',
@@ -109,7 +105,7 @@ export function rangeToA1(range: IRange): string {
         startColumn: range.startColumn,
         startRow: range.startRow,
         endColumn: range.endColumn,
-        endRow: range.endRow
+        endRow: range.endRow,
       }
     );
   }
@@ -119,10 +115,12 @@ export function rangeToA1(range: IRange): string {
   const endCol = columnToLetter(range.endColumn);
   const endRow = range.endRow + 1;
 
-  if (range.startColumn === range.endColumn && range.startRow === range.endRow) {
+  if (
+    range.startColumn === range.endColumn &&
+    range.startRow === range.endRow
+  ) {
     return `${startCol}${startRow}`;
   }
 
   return `${startCol}${startRow}:${endCol}${endRow}`;
 }
-

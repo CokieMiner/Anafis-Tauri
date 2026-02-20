@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useCallback, memo } from 'react';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
 import { BlockMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
+import { Box, Paper, ThemeProvider } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider, Box, Paper } from '@mui/material';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
 import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
@@ -16,7 +16,13 @@ interface LatexPreviewWindowProps {
 const FormulaRenderer = memo(({ formula }: { formula: string }) => {
   if (!formula) {
     return (
-      <Box sx={{ color: 'text.secondary', fontStyle: 'italic', textAlign: 'center' }}>
+      <Box
+        sx={{
+          color: 'text.secondary',
+          fontStyle: 'italic',
+          textAlign: 'center',
+        }}
+      >
         No formula provided
       </Box>
     );
@@ -31,11 +37,14 @@ const FormulaRenderer = memo(({ formula }: { formula: string }) => {
 
 FormulaRenderer.displayName = 'FormulaRenderer';
 
-const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title }) => {
+const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({
+  formula,
+  title,
+}) => {
   // Constants for window sizing
   const MAX_CONTENT_WIDTH = 8000; // Maximum width for content and Paper component
   const MIN_CONTENT_WIDTH = 500; // Minimum width for content
-  
+
   // Timeout constants for window resizing operations
   const WINDOW_RESIZE_SETTLE_DELAY = 200; // Delay to allow DOM to settle before measuring container size
   const INITIAL_RESIZE_DELAY = 300; // Initial delay after setting document title before first resize
@@ -46,20 +55,27 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
   const resizeTimeoutRef = useRef<number | undefined>(undefined);
 
   const adjustWindowSize = useCallback(async () => {
-    if (!containerRef.current) {return;}
+    if (!containerRef.current) {
+      return;
+    }
 
-    await new Promise(resolve => setTimeout(resolve, WINDOW_RESIZE_SETTLE_DELAY));
+    await new Promise((resolve) =>
+      setTimeout(resolve, WINDOW_RESIZE_SETTLE_DELAY)
+    );
 
     const container = containerRef.current;
     const rect = container.getBoundingClientRect();
-    const contentWidth = Math.max(MIN_CONTENT_WIDTH, Math.min(MAX_CONTENT_WIDTH, rect.width + 120));
+    const contentWidth = Math.max(
+      MIN_CONTENT_WIDTH,
+      Math.min(MAX_CONTENT_WIDTH, rect.width + 120)
+    );
     const fixedHeight = 150 + 32; // 150px content + 32px title bar
 
     try {
       await invoke('set_window_size', {
         window_id: 'latex-preview',
         width: Math.round(contentWidth),
-        height: fixedHeight
+        height: fixedHeight,
       });
     } catch (e) {
       console.log('Could not resize window:', e);
@@ -68,8 +84,11 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
 
   useEffect(() => {
     document.title = title;
-    
-    const timeoutId = setTimeout(() => void adjustWindowSize(), INITIAL_RESIZE_DELAY);
+
+    const timeoutId = setTimeout(
+      () => void adjustWindowSize(),
+      INITIAL_RESIZE_DELAY
+    );
 
     // Setup resize observer
     if (containerRef.current) {
@@ -77,7 +96,10 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
         if (resizeTimeoutRef.current) {
           clearTimeout(resizeTimeoutRef.current);
         }
-        resizeTimeoutRef.current = setTimeout(() => void adjustWindowSize(), RESIZE_DEBOUNCE_DELAY);
+        resizeTimeoutRef.current = setTimeout(
+          () => void adjustWindowSize(),
+          RESIZE_DEBOUNCE_DELAY
+        );
       });
       resizeObserverRef.current.observe(containerRef.current);
     }
@@ -95,14 +117,16 @@ const LatexPreviewWindow: React.FC<LatexPreviewWindowProps> = ({ formula, title 
   }, [title, adjustWindowSize]);
 
   return (
-    <Box sx={{
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      bgcolor: 'background.default',
-      overflow: 'hidden'
-    }}>
+    <Box
+      sx={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.default',
+        overflow: 'hidden',
+      }}
+    >
       <CustomTitleBar title="LaTeX Formula Preview" />
 
       <Box
@@ -162,9 +186,11 @@ const container = document.getElementById('root');
 if (container) {
   // Create theme using shared configuration
   const theme = createAnafisTheme();
-  
+
   // Create and render the component using modern React 18+ API
-  const app = React.createElement(ThemeProvider, { theme }, 
+  const app = React.createElement(
+    ThemeProvider,
+    { theme },
     React.createElement(LatexPreviewWindow, { formula, title })
   );
   const root = createRoot(container);

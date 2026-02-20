@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic, clippy::nursery)]
+//! `AnaFis` library crate providing core functionality for scientific computation and data management.
 // Minimal modules - only what's actually used
 mod data_library;
 mod error;
@@ -10,12 +12,22 @@ mod windows;
 
 use tauri::{Emitter, Manager};
 
+/// Main entry point for the `AnaFis` application
+///
+/// # Panics
+///
+/// Panics if the Tauri context or application cannot be initialized.
+#[allow(
+    clippy::too_many_lines,
+    reason = "Main application setup and configuration"
+)]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             // Scientific Computation Commands
             scientific::curve_fitting::fit_custom_odr,
+            scientific::curve_fitting::evaluate_model_grid,
             scientific::uncertainty_propagation::calculator::calculate_uncertainty,
             scientific::uncertainty_propagation::calculator::generate_latex,
             scientific::uncertainty_propagation::generate_uncertainty_formulas,
@@ -64,6 +76,10 @@ pub fn run() {
             utils::file_operations::save_png_file,
             utils::file_operations::save_image_from_data_url,
             utils::file_operations::save_svg_file,
+            utils::file_operations::save_binary_file,
+            utils::file_operations::read_file_text,
+            utils::file_operations::check_ffmpeg_available,
+            utils::file_operations::transcode_webm_to_mp4,
         ])
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -80,13 +96,13 @@ pub fn run() {
             if args.len() > 1 {
                 let file_path = args[1].clone();
                 if file_path.ends_with(".anafispread") {
-                    utils::log_info(&format!("Opening file from association: {}", file_path));
+                    utils::log_info(&format!("Opening file from association: {file_path}"));
                     // We'll emit an event to the frontend to handle the file opening
                     let app_handle = app.handle().clone();
                     std::thread::spawn(move || {
                         std::thread::sleep(std::time::Duration::from_millis(500));
                         if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.emit("open-file", file_path);
+                            drop(window.emit("open-file", file_path));
                         }
                     });
                 }
@@ -99,10 +115,7 @@ pub fn run() {
                     utils::log_info("Data Library initialized successfully");
                 }
                 Err(e) => {
-                    utils::log_info(&format!(
-                        "WARNING: Failed to initialize Data Library: {}",
-                        e
-                    ));
+                    utils::log_info(&format!("WARNING: Failed to initialize Data Library: {e}"));
                 }
             }
 
@@ -112,23 +125,17 @@ pub fn run() {
             let app_handle = app.handle().clone();
             if let Some(main_window) = app.get_webview_window("main") {
                 main_window.on_window_event(move |event| {
-                    match event {
-                        tauri::WindowEvent::Focused(true) => {
-                            // Main window gained focus - no action needed
+                    if matches!(event, tauri::WindowEvent::Destroyed) {
+                        // Main window is being destroyed, close all child windows
+                        if let Some(w) = app_handle.get_webview_window("uncertainty-calculator") {
+                            drop(w.close());
                         }
-                        tauri::WindowEvent::Destroyed => {
-                            // Main window is being destroyed, close all child windows
-                            let _ = app_handle
-                                .get_webview_window("uncertainty-calculator")
-                                .and_then(|w| w.close().ok());
-                            let _ = app_handle
-                                .get_webview_window("settings")
-                                .and_then(|w| w.close().ok());
-                            let _ = app_handle
-                                .get_webview_window("latex-preview")
-                                .and_then(|w| w.close().ok());
+                        if let Some(w) = app_handle.get_webview_window("settings") {
+                            drop(w.close());
                         }
-                        _ => {}
+                        if let Some(w) = app_handle.get_webview_window("latex-preview") {
+                            drop(w.close());
+                        }
                     }
                 });
             }

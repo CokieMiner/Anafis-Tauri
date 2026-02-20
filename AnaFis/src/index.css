@@ -1,5 +1,5 @@
 /* Main application styles - imports shared styles and adds app-specific overrides */
-@import './shared-styles.css';
+@import "./shared-styles.css";
 
 /* Application-specific overrides */
 body {
@@ -45,7 +45,9 @@ button {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   cursor: pointer;
-  transition: border-color 0.25s, background-color 0.25s;
+  transition:
+    border-color 0.25s,
+    background-color 0.25s;
 }
 
 /* Allow Material UI components to have their own backgrounds */
@@ -54,5 +56,5 @@ button {
 .MuiTextField-root,
 .MuiDialog-root,
 .MuiAppBar-root {
-  background-color: unset !important;
+  background-color: unset;
 }

@@ -11,7 +11,9 @@ interface SelectionContextValue {
 export const useSelectionContext = (): SelectionContextValue => {
   const context = useContext(SelectionContext);
   if (!context) {
-    throw new Error('useSelectionContext must be used within a SelectionProvider');
+    throw new Error(
+      'useSelectionContext must be used within a SelectionProvider'
+    );
   }
   return context;
 };

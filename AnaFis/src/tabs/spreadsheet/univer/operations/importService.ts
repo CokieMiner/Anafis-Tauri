@@ -2,22 +2,35 @@
 // Supports: CSV, TSV, TXT, Parquet, AnaFisSpread (no HTML/Markdown)
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { SpreadsheetStyle, SpreadsheetRef, CellValue, WorkbookSnapshot, SheetSnapshot } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import type { ImportOptions, ImportResult, ImportError } from '@/core/types/import';
-import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
-import { convertSimpleArrayToCellValues, parseRange } from '@/tabs/spreadsheet/univer';
-import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
-import { Result, ok, err, isErr } from '@/core/types/result';
-import { extractStartCell } from '@/tabs/spreadsheet/utils/rangeUtils';
+import type {
+  ImportError,
+  ImportOptions,
+  ImportResult,
+} from '@/core/types/import';
+import { err, isErr, ok, type Result } from '@/core/types/result';
+import type {
+  CellValue,
+  SheetSnapshot,
+  SpreadsheetRef,
+  SpreadsheetStyle,
+  WorkbookSnapshot,
+} from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import {
-  SpreadsheetError,
-  SpreadsheetValidationError,
-  SpreadsheetErrorCode,
+  convertSimpleArrayToCellValues,
+  parseRange,
+} from '@/tabs/spreadsheet/univer';
+import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
+import {
   ErrorCategory,
   ErrorSeverity,
+  logError,
   normalizeError,
-  logError
+  SpreadsheetError,
+  SpreadsheetErrorCode,
+  SpreadsheetValidationError,
 } from '@/tabs/spreadsheet/univer/utils/errors';
+import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
+import { extractStartCell } from '@/tabs/spreadsheet/utils/rangeUtils';
 export type ImportFormat = 'csv' | 'tsv' | 'txt' | 'parquet' | 'anafispread';
 
 export interface FileMetadata {
@@ -76,7 +89,12 @@ class TransactionalImportManager {
   /**
    * Log an operation with details
    */
-  private logOperation(operation: string, phase?: string, details?: Record<string, unknown>, error?: string): void {
+  private logOperation(
+    operation: string,
+    phase?: string,
+    details?: Record<string, unknown>,
+    error?: string
+  ): void {
     const entry: TransactionLogEntry = {
       timestamp: Date.now(),
       operation,
@@ -110,14 +128,18 @@ class TransactionalImportManager {
     spreadsheetAPI: SpreadsheetRef
   ): Promise<Result<void, string>> {
     const startTime = Date.now();
-    this.logOperation('START', 'importSheetsAtomic', { sheetCount: Object.keys(snapshot.sheets).length });
+    this.logOperation('START', 'importSheetsAtomic', {
+      sheetCount: Object.keys(snapshot.sheets).length,
+    });
 
     try {
       // Phase 1: Pre-validate all sheets can be imported
       this.logOperation('PHASE', 'validation', { phase: 1 });
       const validation = await this.validateAllSheets(snapshot, spreadsheetAPI);
       if (isErr(validation)) {
-        this.logOperation('VALIDATION_FAILED', 'validateAllSheets', { error: validation.error });
+        this.logOperation('VALIDATION_FAILED', 'validateAllSheets', {
+          error: validation.error,
+        });
         return validation;
       }
       this.logOperation('VALIDATION_SUCCESS', 'validateAllSheets');
@@ -126,12 +148,16 @@ class TransactionalImportManager {
       this.logOperation('PHASE', 'import', { phase: 2 });
       const importResult = await this.importAllSheets(snapshot, spreadsheetAPI);
       if (isErr(importResult)) {
-        this.logOperation('IMPORT_FAILED', 'importAllSheets', { error: importResult.error });
+        this.logOperation('IMPORT_FAILED', 'importAllSheets', {
+          error: importResult.error,
+        });
         await this.rollback(spreadsheetAPI);
         this.logOperation('ROLLBACK_COMPLETED', 'rollback');
         return importResult;
       }
-      this.logOperation('IMPORT_SUCCESS', 'importAllSheets', { createdSheets: this.createdSheets.length });
+      this.logOperation('IMPORT_SUCCESS', 'importAllSheets', {
+        createdSheets: this.createdSheets.length,
+      });
 
       // Phase 3: Apply protection data (optional, doesn't affect rollback)
       this.logOperation('PHASE', 'protection', { phase: 3 });
@@ -140,20 +166,22 @@ class TransactionalImportManager {
         this.logOperation('PROTECTION_SUCCESS', 'applyProtectionData');
       } catch (error) {
         this.logOperation('PROTECTION_FAILED', 'applyProtectionData', {
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
         // Don't fail the import for protection issues
       }
 
       const duration = Date.now() - startTime;
-      this.logOperation('SUCCESS', 'importSheetsAtomic', { duration, createdSheets: this.createdSheets.length });
+      this.logOperation('SUCCESS', 'importSheetsAtomic', {
+        duration,
+        createdSheets: this.createdSheets.length,
+      });
       return ok(undefined);
-
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logOperation('UNEXPECTED_ERROR', 'importSheetsAtomic', {
         error: error instanceof Error ? error.message : String(error),
-        duration
+        duration,
       });
 
       // If anything unexpected happens, attempt rollback
@@ -162,10 +190,15 @@ class TransactionalImportManager {
         this.logOperation('ROLLBACK_COMPLETED', 'rollback');
       } catch (rollbackError) {
         this.logOperation('ROLLBACK_FAILED', 'rollback', {
-          error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+          error:
+            rollbackError instanceof Error
+              ? rollbackError.message
+              : String(rollbackError),
         });
       }
-      return err(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
+      return err(
+        `Import failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -178,14 +211,15 @@ class TransactionalImportManager {
   ): Promise<Result<void, string>> {
     const existingNames = await this.getExistingSheetNames(spreadsheetAPI);
     const sheetOrder = Array.isArray(snapshot.sheetOrder)
-      ? snapshot.sheetOrder as string[]
+      ? (snapshot.sheetOrder as string[])
       : Object.keys(snapshot.sheets);
 
     for (const sheetId of sheetOrder) {
       const sheetData = snapshot.sheets[sheetId] as SheetSnapshot;
 
       // Check if sheet name would conflict
-      const sheetName = sheetData.name ?? `Sheet ${sheetOrder.indexOf(sheetId) + 1}`;
+      const sheetName =
+        sheetData.name ?? `Sheet ${sheetOrder.indexOf(sheetId) + 1}`;
       if (existingNames.has(sheetName)) {
         // This is actually OK - we generate unique names, but let's validate the data structure
       }
@@ -211,10 +245,12 @@ class TransactionalImportManager {
   ): Promise<Result<void, string>> {
     const existingNames = await this.getExistingSheetNames(spreadsheetAPI);
     const sheetOrder = Array.isArray(snapshot.sheetOrder)
-      ? snapshot.sheetOrder as string[]
+      ? (snapshot.sheetOrder as string[])
       : Object.keys(snapshot.sheets);
 
-    this.logOperation('SHEET_IMPORT_START', undefined, { totalSheets: sheetOrder.length });
+    this.logOperation('SHEET_IMPORT_START', undefined, {
+      totalSheets: sheetOrder.length,
+    });
 
     for (const sheetId of sheetOrder) {
       const sheetStartTime = Date.now();
@@ -226,12 +262,15 @@ class TransactionalImportManager {
           sheetName: sheetData.name,
           index: sheetIndex,
           rowCount: sheetData.rowCount,
-          columnCount: sheetData.columnCount
+          columnCount: sheetData.columnCount,
         });
 
         // Generate unique sheet name
         const baseName = sheetData.name ?? `Sheet ${sheetIndex + 1}`;
-        const uniqueName = this.generateUniqueSheetName(baseName, existingNames);
+        const uniqueName = this.generateUniqueSheetName(
+          baseName,
+          existingNames
+        );
 
         // Create the sheet
         const newSheetId = await spreadsheetAPI.createSheet(
@@ -256,28 +295,32 @@ class TransactionalImportManager {
         this.logOperation('SHEET_SUCCESS', sheetId, {
           newSheetId,
           uniqueName,
-          duration: sheetDuration
+          duration: sheetDuration,
         });
-
       } catch (error) {
         const sheetDuration = Date.now() - sheetStartTime;
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
 
         this.logOperation('SHEET_FAILED', sheetId, {
           error: errorMessage,
           duration: sheetDuration,
-          sheetsProcessed: this.createdSheets.length
+          sheetsProcessed: this.createdSheets.length,
         });
 
         // Return detailed error with context
         const sheetData = snapshot.sheets[sheetId] as SheetSnapshot;
         const sheetName = sheetData.name ?? 'Unknown';
-        return err(`Failed to import sheet '${sheetId}' (${sheetName}): ${errorMessage}. ` +
-                   `${this.createdSheets.length} sheets were successfully imported before this failure.`);
+        return err(
+          `Failed to import sheet '${sheetId}' (${sheetName}): ${errorMessage}. ` +
+            `${this.createdSheets.length} sheets were successfully imported before this failure.`
+        );
       }
     }
 
-    this.logOperation('ALL_SHEETS_SUCCESS', undefined, { totalSheets: sheetOrder.length });
+    this.logOperation('ALL_SHEETS_SUCCESS', undefined, {
+      totalSheets: sheetOrder.length,
+    });
     return ok(undefined);
   }
 
@@ -286,13 +329,15 @@ class TransactionalImportManager {
    */
   private async rollback(spreadsheetAPI: SpreadsheetRef): Promise<void> {
     if (this.createdSheets.length === 0) {
-      this.logOperation('ROLLBACK_SKIPPED', undefined, { reason: 'No sheets to rollback' });
+      this.logOperation('ROLLBACK_SKIPPED', undefined, {
+        reason: 'No sheets to rollback',
+      });
       return;
     }
 
     this.logOperation('ROLLBACK_START', undefined, {
       sheetsToDelete: this.createdSheets.length,
-      sheetIds: this.createdSheets
+      sheetIds: this.createdSheets,
     });
 
     const rollbackStartTime = Date.now();
@@ -306,9 +351,12 @@ class TransactionalImportManager {
         deletedCount++;
         this.logOperation('SHEET_DELETED', sheetId);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         failedDeletions.push({ sheetId, error: errorMessage });
-        this.logOperation('SHEET_DELETE_FAILED', sheetId, { error: errorMessage });
+        this.logOperation('SHEET_DELETE_FAILED', sheetId, {
+          error: errorMessage,
+        });
       }
     }
 
@@ -318,14 +366,14 @@ class TransactionalImportManager {
     if (failedDeletions.length === 0) {
       this.logOperation('ROLLBACK_SUCCESS', undefined, {
         deletedCount,
-        duration: rollbackDuration
+        duration: rollbackDuration,
       });
     } else {
       this.logOperation('ROLLBACK_PARTIAL', undefined, {
         deletedCount,
         failedCount: failedDeletions.length,
         failedDeletions,
-        duration: rollbackDuration
+        duration: rollbackDuration,
       });
     }
   }
@@ -343,16 +391,21 @@ class TransactionalImportManager {
 
     try {
       // Group protection resources by sheet
-      const protectionBySheet = new Map<string, Array<{ name: string; data: string }>>();
+      const protectionBySheet = new Map<
+        string,
+        Array<{ name: string; data: string }>
+      >();
 
       for (const resource of snapshot.resources) {
         const res = resource as { name?: string; data?: string };
-        if (typeof res.name === 'string' &&
-            (res.name.includes('PROTECTION') || res.name.includes('PERMISSION'))) {
-
+        if (
+          typeof res.name === 'string' &&
+          (res.name.includes('PROTECTION') || res.name.includes('PERMISSION'))
+        ) {
           // Parse sheet ID from resource data to apply protection to correct sheet
           // Protection resources contain sheet-specific data that needs to be mapped correctly
-          const sheetIdFromResource = this.extractSheetIdFromProtectionResource(res);
+          const sheetIdFromResource =
+            this.extractSheetIdFromProtectionResource(res);
           if (sheetIdFromResource) {
             // Map the original sheet ID to the new sheet ID
             const newSheetId = this.sheetIdMapping.get(sheetIdFromResource);
@@ -360,24 +413,38 @@ class TransactionalImportManager {
               if (!protectionBySheet.has(newSheetId)) {
                 protectionBySheet.set(newSheetId, []);
               }
-              protectionBySheet.get(newSheetId)!.push(res as { name: string; data: string });
+              protectionBySheet
+                .get(newSheetId)
+                ?.push(res as { name: string; data: string });
             }
           } else {
             // Fallback: if we can't parse sheet ID, apply to all sheets (current behavior)
-            for (const [_originalSheetId, newSheetId] of this.sheetIdMapping.entries()) {
+            for (const [
+              _originalSheetId,
+              newSheetId,
+            ] of this.sheetIdMapping.entries()) {
               if (!protectionBySheet.has(newSheetId)) {
                 protectionBySheet.set(newSheetId, []);
               }
-              protectionBySheet.get(newSheetId)!.push(res as { name: string; data: string });
+              protectionBySheet
+                .get(newSheetId)
+                ?.push(res as { name: string; data: string });
             }
           }
         }
       }
 
       // Apply protection for each sheet
-      for (const [newSheetId, protectionResources] of protectionBySheet.entries()) {
+      for (const [
+        newSheetId,
+        protectionResources,
+      ] of protectionBySheet.entries()) {
         if (protectionResources.length > 0) {
-          void spreadsheetAPI.applySheetProtection(newSheetId, protectionResources, this.sheetIdMapping);
+          void spreadsheetAPI.applySheetProtection(
+            newSheetId,
+            protectionResources,
+            this.sheetIdMapping
+          );
         }
       }
     } catch (error) {
@@ -389,15 +456,20 @@ class TransactionalImportManager {
   /**
    * Get existing sheet names
    */
-  private async getExistingSheetNames(spreadsheetAPI: SpreadsheetRef): Promise<Set<string>> {
+  private async getExistingSheetNames(
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<Set<string>> {
     const existingSheets = await spreadsheetAPI.getAllSheets();
-    return new Set(existingSheets.map(s => s.name));
+    return new Set(existingSheets.map((s) => s.name));
   }
 
   /**
    * Generate unique sheet name
    */
-  private generateUniqueSheetName(baseName: string, existingNames: Set<string>): string {
+  private generateUniqueSheetName(
+    baseName: string,
+    existingNames: Set<string>
+  ): string {
     let sheetName = baseName;
     let nameCounter = 1;
 
@@ -409,11 +481,14 @@ class TransactionalImportManager {
     return sheetName;
   }
 
-    /**
+  /**
    * Extract sheet ID from protection resource data
    * Protection resources in Univer snapshots contain sheet-specific information
    */
-  private extractSheetIdFromProtectionResource(resource: { name?: string; data?: string }): string | null {
+  private extractSheetIdFromProtectionResource(resource: {
+    name?: string;
+    data?: string;
+  }): string | null {
     try {
       if (!resource.data) {
         return null;
@@ -423,7 +498,11 @@ class TransactionalImportManager {
       const parsedData: unknown = JSON.parse(resource.data);
 
       // Look for sheet ID in common locations within protection data
-      if (typeof parsedData === 'object' && parsedData !== null && 'sheetId' in parsedData) {
+      if (
+        typeof parsedData === 'object' &&
+        parsedData !== null &&
+        'sheetId' in parsedData
+      ) {
         const sheetId = (parsedData as { sheetId?: unknown }).sheetId;
         if (typeof sheetId === 'string') {
           return sheetId;
@@ -449,7 +528,10 @@ class TransactionalImportManager {
           }
           if (typeof obj === 'object' && obj !== null) {
             for (const key in obj) {
-              if (key.toLowerCase().includes('sheet') && typeof (obj as Record<string, unknown>)[key] === 'string') {
+              if (
+                key.toLowerCase().includes('sheet') &&
+                typeof (obj as Record<string, unknown>)[key] === 'string'
+              ) {
                 return (obj as Record<string, unknown>)[key] as string;
               }
               const result = findSheetId((obj as Record<string, unknown>)[key]);
@@ -499,8 +581,13 @@ class TransactionalImportManager {
         sheetId,
         {
           name: `Sheet-${sheetId}`,
-          cellDataMatrix: sheet.cellData as Record<number, Record<number, ImportCellDataRecord>>,
-          mergeData: Array.isArray(sheet.mergeData) ? sheet.mergeData as ImportMergeDataItem[] : [],
+          cellDataMatrix: sheet.cellData as Record<
+            number,
+            Record<number, ImportCellDataRecord>
+          >,
+          mergeData: Array.isArray(sheet.mergeData)
+            ? (sheet.mergeData as ImportMergeDataItem[])
+            : [],
         },
         {
           includeFormulas: true,
@@ -537,25 +624,34 @@ export class ImportService implements ImportService {
   /**
    * Select file and auto-detect format
    */
-  async selectFile(): Promise<{ filePath: string; detectedFormat: ImportFormat } | null> {
+  async selectFile(): Promise<{
+    filePath: string;
+    detectedFormat: ImportFormat;
+  } | null> {
     try {
       const file = await open({
         multiple: false,
         filters: [
-          { name: 'All Supported', extensions: ['csv', 'tsv', 'txt', 'parquet', 'anafispread'] },
+          {
+            name: 'All Supported',
+            extensions: ['csv', 'tsv', 'txt', 'parquet', 'anafispread'],
+          },
           FORMAT_FILTERS.anafispread,
           FORMAT_FILTERS.csv,
           FORMAT_FILTERS.tsv,
           FORMAT_FILTERS.txt,
           FORMAT_FILTERS.parquet,
-        ]
+        ],
       });
 
       if (!file) {
         return null;
       }
 
-      const filePath = typeof file === 'string' ? file : (file as { path?: string }).path ?? '';
+      const filePath =
+        typeof file === 'string'
+          ? file
+          : ((file as { path?: string }).path ?? '');
       if (!filePath) {
         const error = new SpreadsheetError(
           ERROR_MESSAGES.NO_FILE_PATH,
@@ -582,32 +678,36 @@ export class ImportService implements ImportService {
   /**
    * Get supported formats with descriptions
    */
-  getSupportedFormats(): { format: ImportFormat; description: string; extensions: string[] }[] {
+  getSupportedFormats(): {
+    format: ImportFormat;
+    description: string;
+    extensions: string[];
+  }[] {
     return [
-      { 
-        format: 'anafispread', 
-        description: 'AnaFis Spreadsheet - Lossless native format', 
-        extensions: ['anafispread'] 
+      {
+        format: 'anafispread',
+        description: 'AnaFis Spreadsheet - Lossless native format',
+        extensions: ['anafispread'],
       },
-      { 
-        format: 'csv', 
-        description: 'CSV - Comma-separated values', 
-        extensions: ['csv'] 
+      {
+        format: 'csv',
+        description: 'CSV - Comma-separated values',
+        extensions: ['csv'],
       },
-      { 
-        format: 'tsv', 
-        description: 'TSV - Tab-separated values', 
-        extensions: ['tsv'] 
+      {
+        format: 'tsv',
+        description: 'TSV - Tab-separated values',
+        extensions: ['tsv'],
       },
-      { 
-        format: 'txt', 
-        description: 'TXT - Text with custom delimiter', 
-        extensions: ['txt'] 
+      {
+        format: 'txt',
+        description: 'TXT - Text with custom delimiter',
+        extensions: ['txt'],
       },
-      { 
-        format: 'parquet', 
-        description: 'Parquet - Columnar data format', 
-        extensions: ['parquet'] 
+      {
+        format: 'parquet',
+        description: 'Parquet - Columnar data format',
+        extensions: ['parquet'],
       },
     ];
   }
@@ -633,25 +733,31 @@ export class ImportService implements ImportService {
         logError(error);
         return err({
           message: error.message,
-          code: error.code
+          code: error.code,
         });
       }
 
       // Special case: anafispread uses direct lossless import
       if (options.format === 'anafispread') {
-        const snapshot = await invoke<unknown>('import_anafis_spread_direct', { filePath });
+        const snapshot = await invoke<unknown>('import_anafis_spread_direct', {
+          filePath,
+        });
 
         // Validate snapshot structure before processing
         const validatedSnapshot = this.validateSnapshot(snapshot);
 
         // Handle anafispread mode: append (default) or replace
         const mode = options.anaFisMode ?? 'append';
-        
+
         if (mode === 'replace') {
           await spreadsheetAPI.loadWorkbookSnapshot(validatedSnapshot);
         } else {
           // Use transactional import manager for atomic multi-sheet operations
-          const importResult = await this.transactionalManager.importSheetsAtomic(validatedSnapshot, spreadsheetAPI);
+          const importResult =
+            await this.transactionalManager.importSheetsAtomic(
+              validatedSnapshot,
+              spreadsheetAPI
+            );
           if (isErr(importResult)) {
             const error = new SpreadsheetError(
               importResult.error,
@@ -663,42 +769,49 @@ export class ImportService implements ImportService {
             logError(error);
             return err({
               message: error.message,
-              code: error.code
+              code: error.code,
             });
           }
         }
 
         const sheetCount = this.getSheetCount(validatedSnapshot);
-        return ok({ 
+        return ok({
           message: `Successfully imported ${sheetCount} sheet(s)`,
-          sheetCount 
+          sheetCount,
         });
       }
 
       // Simple formats (CSV, TSV, TXT, Parquet): import as 2D array
-      const importedData = await invoke<{ sheets: Record<string, (string | number | null)[][]> }>('import_spreadsheet_file', {
+      const importedData = await invoke<{
+        sheets: Record<string, (string | number | null)[][]>;
+      }>('import_spreadsheet_file', {
         filePath,
         options: {
           format: options.format,
           skipRows: options.skipRows ?? 0,
           delimiter: this.getDelimiter(options),
           encoding: options.encoding ?? 'utf8',
-        }
+        },
       });
 
       // Get file dimensions for validation
       const fileDimensions = this.getFileDimensions(importedData);
-      
+
       // Validate range if using currentRange mode
       let rangeValidation: ImportResult['rangeValidation'];
       if (options.targetMode === 'currentRange' && options.targetRange) {
-        rangeValidation = this.validateRange(options.targetRange, fileDimensions);
+        rangeValidation = this.validateRange(
+          options.targetRange,
+          fileDimensions
+        );
       }
 
       // Load data into spreadsheet based on target mode
       const targetMode = options.targetMode ?? 'newSheet';
-      
-      for (const [sheetName, sheetData] of Object.entries(importedData.sheets)) {
+
+      for (const [sheetName, sheetData] of Object.entries(
+        importedData.sheets
+      )) {
         if (Array.isArray(sheetData)) {
           // Convert simple values to CellValue format using centralized utility
           const cellValues = convertSimpleArrayToCellValues(sheetData);
@@ -710,33 +823,39 @@ export class ImportService implements ImportService {
               await spreadsheetAPI.createSheet(sheetName || 'Imported Data');
               await spreadsheetAPI.updateRange('A1', cellValues);
               break;
-              
+
             case 'currentRange': {
               // Import to specified range (A1 default)
               const targetRange = options.targetRange ?? 'A1';
-              
+
               // Extract starting cell from range (e.g., "J13:L16" -> "J13")
               const targetCell = extractStartCell(targetRange);
-              
+
               // Apply range truncation if needed
               let dataToImport = cellValues;
-              if (rangeValidation?.willTruncate && rangeValidation.selectedRange) {
-                dataToImport = this.truncateDataToRange(cellValues, rangeValidation.selectedRange);
+              if (
+                rangeValidation?.willTruncate &&
+                rangeValidation.selectedRange
+              ) {
+                dataToImport = this.truncateDataToRange(
+                  cellValues,
+                  rangeValidation.selectedRange
+                );
               }
-              
+
               await spreadsheetAPI.updateRange(targetCell, dataToImport);
               break;
             }
           }
-          
+
           break; // Only use first sheet for single-sheet formats
         }
       }
 
       const rowCount = this.getRowCount(importedData);
-      const result: ImportResult = { 
+      const result: ImportResult = {
         message: `Successfully imported ${rowCount} rows from ${filePath.split('/').pop() ?? 'file'}`,
-        fileDimensions
+        fileDimensions,
       };
 
       // Add range validation info if applicable
@@ -750,7 +869,7 @@ export class ImportService implements ImportService {
       logError(spreadsheetError);
       return err({
         message: spreadsheetError.message,
-        code: spreadsheetError.code
+        code: spreadsheetError.code,
       });
     }
   }
@@ -759,9 +878,15 @@ export class ImportService implements ImportService {
    * Get file metadata
    * For TXT files, pass delimiter to get accurate column count with that delimiter
    */
-  async getFileMetadata(filePath: string, delimiter?: string): Promise<FileMetadata | null> {
+  async getFileMetadata(
+    filePath: string,
+    delimiter?: string
+  ): Promise<FileMetadata | null> {
     try {
-      return await invoke<FileMetadata>('get_file_metadata', { filePath, delimiter });
+      return await invoke<FileMetadata>('get_file_metadata', {
+        filePath,
+        delimiter,
+      });
     } catch {
       return null;
     }
@@ -791,7 +916,10 @@ export class ImportService implements ImportService {
         { value: snapshotObj.id }
       );
     }
-    if (typeof snapshotObj.name !== 'string' || snapshotObj.name.trim() === '') {
+    if (
+      typeof snapshotObj.name !== 'string' ||
+      snapshotObj.name.trim() === ''
+    ) {
       throw new SpreadsheetValidationError(
         'Snapshot missing required field: name (must be non-empty string)',
         'name',
@@ -810,11 +938,17 @@ export class ImportService implements ImportService {
 
     // Validate sheets structure
     const sheets: Record<string, SheetSnapshot> = {};
-    for (const [sheetId, sheetData] of Object.entries(snapshotObj.sheets as Record<string, unknown>)) {
+    for (const [sheetId, sheetData] of Object.entries(
+      snapshotObj.sheets as Record<string, unknown>
+    )) {
       if (typeof sheetData === 'object' && sheetData !== null) {
         const sheet = sheetData as Record<string, unknown>;
-        if (typeof sheet.id !== 'string' || sheet.id.trim() === '' ||
-            typeof sheet.name !== 'string' || sheet.name.trim() === '') {
+        if (
+          typeof sheet.id !== 'string' ||
+          sheet.id.trim() === '' ||
+          typeof sheet.name !== 'string' ||
+          sheet.name.trim() === ''
+        ) {
           throw new SpreadsheetValidationError(
             `Sheet '${sheetId}' missing required fields: id or name (must be non-empty strings)`,
             'id/name',
@@ -824,7 +958,10 @@ export class ImportService implements ImportService {
         }
 
         // Additional validation for optional fields
-        if (sheet.cellData !== undefined && typeof sheet.cellData !== 'object') {
+        if (
+          sheet.cellData !== undefined &&
+          typeof sheet.cellData !== 'object'
+        ) {
           throw new SpreadsheetValidationError(
             `Sheet '${sheetId}' has invalid cellData (must be object if present)`,
             'cellData',
@@ -840,7 +977,10 @@ export class ImportService implements ImportService {
             { sheetId, valueType: typeof sheet.mergeData }
           );
         }
-        if (sheet.rowCount !== undefined && (typeof sheet.rowCount !== 'number' || sheet.rowCount < 0)) {
+        if (
+          sheet.rowCount !== undefined &&
+          (typeof sheet.rowCount !== 'number' || sheet.rowCount < 0)
+        ) {
           throw new SpreadsheetValidationError(
             `Sheet '${sheetId}' has invalid rowCount (must be non-negative number if present)`,
             'rowCount',
@@ -848,7 +988,10 @@ export class ImportService implements ImportService {
             { sheetId, value: sheet.rowCount }
           );
         }
-        if (sheet.columnCount !== undefined && (typeof sheet.columnCount !== 'number' || sheet.columnCount < 0)) {
+        if (
+          sheet.columnCount !== undefined &&
+          (typeof sheet.columnCount !== 'number' || sheet.columnCount < 0)
+        ) {
           throw new SpreadsheetValidationError(
             `Sheet '${sheetId}' has invalid columnCount (must be non-negative number if present)`,
             'columnCount',
@@ -895,16 +1038,27 @@ export class ImportService implements ImportService {
     if (typeof snapshotObj.styles === 'object' && snapshotObj.styles !== null) {
       result.styles = snapshotObj.styles as Record<string, SpreadsheetStyle>;
     }
-    if (Array.isArray(snapshotObj.sheetOrder) && snapshotObj.sheetOrder.every(id => typeof id === 'string')) {
+    if (
+      Array.isArray(snapshotObj.sheetOrder) &&
+      snapshotObj.sheetOrder.every((id) => typeof id === 'string')
+    ) {
       result.sheetOrder = snapshotObj.sheetOrder;
     }
     if (Array.isArray(snapshotObj.resources)) {
-      const validResources = snapshotObj.resources.filter((r): r is { name: string; data: string } => {
-        if (typeof r !== 'object' || r === null) {return false;}
-        const obj = r as Record<string, unknown>;
-        return 'name' in obj && typeof obj.name === 'string' &&
-               'data' in obj && typeof obj.data === 'string';
-      });
+      const validResources = snapshotObj.resources.filter(
+        (r): r is { name: string; data: string } => {
+          if (typeof r !== 'object' || r === null) {
+            return false;
+          }
+          const obj = r as Record<string, unknown>;
+          return (
+            'name' in obj &&
+            typeof obj.name === 'string' &&
+            'data' in obj &&
+            typeof obj.data === 'string'
+          );
+        }
+      );
       if (validResources.length > 0) {
         result.resources = validResources;
       }
@@ -923,13 +1077,12 @@ export class ImportService implements ImportService {
    * Get sheet count from workbook snapshot
    */
 
-
   /**
    * Auto-detect format from file extension
    */
   private detectFormat(filePath: string): ImportFormat {
     const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
-    
+
     switch (ext) {
       case 'anafispread':
         return 'anafispread';
@@ -967,7 +1120,11 @@ export class ImportService implements ImportService {
    */
   private getSheetCount(snapshot: unknown): number {
     try {
-      if (typeof snapshot === 'object' && snapshot !== null && 'sheets' in snapshot) {
+      if (
+        typeof snapshot === 'object' &&
+        snapshot !== null &&
+        'sheets' in snapshot
+      ) {
         const sheets = (snapshot as { sheets: unknown }).sheets;
         if (typeof sheets === 'object' && sheets !== null) {
           return Object.keys(sheets).length;
@@ -982,9 +1139,15 @@ export class ImportService implements ImportService {
   /**
    * Get row count from imported data
    */
-  private getRowCount(importedData: { sheets: Record<string, (string | number | null)[][]> } | undefined): number {
-    if (!importedData?.sheets) {return 0;}
-    
+  private getRowCount(
+    importedData:
+      | { sheets: Record<string, (string | number | null)[][]> }
+      | undefined
+  ): number {
+    if (!importedData?.sheets) {
+      return 0;
+    }
+
     const firstSheet = Object.values(importedData.sheets)[0];
     return Array.isArray(firstSheet) ? firstSheet.length : 0;
   }
@@ -992,14 +1155,18 @@ export class ImportService implements ImportService {
   /**
    * Get file dimensions from imported data
    */
-  private getFileDimensions(importedData: { sheets: Record<string, (string | number | null)[][]> }): { rows: number; columns: number } {
+  private getFileDimensions(importedData: {
+    sheets: Record<string, (string | number | null)[][]>;
+  }): { rows: number; columns: number } {
     const firstSheet = Object.values(importedData.sheets)[0];
     if (!Array.isArray(firstSheet) || firstSheet.length === 0) {
       return { rows: 0, columns: 0 };
     }
 
     const rows = firstSheet.length;
-    const columns = Math.max(...firstSheet.map(row => Array.isArray(row) ? row.length : 0));
+    const columns = Math.max(
+      ...firstSheet.map((row) => (Array.isArray(row) ? row.length : 0))
+    );
 
     return { rows, columns };
   }
@@ -1007,7 +1174,10 @@ export class ImportService implements ImportService {
   /**
    * Validate if the selected range can accommodate the file data
    */
-  private validateRange(rangeRef: string, fileDimensions: { rows: number; columns: number }): ImportResult['rangeValidation'] {
+  private validateRange(
+    rangeRef: string,
+    fileDimensions: { rows: number; columns: number }
+  ): ImportResult['rangeValidation'] {
     const warnings: string[] = [];
     let willTruncate = false;
 
@@ -1015,11 +1185,12 @@ export class ImportService implements ImportService {
     try {
       RangeValidator.validateFormat(rangeRef);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       return {
         isValid: false,
         warnings: [`Invalid range format: ${errorMessage}`],
-        willTruncate: false
+        willTruncate: false,
       };
     }
 
@@ -1029,7 +1200,7 @@ export class ImportService implements ImportService {
       return {
         isValid: false,
         warnings: ['Invalid range format'],
-        willTruncate: false
+        willTruncate: false,
       };
     }
 
@@ -1037,22 +1208,34 @@ export class ImportService implements ImportService {
     const selectedColumns = rangeBounds.endCol - rangeBounds.startCol + 1;
 
     // Check if range is too small (but allow single cell to import all data)
-    if (selectedRows < fileDimensions.rows || selectedColumns < fileDimensions.columns) {
+    if (
+      selectedRows < fileDimensions.rows ||
+      selectedColumns < fileDimensions.columns
+    ) {
       // Don't truncate for single cell - use it as top-left corner for full data import
       if (!(selectedRows === 1 && selectedColumns === 1)) {
         willTruncate = true;
-        warnings.push(`Selected range (${selectedRows}×${selectedColumns}) is smaller than file data (${fileDimensions.rows}×${fileDimensions.columns}). Data will be truncated to fit.`);
+        warnings.push(
+          `Selected range (${selectedRows}×${selectedColumns}) is smaller than file data (${fileDimensions.rows}×${fileDimensions.columns}). Data will be truncated to fit.`
+        );
       }
     }
 
     // Check if range is much larger (just informational)
-    if (selectedRows > fileDimensions.rows * 2 || selectedColumns > fileDimensions.columns * 2) {
-      warnings.push(`Selected range is much larger than needed. Consider selecting a smaller range for better performance.`);
+    if (
+      selectedRows > fileDimensions.rows * 2 ||
+      selectedColumns > fileDimensions.columns * 2
+    ) {
+      warnings.push(
+        `Selected range is much larger than needed. Consider selecting a smaller range for better performance.`
+      );
     }
 
     // Special case: single cell
     if (selectedRows === 1 && selectedColumns === 1) {
-      warnings.push('Single cell selected. This will be treated as the top-left corner of the import area.');
+      warnings.push(
+        'Single cell selected. This will be treated as the top-left corner of the import area.'
+      );
     }
 
     return {
@@ -1061,17 +1244,20 @@ export class ImportService implements ImportService {
       willTruncate,
       selectedRange: {
         rows: selectedRows,
-        columns: selectedColumns
-      }
+        columns: selectedColumns,
+      },
     };
   }
 
   /**
    * Truncate data to fit the selected range
    */
-  private truncateDataToRange(data: CellValue[][], maxDimensions: { rows: number; columns: number }): CellValue[][] {
-    return data.slice(0, maxDimensions.rows).map(row =>
-      row.slice(0, maxDimensions.columns)
-    );
+  private truncateDataToRange(
+    data: CellValue[][],
+    maxDimensions: { rows: number; columns: number }
+  ): CellValue[][] {
+    return data
+      .slice(0, maxDimensions.rows)
+      .map((row) => row.slice(0, maxDimensions.columns));
   }
 }

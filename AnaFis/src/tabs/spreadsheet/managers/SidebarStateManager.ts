@@ -1,10 +1,17 @@
 // SidebarStateManager.ts - Centralized sidebar state management
-import { useReducer, useCallback } from 'react';
-import { ExportService } from '@/core/types/export';
-import { ImportService } from '@/core/types/import';
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import { useCallback, useReducer } from 'react';
+import type { ExportService } from '@/core/types/export';
+import type { ImportService } from '@/core/types/import';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
-export type SidebarType = 'uncertainty' | 'unitConvert' | 'quickPlot' | 'export' | 'import' | 'statistics' | null;
+export type SidebarType =
+  | 'uncertainty'
+  | 'unitConvert'
+  | 'quickPlot'
+  | 'export'
+  | 'import'
+  | 'statistics'
+  | null;
 
 export interface SidebarState {
   activeSidebar: SidebarType;
@@ -44,7 +51,10 @@ const initialState: SidebarState = {
   },
 };
 
-function sidebarReducer(state: SidebarState, action: SidebarAction): SidebarState {
+function sidebarReducer(
+  state: SidebarState,
+  action: SidebarAction
+): SidebarState {
   switch (action.type) {
     case 'SET_ACTIVE_SIDEBAR':
       return { ...state, activeSidebar: action.payload };
@@ -52,43 +62,43 @@ function sidebarReducer(state: SidebarState, action: SidebarAction): SidebarStat
     case 'SET_UNIT_CONVERSION_CATEGORY':
       return {
         ...state,
-        unitConversion: { ...state.unitConversion, category: action.payload }
+        unitConversion: { ...state.unitConversion, category: action.payload },
       };
 
     case 'SET_UNIT_CONVERSION_FROM_UNIT':
       return {
         ...state,
-        unitConversion: { ...state.unitConversion, fromUnit: action.payload }
+        unitConversion: { ...state.unitConversion, fromUnit: action.payload },
       };
 
     case 'SET_UNIT_CONVERSION_TO_UNIT':
       return {
         ...state,
-        unitConversion: { ...state.unitConversion, toUnit: action.payload }
+        unitConversion: { ...state.unitConversion, toUnit: action.payload },
       };
 
     case 'SET_UNIT_CONVERSION_VALUE':
       return {
         ...state,
-        unitConversion: { ...state.unitConversion, value: action.payload }
+        unitConversion: { ...state.unitConversion, value: action.payload },
       };
 
     case 'SET_EXPORT_SERVICE':
       return {
         ...state,
-        services: { ...state.services, exportService: action.payload }
+        services: { ...state.services, exportService: action.payload },
       };
 
     case 'SET_IMPORT_SERVICE':
       return {
         ...state,
-        services: { ...state.services, importService: action.payload }
+        services: { ...state.services, importService: action.payload },
       };
 
     case 'RESET_UNIT_CONVERSION':
       return {
         ...state,
-        unitConversion: initialState.unitConversion
+        unitConversion: initialState.unitConversion,
       };
 
     default:
@@ -136,14 +146,17 @@ export function useSidebarState() {
     }, []),
 
     // Convenience method to initialize services
-    initializeServices: useCallback((spreadsheetRef: React.RefObject<SpreadsheetRef | null>) => {
-      if (spreadsheetRef.current) {
-        const expSvc = spreadsheetRef.current.getExportService();
-        const impSvc = spreadsheetRef.current.getImportService();
-        dispatch({ type: 'SET_EXPORT_SERVICE', payload: expSvc });
-        dispatch({ type: 'SET_IMPORT_SERVICE', payload: impSvc });
-      }
-    }, []),
+    initializeServices: useCallback(
+      (spreadsheetRef: React.RefObject<SpreadsheetRef | null>) => {
+        if (spreadsheetRef.current) {
+          const expSvc = spreadsheetRef.current.getExportService();
+          const impSvc = spreadsheetRef.current.getImportService();
+          dispatch({ type: 'SET_EXPORT_SERVICE', payload: expSvc });
+          dispatch({ type: 'SET_IMPORT_SERVICE', payload: impSvc });
+        }
+      },
+      []
+    ),
   };
 
   return {

@@ -8,7 +8,10 @@
  * @param sheets Array of all sheets (for fallback naming)
  * @returns The sheet name or a fallback name
  */
-export function getSheetNameSafely(sheet: { getSheetName: () => string }, sheets: { getSheetName: () => string }[]): string {
+export function getSheetNameSafely(
+  sheet: { getSheetName: () => string },
+  sheets: { getSheetName: () => string }[]
+): string {
   try {
     // Use official Facade API to get sheet name
     return sheet.getSheetName();

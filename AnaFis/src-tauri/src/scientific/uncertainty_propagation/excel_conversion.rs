@@ -6,33 +6,37 @@ use thiserror::Error;
 /// Error type for Excel conversion operations
 #[derive(Debug, Error)]
 pub enum ConversionError {
-    #[error("Function '{0}' is not supported in Excel")]
-    UnsupportedExcelFunction(String),
-
-    #[error("Invalid expression: {0}")]
-    InvalidExpression(String),
+    /// Identifier in formula not present in mapping.
+    #[error("Identifier not found in mapping: {0}")]
+    IdentifierNotFound(String),
+    /// Function not supported by the Excel converter.
+    #[error("Unsupported function: {0}")]
+    UnsupportedFunction(String),
 }
 
-/// Error type for range parsing operations
+/// Error type for Excel range parsing
 #[derive(Debug, Error)]
 pub enum RangeError {
+    /// The range format (e.g., "A1:B10") is invalid.
     #[error("Invalid range format: {0}")]
     InvalidFormat(String),
 
+    /// A specific cell identifier (e.g., "A1") is invalid.
     #[error("Invalid cell format: {0}")]
     InvalidCell(String),
 
+    /// A row number is out of bounds or not a positive integer.
     #[error("Invalid row number in range: {0}")]
     InvalidRow(String),
 }
 
-/// Convert symb_anafis derivative expression to Excel formula
+/// Convert `symb_anafis` derivative expression to Excel formula
 ///
-/// This function converts mathematical expressions from symb_anafis's format to Excel's format,
+/// This function converts mathematical expressions from `symb_anafis`'s format to Excel's format,
 /// handling function names, operators, and variable substitutions.
 ///
 /// # Arguments
-/// * `symb_anafis_expr` - The expression string from symb_anafis
+/// * `symb_anafis_expr` - The expression string from `symb_anafis`
 /// * `var_map` - Maps variable names to Excel cell references (e.g., "x" -> "A1")
 ///
 /// # Returns
@@ -47,12 +51,16 @@ pub enum RangeError {
 /// let formula = symb_anafis_to_excel("2*x", &var_map).unwrap();
 /// assert_eq!(formula, "2*A1");
 /// ```
-pub fn symb_anafis_to_excel(
+/// # Errors
+/// Returns `ConversionError::UnsupportedExcelFunction` if the expression contains functions
+/// not supported by Excel.
+///
+/// # Panics
+/// Panics if internal regex compilation fails.
+pub fn symb_anafis_to_excel<S: ::std::hash::BuildHasher>(
     symb_anafis_expr: &str,
-    var_map: &HashMap<String, String>,
+    var_map: &HashMap<String, String, S>,
 ) -> Result<String, ConversionError> {
-    let mut excel_formula = symb_anafis_expr.to_string();
-
     // Check for unsupported functions before conversion
     static UNSUPPORTED_FUNCTIONS: &[&str] = &[
         "Ynm",                // Spherical harmonics (not in Excel)
@@ -65,9 +73,11 @@ pub fn symb_anafis_to_excel(
         "tetragamma",         // Tetragamma function (not in Excel)
     ];
 
+    let mut excel_formula = symb_anafis_expr.to_string();
+
     for unsupported in UNSUPPORTED_FUNCTIONS {
         if excel_formula.contains(unsupported) {
-            return Err(ConversionError::UnsupportedExcelFunction(
+            return Err(ConversionError::UnsupportedFunction(
                 unsupported.to_string(),
             ));
         }
@@ -182,7 +192,10 @@ pub fn symb_anafis_to_excel(
     Ok(excel_formula)
 }
 
-fn replace_identifiers(formula: &str, var_map: &HashMap<String, String>) -> String {
+fn replace_identifiers<S: ::std::hash::BuildHasher>(
+    formula: &str,
+    var_map: &HashMap<String, String, S>,
+) -> String {
     let mut output = formula.to_string();
 
     // Replace longer identifiers first to keep behavior deterministic with overlapping names.
@@ -202,7 +215,7 @@ fn replace_identifiers(formula: &str, var_map: &HashMap<String, String>) -> Stri
     output
 }
 
-/// Parse Excel range notation into structured ExcelRange
+/// Parse Excel range notation into structured `ExcelRange`
 ///
 /// Supports both single cell (e.g., "A1") and range (e.g., "A1:A10") formats.
 ///
@@ -210,7 +223,9 @@ fn replace_identifiers(formula: &str, var_map: &HashMap<String, String>) -> Stri
 /// * `range` - The range string to parse
 ///
 /// # Returns
-/// An ExcelRange struct containing column, start_row, and end_row
+/// An `ExcelRange` struct containing column, `start_row`, and `end_row`
+/// # Errors
+/// Returns `RangeError` if the range format is invalid or rows are not numbers.
 pub fn parse_excel_range(range: &str) -> Result<ExcelRange, RangeError> {
     let parts: Vec<&str> = range.split(':').collect();
 
@@ -244,14 +259,14 @@ pub fn parse_excel_range(range: &str) -> Result<ExcelRange, RangeError> {
             .skip_while(|c| c.is_alphabetic())
             .collect::<String>()
             .parse()
-            .map_err(|_| RangeError::InvalidRow(format!("start: {}", range)))?;
+            .map_err(|_| RangeError::InvalidRow(format!("start: {range}")))?;
 
         let end_row: usize = parts[1]
             .chars()
             .skip_while(|c| c.is_alphabetic())
             .collect::<String>()
             .parse()
-            .map_err(|_| RangeError::InvalidRow(format!("end: {}", range)))?;
+            .map_err(|_| RangeError::InvalidRow(format!("end: {range}")))?;
 
         Ok(ExcelRange::new(start_col, start_row, end_row))
     } else {
@@ -267,8 +282,9 @@ pub fn parse_excel_range(range: &str) -> Result<ExcelRange, RangeError> {
 /// assert_eq!(create_cell_ref("A", 1), "A1");
 /// assert_eq!(create_cell_ref("BC", 42), "BC42");
 /// ```
+#[must_use]
 pub fn create_cell_ref(col: &str, row: usize) -> String {
-    format!("{}{}", col, row)
+    format!("{col}{row}")
 }
 
 #[cfg(test)]
@@ -389,26 +405,26 @@ mod tests {
         let result = symb_anafis_to_excel("Ynm(x, y, z)", &var_map);
         assert!(matches!(
             result,
-            Err(ConversionError::UnsupportedExcelFunction(_))
+            Err(ConversionError::UnsupportedFunction(_))
         ));
 
         // Test newly added unsupported functions
         let result = symb_anafis_to_excel("elliptic_e(x)", &var_map);
         assert!(matches!(
             result,
-            Err(ConversionError::UnsupportedExcelFunction(_))
+            Err(ConversionError::UnsupportedFunction(_))
         ));
 
         let result = symb_anafis_to_excel("zeta_deriv(1, x)", &var_map);
         assert!(matches!(
             result,
-            Err(ConversionError::UnsupportedExcelFunction(_))
+            Err(ConversionError::UnsupportedFunction(_))
         ));
 
         let result = symb_anafis_to_excel("polygamma(1, x)", &var_map);
         assert!(matches!(
             result,
-            Err(ConversionError::UnsupportedExcelFunction(_))
+            Err(ConversionError::UnsupportedFunction(_))
         ));
     }
 

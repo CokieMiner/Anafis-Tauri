@@ -1,7 +1,13 @@
+import {
+  Box,
+  CssBaseline,
+  Paper,
+  ThemeProvider,
+  Typography,
+} from '@mui/material';
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider, CssBaseline, Box, Typography, Paper } from '@mui/material';
-import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 const theme = createAnafisTheme();
 
@@ -9,32 +15,42 @@ function SettingsWindow() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{
-        width: '650px',
-        height: '700px',
-        backgroundColor: 'background.default',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
+      <Box
+        sx={{
+          width: '650px',
+          height: '700px',
+          backgroundColor: 'background.default',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         <CustomTitleBar title="AnaFis Settings" />
-        
-        <Box sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          p: 4
-        }}>
-          <Paper sx={{ 
-            p: 4, 
-            textAlign: 'center',
-            maxWidth: 400,
-            bgcolor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'divider'
-          }}>
-            <Typography variant="h5" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 4,
+          }}
+        >
+          <Paper
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              maxWidth: 400,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Typography
+              variant="h5"
+              gutterBottom
+              sx={{ color: 'text.primary', mb: 2 }}
+            >
               Settings Placeholder
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>

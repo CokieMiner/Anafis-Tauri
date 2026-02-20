@@ -5,24 +5,28 @@
  * including state management, file selection, and API calls.
  */
 
-import { useState, useCallback } from 'react';
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { ImportService, ImportOptions, FileMetadata } from '@/core/types/import';
+import { useCallback, useState } from 'react';
+import type {
+  FileMetadata,
+  ImportOptions,
+  ImportService,
+} from '@/core/types/import';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 interface UseImportOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
   importService: ImportService;
 }
 
-export function useImport({
-  spreadsheetRef,
-  importService,
-}: UseImportOptions) {
+export function useImport({ spreadsheetRef, importService }: UseImportOptions) {
   // Import state
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<{ filePath: string; detectedFormat: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{
+    filePath: string;
+    detectedFormat: string;
+  } | null>(null);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
 
   // Import mode: 'file' or 'library'
@@ -31,7 +35,8 @@ export function useImport({
   // Range state (shared between components)
   const [targetRange, setTargetRange] = useState<string>('A1');
   const [libraryDataRange, setLibraryDataRange] = useState<string>('A1');
-  const [libraryUncertaintyRange, setLibraryUncertaintyRange] = useState<string>('B1');
+  const [libraryUncertaintyRange, setLibraryUncertaintyRange] =
+    useState<string>('B1');
 
   // Select file for import
   const selectFile = useCallback(async (): Promise<boolean> => {
@@ -46,38 +51,49 @@ export function useImport({
       }
       return false;
     } catch (error) {
-      setError(`File selection failed: ${error instanceof Error ? error.message : String(error)}`);
+      setError(
+        `File selection failed: ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }, [importService]);
 
   // Import the selected file
-  const importFile = useCallback(async (options: ImportOptions): Promise<void> => {
-    if (!selectedFile || !spreadsheetRef.current) {
-      setError('No file selected or spreadsheet not initialized');
-      return;
-    }
-
-    setError(null);
-    setSuccess(null);
-    setIsImporting(true);
-
-    try {
-      const result = await importService.importFile(selectedFile.filePath, options, spreadsheetRef);
-      if (result.ok) {
-        setSuccess(result.value.message ?? 'Import completed successfully');
-        // Clear selection on success
-        setSelectedFile(null);
-        setFileMetadata(null);
-      } else {
-        setError(result.error.message);
+  const importFile = useCallback(
+    async (options: ImportOptions): Promise<void> => {
+      if (!selectedFile || !spreadsheetRef.current) {
+        setError('No file selected or spreadsheet not initialized');
+        return;
       }
-    } catch (error) {
-      setError(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setIsImporting(false);
-    }
-  }, [selectedFile, spreadsheetRef, importService]);
+
+      setError(null);
+      setSuccess(null);
+      setIsImporting(true);
+
+      try {
+        const result = await importService.importFile(
+          selectedFile.filePath,
+          options,
+          spreadsheetRef
+        );
+        if (result.ok) {
+          setSuccess(result.value.message ?? 'Import completed successfully');
+          // Clear selection on success
+          setSelectedFile(null);
+          setFileMetadata(null);
+        } else {
+          setError(result.error.message);
+        }
+      } catch (error) {
+        setError(
+          `Import failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      } finally {
+        setIsImporting(false);
+      }
+    },
+    [selectedFile, spreadsheetRef, importService]
+  );
 
   // Clear results
   const clearResult = useCallback(() => {

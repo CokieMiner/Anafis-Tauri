@@ -8,8 +8,8 @@ use chrono::Utc;
 use rusqlite::{Connection, OptionalExtension, Result as SqliteResult, Row, params};
 use std::sync::Mutex;
 use uuid::Uuid;
-
-use super::models::*;
+use std::fmt::Write;
+use super::models::{SearchRequest, SortBy, SortOrder, DataSequence, SaveSequenceRequest, SequenceListResponse, UpdateSequenceRequest, BatchImportRequest, BatchImportResponse, BatchImportError};
 
 pub struct DataLibraryDatabase {
     conn: Mutex<Connection>,
@@ -47,15 +47,14 @@ impl DataLibraryDatabase {
                     params.push(fts_query);
                     let fts_idx = params.len();
 
-                    params.push(format!("%{}%", query_text));
+                    params.push(format!("%{query_text}%"));
                     let like_idx = params.len();
 
                     where_clauses.push(format!(
-                        "(id IN (SELECT id FROM sequences_fts WHERE sequences_fts MATCH ?{}) OR name LIKE ?{})",
-                        fts_idx, like_idx
+                        "(id IN (SELECT id FROM sequences_fts WHERE sequences_fts MATCH ?{fts_idx}) OR name LIKE ?{like_idx})"
                     ));
                 } else {
-                    params.push(format!("%{}%", query_text));
+                    params.push(format!("%{query_text}%"));
                     where_clauses.push(format!("name LIKE ?{}", params.len()));
                 }
             }
@@ -67,7 +66,7 @@ impl DataLibraryDatabase {
             let tags_conditions: Vec<String> = tags
                 .iter()
                 .map(|tag| {
-                    params.push(format!("%{}%", tag));
+                    params.push(format!("%{tag}%"));
                     format!("tags LIKE ?{}", params.len())
                 })
                 .collect();
@@ -101,7 +100,7 @@ impl DataLibraryDatabase {
             SortOrder::Ascending => "ASC",
             SortOrder::Descending => "DESC",
         };
-        format!(" ORDER BY is_pinned DESC, {} {}", order_col, order_dir)
+        format!(" ORDER BY is_pinned DESC, {order_col} {order_dir}")
     }
 
     fn query_count(
@@ -110,19 +109,30 @@ impl DataLibraryDatabase {
         where_sql: &str,
         params: &[String],
     ) -> SqliteResult<usize> {
-        let conn = self.conn.lock().unwrap();
         let sql = format!("{base_sql}{where_sql}");
-        let mut stmt = conn.prepare(&sql)?;
-
-        if params.is_empty() {
-            let count: i64 = stmt.query_row([], |row| row.get(0))?;
-            Ok(count as usize)
+        let count: i64 = if params.is_empty() {
+            self.conn
+                .lock()
+                .unwrap()
+                .prepare(&sql)?
+                .query_row([], |row| row.get(0))?
         } else {
             let param_refs: Vec<&dyn rusqlite::ToSql> =
                 params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
-            let count: i64 = stmt.query_row(&param_refs[..], |row| row.get(0))?;
-            Ok(count as usize)
-        }
+            self.conn
+                .lock()
+                .unwrap()
+                .prepare(&sql)?
+                .query_row(&param_refs[..], |row| row.get(0))?
+        };
+
+        usize::try_from(count).map_err(|_| {
+            rusqlite::Error::FromSqlConversionFailure(
+                0,
+                rusqlite::types::Type::Integer,
+                "Count value out of range for usize".into(),
+            )
+        })
     }
 
     fn query_sequences_with_limit(
@@ -131,7 +141,6 @@ impl DataLibraryDatabase {
         limit: Option<usize>,
         offset: Option<usize>,
     ) -> SqliteResult<Vec<DataSequence>> {
-        let conn = self.conn.lock().unwrap();
         let (where_sql, mut params) = Self::build_where_clause(search);
         let mut query = "SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at FROM sequences".to_string();
         query.push_str(&where_sql);
@@ -140,28 +149,31 @@ impl DataLibraryDatabase {
         if let Some(limit) = limit {
             params.push(limit.to_string());
             let limit_idx = params.len();
-            query.push_str(&format!(" LIMIT ?{}", limit_idx));
+            let _ = write!(query, " LIMIT ?{limit_idx}");
         }
         if let Some(offset) = offset {
             params.push(offset.to_string());
             let offset_idx = params.len();
-            query.push_str(&format!(" OFFSET ?{}", offset_idx));
+            let _ = write!(query, " OFFSET ?{offset_idx}");
         }
 
-        let mut stmt = conn.prepare(&query)?;
-
-        let mut rows = if params.is_empty() {
-            stmt.query([])?
+        let sequences = if params.is_empty() {
+            self.conn
+                .lock()
+                .unwrap()
+                .prepare(&query)?
+                .query_map([], Self::row_to_sequence)?
+                .collect::<SqliteResult<Vec<_>>>()?
         } else {
             let param_refs: Vec<&dyn rusqlite::ToSql> =
                 params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
-            stmt.query(&param_refs[..])?
+            self.conn
+                .lock()
+                .unwrap()
+                .prepare(&query)?
+                .query_map(&param_refs[..], Self::row_to_sequence)?
+                .collect::<SqliteResult<Vec<_>>>()?
         };
-
-        let mut sequences = Vec::new();
-        while let Some(row) = rows.next()? {
-            sequences.push(Self::row_to_sequence(row)?);
-        }
 
         Ok(sequences)
     }
@@ -288,7 +300,7 @@ impl DataLibraryDatabase {
     }
 
     /// Save a new sequence to the database
-    pub fn save_sequence(&self, request: SaveSequenceRequest) -> SqliteResult<String> {
+    pub fn save_sequence(&self, request: &SaveSequenceRequest) -> SqliteResult<String> {
         let id = Uuid::new_v4().to_string();
         let now = Utc::now();
 
@@ -304,39 +316,41 @@ impl DataLibraryDatabase {
         let tags_json = serde_json::to_string(&request.tags)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
-        let conn = self.conn.lock().unwrap();
+        {
+            let conn = self.conn.lock().unwrap();
 
-        // Insert into main table
-        conn.execute(
-            "INSERT INTO sequences (id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-            params![
-                id,
-                request.name,
-                request.description,
-                tags_json,
-                request.unit,
-                request.source,
-                data_json,
-                uncertainties_json,
-                request.is_pinned as i32,
-                now.to_rfc3339(),
-                now.to_rfc3339(),
-            ],
-        )?;
+            // Insert into main table
+            conn.execute(
+                "INSERT INTO sequences (id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                params![
+                    id,
+                    request.name,
+                    request.description,
+                    tags_json,
+                    request.unit,
+                    request.source,
+                    data_json,
+                    uncertainties_json,
+                    i32::from(request.is_pinned),
+                    now.to_rfc3339(),
+                    now.to_rfc3339(),
+                ],
+            )?;
 
-        // Insert into FTS table
-        conn.execute(
-            "INSERT INTO sequences_fts (id, name, description, tags, source)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![
-                id,
-                request.name,
-                request.description,
-                request.tags.join(" "),
-                request.source,
-            ],
-        )?;
+            // Insert into FTS table
+            conn.execute(
+                "INSERT INTO sequences_fts (id, name, description, tags, source)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    id,
+                    request.name,
+                    request.description,
+                    request.tags.join(" "),
+                    request.source,
+                ],
+            )?;
+        }
 
         Ok(id)
     }
@@ -386,22 +400,20 @@ impl DataLibraryDatabase {
         })
     }
 
-    /// Get a single sequence by ID
     pub fn get_sequence(&self, id: &str) -> SqliteResult<Option<DataSequence>> {
-        let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at
-             FROM sequences
-             WHERE id = ?1",
-        )?;
-
-        stmt.query_row(params![id], Self::row_to_sequence)
+        self.conn
+            .lock()
+            .unwrap()
+            .prepare(
+                "SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at
+                 FROM sequences
+                 WHERE id = ?1",
+            )?
+            .query_row(params![id], Self::row_to_sequence)
             .optional()
     }
 
-    /// Update an existing sequence
-    pub fn update_sequence(&self, request: UpdateSequenceRequest) -> SqliteResult<()> {
-        let conn = self.conn.lock().unwrap();
+    pub fn update_sequence(&self, request: &UpdateSequenceRequest) -> SqliteResult<()> {
         let now = Utc::now();
 
         let mut updates = Vec::new();
@@ -427,7 +439,7 @@ impl DataLibraryDatabase {
         }
         if let Some(is_pinned) = request.is_pinned {
             updates.push("is_pinned = ?");
-            params.push(Box::new(is_pinned as i32));
+            params.push(Box::new(i32::from(is_pinned)));
         }
 
         updates.push("modified_at = ?");
@@ -437,32 +449,35 @@ impl DataLibraryDatabase {
 
         let query = format!("UPDATE sequences SET {} WHERE id = ?", updates.join(", "));
 
-        conn.execute(&query, rusqlite::params_from_iter(params.iter()))?;
+        {
+            let conn = self.conn.lock().unwrap();
+            conn.execute(&query, rusqlite::params_from_iter(params.iter()))?;
 
-        // Update FTS table if name, description, or tags changed
-        if request.name.is_some() || request.description.is_some() || request.tags.is_some() {
-            // Get current values for FTS update
-            let mut stmt =
-                conn.prepare("SELECT name, description, tags, source FROM sequences WHERE id = ?")?;
-            let mut rows = stmt.query(params![request.id])?;
+            // Update FTS table if name, description, or tags changed
+            if request.name.is_some() || request.description.is_some() || request.tags.is_some() {
+                // Get current values for FTS update
+                let mut stmt =
+                    conn.prepare("SELECT name, description, tags, source FROM sequences WHERE id = ?")?;
+                let mut rows = stmt.query(params![request.id])?;
 
-            if let Some(row) = rows.next()? {
-                let name: String = row.get(0)?;
-                let description: String = row.get(1)?;
-                let tags_json: String = row.get(2)?;
-                let source: String = row.get(3)?;
-                let tags: Vec<String> = serde_json::from_str(&tags_json).map_err(|e| {
-                    rusqlite::Error::FromSqlConversionFailure(
-                        2,
-                        rusqlite::types::Type::Text,
-                        Box::new(e),
-                    )
-                })?;
+                if let Some(row) = rows.next()? {
+                    let name: String = row.get(0)?;
+                    let description: String = row.get(1)?;
+                    let tags_json: String = row.get(2)?;
+                    let source: String = row.get(3)?;
+                    let tags: Vec<String> = serde_json::from_str(&tags_json).map_err(|e| {
+                        rusqlite::Error::FromSqlConversionFailure(
+                            2,
+                            rusqlite::types::Type::Text,
+                            Box::new(e),
+                        )
+                    })?;
 
-                conn.execute(
-                    "UPDATE sequences_fts SET name = ?1, description = ?2, tags = ?3, source = ?4 WHERE id = ?5",
-                    params![name, description, tags.join(" "), source, request.id],
-                )?;
+                    conn.execute(
+                        "UPDATE sequences_fts SET name = ?1, description = ?2, tags = ?3, source = ?4 WHERE id = ?5",
+                        params![name, description, tags.join(" "), source, request.id],
+                    )?;
+                }
             }
         }
 
@@ -474,18 +489,21 @@ impl DataLibraryDatabase {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM sequences WHERE id = ?", params![id])?;
         conn.execute("DELETE FROM sequences_fts WHERE id = ?", params![id])?;
+        drop(conn);
         Ok(())
     }
 
     /// Get all unique tags
     pub fn get_all_tags(&self) -> SqliteResult<Vec<String>> {
-        let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT DISTINCT tags FROM sequences")?;
-        let mut rows = stmt.query([])?;
-
         let mut all_tags = std::collections::HashSet::new();
-        while let Some(row) = rows.next()? {
-            let tags_json: String = row.get(0)?;
+        let tags_json_list: Vec<String> = self.conn
+            .lock()
+            .unwrap()
+            .prepare("SELECT DISTINCT tags FROM sequences")?
+            .query_map([], |row| row.get(0))?
+            .collect::<SqliteResult<Vec<String>>>()?;
+
+        for tags_json in tags_json_list {
             let tags: Vec<String> = serde_json::from_str(&tags_json).map_err(|e| {
                 rusqlite::Error::FromSqlConversionFailure(
                     0,
@@ -518,11 +536,11 @@ impl DataLibraryDatabase {
             is_pinned: false,
         };
 
-        self.save_sequence(request)
+        self.save_sequence(&request)
     }
 
     /// Export sequences to CSV format
-    /// Format: Each sequence becomes a column pair (name, name_uncertainty)
+    /// Format: Each sequence becomes a column pair (name, `name_uncertainty`)
     /// First row: column headers
     /// Subsequent rows: data values
     pub fn export_to_csv(&self, sequence_ids: &[String], file_path: &str) -> SqliteResult<()> {
@@ -552,19 +570,18 @@ impl DataLibraryDatabase {
         let mut header = Vec::new();
         for seq in &sequences {
             // Escape commas and quotes in metadata fields
-            let name = seq.name.replace(",", ";").replace("\"", "'");
-            let unit = seq.unit.replace(",", ";").replace("\"", "'");
-            let description = seq.description.replace(",", ";").replace("\"", "'");
-            let tags = seq.tags.join("|").replace(",", ";").replace("\"", "'");
+            let name = seq.name.replace(',', ";").replace('"', "'");
+            let unit = seq.unit.replace(',', ";").replace('"', "'");
+            let description = seq.description.replace(',', ";").replace('"', "'");
+            let tags = seq.tags.join("|").replace(',', ";").replace('"', "'");
 
             // Data column with full metadata
-            header.push(format!("[{},{},{},{}]", name, unit, description, tags));
+            header.push(format!("[{name},{unit},{description},{tags}]"));
 
             // Uncertainty column if present
             if seq.uncertainties.is_some() {
                 header.push(format!(
-                    "[{}_uncertainty,{},Uncertainty values for {},{}]",
-                    name, unit, name, tags
+                    "[{name}_uncertainty,{unit},Uncertainty values for {name},{tags}]"
                 ));
             }
         }
@@ -603,14 +620,14 @@ impl DataLibraryDatabase {
     pub fn batch_import_sequences(
         &self,
         request: BatchImportRequest,
-    ) -> SqliteResult<BatchImportResponse> {
+    ) -> BatchImportResponse {
         let mut successful_imports = 0;
         let mut failed_imports = 0;
         let mut errors = Vec::new();
         let mut imported_ids = Vec::new();
 
         for (index, sequence_request) in request.sequences.into_iter().enumerate() {
-            match self.save_sequence(sequence_request.clone()) {
+            match self.save_sequence(&sequence_request) {
                 Ok(id) => {
                     successful_imports += 1;
                     imported_ids.push(id);
@@ -626,12 +643,12 @@ impl DataLibraryDatabase {
             }
         }
 
-        Ok(BatchImportResponse {
+        BatchImportResponse {
             version: crate::error::API_VERSION.to_string(),
             successful_imports,
             failed_imports,
             errors,
             imported_ids,
-        })
+        }
     }
 }

@@ -1,7 +1,6 @@
 // src-tauri/src/unit_conversion/core.rs
 
 use super::units::{get_unit_categories, register_all_units};
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,7 +38,7 @@ pub struct ConversionPreview {
 /// [M^a L^b T^c I^d Θ^e N^f J^g] where:
 /// M = mass (kg), L = length (m), T = time (s), I = electric current (A)
 /// Θ = temperature (K), N = amount of substance (mol), J = luminous intensity (cd)
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dimension {
     pub mass: i32,        // M
     pub length: i32,      // L
@@ -51,8 +50,8 @@ pub struct Dimension {
 }
 
 impl Dimension {
-    pub fn new() -> Self {
-        Dimension {
+    pub const fn new() -> Self {
+        Self {
             mass: 0,
             length: 0,
             time: 0,
@@ -63,12 +62,12 @@ impl Dimension {
         }
     }
 
-    pub fn is_compatible(&self, other: &Dimension) -> bool {
+    pub fn is_compatible(&self, other: &Self) -> bool {
         self == other
     }
 
-    pub fn multiply(&self, other: &Dimension) -> Dimension {
-        Dimension {
+    pub const fn multiply(&self, other: &Self) -> Self {
+        Self {
             mass: self.mass + other.mass,
             length: self.length + other.length,
             time: self.time + other.time,
@@ -79,8 +78,8 @@ impl Dimension {
         }
     }
 
-    pub fn power(&self, exponent: i32) -> Dimension {
-        Dimension {
+    pub const fn power(&self, exponent: i32) -> Self {
+        Self {
             mass: self.mass * exponent,
             length: self.length * exponent,
             time: self.time * exponent,
@@ -92,20 +91,26 @@ impl Dimension {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct BaseUnit {
+    #[allow(
+        dead_code,
+        reason = "Symbol is currently only used for identification in code and storage"
+    )]
     pub symbol: String,
     pub name: String,
     pub dimension: Dimension,
     pub si_factor: f64, // Conversion factor to SI base unit
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ParsedUnit {
     pub dimension: Dimension,
     pub si_factor: f64,
+    #[allow(
+        dead_code,
+        reason = "Original string is kept for debugging or re-parsing"
+    )]
     pub original: String,
 }
 
@@ -118,7 +123,7 @@ pub struct UnitConverter {
 
 impl UnitConverter {
     pub fn new() -> Self {
-        let mut converter = UnitConverter {
+        let mut converter = Self {
             base_units: HashMap::new(),
             prefixes: HashMap::new(),
             categories: HashMap::new(),
@@ -167,18 +172,18 @@ impl UnitConverter {
     fn initialize_quick_conversions(&mut self) {
         // For fast menu button conversions - pre-calculated common conversions
         let mut length_conversions = HashMap::new();
-        length_conversions.insert("cm_to_in".to_string(), 0.393701);
+        length_conversions.insert("cm_to_in".to_string(), 0.393_701);
         length_conversions.insert("in_to_cm".to_string(), 2.54);
         length_conversions.insert("ft_to_m".to_string(), 0.3048);
         length_conversions.insert("m_to_ft".to_string(), 3.28084);
         length_conversions.insert("mi_to_km".to_string(), 1.60934);
-        length_conversions.insert("km_to_mi".to_string(), 0.621371);
+        length_conversions.insert("km_to_mi".to_string(), 0.621_371);
 
         let mut mass_conversions = HashMap::new();
-        mass_conversions.insert("lb_to_kg".to_string(), 0.453592);
+        mass_conversions.insert("lb_to_kg".to_string(), 0.453_592);
         mass_conversions.insert("kg_to_lb".to_string(), 2.20462);
         mass_conversions.insert("oz_to_g".to_string(), 28.3495);
-        mass_conversions.insert("g_to_oz".to_string(), 0.035274);
+        mass_conversions.insert("g_to_oz".to_string(), 0.035_274);
 
         self.quick_conversions
             .insert("length".to_string(), length_conversions);
@@ -189,7 +194,7 @@ impl UnitConverter {
     /// Parse a unit string into its dimensional components
     pub fn parse_unit(&self, unit_str: &str) -> Result<ParsedUnit, String> {
         // Updated regex to support: ^ (caret), ** (double asterisk), and Unicode superscript (⁻, ⁰-⁹)
-        static UNIT_REGEX: Lazy<Regex> = Lazy::new(|| {
+        static UNIT_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
             Regex::new(r"^([a-zA-Zμ°]+)((?:\*\*|\^)[⁻⁰¹²³⁴⁵⁶⁷⁸⁹\-\d]+|[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?$").unwrap()
         });
 
@@ -209,13 +214,12 @@ impl UnitConverter {
         // First, remove parentheses and handle them as grouping only
         // Replace ** with a temporary placeholder to protect it, then replace single * and restore **
         let normalized = unit_str
-            .replace("(", "")
-            .replace(")", "")
+            .replace(['(', ')'], "")
             .replace("**", "§§") // Temporary placeholder for **
-            .replace("*", " ")
+            .replace('*', " ")
             .replace("·", " ")
             .replace("§§", "**") // Restore **
-            .replace("/", " / ");
+            .replace('/', " / ");
         let parts: Vec<&str> = normalized.split_whitespace().collect();
 
         let mut dividing = false;
@@ -233,7 +237,7 @@ impl UnitConverter {
             let unit_part = captures.get(1).unwrap().as_str();
             let power_part = captures.get(2).map(|m| m.as_str());
 
-            let power = if let Some(pow_str) = power_part {
+            let power = power_part.map_or(1, |pow_str| {
                 // Handle different exponent formats: ^, **, or Unicode superscript
                 let clean_pow = pow_str
                     .trim_start_matches("**") // Handle ** first (two chars)
@@ -241,22 +245,20 @@ impl UnitConverter {
 
                 // Convert Unicode superscript to regular digits
                 let normalized_pow = clean_pow
-                    .replace("⁰", "0")
-                    .replace("¹", "1")
-                    .replace("²", "2")
-                    .replace("³", "3")
-                    .replace("⁴", "4")
-                    .replace("⁵", "5")
-                    .replace("⁶", "6")
-                    .replace("⁷", "7")
-                    .replace("⁸", "8")
-                    .replace("⁹", "9")
-                    .replace("⁻", "-");
+                    .replace('⁰', "0")
+                    .replace('¹', "1")
+                    .replace('²', "2")
+                    .replace('³', "3")
+                    .replace('⁴', "4")
+                    .replace('⁵', "5")
+                    .replace('⁶', "6")
+                    .replace('⁷', "7")
+                    .replace('⁸', "8")
+                    .replace('⁹', "9")
+                    .replace('⁻', "-");
 
                 normalized_pow.parse::<i32>().unwrap_or(1)
-            } else {
-                1
-            };
+            });
 
             let actual_power = if dividing { -power } else { power };
 
@@ -325,9 +327,9 @@ impl UnitConverter {
             // Réaumur conversions
             ("°Ré", "°C") => return Some(value * 1.25),
             ("°C", "°Ré") => return Some(value * 0.8),
-            ("°Ré", "K") => return Some(value * 1.25 + 273.15),
+            ("°Ré", "K") => return Some(value.mul_add(1.25, 273.15)),
             ("K", "°Ré") => return Some((value - 273.15) * 0.8),
-            ("°Ré", "°F") => return Some(value * 2.25 + 32.0),
+            ("°Ré", "°F") => return Some(value.mul_add(2.25, 32.0)),
             ("°F", "°Ré") => return Some((value - 32.0) / 2.25),
 
             // Same temperature unit
@@ -356,7 +358,7 @@ impl UnitConverter {
         {
             return Ok(ConversionResult {
                 value: quick_result,
-                formatted_result: self.format_result(
+                formatted_result: Self::format_result(
                     request.value,
                     &request.from_unit,
                     quick_result,
@@ -388,7 +390,7 @@ impl UnitConverter {
 
         Ok(ConversionResult {
             value: converted_value,
-            formatted_result: self.format_result(
+            formatted_result: Self::format_result(
                 request.value,
                 &request.from_unit,
                 converted_value,
@@ -443,7 +445,7 @@ impl UnitConverter {
         let mut category_map = HashMap::new();
 
         // Build reverse lookup: unit symbol -> category
-        for (category, units) in categories.iter() {
+        for (category, units) in &categories {
             for unit_symbol in units {
                 category_map.insert(unit_symbol.clone(), category.clone());
             }
@@ -469,44 +471,20 @@ impl UnitConverter {
             .collect()
     }
 
-    #[allow(dead_code)]
-    pub fn get_categories(&self) -> &HashMap<String, Vec<String>> {
-        &self.categories
-    }
-
-    #[allow(dead_code)]
-    fn get_unit_category(&self, dimension: &Dimension) -> String {
-        match dimension {
-            d if d.length == 1 && d.mass == 0 && d.time == 0 => "length".to_string(),
-            d if d.mass == 1 && d.length == 0 && d.time == 0 => "mass".to_string(),
-            d if d.time == 1 && d.mass == 0 && d.length == 0 => "time".to_string(),
-            d if d.length == 1 && d.time == -1 => "velocity".to_string(),
-            d if d.mass == 1 && d.length == 1 && d.time == -2 => "force".to_string(),
-            d if d.mass == 1 && d.length == 2 && d.time == -2 => "energy".to_string(),
-            d if d.mass == 1 && d.length == 2 && d.time == -3 => "power".to_string(),
-            d if d.mass == 1 && d.length == -1 && d.time == -2 => "pressure".to_string(),
-            d if d.time == -1 => "frequency".to_string(),
-            d if d.current == 1 => "current".to_string(),
-            d if d.temperature == 1 => "temperature".to_string(),
-            _ => "other".to_string(),
-        }
-    }
-
     fn format_result(
-        &self,
         input_value: f64,
         from_unit: &str,
         output_value: f64,
         to_unit: &str,
     ) -> String {
-        let formatted_output = if output_value.abs() >= 1000000.0 {
+        let formatted_output = if output_value.abs() >= 1_000_000.0 {
             format!("{output_value:.6e}")
         } else if output_value.abs() >= 1.0 {
             format!("{output_value:.6}")
                 .trim_end_matches('0')
                 .trim_end_matches('.')
                 .to_string()
-        } else if output_value.abs() >= 0.000001 {
+        } else if output_value.abs() >= 0.000_001 {
             format!("{output_value:.8}")
                 .trim_end_matches('0')
                 .trim_end_matches('.')
@@ -522,5 +500,5 @@ impl UnitConverter {
 // Global converter instance
 use std::sync::Mutex;
 
-pub static UNIT_CONVERTER: Lazy<Mutex<UnitConverter>> =
-    Lazy::new(|| Mutex::new(UnitConverter::new()));
+pub static UNIT_CONVERTER: std::sync::LazyLock<Mutex<UnitConverter>> =
+    std::sync::LazyLock::new(|| Mutex::new(UnitConverter::new()));

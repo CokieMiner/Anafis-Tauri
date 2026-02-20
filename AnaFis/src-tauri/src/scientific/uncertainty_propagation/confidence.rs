@@ -4,26 +4,21 @@ use thiserror::Error;
 /// Error type for confidence calculations
 #[derive(Debug, Error)]
 pub enum ConfidenceError {
+    /// Provided confidence level is outside the valid range [0, 100].
     #[error("Confidence level must be between 0 and 100, got {0}")]
     InvalidLevel(f64),
+    /// Provided sigma value is non-positive or non-finite.
     #[error("Sigma value must be positive, got {0}")]
     InvalidSigma(f64),
 }
 
 /// Convert confidence percentage to sigma value using the normal distribution
 ///
-/// # Arguments
-/// * `confidence_percent` - Confidence level as a percentage (e.g., 95.0 for 95%)
+/// # Errors
+/// Returns `ConfidenceError::InvalidLevel` if the confidence level is not between 0 and 100.
 ///
-/// # Returns
-/// The corresponding sigma value for a two-sided confidence interval
-///
-/// # Examples
-/// ```
-/// # use anafis_lib::scientific::uncertainty_propagation::confidence::confidence_to_sigma;
-/// let sigma = confidence_to_sigma(95.0).unwrap();
-/// assert!((sigma - 1.96).abs() < 0.01);
-/// ```
+/// # Panics
+/// Panics if the standard normal distribution cannot be created.
 pub fn confidence_to_sigma(confidence_percent: f64) -> Result<f64, ConfidenceError> {
     if !confidence_percent.is_finite() || !(0.0..=100.0).contains(&confidence_percent) {
         return Err(ConfidenceError::InvalidLevel(confidence_percent));
@@ -43,18 +38,11 @@ pub fn confidence_to_sigma(confidence_percent: f64) -> Result<f64, ConfidenceErr
 
 /// Convert sigma value to confidence percentage
 ///
-/// # Arguments
-/// * `sigma` - The sigma value
+/// # Errors
+/// Returns `ConfidenceError::InvalidSigma` if the sigma value is not positive or finite.
 ///
-/// # Returns
-/// The corresponding confidence level as a percentage
-///
-/// # Examples
-/// ```
-/// # use anafis_lib::scientific::uncertainty_propagation::confidence::sigma_to_confidence;
-/// let confidence = sigma_to_confidence(1.96).unwrap();
-/// assert!((confidence - 95.0).abs() < 0.1);
-/// ```
+/// # Panics
+/// Panics if the standard normal distribution cannot be created.
 pub fn sigma_to_confidence(sigma: f64) -> Result<f64, ConfidenceError> {
     if !sigma.is_finite() || sigma <= 0.0 {
         return Err(ConfidenceError::InvalidSigma(sigma));
@@ -66,12 +54,15 @@ pub fn sigma_to_confidence(sigma: f64) -> Result<f64, ConfidenceError> {
     let tail_prob = 1.0 - normal.cdf(sigma);
 
     // Convert to two-sided confidence level
-    let confidence = (1.0 - 2.0 * tail_prob) * 100.0;
+    let confidence = 2.0f64.mul_add(-tail_prob, 1.0) * 100.0;
 
     Ok(confidence)
 }
 
 /// Validate that a confidence level is within valid range
+///
+/// # Errors
+/// Returns `ConfidenceError::InvalidLevel` if the confidence level is not between 0 and 100.
 pub fn validate_confidence_level(confidence: f64) -> Result<(), ConfidenceError> {
     if !confidence.is_finite() || !(0.0..=100.0).contains(&confidence) {
         Err(ConfidenceError::InvalidLevel(confidence))

@@ -4,12 +4,17 @@
 
 use super::ExportConfig;
 use serde_json::Value;
+use std::fmt::Write as FmtWrite;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
 /// Export data to HTML format (simplified - expects 2D array)
 #[tauri::command]
-pub async fn export_to_html(
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
+pub fn export_to_html(
     data: Vec<serde_json::Value>,
     file_path: String,
     _config: ExportConfig,
@@ -43,10 +48,9 @@ pub async fn export_to_html(
     html.push_str("<table>\n<tbody>\n");
 
     // Process data rows - all rows are treated as data
-    for row in data.iter() {
-        let row_array = match row.as_array() {
-            Some(arr) => arr,
-            None => continue,
+    for row in &data {
+        let Some(row_array) = row.as_array() else {
+            continue;
         };
 
         html.push_str("<tr>\n");
@@ -60,7 +64,7 @@ pub async fn export_to_html(
                 _ => cell.to_string(),
             };
 
-            html.push_str(&format!("<td>{}</td>\n", cell_content));
+            let _ = writeln!(html, "<td>{cell_content}</td>");
         }
 
         html.push_str("</tr>\n");
@@ -70,25 +74,25 @@ pub async fn export_to_html(
     html.push_str("</body>\n</html>\n");
 
     // Write to file
-    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {e}"))?;
     let mut writer = BufWriter::new(file);
 
     writer
         .write_all(html.as_bytes())
-        .map_err(|e| format!("Failed to write HTML: {}", e))?;
+        .map_err(|e| format!("Failed to write HTML: {e}"))?;
 
     writer
         .flush()
-        .map_err(|e| format!("Failed to flush writer: {}", e))?;
+        .map_err(|e| format!("Failed to flush writer: {e}"))?;
 
     Ok(())
 }
 
 /// Escape HTML special characters
 fn html_escape(text: &str) -> String {
-    text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&#x27;")
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#x27;")
 }

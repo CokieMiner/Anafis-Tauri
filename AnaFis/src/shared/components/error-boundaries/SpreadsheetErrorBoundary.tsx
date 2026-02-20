@@ -1,6 +1,13 @@
-import { Component, ReactNode, ErrorInfo } from 'react';
-import { Box, Typography, Button, Paper, Alert, AlertTitle } from '@mui/material';
-import { ErrorOutline, Refresh, BugReport } from '@mui/icons-material';
+import { BugReport, ErrorOutline, Refresh } from '@mui/icons-material';
+import {
+  Alert,
+  AlertTitle,
+  Box,
+  Button,
+  Paper,
+  Typography,
+} from '@mui/material';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 interface Props {
@@ -79,12 +86,17 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
     };
 
     // Copy error details to clipboard
-    navigator.clipboard.writeText(JSON.stringify(reportData, null, 2))
+    navigator.clipboard
+      .writeText(JSON.stringify(reportData, null, 2))
       .then(() => {
-        alert('Error details copied to clipboard. Please paste them in a bug report.');
+        alert(
+          'Error details copied to clipboard. Please paste them in a bug report.'
+        );
       })
       .catch(() => {
-        alert('Failed to copy error details. Please check the console for details.');
+        alert(
+          'Failed to copy error details. Please check the console for details.'
+        );
       });
   };
 
@@ -120,18 +132,27 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
                 sx={{
                   fontSize: 64,
                   color: anafisColors.buttons.close,
-                  mb: 2
+                  mb: 2,
                 }}
               />
               <Typography variant="h5" sx={{ color: 'white', mb: 1 }}>
                 {title}
               </Typography>
               {componentName && (
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}
+                >
                   Error in: {componentName}
                 </Typography>
               )}
-              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontFamily: 'monospace' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontFamily: 'monospace',
+                }}
+              >
                 Error ID: {errorId}
               </Typography>
             </Box>
@@ -142,23 +163,33 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
                 mb: 3,
                 bgcolor: 'rgba(244, 67, 54, 0.1)',
                 color: 'white',
-                '& .MuiAlert-icon': { color: anafisColors.buttons.close }
+                '& .MuiAlert-icon': { color: anafisColors.buttons.close },
               }}
             >
-              <AlertTitle sx={{ fontWeight: 'bold' }}>Something went wrong</AlertTitle>
+              <AlertTitle sx={{ fontWeight: 'bold' }}>
+                Something went wrong
+              </AlertTitle>
               <Typography variant="body2">
-                {error?.message ?? 'An unexpected error occurred in the spreadsheet component.'}
+                {error?.message ??
+                  'An unexpected error occurred in the spreadsheet component.'}
               </Typography>
             </Alert>
 
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 2,
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
               <Button
                 variant="contained"
                 startIcon={<Refresh />}
                 onClick={this.handleRetry}
                 sx={{
                   bgcolor: anafisColors.spreadsheet,
-                  '&:hover': { bgcolor: '#1565c0' }
+                  '&:hover': { bgcolor: '#1565c0' },
                 }}
               >
                 Try Again
@@ -173,8 +204,8 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
                   color: 'white',
                   '&:hover': {
                     borderColor: 'rgba(255, 255, 255, 0.5)',
-                    bgcolor: 'rgba(255, 255, 255, 0.05)'
-                  }
+                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  },
                 }}
               >
                 Report Bug
@@ -183,7 +214,14 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
 
             {import.meta.env.DEV && error?.stack && (
               <Box sx={{ mt: 3 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', display: 'block', mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    display: 'block',
+                    mb: 1,
+                  }}
+                >
                   Stack Trace (Development Only):
                 </Typography>
                 <Paper
@@ -192,7 +230,7 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
                     bgcolor: '#0a0a0a',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     maxHeight: 200,
-                    overflow: 'auto'
+                    overflow: 'auto',
                   }}
                 >
                   <Typography
@@ -203,7 +241,7 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
                       fontFamily: 'monospace',
                       fontSize: '11px',
                       whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word'
+                      wordBreak: 'break-word',
                     }}
                   >
                     {error.stack}

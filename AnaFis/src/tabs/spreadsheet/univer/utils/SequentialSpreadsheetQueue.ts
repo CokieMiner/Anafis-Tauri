@@ -72,7 +72,8 @@ export class SequentialSpreadsheetQueue {
     this.isProcessing = true;
 
     while (this.queue.length > 0) {
-      const operation = this.queue.shift()!;
+      const operation = this.queue.shift();
+      if (!operation) continue;
       try {
         const result = await operation.operation();
         operation.resolve(result);

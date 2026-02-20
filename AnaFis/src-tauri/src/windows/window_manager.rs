@@ -2,6 +2,7 @@
 use crate::error::{CommandResult, window_error};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
+#[allow(clippy::struct_excessive_bools, reason = "Window configuration naturally involves many flags")]
 pub struct WindowConfig {
     pub title: String,
     pub url: String,
@@ -86,13 +87,13 @@ pub fn create_or_focus_window(
     {
         builder = builder
             .parent(&parent_window)
-            .map_err(|e| window_error(format!("Failed to set parent window: {}", e)))?;
+            .map_err(|e| window_error(format!("Failed to set parent window: {e}")))?;
     }
 
     let window = builder.build().map_err(|e| window_error(e.to_string()))?;
 
     // Ensure transparent background is set (redundant but safe)
-    let _ = window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0)));
+    drop(window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0))));
 
     // Now show the window
     window.show().map_err(|e| window_error(e.to_string()))?;
@@ -125,7 +126,11 @@ pub fn resize_window(
     if let Some(window) = app.get_webview_window(window_id) {
         window
             .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+                #[allow(clippy::cast_possible_truncation, reason = "Screen coordinates fit in u32")]
+                #[allow(clippy::cast_sign_loss, reason = "Window dimensions are positive")]
                 width: width as u32,
+                #[allow(clippy::cast_possible_truncation, reason = "Screen coordinates fit in u32")]
+                #[allow(clippy::cast_sign_loss, reason = "Window dimensions are positive")]
                 height: height as u32,
             }))
             .map_err(|e| window_error(e.to_string()))?;
@@ -136,6 +141,7 @@ pub fn resize_window(
 }
 
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn set_window_size(
     app: AppHandle,
     window_id: String,

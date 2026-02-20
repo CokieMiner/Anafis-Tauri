@@ -4,6 +4,10 @@ use super::core::{BaseUnit, Dimension};
 use std::collections::HashMap;
 
 /// Register all base units organized by category
+#[allow(
+    clippy::too_many_lines,
+    reason = "Registration function calls many sub-registrations"
+)]
 pub fn register_all_units() -> HashMap<String, BaseUnit> {
     let mut units = HashMap::new();
 
@@ -31,7 +35,6 @@ pub fn register_all_units() -> HashMap<String, BaseUnit> {
     register_capacitance_units(&mut units);
     register_inductance_units(&mut units);
     register_conductance_units(&mut units);
-    register_electrical_units(&mut units);
     register_magnetic_flux_density_units(&mut units);
     register_magnetic_flux_units(&mut units);
     register_electric_charge_units(&mut units);
@@ -46,6 +49,10 @@ pub fn register_all_units() -> HashMap<String, BaseUnit> {
 }
 
 /// Get all unit categories with their respective unit symbols
+#[allow(
+    clippy::too_many_lines,
+    reason = "Comprehensive list of all units by category"
+)]
 pub fn get_unit_categories() -> HashMap<String, Vec<String>> {
     let mut categories = HashMap::new();
 
@@ -518,6 +525,10 @@ fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
 }
 
 // === LENGTH UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of length units"
+)]
 fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     // Metric length units
     units.insert(
@@ -701,7 +712,7 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 1,
                 ..Dimension::new()
             },
-            si_factor: 1.495978707e11,
+            si_factor: 1.495_978_707e11,
         },
     );
 
@@ -714,7 +725,7 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 1,
                 ..Dimension::new()
             },
-            si_factor: 9.4607304725808e15,
+            si_factor: 9.460_730_472_580_8e15,
         },
     );
 
@@ -806,7 +817,7 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 1,
                 ..Dimension::new()
             },
-            si_factor: 0.201168,
+            si_factor: 0.201_168,
         },
     );
 
@@ -820,7 +831,7 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 1,
                 ..Dimension::new()
             },
-            si_factor: 0.000352778,
+            si_factor: 0.000_352_778,
         },
     );
 
@@ -833,12 +844,16 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 1,
                 ..Dimension::new()
             },
-            si_factor: 0.00423333,
+            si_factor: 0.004_233_33,
         },
     );
 }
 
 // === MASS UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of mass units"
+)]
 fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     // Metric mass units
     units.insert(
@@ -890,7 +905,7 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
                 mass: 1,
                 ..Dimension::new()
             },
-            si_factor: 0.453592,
+            si_factor: 0.453_592,
         },
     );
 
@@ -903,7 +918,7 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
                 mass: 1,
                 ..Dimension::new()
             },
-            si_factor: 0.0283495,
+            si_factor: 0.028_349_5,
         },
     );
 
@@ -1063,7 +1078,7 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
                 time: 1,
                 ..Dimension::new()
             },
-            si_factor: 604800.0,
+            si_factor: 604_800.0,
         },
     );
 
@@ -1076,7 +1091,7 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
                 time: 1,
                 ..Dimension::new()
             },
-            si_factor: 31557600.0, // Julian year
+            si_factor: 31_557_600.0, // Julian year
         },
     );
 }
@@ -1184,7 +1199,7 @@ fn register_angle_units(units: &mut HashMap<String, BaseUnit>) {
             symbol: "arcsec".to_string(),
             name: "arcsecond".to_string(),
             dimension: Dimension::new(), // Dimensionless
-            si_factor: std::f64::consts::PI / 648000.0,
+            si_factor: std::f64::consts::PI / 648_000.0,
         },
     );
 
@@ -1210,6 +1225,10 @@ fn register_angle_units(units: &mut HashMap<String, BaseUnit>) {
 }
 
 // === AREA UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of area units"
+)]
 fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
         "m²".to_string(),
@@ -1285,7 +1304,7 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 2,
                 ..Dimension::new()
             },
-            si_factor: 0.092903,
+            si_factor: 0.092_903,
         },
     );
 
@@ -1298,7 +1317,7 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 2,
                 ..Dimension::new()
             },
-            si_factor: 0.836127,
+            si_factor: 0.836_127,
         },
     );
 
@@ -1356,6 +1375,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
 }
 
 // === VOLUME UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of volume units"
+)]
 fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
         "m³".to_string(),
@@ -1431,7 +1454,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.0283168,
+            si_factor: 0.028_316_8,
         },
     );
 
@@ -1444,7 +1467,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.764555,
+            si_factor: 0.764_555,
         },
     );
 
@@ -1458,7 +1481,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.00378541,
+            si_factor: 0.003_785_41,
         },
     );
 
@@ -1471,7 +1494,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.000946353,
+            si_factor: 0.000_946_353,
         },
     );
 
@@ -1484,7 +1507,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.000473176,
+            si_factor: 0.000_473_176,
         },
     );
 
@@ -1497,7 +1520,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.000236588,
+            si_factor: 0.000_236_588,
         },
     );
 
@@ -1549,7 +1572,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.158987,
+            si_factor: 0.158_987,
         },
     );
 
@@ -1562,7 +1585,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.0352391,
+            si_factor: 0.035_239_1,
         },
     );
 
@@ -1576,7 +1599,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.00454609,
+            si_factor: 0.004_546_09,
         },
     );
 
@@ -1589,7 +1612,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.00113652,
+            si_factor: 0.001_136_52,
         },
     );
 
@@ -1602,7 +1625,7 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
                 length: 3,
                 ..Dimension::new()
             },
-            si_factor: 0.000568261,
+            si_factor: 0.000_568_261,
         },
     );
 
@@ -1688,7 +1711,7 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -1,
                 ..Dimension::new()
             },
-            si_factor: 299792458.0,
+            si_factor: 299_792_458.0,
         },
     );
 
@@ -1702,7 +1725,7 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -1,
                 ..Dimension::new()
             },
-            si_factor: 0.514444,
+            si_factor: 0.514_444,
         },
     );
 }
@@ -1832,6 +1855,10 @@ fn register_force_units(units: &mut HashMap<String, BaseUnit>) {
 }
 
 // === PRESSURE UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of pressure units"
+)]
 fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
         "Pa".to_string(),
@@ -1874,7 +1901,7 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1000000.0,
+            si_factor: 1_000_000.0,
         },
     );
 
@@ -1889,7 +1916,7 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1000000000.0,
+            si_factor: 1_000_000_000.0,
         },
     );
 
@@ -1919,7 +1946,7 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 101325.0,
+            si_factor: 101_325.0,
         },
     );
 
@@ -2024,12 +2051,16 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 100000.0,
+            si_factor: 100_000.0,
         },
     );
 }
 
 // === ENERGY UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of energy units"
+)]
 fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
         "J".to_string(),
@@ -2072,7 +2103,7 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1000000.0,
+            si_factor: 1_000_000.0,
         },
     );
 
@@ -2087,7 +2118,7 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1000000000.0,
+            si_factor: 1_000_000_000.0,
         },
     );
 
@@ -2177,7 +2208,7 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1.602176634e-19,
+            si_factor: 1.602_176_634e-19,
         },
     );
 
@@ -2192,7 +2223,7 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1.602176634e-16,
+            si_factor: 1.602_176_634e-16,
         },
     );
 
@@ -2207,7 +2238,7 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1.602176634e-13,
+            si_factor: 1.602_176_634e-13,
         },
     );
 
@@ -2222,7 +2253,7 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -2,
                 ..Dimension::new()
             },
-            si_factor: 1.602176634e-10,
+            si_factor: 1.602_176_634e-10,
         },
     );
 
@@ -2258,6 +2289,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
 }
 
 // === POWER UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of power units"
+)]
 fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
         "W".to_string(),
@@ -2390,7 +2425,7 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -3,
                 ..Dimension::new()
             },
-            si_factor: 0.0225969667,
+            si_factor: 0.022_596_966_7,
         },
     );
 
@@ -2405,7 +2440,7 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
                 time: -3,
                 ..Dimension::new()
             },
-            si_factor: 0.29307107,
+            si_factor: 0.293_071_07,
         },
     );
 }
@@ -2949,13 +2984,6 @@ fn register_conductance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 }
 
-// === ELECTRICAL UNITS ===
-#[allow(unused_variables)]
-fn register_electrical_units(units: &mut HashMap<String, BaseUnit>) {
-    // This function is kept for any remaining electrical units not covered by specific categories
-    // Currently empty as all units have been moved to specific categories (voltage, resistance, etc.)
-}
-
 // === MAGNETIC FLUX DENSITY UNITS ===
 fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
@@ -3112,7 +3140,7 @@ fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
                 current: -1,
                 ..Dimension::new()
             },
-            si_factor: 2.99792458e10,
+            si_factor: 2.997_924_58e10,
         },
     );
 }
@@ -3352,6 +3380,10 @@ fn register_illuminance_units(units: &mut HashMap<String, BaseUnit>) {
 }
 
 // === DATA STORAGE UNITS ===
+#[allow(
+    clippy::too_many_lines,
+    reason = "Extensive registration of data storage units"
+)]
 fn register_data_storage_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
         "byte".to_string(),
@@ -3439,7 +3471,7 @@ fn register_data_storage_units(units: &mut HashMap<String, BaseUnit>) {
             symbol: "Mibit".to_string(),
             name: "mebibit".to_string(),
             dimension: Dimension::new(),
-            si_factor: 1048576.0,
+            si_factor: 1_048_576.0,
         },
     );
 
@@ -3449,7 +3481,7 @@ fn register_data_storage_units(units: &mut HashMap<String, BaseUnit>) {
             symbol: "Gibit".to_string(),
             name: "gibibit".to_string(),
             dimension: Dimension::new(),
-            si_factor: 1073741824.0,
+            si_factor: 1_073_741_824.0,
         },
     );
 
@@ -3469,7 +3501,7 @@ fn register_data_storage_units(units: &mut HashMap<String, BaseUnit>) {
             symbol: "MiB".to_string(),
             name: "mebibyte".to_string(),
             dimension: Dimension::new(),
-            si_factor: 8388608.0,
+            si_factor: 8_388_608.0,
         },
     );
 
@@ -3479,7 +3511,7 @@ fn register_data_storage_units(units: &mut HashMap<String, BaseUnit>) {
             symbol: "GiB".to_string(),
             name: "gibibyte".to_string(),
             dimension: Dimension::new(),
-            si_factor: 8589934592.0,
+            si_factor: 8_589_934_592.0,
         },
     );
 }

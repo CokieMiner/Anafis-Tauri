@@ -1,19 +1,24 @@
 // Export types - streamlined for AnaFis workflow
 
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { Result } from '@/core/types/result';
+import type { Result } from '@/core/types/result';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 /**
  * Export format types - streamlined hierarchy
- * 
+ *
  * PRIMARY (Lossless): anafispread - native format for full workbook preservation
- * SIMPLE INTERCHANGE: csv, tsv, txt, parquet - for external application interaction  
+ * SIMPLE INTERCHANGE: csv, tsv, txt, parquet - for external application interaction
  * READ-ONLY DOCUMENTS: html, markdown, tex - for reports and documentation (no options, just custom delimiter for txt)
  */
-export type ExportFormat = 
-  | 'anafispread'  // Lossless native format (primary)
-  | 'csv' | 'tsv' | 'txt' | 'parquet'  // Simple interchange formats
-  | 'html' | 'markdown' | 'tex';  // Read-only document formats
+export type ExportFormat =
+  | 'anafispread' // Lossless native format (primary)
+  | 'csv'
+  | 'tsv'
+  | 'txt'
+  | 'parquet' // Simple interchange formats
+  | 'html'
+  | 'markdown'
+  | 'tex'; // Read-only document formats
 
 /**
  * Export range mode - simplified to two essential options
@@ -22,7 +27,7 @@ export type ExportRangeMode = 'sheet' | 'custom';
 
 /**
  * Streamlined export options - only essential configuration
- * 
+ *
  * AnaFisSpread: No options needed (always lossless)
  * Simple formats: Only custom delimiter for TXT, encoding for supported formats
  * Range: Current sheet OR custom user-selected range
@@ -30,10 +35,10 @@ export type ExportRangeMode = 'sheet' | 'custom';
 export interface ExportOptions {
   format: ExportFormat;
   rangeMode: ExportRangeMode;
-  customRange?: string;  // Required only when rangeMode === 'custom'
-  delimiter?: string;    // Only for txt format (csv=comma, tsv=tab fixed)
-  encoding?: 'utf8' | 'latin1' | 'utf16';  // For supporting formats
-  trackedBounds?: Record<string, { maxRow: number; maxCol: number }> | null;  // Performance optimization
+  customRange?: string; // Required only when rangeMode === 'custom'
+  delimiter?: string; // Only for txt format (csv=comma, tsv=tab fixed)
+  encoding?: 'utf8' | 'latin1' | 'utf16'; // For supporting formats
+  trackedBounds?: Record<string, { maxRow: number; maxCol: number }> | null; // Performance optimization
 }
 
 /**
@@ -57,10 +62,10 @@ export interface ExportSidebarProps {
   onClose: () => void;
   spreadsheetRef?: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
-  
+
   // Dependency injection for export service (abstraction)
   exportService: ExportService;
-  
+
   // Simplified state management - only essential options
   exportFormat: ExportFormat;
   setExportFormat: (format: ExportFormat) => void;
@@ -76,14 +81,20 @@ export interface ExportSidebarProps {
  * Export service interface
  */
 export interface ExportService {
-  exportWithDialog(options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<Result<ExportResult, ExportError>>;
-  
-  exportToDataLibrary(options: {
-    libraryName: string;
-    libraryDescription: string;
-    libraryTags: string;
-    libraryUnit: string;
-    dataRange: string;
-    uncertaintyRange: string;
-  }, spreadsheetAPI: SpreadsheetRef): Promise<Result<ExportResult, ExportError>>;
+  exportWithDialog(
+    options: ExportOptions,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<Result<ExportResult, ExportError>>;
+
+  exportToDataLibrary(
+    options: {
+      libraryName: string;
+      libraryDescription: string;
+      libraryTags: string;
+      libraryUnit: string;
+      dataRange: string;
+      uncertaintyRange: string;
+    },
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<Result<ExportResult, ExportError>>;
 }

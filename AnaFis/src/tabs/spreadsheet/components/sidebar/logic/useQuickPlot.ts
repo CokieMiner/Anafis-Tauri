@@ -3,13 +3,17 @@
  *
  * This hook encapsulates all the business logic for creating quick plots from spreadsheet data,
  * including state management, validation, data extraction, chart generation, and export functionality.
+ *
+ * Uses Plotly.js for rendering — chart options are returned as Plotly data/layout
+ * and the consuming component renders via <Plot />.
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import * as echarts from 'echarts';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Plotly } from '@/shared/components/PlotlyChart';
+import { CHART_COLORS, getThemeLayout } from '@/shared/components/plotlyTheme';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 interface UseQuickPlotOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
@@ -41,10 +45,9 @@ export function useQuickPlot({
   const [error, setError] = useState<string>('');
   const [hasPlot, setHasPlot] = useState<boolean>(false);
 
-  // Chart management
+  // Chart ref — Plotly manages internals, we just need the div for export
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
-  const [chartReady, setChartReady] = useState<boolean>(false);
+  const chartReady = true; // Plotly is always ready
 
   // Export state
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -81,21 +84,29 @@ export function useQuickPlot({
     try {
       // Get X data
       const xValues = await spreadsheetAPI.getRange(xRange);
-      const xFlat = xValues.flat().map((v: unknown) => {
-        const num = typeof v === 'number' ? v : parseFloat(String(v));
-        return Math.round(num * 1e10) / 1e10;
-      }).filter(num => isFinite(num));
+      const xFlat = xValues
+        .flat()
+        .map((v: unknown) => {
+          const num = typeof v === 'number' ? v : parseFloat(String(v));
+          return Math.round(num * 1e10) / 1e10;
+        })
+        .filter((num) => Number.isFinite(num));
 
       // Get Y data
       const yValues = await spreadsheetAPI.getRange(yRange);
-      const yFlat = yValues.flat().map((v: unknown) => {
-        const num = typeof v === 'number' ? v : parseFloat(String(v));
-        return Math.round(num * 1e10) / 1e10;
-      }).filter(num => isFinite(num));
+      const yFlat = yValues
+        .flat()
+        .map((v: unknown) => {
+          const num = typeof v === 'number' ? v : parseFloat(String(v));
+          return Math.round(num * 1e10) / 1e10;
+        })
+        .filter((num) => Number.isFinite(num));
 
       // Validate lengths
       if (xFlat.length !== yFlat.length) {
-        setError(`Length mismatch: X has ${xFlat.length} points, Y has ${yFlat.length} points`);
+        setError(
+          `Length mismatch: X has ${xFlat.length} points, Y has ${yFlat.length} points`
+        );
         return false;
       }
 
@@ -105,16 +116,21 @@ export function useQuickPlot({
       }
 
       // Get error bars if enabled
-      let errorFlat: number[] | undefined = undefined;
+      let errorFlat: number[] | undefined;
       if (showErrorBars && errorRange) {
         const errorValues = await spreadsheetAPI.getRange(errorRange);
-        errorFlat = errorValues.flat().map((v: unknown) => {
-          const num = typeof v === 'number' ? v : parseFloat(String(v));
-          return Math.round(Math.abs(num) * 1e10) / 1e10;
-        }).filter(num => isFinite(num));
+        errorFlat = errorValues
+          .flat()
+          .map((v: unknown) => {
+            const num = typeof v === 'number' ? v : parseFloat(String(v));
+            return Math.round(Math.abs(num) * 1e10) / 1e10;
+          })
+          .filter((num) => Number.isFinite(num));
 
         if (errorFlat.length !== yFlat.length) {
-          setError(`Error range length (${errorFlat.length}) doesn't match Y data (${yFlat.length})`);
+          setError(
+            `Error range length (${errorFlat.length}) doesn't match Y data (${yFlat.length})`
+          );
           return false;
         }
       }
@@ -126,215 +142,120 @@ export function useQuickPlot({
       setHasPlot(true);
       return true;
     } catch (err) {
-      setError(`Range validation failed: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Range validation failed: ${err instanceof Error ? err.message : String(err)}`
+      );
       return false;
     }
   }, [xRange, yRange, errorRange, showErrorBars, spreadsheetRef]);
 
-  // Chart management functions
-  const initializeChart = useCallback(() => {
-    if (chartRef.current && !chartInstanceRef.current) {
-      chartInstanceRef.current = echarts.init(chartRef.current, null, {
-        renderer: 'canvas',
-        devicePixelRatio: 2
-      });
-      setChartReady(true);
-    }
-  }, []);
+  // Generate Plotly data and layout
+  const generatePlotlyProps = useCallback(
+    (
+      theme: 'dark' | 'light' = 'dark'
+    ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } => {
+      const { layout: baseLayout, axis } = getThemeLayout(theme);
+      const traces: Plotly.Data[] = [];
 
-  const generateChartOptions = useCallback((theme: 'dark' | 'light' = 'dark'): echarts.EChartsOption => {
-    const series: echarts.SeriesOption[] = [];
+      // Scatter series
+      if (plotType === 'scatter' || plotType === 'both') {
+        const scatter: Plotly.Data = {
+          x: xData,
+          y: yData,
+          mode: 'markers',
+          type: 'scatter',
+          name: yLabel || 'Data',
+          marker: { color: CHART_COLORS.primary, size: 6 },
+        };
 
-    // Add scatter series
-    if (plotType === 'scatter' || plotType === 'both') {
-      const scatterData = xData.map((x, i) => [x, yData[i]]);
+        if (showErrorBars && errorData) {
+          scatter.error_y = {
+            type: 'data',
+            array: errorData,
+            visible: true,
+            color: CHART_COLORS.error,
+            thickness: 1.5,
+            width: 3,
+          };
+        }
 
-      series.push({
-        name: yLabel || 'Data',
-        type: 'scatter',
-        data: scatterData,
-        symbolSize: 8,
-        itemStyle: { color: '#2196f3' },
-        z: 2,
-      });
+        traces.push(scatter);
+      }
 
-      // Add error bars if enabled
-      if (showErrorBars && errorData) {
-        series.push({
-          name: 'Error Bars',
-          type: 'custom',
-          renderItem: (_params: echarts.CustomSeriesRenderItemParams, api: echarts.CustomSeriesRenderItemAPI) => {
-            const point = api.coord([api.value(0), api.value(1)]);
-            const errorValue = api.value(2) as number;
-            const yTop = api.coord([api.value(0), (api.value(1) as number) + errorValue]);
-            const yBottom = api.coord([api.value(0), (api.value(1) as number) - errorValue]);
-
-            if (typeof point[0] !== 'number' || typeof point[1] !== 'number' ||
-              typeof yTop[1] !== 'number' || typeof yBottom[1] !== 'number') {
-              return { type: 'group', children: [] };
-            }
-            return {
-              type: 'group',
-              children: [
-                {
-                  type: 'line',
-                  shape: { x1: point[0], y1: yTop[1], x2: point[0], y2: yBottom[1] },
-                  style: { stroke: '#f44336', lineWidth: 1.5 },
-                },
-                {
-                  type: 'line',
-                  shape: { x1: point[0] - 4, y1: yTop[1], x2: point[0] + 4, y2: yTop[1] },
-                  style: { stroke: '#f44336', lineWidth: 1.5 },
-                },
-                {
-                  type: 'line',
-                  shape: { x1: point[0] - 4, y1: yBottom[1], x2: point[0] + 4, y2: yBottom[1] },
-                  style: { stroke: '#f44336', lineWidth: 1.5 },
-                },
-              ],
-            };
+      // Line series
+      if (plotType === 'line' || plotType === 'both') {
+        traces.push({
+          x: xData,
+          y: yData,
+          mode: 'lines',
+          type: 'scatter',
+          name: plotType === 'both' ? 'Trend' : yLabel || 'Data',
+          line: {
+            color:
+              plotType === 'both'
+                ? CHART_COLORS.secondary
+                : CHART_COLORS.primary,
+            width: 2,
           },
-          data: xData.map((x, i) => [x, yData[i], errorData[i]]),
-          z: 1,
-          silent: true,
         });
       }
-    }
 
-    // Add line series
-    if (plotType === 'line' || plotType === 'both') {
-      series.push({
-        name: plotType === 'both' ? 'Trend' : yLabel || 'Data',
-        type: 'line',
-        data: xData.map((x, i) => [x, yData[i]]),
-        smooth: false,
-        showSymbol: false,
-        lineStyle: {
-          color: plotType === 'both' ? '#4caf50' : '#2196f3',
-          width: 2
+      // Calculate axis ranges with 10% margin
+      const xMin = Math.min(...xData);
+      const xMax = Math.max(...xData);
+      const xSpan = xMax - xMin;
+      const xMargin = Math.max(xSpan * 0.1, Math.abs(xMin) * 0.01, 0.1);
+
+      let yMin: number, yMax: number;
+      if (showErrorBars && errorData) {
+        const yWithErrorsMin = yData.map((y, i) => y - (errorData[i] ?? 0));
+        const yWithErrorsMax = yData.map((y, i) => y + (errorData[i] ?? 0));
+        yMin = Math.min(...yWithErrorsMin);
+        yMax = Math.max(...yWithErrorsMax);
+      } else {
+        yMin = Math.min(...yData);
+        yMax = Math.max(...yData);
+      }
+      const ySpan = yMax - yMin;
+      const yMargin = Math.max(ySpan * 0.1, Math.abs(yMin) * 0.01, 0.1);
+
+      const layout: Partial<Plotly.Layout> = {
+        ...baseLayout,
+        showlegend: plotType === 'both',
+        legend:
+          plotType === 'both'
+            ? {
+                font: { color: baseLayout.font?.color as string, size: 10 },
+                bgcolor: 'rgba(0,0,0,0.4)',
+                borderwidth: 0,
+                x: 0.01,
+                y: 0.99,
+                xanchor: 'left',
+                yanchor: 'top',
+              }
+            : undefined,
+        xaxis: {
+          ...axis,
+          title: { text: xLabel || 'X', font: { color: '#aaa', size: 12 } },
+          range: [xMin - xMargin, xMax + xMargin],
         },
-        z: 0,
-      });
-    }
-
-    // Theme-specific colors
-    const textColor = theme === 'light' ? '#000000' : '#ffffff';
-    const axisLineColor = theme === 'light' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)';
-    const splitLineColor = theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
-    const backgroundColor = theme === 'light' ? '#ffffff' : '#0a0a0a';
-
-    // Calculate axis ranges with 10% margin
-    const xMin = Math.min(...xData);
-    const xMax = Math.max(...xData);
-    const xRange = xMax - xMin;
-    const xMargin = Math.max(xRange * 0.10, Math.abs(xMin) * 0.01, 0.1);
-
-    let yMin: number, yMax: number;
-    if (showErrorBars && errorData) {
-      const yWithErrorsMin = yData.map((y, i) => y - (errorData[i] ?? 0));
-      const yWithErrorsMax = yData.map((y, i) => y + (errorData[i] ?? 0));
-      yMin = Math.min(...yWithErrorsMin);
-      yMax = Math.max(...yWithErrorsMax);
-    } else {
-      yMin = Math.min(...yData);
-      yMax = Math.max(...yData);
-    }
-    const yRange = yMax - yMin;
-    const yMargin = Math.max(yRange * 0.10, Math.abs(yMin) * 0.01, 0.1);
-
-    const roundToPrecision = (num: number, precision: number = 10): number => {
-      if (!isFinite(num)) { return 0; }
-      return Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision);
-    };
-
-    const option: echarts.EChartsOption = {
-      backgroundColor,
-      grid: {
-        left: 60,
-        right: 30,
-        top: 40,
-        bottom: 60,
-        containLabel: false,
-      },
-      xAxis: {
-        type: 'value',
-        name: xLabel || 'X',
-        nameLocation: 'middle',
-        nameGap: 35,
-        nameTextStyle: { color: textColor, fontSize: 12 },
-        axisLine: { lineStyle: { color: axisLineColor } },
-        axisLabel: {
-          color: textColor,
-          formatter: (value: number) => {
-            if (Math.abs(value) >= 1e6 || (Math.abs(value) < 0.001 && value !== 0)) {
-              return value.toExponential(2);
-            } else if (Math.abs(value) >= 1000) {
-              return value.toFixed(0);
-            } else if (Math.abs(value) >= 1) {
-              return value.toFixed(2);
-            } else {
-              return value.toFixed(4);
-            }
-          }
+        yaxis: {
+          ...axis,
+          title: { text: yLabel || 'Y', font: { color: '#aaa', size: 12 } },
+          range: [yMin - yMargin, yMax + yMargin],
         },
-        splitLine: { lineStyle: { color: splitLineColor } },
-        min: roundToPrecision(xMin - xMargin),
-        max: roundToPrecision(xMax + xMargin),
-      },
-      yAxis: {
-        type: 'value',
-        name: yLabel || 'Y',
-        nameLocation: 'middle',
-        nameGap: 45,
-        nameTextStyle: { color: textColor, fontSize: 12 },
-        axisLine: { lineStyle: { color: axisLineColor } },
-        axisLabel: {
-          color: textColor,
-          formatter: (value: number) => {
-            if (Math.abs(value) >= 1e6 || (Math.abs(value) < 0.001 && value !== 0)) {
-              return value.toExponential(2);
-            } else if (Math.abs(value) >= 1000) {
-              return value.toFixed(0);
-            } else if (Math.abs(value) >= 1) {
-              return value.toFixed(2);
-            } else {
-              return value.toFixed(4);
-            }
-          }
-        },
-        splitLine: { lineStyle: { color: splitLineColor } },
-        min: roundToPrecision(yMin - yMargin),
-        max: roundToPrecision(yMax + yMargin),
-      },
-      series,
-      legend: plotType === 'both' ? {
-        show: true,
-        textStyle: { color: textColor },
-        top: 5,
-        backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.5)',
-        borderRadius: 4,
-        padding: 8,
-      } : { show: false },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross' },
-        backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.8)',
-        borderColor: '#2196f3',
-        textStyle: { color: textColor },
-      },
-    };
+      };
 
-    return option;
-  }, [xData, yData, errorData, plotType, xLabel, yLabel, showErrorBars]);
+      return { data: traces, layout };
+    },
+    [xData, yData, errorData, plotType, xLabel, yLabel, showErrorBars]
+  );
 
-  const updateChart = useCallback(() => {
-    if (!chartInstanceRef.current || !hasPlot || xData.length === 0 || yData.length === 0) {
-      return;
-    }
-
-    const option = generateChartOptions('dark');
-    chartInstanceRef.current.setOption(option, true);
-  }, [hasPlot, xData, yData, generateChartOptions]);
+  // Chart data for the consuming component
+  const plotlyData = useMemo(() => {
+    if (!hasPlot || xData.length === 0 || yData.length === 0) return null;
+    return generatePlotlyProps('dark');
+  }, [hasPlot, xData, yData, generatePlotlyProps]);
 
   // Generate plot
   const generatePlot = useCallback(async (): Promise<void> => {
@@ -347,18 +268,17 @@ export function useQuickPlot({
 
     setIsGenerating(true);
     try {
-      const success = await validateConfig();
-      if (success) {
-        updateChart();
-      }
+      await validateConfig();
     } finally {
       setIsGenerating(false);
     }
-  }, [spreadsheetRef, validateConfig, updateChart]);
+  }, [spreadsheetRef, validateConfig]);
 
   // Export functionality
   const handleExport = useCallback(async () => {
-    if (!hasPlot || !chartInstanceRef.current) { return; }
+    if (!hasPlot) {
+      return;
+    }
 
     setIsExporting(true);
 
@@ -368,10 +288,12 @@ export function useQuickPlot({
 
       const filePath = await save({
         defaultPath: `quick_plot_${Date.now()}.${extension}`,
-        filters: [{
-          name: filterName,
-          extensions: [extension]
-        }]
+        filters: [
+          {
+            name: filterName,
+            extensions: [extension],
+          },
+        ],
       });
 
       if (!filePath) {
@@ -380,63 +302,66 @@ export function useQuickPlot({
         return;
       }
 
-      if (exportFormat === 'svg') {
-        const tempDiv = document.createElement('div');
-        tempDiv.style.width = '1200px';
-        tempDiv.style.height = '800px';
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        document.body.appendChild(tempDiv);
+      // Generate export props with the chosen theme
+      const { data, layout } = generatePlotlyProps(exportTheme);
 
-        const tempChart = echarts.init(tempDiv, null, { renderer: 'svg' });
-        const exportOptions = generateChartOptions(exportTheme);
-        exportOptions.animation = false;
-        tempChart.setOption(exportOptions);
+      // Create a temporary offscreen div for Plotly rendering
+      const tempDiv = document.createElement('div');
+      tempDiv.style.width = '1200px';
+      tempDiv.style.height = '800px';
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      document.body.appendChild(tempDiv);
 
-        await new Promise<void>((resolve) => {
-          tempChart.on('finished', () => resolve());
-          setTimeout(resolve, 500);
+      try {
+        // Render Plotly chart in offscreen div
+        await Plotly.newPlot(tempDiv, data, {
+          ...layout,
+          width: 1200,
+          height: 800,
         });
 
-        const svgString = tempChart.renderToSVGString();
-        tempChart.dispose();
+        if (exportFormat === 'svg') {
+          const svgDataUrl = await Plotly.toImage(tempDiv, {
+            format: 'svg',
+            width: 1200,
+            height: 800,
+          });
+
+          // Plotly returns either:
+          //   "data:image/svg+xml,<url-encoded-svg>"   (plotly.js-dist-min)
+          //   "data:image/svg+xml;base64,<b64>"         (full plotly.js)
+          let svgString: string;
+          if (svgDataUrl.includes(';base64,')) {
+            const base64 = svgDataUrl.split(';base64,')[1] ?? '';
+            svgString = atob(base64);
+          } else {
+            // URL-encoded form: "data:image/svg+xml,..."
+            const encoded = svgDataUrl.split(',').slice(1).join(',');
+            svgString = decodeURIComponent(encoded);
+          }
+
+          await invoke('save_svg_file', {
+            svgContent: svgString,
+            path: filePath,
+          });
+        } else {
+          const dataURL = await Plotly.toImage(tempDiv, {
+            format: 'png',
+            width: 1200,
+            height: 800,
+            scale: 2,
+          });
+
+          await invoke('save_image_from_data_url', {
+            dataUrl: dataURL,
+            path: filePath,
+          });
+        }
+
+        Plotly.purge(tempDiv);
+      } finally {
         document.body.removeChild(tempDiv);
-
-        await invoke('save_svg_file', {
-          svgContent: svgString,
-          path: filePath,
-        });
-      } else {
-        const tempDiv = document.createElement('div');
-        tempDiv.style.width = '1200px';
-        tempDiv.style.height = '800px';
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        document.body.appendChild(tempDiv);
-
-        const tempChart = echarts.init(tempDiv, null, { renderer: 'canvas' });
-        const exportOptions = generateChartOptions(exportTheme);
-        exportOptions.animation = false;
-        tempChart.setOption(exportOptions);
-
-        await new Promise<void>((resolve) => {
-          tempChart.on('finished', () => resolve());
-          setTimeout(resolve, 500);
-        });
-
-        const dataURL = tempChart.getDataURL({
-          type: 'png',
-          pixelRatio: 2,
-          backgroundColor: exportTheme === 'light' ? '#ffffff' : '#0a0a0a',
-        });
-
-        tempChart.dispose();
-        document.body.removeChild(tempDiv);
-
-        await invoke('save_image_from_data_url', {
-          dataUrl: dataURL,
-          path: filePath,
-        });
       }
 
       setExportDialogOpen(false);
@@ -446,7 +371,7 @@ export function useQuickPlot({
       setExportDialogOpen(false);
       setIsExporting(false);
     }
-  }, [hasPlot, exportFormat, exportTheme, generateChartOptions]);
+  }, [hasPlot, exportFormat, exportTheme, generatePlotlyProps]);
 
   // Save to library functionality
   const handleSaveToLibrary = useCallback(async () => {
@@ -494,7 +419,18 @@ export function useQuickPlot({
     } catch (error) {
       setError(`Failed to save: ${String(error)}`);
     }
-  }, [xSequenceName, ySequenceName, xRange, yRange, xUnit, yUnit, sequenceTags, xData, yData, errorData]);
+  }, [
+    xSequenceName,
+    ySequenceName,
+    xRange,
+    yRange,
+    xUnit,
+    yUnit,
+    sequenceTags,
+    xData,
+    yData,
+    errorData,
+  ]);
 
   // Tag management
   const addTag = useCallback(() => {
@@ -504,28 +440,20 @@ export function useQuickPlot({
     }
   }, [newTag, sequenceTags]);
 
-  const removeTag = useCallback((tag: string) => {
-    setSequenceTags(sequenceTags.filter(t => t !== tag));
-  }, [sequenceTags]);
-
-  // Initialize chart when component mounts
-  useEffect(() => {
-    if (hasPlot) {
-      initializeChart();
-    }
-  }, [hasPlot, initializeChart]);
-
-  // Update chart when data changes
-  useEffect(() => {
-    if (hasPlot && chartReady) {
-      updateChart();
-    }
-  }, [hasPlot, chartReady, updateChart]);
+  const removeTag = useCallback(
+    (tag: string) => {
+      setSequenceTags(sequenceTags.filter((t) => t !== tag));
+    },
+    [sequenceTags]
+  );
 
   // Handle selection change for ranges
-  const handleSelectionChange = useCallback((selection: string) => {
-    onSelectionChange?.(selection);
-  }, [onSelectionChange]);
+  const handleSelectionChange = useCallback(
+    (selection: string) => {
+      onSelectionChange?.(selection);
+    },
+    [onSelectionChange]
+  );
 
   // Clear error
   const clearError = useCallback(() => {
@@ -551,6 +479,9 @@ export function useQuickPlot({
     hasPlot,
     chartRef,
     chartReady,
+
+    // Plotly data/layout for consuming component
+    plotlyData,
 
     // Export state
     exportDialogOpen,
@@ -595,5 +526,5 @@ export function useQuickPlot({
     addTag,
     removeTag,
     setNewTag,
-  }
-} 
+  };
+}

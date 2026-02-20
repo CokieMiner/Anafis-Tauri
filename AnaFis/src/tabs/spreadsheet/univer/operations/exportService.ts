@@ -2,24 +2,35 @@
 // Supports: CSV, TSV, TXT, Parquet, HTML, Markdown, TeX, AnaFisSpread
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
-import { SpreadsheetRef, WorkbookSnapshot } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { safeSpreadsheetOperation } from '@/tabs/spreadsheet/univer';
-import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
 import type { ExportOptions } from '@/core/types/export';
+import { err, isErr, ok, type Result } from '@/core/types/result';
+import type {
+  SpreadsheetRef,
+  WorkbookSnapshot,
+} from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import { safeSpreadsheetOperation } from '@/tabs/spreadsheet/univer';
 import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
-import { Result, ok, err, isErr } from '@/core/types/result';
 import {
-  normalizeError,
   logError,
+  normalizeError,
+  SpreadsheetOperationError,
   SpreadsheetValidationError,
-  SpreadsheetOperationError
 } from '@/tabs/spreadsheet/univer/utils/errors';
+import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
 
 // Type definitions for better type safety
 type CellValue = string | number | null;
 type DataTable = CellValue[][];
 
-export type ExportFormat = 'csv' | 'tsv' | 'txt' | 'parquet' | 'html' | 'markdown' | 'tex' | 'anafispread';
+export type ExportFormat =
+  | 'csv'
+  | 'tsv'
+  | 'txt'
+  | 'parquet'
+  | 'html'
+  | 'markdown'
+  | 'tex'
+  | 'anafispread';
 
 export interface ExportResult {
   message?: string;
@@ -32,7 +43,10 @@ export interface ExportError {
 }
 
 // Simple file filter config
-const FILE_FILTERS: Record<ExportFormat, { name: string; extensions: string[] }> = {
+const FILE_FILTERS: Record<
+  ExportFormat,
+  { name: string; extensions: string[] }
+> = {
   csv: { name: 'CSV Files', extensions: ['csv'] },
   tsv: { name: 'TSV Files', extensions: ['tsv'] },
   txt: { name: 'Text Files', extensions: ['txt'] },
@@ -55,7 +69,10 @@ export class ExportService implements ExportService {
    * @param spreadsheetAPI - Reference to the spreadsheet API for data access
    * @returns Promise resolving to Result with export success details or error
    */
-  async exportWithDialog(options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<Result<ExportResult, ExportError>> {
+  async exportWithDialog(
+    options: ExportOptions,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<Result<ExportResult, ExportError>> {
     try {
       const filter = FILE_FILTERS[options.format];
       const filePath = await save({
@@ -71,7 +88,10 @@ export class ExportService implements ExportService {
     } catch (error) {
       const spreadsheetError = normalizeError(error, 'exportWithDialog');
       logError(spreadsheetError);
-      return err({ message: spreadsheetError.message, code: spreadsheetError.code });
+      return err({
+        message: spreadsheetError.message,
+        code: spreadsheetError.code,
+      });
     }
   }
 
@@ -87,12 +107,19 @@ export class ExportService implements ExportService {
    * @param spreadsheetAPI - Reference to the spreadsheet API for data access
    * @returns Promise resolving to Result with export success details or error
    */
-  async exportToFile(filePath: string, options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<Result<ExportResult, ExportError>> {
+  async exportToFile(
+    filePath: string,
+    options: ExportOptions,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<Result<ExportResult, ExportError>> {
     try {
       // Extract data
       const data = await this.extractData(options, spreadsheetAPI);
       if (!data) {
-        return err({ message: ERROR_MESSAGES.NO_DATA_TO_EXPORT, code: 'NO_DATA' });
+        return err({
+          message: ERROR_MESSAGES.NO_DATA_TO_EXPORT,
+          code: 'NO_DATA',
+        });
       }
 
       // For anafispread, validate and pass workbook snapshot directly
@@ -102,9 +129,12 @@ export class ExportService implements ExportService {
         if (isErr(validation)) {
           return err({ message: validation.error, code: 'INVALID_SNAPSHOT' });
         }
-        
+
         await invoke('export_anafispread', { data, filePath });
-        return ok({ message: `Successfully exported to ${filePath}`, filePath });
+        return ok({
+          message: `Successfully exported to ${filePath}`,
+          filePath,
+        });
       }
 
       // For other formats, ensure we have 2D array data
@@ -118,12 +148,13 @@ export class ExportService implements ExportService {
         format: options.format,
         config: {
           delimiter: options.delimiter ?? ',',
-        }
+        },
       });
 
-      const message = rowCount > 0 
-        ? `Successfully exported ${rowCount} rows to ${filePath}`
-        : `Successfully exported data to ${filePath}`;
+      const message =
+        rowCount > 0
+          ? `Successfully exported ${rowCount} rows to ${filePath}`
+          : `Successfully exported data to ${filePath}`;
 
       return ok({ message, filePath });
     } catch (error) {
@@ -131,7 +162,7 @@ export class ExportService implements ExportService {
       logError(spreadsheetError);
       return err({
         message: spreadsheetError.message,
-        code: spreadsheetError.code
+        code: spreadsheetError.code,
       });
     }
   }
@@ -139,7 +170,10 @@ export class ExportService implements ExportService {
   /**
    * Extract data from spreadsheet
    */
-  private async extractData(options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<unknown> {
+  private async extractData(
+    options: ExportOptions,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<unknown> {
     return safeSpreadsheetOperation(async () => {
       // Special case: anafispread format needs full workbook snapshot
       if (options.format === 'anafispread') {
@@ -157,7 +191,9 @@ export class ExportService implements ExportService {
    * Validate workbook snapshot structure before export
    * Prevents corrupted or malformed snapshots from being saved
    */
-  private validateWorkbookSnapshot(snapshot: unknown): Result<WorkbookSnapshot, string> {
+  private validateWorkbookSnapshot(
+    snapshot: unknown
+  ): Result<WorkbookSnapshot, string> {
     try {
       // Basic type check
       if (!snapshot || typeof snapshot !== 'object') {
@@ -168,11 +204,15 @@ export class ExportService implements ExportService {
 
       // Required fields validation
       if (typeof obj.id !== 'string' || obj.id.trim() === '') {
-        return err('Snapshot missing required field: id (must be non-empty string)');
+        return err(
+          'Snapshot missing required field: id (must be non-empty string)'
+        );
       }
 
       if (typeof obj.name !== 'string' || obj.name.trim() === '') {
-        return err('Snapshot missing required field: name (must be non-empty string)');
+        return err(
+          'Snapshot missing required field: name (must be non-empty string)'
+        );
       }
 
       if (!obj.sheets || typeof obj.sheets !== 'object') {
@@ -203,26 +243,45 @@ export class ExportService implements ExportService {
         }
 
         // Optional fields validation (if present, must be valid)
-        if (sheet.cellData !== undefined && typeof sheet.cellData !== 'object') {
-          return err(`Sheet '${sheetId}' has invalid cellData (must be object if present)`);
+        if (
+          sheet.cellData !== undefined &&
+          typeof sheet.cellData !== 'object'
+        ) {
+          return err(
+            `Sheet '${sheetId}' has invalid cellData (must be object if present)`
+          );
         }
 
         if (sheet.mergeData !== undefined && !Array.isArray(sheet.mergeData)) {
-          return err(`Sheet '${sheetId}' has invalid mergeData (must be array if present)`);
+          return err(
+            `Sheet '${sheetId}' has invalid mergeData (must be array if present)`
+          );
         }
 
-        if (sheet.rowCount !== undefined && (typeof sheet.rowCount !== 'number' || sheet.rowCount < 0)) {
-          return err(`Sheet '${sheetId}' has invalid rowCount (must be non-negative number if present)`);
+        if (
+          sheet.rowCount !== undefined &&
+          (typeof sheet.rowCount !== 'number' || sheet.rowCount < 0)
+        ) {
+          return err(
+            `Sheet '${sheetId}' has invalid rowCount (must be non-negative number if present)`
+          );
         }
 
-        if (sheet.columnCount !== undefined && (typeof sheet.columnCount !== 'number' || sheet.columnCount < 0)) {
-          return err(`Sheet '${sheetId}' has invalid columnCount (must be non-negative number if present)`);
+        if (
+          sheet.columnCount !== undefined &&
+          (typeof sheet.columnCount !== 'number' || sheet.columnCount < 0)
+        ) {
+          return err(
+            `Sheet '${sheetId}' has invalid columnCount (must be non-negative number if present)`
+          );
         }
       }
 
       // Optional workbook-level fields validation
       if (obj.appVersion !== undefined && typeof obj.appVersion !== 'string') {
-        return err('Snapshot has invalid appVersion (must be string if present)');
+        return err(
+          'Snapshot has invalid appVersion (must be string if present)'
+        );
       }
 
       if (obj.locale !== undefined && typeof obj.locale !== 'string') {
@@ -234,7 +293,9 @@ export class ExportService implements ExportService {
       }
 
       if (obj.sheetOrder !== undefined && !Array.isArray(obj.sheetOrder)) {
-        return err('Snapshot has invalid sheetOrder (must be array if present)');
+        return err(
+          'Snapshot has invalid sheetOrder (must be array if present)'
+        );
       }
 
       if (obj.resources !== undefined && !Array.isArray(obj.resources)) {
@@ -243,9 +304,10 @@ export class ExportService implements ExportService {
 
       // If we get here, validation passed
       return ok(snapshot as WorkbookSnapshot);
-
     } catch (error) {
-      return err(`Snapshot validation failed: ${error instanceof Error ? error.message : String(error)}`);
+      return err(
+        `Snapshot validation failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -253,7 +315,10 @@ export class ExportService implements ExportService {
    * Determine export range using direct internal API access
    * No fallbacks - forces proper fixes when internal API access fails
    */
-  private async determineRange(options: ExportOptions, spreadsheetAPI: SpreadsheetRef): Promise<string> {
+  private async determineRange(
+    options: ExportOptions,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<string> {
     if (options.rangeMode === 'custom') {
       if (!options.customRange) {
         throw new SpreadsheetValidationError(
@@ -267,7 +332,8 @@ export class ExportService implements ExportService {
         RangeValidator.validateFormat(options.customRange);
         return options.customRange;
       } catch (error) {
-        const originalError = error instanceof Error ? error : new Error(String(error));
+        const originalError =
+          error instanceof Error ? error : new Error(String(error));
         throw new SpreadsheetValidationError(
           `Invalid range: ${originalError.message}`,
           'customRange',
@@ -282,12 +348,12 @@ export class ExportService implements ExportService {
     try {
       return await spreadsheetAPI.getUsedRange();
     } catch (error) {
-      const originalError = error instanceof Error ? error : new Error(String(error));
-      throw new SpreadsheetOperationError(
-        'determineRange',
-        originalError,
-        { rangeMode: options.rangeMode, operation: 'getUsedRange' }
-      );
+      const originalError =
+        error instanceof Error ? error : new Error(String(error));
+      throw new SpreadsheetOperationError('determineRange', originalError, {
+        rangeMode: options.rangeMode,
+        operation: 'getUsedRange',
+      });
     }
   }
 
@@ -365,7 +431,7 @@ export class ExportService implements ExportService {
     }
 
     return result;
-  }  /**
+  } /**
    * Export spreadsheet data to the AnaFis Data Library.
    *
    * Extracts numeric data and uncertainties from specified ranges, validates the data,
@@ -376,21 +442,27 @@ export class ExportService implements ExportService {
    * @param spreadsheetAPI - Reference to the spreadsheet API for data access
    * @returns Promise resolving to Result with save confirmation or error
    */
-  async exportToDataLibrary(options: {
-    libraryName: string;
-    libraryDescription: string;
-    libraryTags: string;
-    libraryUnit: string;
-    dataRange: string;
-    uncertaintyRange: string;
-  }, spreadsheetAPI: SpreadsheetRef): Promise<Result<ExportResult, ExportError>> {
+  async exportToDataLibrary(
+    options: {
+      libraryName: string;
+      libraryDescription: string;
+      libraryTags: string;
+      libraryUnit: string;
+      dataRange: string;
+      uncertaintyRange: string;
+    },
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<Result<ExportResult, ExportError>> {
     try {
       if (!options.libraryName.trim()) {
         return err({ message: 'Please enter a name', code: 'INVALID_INPUT' });
       }
 
       if (!options.dataRange.trim()) {
-        return err({ message: 'Please specify a data range', code: 'INVALID_INPUT' });
+        return err({
+          message: 'Please specify a data range',
+          code: 'INVALID_INPUT',
+        });
       }
 
       // Validate ranges
@@ -400,29 +472,44 @@ export class ExportService implements ExportService {
           RangeValidator.validateFormat(options.uncertaintyRange.trim());
         }
       } catch (error) {
-        return err({ message: `Invalid range: ${error instanceof Error ? error.message : String(error)}`, code: 'INVALID_RANGE' });
+        return err({
+          message: `Invalid range: ${error instanceof Error ? error.message : String(error)}`,
+          code: 'INVALID_RANGE',
+        });
       }
 
       // Extract data
-      const dataExtraction = await this.extractRangeData(options.dataRange, spreadsheetAPI);
+      const dataExtraction = await this.extractRangeData(
+        options.dataRange,
+        spreadsheetAPI
+      );
       if (dataExtraction.length === 0) {
-        return err({ message: `No numeric data in range ${options.dataRange}`, code: 'NO_DATA' });
+        return err({
+          message: `No numeric data in range ${options.dataRange}`,
+          code: 'NO_DATA',
+        });
       }
 
       // Extract uncertainties if provided
       let uncertainties: number[] | undefined;
       if (options.uncertaintyRange.trim()) {
-        uncertainties = await this.extractRangeData(options.uncertaintyRange, spreadsheetAPI);
+        uncertainties = await this.extractRangeData(
+          options.uncertaintyRange,
+          spreadsheetAPI
+        );
         if (uncertainties.length !== dataExtraction.length) {
-          return err({ message: 'Uncertainty range must match data range length', code: 'RANGE_MISMATCH' });
+          return err({
+            message: 'Uncertainty range must match data range length',
+            code: 'RANGE_MISMATCH',
+          });
         }
       }
 
       // Save to library
       const tags = options.libraryTags
         .split(',')
-        .map(t => t.trim())
-        .filter(t => t.length > 0);
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
 
       await invoke('save_sequence', {
         request: {
@@ -434,18 +521,18 @@ export class ExportService implements ExportService {
           data: dataExtraction,
           uncertainties: uncertainties ?? null,
           is_pinned: false,
-        }
+        },
       });
 
       return ok({
-        message: `Saved '${options.libraryName}' (${dataExtraction.length} points)`
+        message: `Saved '${options.libraryName}' (${dataExtraction.length} points)`,
       });
     } catch (error) {
       const spreadsheetError = normalizeError(error, 'exportToDataLibrary');
       logError(spreadsheetError);
       return err({
         message: spreadsheetError.message,
-        code: spreadsheetError.code
+        code: spreadsheetError.code,
       });
     }
   }
@@ -453,7 +540,10 @@ export class ExportService implements ExportService {
   /**
    * Extract numeric data from range
    */
-  private async extractRangeData(range: string, spreadsheetAPI: SpreadsheetRef): Promise<number[]> {
+  private async extractRangeData(
+    range: string,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<number[]> {
     return safeSpreadsheetOperation(async () => {
       const data = await spreadsheetAPI.getRange(range);
       const numbers: number[] = [];
@@ -472,11 +562,13 @@ export class ExportService implements ExportService {
             num = cell;
           } else {
             const str = String(cell).trim();
-            if (str === '') {continue;}
+            if (str === '') {
+              continue;
+            }
             num = parseFloat(str);
           }
 
-          if (!isNaN(num) && isFinite(num)) {
+          if (!Number.isNaN(num) && Number.isFinite(num)) {
             numbers.push(num);
           }
         }
@@ -485,12 +577,4 @@ export class ExportService implements ExportService {
       return numbers;
     }, 'numeric data extraction');
   }
-}
-
-export function getFileExtension(format: ExportFormat): string {
-  return FILE_FILTERS[format].extensions[0] ?? 'txt';
-}
-
-export function getFilterName(format: ExportFormat): string {
-  return FILE_FILTERS[format].name;
 }

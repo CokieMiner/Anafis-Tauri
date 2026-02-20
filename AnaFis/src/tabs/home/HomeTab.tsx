@@ -1,10 +1,21 @@
-import React, { useCallback, useMemo } from 'react';
-import { Box, Typography, Paper, List, ListItemButton, ListItemIcon, ListItemText, Card, CardContent, Avatar } from '@mui/material';
-import TableChartIcon from '@mui/icons-material/TableChart';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import FunctionsIcon from '@mui/icons-material/Functions';
 import CasinoIcon from '@mui/icons-material/Casino';
 import DescriptionIcon from '@mui/icons-material/Description';
+import FunctionsIcon from '@mui/icons-material/Functions';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import {
+  Avatar,
+  Box,
+  Card,
+  CardContent,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Typography,
+} from '@mui/material';
+import React, { useCallback, useMemo } from 'react';
 
 // Components are now created through the proper tab system, no need for direct imports
 
@@ -56,15 +67,35 @@ const QUICK_ACTIONS_CONFIG = [
     title: 'Monte Carlo',
     description: 'Statistical simulations',
     iconComponent: CasinoIcon,
-  }
+  },
 ] as const;
 
 // Memoized recent files data
 const RECENT_FILES_DATA = [
-  { name: 'pendulum_data.csv', type: 'Data File', iconComponent: TableChartIcon, color: '#64b5f6' },
-  { name: 'transistor_curves.xlsx', type: 'Spreadsheet', iconComponent: TableChartIcon, color: '#64b5f6' },
-  { name: 'g_measurement.anafis', type: 'Project', iconComponent: DescriptionIcon, color: '#ba68c8' },
-  { name: 'circuit_analysis.fit', type: 'Fitting Result', iconComponent: ShowChartIcon, color: '#ffb74d' },
+  {
+    name: 'pendulum_data.csv',
+    type: 'Data File',
+    iconComponent: TableChartIcon,
+    color: '#64b5f6',
+  },
+  {
+    name: 'transistor_curves.xlsx',
+    type: 'Spreadsheet',
+    iconComponent: TableChartIcon,
+    color: '#64b5f6',
+  },
+  {
+    name: 'g_measurement.anafis',
+    type: 'Project',
+    iconComponent: DescriptionIcon,
+    color: '#ba68c8',
+  },
+  {
+    name: 'circuit_analysis.fit',
+    type: 'Fitting Result',
+    iconComponent: ShowChartIcon,
+    color: '#ffb74d',
+  },
 ] as const;
 
 // Memoized styles to prevent recreation
@@ -77,7 +108,8 @@ const HERO_LOGO_STYLES = {
   justifyContent: 'center',
   borderRadius: '20px',
   overflow: 'hidden',
-  background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.2) 0%, rgba(127, 29, 29, 0.2) 100%)',
+  background:
+    'linear-gradient(135deg, rgba(30, 27, 75, 0.2) 0%, rgba(127, 29, 29, 0.2) 100%)',
   boxShadow: '0 8px 32px rgba(30, 27, 75, 0.2)',
   '&::before': {
     content: '""',
@@ -86,32 +118,40 @@ const HERO_LOGO_STYLES = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
+    background:
+      'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
   },
 } as const;
 
 const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
   // Optimized click handler using proper tab creation flow
-  const handleNewTabClick = useCallback((tabType: string, title: string) => {
-    const uniqueId = `${tabType}-${Date.now()}`;
-    // Use openNewTab without pre-created content - let the tab system create the content
-    openNewTab(uniqueId, title, null);
-  }, [openNewTab]);
+  const handleNewTabClick = useCallback(
+    (tabType: string, title: string) => {
+      const uniqueId = `${tabType}-${Date.now()}`;
+      // Use openNewTab without pre-created content - let the tab system create the content
+      openNewTab(uniqueId, title, null);
+    },
+    [openNewTab]
+  );
 
   // Memoize quick actions with colors to prevent recalculation
-  const quickActions = useMemo(() =>
-    QUICK_ACTIONS_CONFIG.map(action => ({
-      ...action,
-      colors: getTabColors(action.id),
-    })), []
+  const quickActions = useMemo(
+    () =>
+      QUICK_ACTIONS_CONFIG.map((action) => ({
+        ...action,
+        colors: getTabColors(action.id),
+      })),
+    []
   );
 
   // Memoize recent files with icons to prevent recreation
-  const recentFiles = useMemo(() =>
-    RECENT_FILES_DATA.map((file, index) => ({
-      ...file,
-      key: `${file.name}-${index}`, // Stable key for React
-    })), []
+  const recentFiles = useMemo(
+    () =>
+      RECENT_FILES_DATA.map((file, index) => ({
+        ...file,
+        key: `${file.name}-${index}`, // Stable key for React
+      })),
+    []
   );
 
   return (
@@ -126,7 +166,8 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
         gap: 4,
         boxSizing: 'border-box',
         overflow: 'auto',
-        background: 'radial-gradient(circle at 20% 50%, rgba(30, 27, 75, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(127, 29, 29, 0.05) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(88, 28, 135, 0.05) 0%, transparent 50%)',
+        background:
+          'radial-gradient(circle at 20% 50%, rgba(30, 27, 75, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(127, 29, 29, 0.05) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(88, 28, 135, 0.05) 0%, transparent 50%)',
         width: '100%', // Ensure full width
       }}
     >
@@ -140,7 +181,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
               width: '110%',
               height: '110%',
               objectFit: 'contain',
-              filter: 'drop-shadow(0 0 10px rgba(30, 27, 75, 0.3))'
+              filter: 'drop-shadow(0 0 10px rgba(30, 27, 75, 0.3))',
             }}
           />
         </Box>
@@ -156,7 +197,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-              mb: 1
+              mb: 1,
             }}
           >
             AnaFis
@@ -169,7 +210,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
                 ml: 2,
                 opacity: 1,
                 fontSize: '0.6em',
-                verticalAlign: 'super'
+                verticalAlign: 'super',
               }}
             >
               v0.1.0
@@ -183,10 +224,20 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
 
       {/* Quick Actions Grid */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
+        <Typography
+          variant="h4"
+          sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}
+        >
           Quick Start
         </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'flex-start' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 3,
+            justifyContent: 'flex-start',
+          }}
+        >
           {quickActions.map((action) => {
             const IconComponent = action.iconComponent;
             return (
@@ -212,7 +263,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
             flexDirection: 'column',
             gap: 2,
             height: '100%',
-            flexGrow: 1
+            flexGrow: 1,
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
@@ -221,15 +272,17 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
               Recent Files
             </Typography>
           </Box>
-          <Box sx={{
-            flexGrow: 1,
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            background: 'rgba(255, 255, 255, 0.02)',
-            minHeight: '400px' // Ensure it expands
-          }}>
+          <Box
+            sx={{
+              flexGrow: 1,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              background: 'rgba(255, 255, 255, 0.02)',
+              minHeight: '400px', // Ensure it expands
+            }}
+          >
             <List dense sx={{ p: 0 }}>
               {recentFiles.map((file, index) => {
                 const IconComponent = file.iconComponent;
@@ -265,7 +318,8 @@ const QuickActionCard = React.memo<{
         width: 200,
         cursor: 'pointer',
         transition: 'all 0.3s ease-in-out',
-        background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(42, 42, 42, 0.4) 100%)',
+        background:
+          'linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(42, 42, 42, 0.4) 100%)',
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
         '&:hover': {
@@ -320,14 +374,22 @@ const RecentFileItem = React.memo<{
 }>(({ file, index, totalFiles, IconComponent }) => (
   <ListItemButton
     sx={{
-      borderBottom: index < totalFiles - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+      borderBottom:
+        index < totalFiles - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
       '&:hover': {
         bgcolor: 'rgba(0, 212, 255, 0.1)',
       },
     }}
   >
     <ListItemIcon>
-      <Avatar sx={{ width: 32, height: 32, bgcolor: `${file.color}20`, color: file.color }}>
+      <Avatar
+        sx={{
+          width: 32,
+          height: 32,
+          bgcolor: `${file.color}20`,
+          color: file.color,
+        }}
+      >
         <IconComponent />
       </Avatar>
     </ListItemIcon>
@@ -336,7 +398,7 @@ const RecentFileItem = React.memo<{
       secondary={file.type}
       slotProps={{
         primary: { sx: { color: 'text.primary', fontWeight: 500 } },
-        secondary: { sx: { color: 'text.secondary' } }
+        secondary: { sx: { color: 'text.secondary' } },
       }}
     />
   </ListItemButton>

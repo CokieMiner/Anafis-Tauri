@@ -76,7 +76,7 @@ pub async fn check_unit_compatibility(from_unit: String, to_unit: String) -> Com
 
 #[command]
 pub async fn get_available_units() -> CommandResult<HashMap<String, UnitInfo>> {
-    with_converter(|converter| converter.get_available_units())
+    with_converter(super::core::UnitConverter::get_available_units)
 }
 
 // ===== QUICK CONVERSION FOR MENU BUTTONS =====
@@ -111,14 +111,14 @@ pub async fn get_conversion_factor(from_unit: String, to_unit: String) -> Comman
 pub async fn parse_unit_formula(unit_formula: String) -> Result<DimensionalAnalysisResult, String> {
     match with_converter_string_result(|converter| converter.parse_unit(&unit_formula)) {
         Ok(parsed) => Ok(DimensionalAnalysisResult {
-            unit_formula: unit_formula.clone(),
+            unit_formula,
             dimensional_formula: format_dimension(&parsed.dimension),
             si_factor: parsed.si_factor,
             is_valid: true,
             error_message: None,
         }),
         Err(e) => Ok(DimensionalAnalysisResult {
-            unit_formula: unit_formula.clone(),
+            unit_formula,
             dimensional_formula: String::new(),
             si_factor: 0.0,
             is_valid: false,
@@ -132,10 +132,10 @@ pub async fn analyze_dimensional_compatibility(
     unit1: String,
     unit2: String,
 ) -> Result<CompatibilityAnalysisResult, String> {
-    let parse1 = with_converter_string_result(|converter| converter.parse_unit(&unit1));
-    let parse2 = with_converter_string_result(|converter| converter.parse_unit(&unit2));
+    let result1 = with_converter_string_result(|converter| converter.parse_unit(&unit1));
+    let result2 = with_converter_string_result(|converter| converter.parse_unit(&unit2));
 
-    match (parse1, parse2) {
+    match (result1, result2) {
         (Ok(parsed1), Ok(parsed2)) => {
             let compatible = parsed1.dimension.is_compatible(&parsed2.dimension);
             let conversion_factor = if compatible {
@@ -164,8 +164,8 @@ pub async fn analyze_dimensional_compatibility(
             };
 
             Ok(CompatibilityAnalysisResult {
-                unit1: unit1.clone(),
-                unit2: unit2.clone(),
+                unit1,
+                unit2,
                 are_compatible: compatible,
                 unit1_formula: format_dimension(&parsed1.dimension),
                 unit2_formula: format_dimension(&parsed2.dimension),
@@ -175,7 +175,7 @@ pub async fn analyze_dimensional_compatibility(
         }
         (Err(e1), _) => Ok(CompatibilityAnalysisResult {
             unit1: unit1.clone(),
-            unit2: unit2.clone(),
+            unit2,
             are_compatible: false,
             unit1_formula: String::new(),
             unit2_formula: String::new(),
@@ -183,7 +183,7 @@ pub async fn analyze_dimensional_compatibility(
             analysis_details: format!("Error parsing {unit1}: {e1}"),
         }),
         (_, Err(e2)) => Ok(CompatibilityAnalysisResult {
-            unit1: unit1.clone(),
+            unit1,
             unit2: unit2.clone(),
             are_compatible: false,
             unit1_formula: String::new(),
@@ -236,7 +236,7 @@ pub async fn get_supported_categories() -> CommandResult<Vec<String>> {
         "temperature",
         "other",
     ];
-    Ok(SUPPORTED_CATEGORIES.iter().map(|c| c.to_string()).collect())
+    Ok(SUPPORTED_CATEGORIES.iter().map(std::string::ToString::to_string).collect())
 }
 
 // ===== HELPER FUNCTIONS =====

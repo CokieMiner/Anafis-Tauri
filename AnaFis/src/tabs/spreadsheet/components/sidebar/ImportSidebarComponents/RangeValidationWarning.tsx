@@ -1,5 +1,5 @@
-import React from 'react';
 import { Box, Typography } from '@mui/material';
+import type React from 'react';
 import type { ImportResult } from '@/core/types/import';
 
 interface RangeValidationWarningProps {
@@ -9,7 +9,9 @@ interface RangeValidationWarningProps {
 /**
  * Reusable component for displaying range validation warnings
  */
-export const RangeValidationWarning: React.FC<RangeValidationWarningProps> = ({ validation }) => {
+export const RangeValidationWarning: React.FC<RangeValidationWarningProps> = ({
+  validation,
+}) => {
   if (!validation) {
     return null;
   }
@@ -41,17 +43,22 @@ export const RangeValidationWarning: React.FC<RangeValidationWarningProps> = ({ 
       {/* Validation warnings */}
       {validation.warnings.length > 0 && (
         <Box>
-          {validation.warnings.map((warning: string, index: number) => (
+          {validation.warnings.map((warning: string) => (
             <Typography
-              key={index}
+              key={warning}
               sx={{
-                color: validation.willTruncate ? '#ffb74d' : 'rgba(255, 255, 255, 0.7)',
+                color: validation.willTruncate
+                  ? '#ffb74d'
+                  : 'rgba(255, 255, 255, 0.7)',
                 fontSize: 10,
                 mb: 0.5,
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 0.5,
-                mt: !validation.willTruncate && validation.selectedRange ? 0.5 : 0,
+                mt:
+                  !validation.willTruncate && validation.selectedRange
+                    ? 0.5
+                    : 0,
               }}
             >
               <span style={{ fontSize: '8px', marginTop: '1px' }}>

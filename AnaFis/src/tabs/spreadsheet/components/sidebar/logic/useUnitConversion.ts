@@ -5,8 +5,8 @@
  * including state management, validation, and conversion calculations.
  */
 
-import { useState, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useCallback, useEffect, useState } from 'react';
 
 interface UseUnitConversionOptions {
   onSelectionChange?: (selection: string) => void;
@@ -47,8 +47,12 @@ export function useUnitConversion({
   const [toUnit, setToUnit] = useState<string>('');
   const [value, setValue] = useState<string>('1');
   const [isConverting, setIsConverting] = useState<boolean>(false);
-  const [lastResult, setLastResult] = useState<UnitConversionResult | null>(null);
-  const [availableUnits, setAvailableUnits] = useState<Record<string, UnitInfo>>({});
+  const [lastResult, setLastResult] = useState<UnitConversionResult | null>(
+    null
+  );
+  const [availableUnits, setAvailableUnits] = useState<
+    Record<string, UnitInfo>
+  >({});
   const [unitCategories, setUnitCategories] = useState<string[]>([]);
 
   // Load available units and categories on mount
@@ -57,7 +61,7 @@ export function useUnitConversion({
       try {
         const [units, categories] = await Promise.all([
           invoke<Record<string, UnitInfo>>('get_available_units'),
-          invoke<string[]>('get_supported_categories')
+          invoke<string[]>('get_supported_categories'),
         ]);
         setAvailableUnits(units);
         setUnitCategories(categories);
@@ -70,22 +74,25 @@ export function useUnitConversion({
   }, []);
 
   // Get available units for selected category
-  const getUnitsForCategory = useCallback((selectedCategory: string): string[] => {
-    if (!selectedCategory) {
-      return [];
-    }
+  const getUnitsForCategory = useCallback(
+    (selectedCategory: string): string[] => {
+      if (!selectedCategory) {
+        return [];
+      }
 
-    return Object.values(availableUnits)
-      .filter(unit => unit.category === selectedCategory)
-      .map(unit => unit.symbol)
-      .sort();
-  }, [availableUnits]);
+      return Object.values(availableUnits)
+        .filter((unit) => unit.category === selectedCategory)
+        .map((unit) => unit.symbol)
+        .sort();
+    },
+    [availableUnits]
+  );
 
   // Perform unit conversion using Rust backend
   const convert = useCallback(async (): Promise<UnitConversionResult> => {
     try {
       const numValue = parseFloat(value);
-      if (isNaN(numValue)) {
+      if (Number.isNaN(numValue)) {
         return { success: false, error: 'Invalid numeric value' };
       }
 
@@ -97,7 +104,7 @@ export function useUnitConversion({
         return {
           success: true,
           result: numValue,
-          formattedResult: `${numValue} ${fromUnit} = ${numValue} ${toUnit}`
+          formattedResult: `${numValue} ${fromUnit} = ${numValue} ${toUnit}`,
         };
       }
 
@@ -108,17 +115,19 @@ export function useUnitConversion({
         to_unit: toUnit,
       };
 
-      const result = await invoke<ConversionResult>('convert_value', { request });
+      const result = await invoke<ConversionResult>('convert_value', {
+        request,
+      });
 
       return {
         success: true,
         result: result.value,
-        formattedResult: result.formatted_result
+        formattedResult: result.formatted_result,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Conversion failed'
+        error: error instanceof Error ? error.message : 'Conversion failed',
       };
     }
   }, [value, category, fromUnit, toUnit]);
@@ -135,9 +144,12 @@ export function useUnitConversion({
   }, [convert]);
 
   // Handle selection change
-  const handleSelectionChange = useCallback((selection: string) => {
-    onSelectionChange?.(selection);
-  }, [onSelectionChange]);
+  const handleSelectionChange = useCallback(
+    (selection: string) => {
+      onSelectionChange?.(selection);
+    },
+    [onSelectionChange]
+  );
 
   // Clear result
   const clearResult = useCallback(() => {

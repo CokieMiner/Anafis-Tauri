@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, IconButton, useTheme } from '@mui/material';
-import { Close, Minimize, CropSquare } from '@mui/icons-material';
+import { Close, CropSquare, Minimize } from '@mui/icons-material';
+import { Box, IconButton, Typography, useTheme } from '@mui/material';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 // Define Tauri window interface
 interface TauriWindow {
@@ -63,7 +64,10 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
           setWindowReady(false);
         }
       } catch (error) {
-        console.error('Failed to get current window - not in Tauri environment:', error);
+        console.error(
+          'Failed to get current window - not in Tauri environment:',
+          error
+        );
         setIsTauri(false);
         setWindowReady(false);
 
@@ -98,7 +102,6 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
       // Method 1: Standard Tauri API
       return getCurrentWindow();
     } catch {
-
       // Method 2: Direct global access
       if (typeof window !== 'undefined') {
         const win = window as Window & TauriGlobal;
@@ -208,9 +211,13 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: This is a custom title bar acting as a drag region
     <div
       data-tauri-drag-region
-      onDoubleClick={() => { handleDoubleClick().catch(console.error); return; }}
+      onDoubleClick={() => {
+        handleDoubleClick().catch(console.error);
+        return;
+      }}
       style={{
         height: '36px',
         background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
@@ -235,17 +242,32 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
       >
         <div
           data-tauri-drag-region
-          style={{ display: 'flex', alignItems: 'center', minWidth: 0, height: '100%' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            minWidth: 0,
+            height: '100%',
+          }}
         >
           <div
             data-tauri-drag-region
-            style={{ display: 'flex', alignItems: 'center', height: '100%', marginRight: '6px' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              height: '100%',
+              marginRight: '6px',
+            }}
           >
             {getTabIcon()}
           </div>
           <div
             data-tauri-drag-region
-            style={{ display: 'flex', alignItems: 'center', height: '100%', minWidth: 0 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              height: '100%',
+              minWidth: 0,
+            }}
           >
             <Typography
               variant="body2"
@@ -261,7 +283,8 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
                 textOverflow: 'ellipsis',
                 opacity: 0.95,
                 pointerEvents: 'none',
-              }}>
+              }}
+            >
               {title}
             </Typography>
           </div>
@@ -274,10 +297,21 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            backgroundColor: isTauri && windowReady ? theme.palette.success.main : isTauri ? theme.palette.warning.main : theme.palette.error.main,
+            backgroundColor:
+              isTauri && windowReady
+                ? theme.palette.success.main
+                : isTauri
+                  ? theme.palette.warning.main
+                  : theme.palette.error.main,
             boxShadow: '0 0 4px rgba(0, 0, 0, 0.3)',
           }}
-          title={isTauri && windowReady ? 'Window controls ready' : isTauri ? 'Initializing...' : 'Not in Tauri environment'}
+          title={
+            isTauri && windowReady
+              ? 'Window controls ready'
+              : isTauri
+                ? 'Initializing...'
+                : 'Not in Tauri environment'
+          }
         />
       </div>
 
@@ -297,23 +331,36 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             width: '32px',
             height: '32px',
             borderRadius: 0,
-            color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+            color:
+              !isTauri || !windowReady
+                ? 'rgba(255, 255, 255, 0.3)'
+                : 'rgba(255, 255, 255, 0.8)',
             backgroundColor: 'transparent',
             border: 'none',
             outline: 'none',
             boxShadow: 'none',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.success.main} !important`,
-              color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : '#ffffff',
-              transform: (!isTauri || !windowReady) ? 'none' : 'scale(1.1)',
-              boxShadow: (!isTauri || !windowReady) ? 'none' : '0 2px 8px rgba(76, 175, 80, 0.4)',
+              backgroundColor:
+                !isTauri || !windowReady
+                  ? 'transparent'
+                  : `${theme.palette.success.main} !important`,
+              color:
+                !isTauri || !windowReady
+                  ? 'rgba(255, 255, 255, 0.3)'
+                  : '#ffffff',
+              transform: !isTauri || !windowReady ? 'none' : 'scale(1.1)',
+              boxShadow:
+                !isTauri || !windowReady
+                  ? 'none'
+                  : '0 2px 8px rgba(76, 175, 80, 0.4)',
               outline: 'none !important',
               border: 'none !important',
             },
             '&:active': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : '#388e3c !important',
-              transform: (!isTauri || !windowReady) ? 'none' : 'scale(0.95)',
+              backgroundColor:
+                !isTauri || !windowReady ? 'transparent' : '#388e3c !important',
+              transform: !isTauri || !windowReady ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',
               boxShadow: 'none !important',
@@ -344,23 +391,38 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             width: '32px',
             height: '32px',
             borderRadius: 0,
-            color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+            color:
+              !isTauri || !windowReady
+                ? 'rgba(255, 255, 255, 0.3)'
+                : 'rgba(255, 255, 255, 0.8)',
             backgroundColor: 'transparent',
             border: 'none',
             outline: 'none',
             boxShadow: 'none',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.secondary.main} !important`,
-              color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : '#ffffff',
-              transform: (!isTauri || !windowReady) ? 'none' : 'scale(1.1)',
-              boxShadow: (!isTauri || !windowReady) ? 'none' : `0 2px 8px ${theme.palette.secondary.main}40`,
+              backgroundColor:
+                !isTauri || !windowReady
+                  ? 'transparent'
+                  : `${theme.palette.secondary.main} !important`,
+              color:
+                !isTauri || !windowReady
+                  ? 'rgba(255, 255, 255, 0.3)'
+                  : '#ffffff',
+              transform: !isTauri || !windowReady ? 'none' : 'scale(1.1)',
+              boxShadow:
+                !isTauri || !windowReady
+                  ? 'none'
+                  : `0 2px 8px ${theme.palette.secondary.main}40`,
               outline: 'none !important',
               border: 'none !important',
             },
             '&:active': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.secondary.main} !important`,
-              transform: (!isTauri || !windowReady) ? 'none' : 'scale(0.95)',
+              backgroundColor:
+                !isTauri || !windowReady
+                  ? 'transparent'
+                  : `${theme.palette.secondary.main} !important`,
+              transform: !isTauri || !windowReady ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',
               boxShadow: 'none !important',
@@ -397,23 +459,38 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             width: '32px',
             height: '32px',
             borderRadius: 0,
-            color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+            color:
+              !isTauri || !windowReady
+                ? 'rgba(255, 255, 255, 0.3)'
+                : 'rgba(255, 255, 255, 0.8)',
             backgroundColor: 'transparent',
             border: 'none',
             outline: 'none',
             boxShadow: 'none',
             transition: 'all 0.2s ease-in-out',
             '&:hover': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.error.main} !important`,
-              color: (!isTauri || !windowReady) ? 'rgba(255, 255, 255, 0.3)' : '#ffffff',
-              transform: (!isTauri || !windowReady) ? 'none' : 'scale(1.1)',
-              boxShadow: (!isTauri || !windowReady) ? 'none' : '0 2px 8px rgba(244, 67, 54, 0.4)',
+              backgroundColor:
+                !isTauri || !windowReady
+                  ? 'transparent'
+                  : `${theme.palette.error.main} !important`,
+              color:
+                !isTauri || !windowReady
+                  ? 'rgba(255, 255, 255, 0.3)'
+                  : '#ffffff',
+              transform: !isTauri || !windowReady ? 'none' : 'scale(1.1)',
+              boxShadow:
+                !isTauri || !windowReady
+                  ? 'none'
+                  : '0 2px 8px rgba(244, 67, 54, 0.4)',
               outline: 'none !important',
               border: 'none !important',
             },
             '&:active': {
-              backgroundColor: (!isTauri || !windowReady) ? 'transparent' : `${theme.palette.error.dark} !important`,
-              transform: (!isTauri || !windowReady) ? 'none' : 'scale(0.95)',
+              backgroundColor:
+                !isTauri || !windowReady
+                  ? 'transparent'
+                  : `${theme.palette.error.dark} !important`,
+              transform: !isTauri || !windowReady ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',
               boxShadow: 'none !important',

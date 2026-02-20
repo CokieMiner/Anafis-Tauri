@@ -1,38 +1,42 @@
-// Optimized App.tsx 
-import React, { useCallback, lazy, useMemo, useRef, useEffect, useState } from 'react';
-import { Box } from '@mui/material';
+// Optimized App.tsx
+
 import {
   DndContext,
-  DragEndEvent,
-  DragStartEvent,
+  type DragEndEvent,
   DragOverlay,
+  type DragStartEvent,
   PointerSensor,
+  rectIntersection,
   useSensor,
   useSensors,
-  rectIntersection,
 } from '@dnd-kit/core';
-import { listen } from '@tauri-apps/api/event';
+import { Box } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
-
-// Components
-import { DraggableTabBar } from '@/shared/components/DraggableTabBar';
-import CustomTitleBar from '@/shared/components/CustomTitleBar';
-import AppToolbar from '@/shared/components/AppToolbar';
-import DragOverlayComponent from '@/shared/components/DragOverlayComponent';
-import OptimizedTabRenderer from '@/shared/components/OptimizedTabRenderer';
-
+import { listen } from '@tauri-apps/api/event';
+import React, {
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { NotificationProvider } from '@/core/contexts/NotificationContext';
 // Contexts
 import { WorkbookDataProvider } from '@/core/contexts/WorkbookDataContext';
-import { useWorkbookData } from '@/core/managers/WorkbookDataProvider';
-import { NotificationProvider } from '@/core/contexts/NotificationContext';
 import { useNotification } from '@/core/managers/NotificationManager';
-
 // Managers (State Management)
 import { useTabStore } from '@/core/managers/TabStateManager';
-
+import { useWorkbookData } from '@/core/managers/WorkbookDataProvider';
+import type { WorkbookData } from '@/core/types/import';
 // Types
 import type { Tab } from '@/core/types/tabs';
-import type { WorkbookData } from '@/core/types/import';
+import AppToolbar from '@/shared/components/AppToolbar';
+import CustomTitleBar from '@/shared/components/CustomTitleBar';
+// Components
+import { DraggableTabBar } from '@/shared/components/DraggableTabBar';
+import DragOverlayComponent from '@/shared/components/DragOverlayComponent';
+import OptimizedTabRenderer from '@/shared/components/OptimizedTabRenderer';
 
 // Lazy load tab components for code splitting
 const HomeTab = lazy(() => import('@/tabs/home/HomeTab'));
@@ -61,7 +65,7 @@ const CONTENT_AREA_STYLES = {
   width: '100%',
   overflow: 'hidden',
   margin: 0,
-  padding: 0
+  padding: 0,
 } as const;
 
 const TAB_CONTENT_STYLES = {
@@ -70,20 +74,28 @@ const TAB_CONTENT_STYLES = {
   bgcolor: '#0a0a0a',
   overflow: 'auto',
   width: '100%',
-  margin: 0
+  margin: 0,
 } as const;
 
 function App() {
   // Store and state
   const { tabs, activeTabId, addTab: storeAddTab, reorderTabs } = useTabStore();
-  
+
   // Contexts
   const { setPendingWorkbookData } = useWorkbookData();
-  const { showNotification } = useNotification();  // Drag state
+  const { showNotification } = useNotification(); // Drag state
   const [draggedTab, setDraggedTab] = useState<Tab | null>(null);
 
   // Ref to store handleAddTab function
-  const handleAddTabRef = useRef<((id: string, title: string, content: React.ReactNode, workbookData?: WorkbookData) => void) | null>(null);
+  const handleAddTabRef = useRef<
+    | ((
+        id: string,
+        title: string,
+        content: React.ReactNode,
+        workbookData?: WorkbookData
+      ) => void)
+    | null
+  >(null);
 
   // Memoized tab content factory
   const createTabContent = useCallback((tabType: string, tabId: string) => {
@@ -105,21 +117,29 @@ function App() {
   }, []);
 
   // Memoized add tab handler
-  const handleAddTab = useCallback((id: string, title: string, content: React.ReactNode, workbookData?: WorkbookData) => {
-    const tabType = id.split('-')[0] ?? 'home';
-    const newTab: Tab = {
-      id,
-      title,
-      content: content ?? createTabContent(tabType, id),
-      type: tabType
-    };
-    storeAddTab(newTab);
-    
-    // Store workbook data for later loading if provided
-    if (workbookData) {
-      setPendingWorkbookData(id, workbookData);
-    }
-  }, [storeAddTab, createTabContent, setPendingWorkbookData]);
+  const handleAddTab = useCallback(
+    (
+      id: string,
+      title: string,
+      content: React.ReactNode,
+      workbookData?: WorkbookData
+    ) => {
+      const tabType = id.split('-')[0] ?? 'home';
+      const newTab: Tab = {
+        id,
+        title,
+        content: content ?? createTabContent(tabType, id),
+        type: tabType,
+      };
+      storeAddTab(newTab);
+
+      // Store workbook data for later loading if provided
+      if (workbookData) {
+        setPendingWorkbookData(id, workbookData);
+      }
+    },
+    [storeAddTab, createTabContent, setPendingWorkbookData]
+  );
 
   // Update the ref after handleAddTab is defined
   useEffect(() => {
@@ -134,11 +154,11 @@ function App() {
         id: 'home',
         title: 'Home',
         content: createTabContent('home', 'home'),
-        type: 'home'
+        type: 'home',
       };
       storeAddTab(homeTab);
     }
-  }, [tabs.length, storeAddTab , createTabContent]);  
+  }, [tabs.length, storeAddTab, createTabContent]);
 
   // Listen for file open events from file associations
   useEffect(() => {
@@ -148,44 +168,53 @@ function App() {
       unlisten = await listen<string>('open-file', (event) => {
         const filePath = event.payload;
         console.log('File open requested:', filePath);
-        
+
         // Handle the async operation without returning a promise
         void (async () => {
           try {
             // Import the .anafispread file
-            const result = await invoke<{ success: boolean; message?: string; data?: { workbook: WorkbookData } }>(
-              'import_anafis_spread_direct',
-              { filePath }
-            );
+            const result = await invoke<{
+              success: boolean;
+              message?: string;
+              data?: { workbook: WorkbookData };
+            }>('import_anafis_spread_direct', { filePath });
 
             if (result.success && result.data?.workbook) {
               // Always create a new spreadsheet tab for each opened file
               // This allows users to have multiple files open simultaneously
-              const fileName = filePath.split('/').pop()?.replace('.anafispread', '') ?? 'Opened File';
+              const fileName =
+                filePath.split('/').pop()?.replace('.anafispread', '') ??
+                'Opened File';
               const tabId = `spreadsheet-opened-${Date.now()}`;
-              handleAddTabRef.current?.(tabId, fileName, undefined, result.data.workbook);
+              handleAddTabRef.current?.(
+                tabId,
+                fileName,
+                undefined,
+                result.data.workbook
+              );
             } else if (!result.success) {
               // Show error notification for failed import
               const errorMessage = result.message ?? 'Unknown import error';
               showNotification({
                 type: 'error',
-                message: `Failed to open file "${filePath.split('/').pop()}": ${errorMessage}`
+                message: `Failed to open file "${filePath.split('/').pop()}": ${errorMessage}`,
               });
             } else {
               // Show error for successful import but missing workbook data
               showNotification({
                 type: 'error',
-                message: `Failed to open file "${filePath.split('/').pop()}": Invalid file format or corrupted data`
+                message: `Failed to open file "${filePath.split('/').pop()}": Invalid file format or corrupted data`,
               });
             }
           } catch (error) {
             console.error('Failed to open file:', error);
             // Show user-facing error notification
             const fileName = filePath.split('/').pop() ?? 'Unknown file';
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            const errorMessage =
+              error instanceof Error ? error.message : 'Unknown error occurred';
             showNotification({
               type: 'error',
-              message: `Failed to open file "${fileName}": ${errorMessage}`
+              message: `Failed to open file "${fileName}": ${errorMessage}`,
             });
           }
         })();
@@ -199,82 +228,79 @@ function App() {
         unlisten();
       }
     };
-  }, [handleAddTab, showNotification]);
-  
+  }, [showNotification]);
+
   // Drag and drop setup
   const sensors = useSensors(useSensor(PointerSensor));
 
   // Memoized drag handlers
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const tab = tabs.find((t: Tab) => t.id === event.active.id);
-    setDraggedTab(tab ?? null);
-  }, [tabs]);
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const tab = tabs.find((t: Tab) => t.id === event.active.id);
+      setDraggedTab(tab ?? null);
+    },
+    [tabs]
+  );
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    setDraggedTab(null);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setDraggedTab(null);
 
-    if (over && active.id !== over.id) {
-      // Handle reordering
-      const activeIndex = tabs.findIndex((tab) => tab.id === active.id);
-      const overIndex = tabs.findIndex((tab) => tab.id === over.id);
-      if (activeIndex !== -1 && overIndex !== -1) {
-        reorderTabs(activeIndex, overIndex);
+      if (over && active.id !== over.id) {
+        // Handle reordering
+        const activeIndex = tabs.findIndex((tab) => tab.id === active.id);
+        const overIndex = tabs.findIndex((tab) => tab.id === over.id);
+        if (activeIndex !== -1 && overIndex !== -1) {
+          reorderTabs(activeIndex, overIndex);
+        }
       }
-    }
-  }, [tabs, reorderTabs]);
+    },
+    [tabs, reorderTabs]
+  );
 
   // Memoized content area height calculation
-  const contentAreaHeight = useMemo(() =>
-    'calc(100vh - 96px)'
-    , []);
+  const contentAreaHeight = useMemo(() => 'calc(100vh - 96px)', []);
 
   return (
-    <>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={rectIntersection}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rectIntersection}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <DragOverlay>
+        {draggedTab && <DragOverlayComponent draggedTab={draggedTab} />}
+      </DragOverlay>
+
+      <Box
+        sx={MAIN_CONTAINER_STYLES}
+        onContextMenu={(e: React.MouseEvent) => {
+          e.preventDefault();
+          return false;
+        }}
       >
-        <DragOverlay>
-          {draggedTab && <DragOverlayComponent draggedTab={draggedTab} />}
-        </DragOverlay>
+        {/* Custom Title Bar */}
+        <CustomTitleBar title="AnaFis" />
 
-        <Box
-          sx={MAIN_CONTAINER_STYLES}
-          onContextMenu={(e: React.MouseEvent) => {
-            e.preventDefault();
-            return false;
-          }}
-        >
-          {/* Custom Title Bar */}
-          <CustomTitleBar
-            title='AnaFis'
-          />
+        {/* Toolbar */}
+        <AppToolbar
+          onAddTab={handleAddTab}
+          createTabContent={createTabContent}
+        />
 
-          {/* Toolbar */}
-          <AppToolbar
-            onAddTab={handleAddTab}
-            createTabContent={createTabContent}
-          />
+        {/* Main Content Area */}
+        <Box sx={{ ...CONTENT_AREA_STYLES, height: contentAreaHeight }}>
+          {/* Tab Bar */}
+          <DraggableTabBar />
 
-          {/* Main Content Area */}
-          <Box sx={{ ...CONTENT_AREA_STYLES, height: contentAreaHeight }}>
-            {/* Tab Bar */}
-            <DraggableTabBar />
-
-            {/* Tab Content */}
-            <Box sx={TAB_CONTENT_STYLES}>
-              <OptimizedTabRenderer
-                tabs={tabs}
-                activeTabId={activeTabId}
-              />
-            </Box>
+          {/* Tab Content */}
+          <Box sx={TAB_CONTENT_STYLES}>
+            <OptimizedTabRenderer tabs={tabs} activeTabId={activeTabId} />
           </Box>
         </Box>
-      </DndContext>
-    </>
+      </Box>
+    </DndContext>
   );
 }
 

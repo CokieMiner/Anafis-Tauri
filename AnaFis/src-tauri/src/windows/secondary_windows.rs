@@ -8,12 +8,14 @@ use tracing::{error, info};
 use urlencoding;
 
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn close_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
     crate::windows::window_manager::close_window(&app, "uncertainty-calculator")
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn resize_uncertainty_calculator_window(
     app: AppHandle,
     width: f64,
@@ -24,7 +26,8 @@ pub fn resize_uncertainty_calculator_window(
 }
 
 #[tauri::command]
-pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
+pub fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
     let config = WindowConfig {
         title: "Uncertainty Calculator".to_string(),
         url: "uncertainty-calculator.html".to_string(),
@@ -45,12 +48,14 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
 }
 
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn close_settings_window(app: AppHandle) -> Result<(), String> {
     crate::windows::window_manager::close_window(&app, "settings").map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
+pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
     let config = WindowConfig {
         title: "AnaFis Settings".to_string(),
         url: "settings.html".to_string(),
@@ -71,12 +76,14 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn close_data_library_window(app: AppHandle) -> Result<(), String> {
     crate::windows::window_manager::close_window(&app, "data-library").map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
+pub fn open_data_library_window(app: AppHandle) -> Result<(), String> {
     let config = WindowConfig {
         title: "Data Library".to_string(),
         url: "data-library.html".to_string(),
@@ -97,6 +104,7 @@ pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub async fn open_latex_preview_window(
     app: AppHandle,
     latex_formula: String,
@@ -125,7 +133,7 @@ pub async fn open_latex_preview_window(
         // Register the destruction listener BEFORE calling destroy()
         // This ensures the listener is active when destroy() is called
         existing_window.on_window_event(move |event| {
-            if let WindowEvent::Destroyed = event {
+            if matches!(event, WindowEvent::Destroyed) {
                 notify_clone.notify_one();
             }
         });
@@ -141,21 +149,19 @@ pub async fn open_latex_preview_window(
                 destroy_err
             );
             return Err(format!(
-                "Failed to destroy existing window: {}",
-                destroy_err
+                "Failed to destroy existing window: {destroy_err}"
             ));
         }
 
         // Wait for the window to be fully destroyed with a shorter timeout
         // Treat timeout as a hard failure to prevent race conditions
-        match timeout(Duration::from_millis(500), notified_fut).await {
-            Ok(_) => info!("Existing LaTeX preview window destroyed successfully"),
-            Err(_) => {
-                error!(
-                    "Timeout waiting for window destruction - window may not be fully destroyed"
-                );
-                return Err("Failed to destroy existing window: timeout waiting for destruction confirmation".to_string());
-            }
+        if timeout(Duration::from_millis(500), notified_fut).await.is_ok() {
+            info!("Existing LaTeX preview window destroyed successfully");
+        } else {
+            error!(
+                "Timeout waiting for window destruction - window may not be fully destroyed"
+            );
+            return Err("Failed to destroy existing window: timeout waiting for destruction confirmation".to_string());
         }
     }
 

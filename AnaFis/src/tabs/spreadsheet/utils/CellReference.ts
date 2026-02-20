@@ -43,6 +43,7 @@ export interface ParsedRange {
   bounds: RangeBounds;
 }
 
+// biome-ignore lint/complexity/noStaticOnlyClass: Utility namespace for cell references
 export class CellReference {
   // Excel-style constants
   private static readonly ALPHABET_SIZE = 26;
@@ -78,9 +79,11 @@ export class CellReference {
     let index = columnIndex;
 
     while (index >= 0) {
-      const remainder = index % this.ALPHABET_SIZE;
-      result = String.fromCharCode(remainder + this.ASCII_UPPERCASE_A) + result;
-      index = Math.floor(index / this.ALPHABET_SIZE) - 1;
+      const remainder = index % CellReference.ALPHABET_SIZE;
+      result =
+        String.fromCharCode(remainder + CellReference.ASCII_UPPERCASE_A) +
+        result;
+      index = Math.floor(index / CellReference.ALPHABET_SIZE) - 1;
     }
 
     return result;
@@ -104,14 +107,15 @@ export class CellReference {
     }
 
     const normalized = columnLetter.toUpperCase();
-    if (!this.COLUMN_PATTERN.test(normalized)) {
+    if (!CellReference.COLUMN_PATTERN.test(normalized)) {
       throw new Error(`Invalid column letter format: ${columnLetter}`);
     }
 
     let result = 0;
     for (let i = 0; i < normalized.length; i++) {
-      result = result * this.ALPHABET_SIZE +
-               (normalized.charCodeAt(i) - this.ASCII_UPPERCASE_A + 1);
+      result =
+        result * CellReference.ALPHABET_SIZE +
+        (normalized.charCodeAt(i) - CellReference.ASCII_UPPERCASE_A + 1);
     }
 
     return result - 1; // Convert to 0-based
@@ -136,12 +140,14 @@ export class CellReference {
 
     const match = cellRef.match(/^([A-Z]+)([1-9]\d*)$/);
     if (!match) {
-      throw new Error(`Invalid cell reference format: ${cellRef}. Expected A1 notation like "A1" or "B10".`);
+      throw new Error(
+        `Invalid cell reference format: ${cellRef}. Expected A1 notation like "A1" or "B10".`
+      );
     }
 
-    const colStr = match[1]!;
-    const rowStr = match[2]!;
-    const col = this.letterToColumn(colStr);
+    const colStr = match[1] ?? 'A';
+    const rowStr = match[2] ?? '1';
+    const col = CellReference.letterToColumn(colStr);
     const row = parseInt(rowStr, 10) - 1; // Convert to 0-based
 
     if (row < 0) {
@@ -169,7 +175,7 @@ export class CellReference {
 
     // Handle single cell (no colon)
     if (!rangeRef.includes(':')) {
-      const coords = this.parseCell(rangeRef);
+      const coords = CellReference.parseCell(rangeRef);
       return {
         start: coords,
         end: coords,
@@ -177,21 +183,23 @@ export class CellReference {
           startCol: coords.col,
           startRow: coords.row,
           endCol: coords.col,
-          endRow: coords.row
-        }
+          endRow: coords.row,
+        },
       };
     }
 
     // Handle range (with colon)
-    const match = rangeRef.match(this.RANGE_PATTERN);
+    const match = rangeRef.match(CellReference.RANGE_PATTERN);
     if (!match) {
-      throw new Error(`Invalid range reference format: ${rangeRef}. Expected "A1:B2" or "C5:C5".`);
+      throw new Error(
+        `Invalid range reference format: ${rangeRef}. Expected "A1:B2" or "C5:C5".`
+      );
     }
 
-    const startCell = match[1]!;
-    const endCell = match[2]!;
-    const start = this.parseCell(startCell);
-    const end = this.parseCell(endCell);
+    const startCell = match[1] ?? 'A1';
+    const endCell = match[2] ?? 'A1';
+    const start = CellReference.parseCell(startCell);
+    const end = CellReference.parseCell(endCell);
 
     return {
       start,
@@ -200,8 +208,8 @@ export class CellReference {
         startCol: Math.min(start.col, end.col),
         startRow: Math.min(start.row, end.row),
         endCol: Math.max(start.col, end.col),
-        endRow: Math.max(start.row, end.row)
-      }
+        endRow: Math.max(start.row, end.row),
+      },
     };
   }
 
@@ -225,7 +233,7 @@ export class CellReference {
       throw new Error(`Column index must be a non-negative integer: ${col}`);
     }
 
-    const colLetter = this.columnToLetter(col);
+    const colLetter = CellReference.columnToLetter(col);
     const rowNumber = row + 1; // Convert to 1-based
     return `${colLetter}${rowNumber}`;
   }
@@ -241,8 +249,11 @@ export class CellReference {
    * CellReference.formatRange({startCol:0,startRow:0,endCol:1,endRow:1}) // "A1:B2"
    */
   static formatRange(bounds: RangeBounds): string {
-    const startCell = this.formatCell(bounds.startRow, bounds.startCol);
-    const endCell = this.formatCell(bounds.endRow, bounds.endCol);
+    const startCell = CellReference.formatCell(
+      bounds.startRow,
+      bounds.startCol
+    );
+    const endCell = CellReference.formatCell(bounds.endRow, bounds.endCol);
     return `${startCell}:${endCell}`;
   }
 
@@ -253,7 +264,7 @@ export class CellReference {
    * @returns true if valid cell reference
    */
   static isValidCell(cellRef: string): boolean {
-    return this.CELL_PATTERN.test(cellRef);
+    return CellReference.CELL_PATTERN.test(cellRef);
   }
 
   /**
@@ -264,9 +275,9 @@ export class CellReference {
    */
   static isValidRange(rangeRef: string): boolean {
     if (!rangeRef.includes(':')) {
-      return this.isValidCell(rangeRef);
+      return CellReference.isValidCell(rangeRef);
     }
-    return this.RANGE_PATTERN.test(rangeRef);
+    return CellReference.RANGE_PATTERN.test(rangeRef);
   }
 
   /**
@@ -276,6 +287,6 @@ export class CellReference {
    * @returns Range bounds
    */
   static getRangeBounds(rangeRef: string): RangeBounds {
-    return this.parseRange(rangeRef).bounds;
+    return CellReference.parseRange(rangeRef).bounds;
   }
 }

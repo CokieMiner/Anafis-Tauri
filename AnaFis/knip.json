@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/windows/SettingsWindow.tsx",
+    "src/windows/uncertaintyCalculator/UncertaintyCalculatorWindow.tsx",
+    "src/windows/uncertaintyCalculator/components/LatexPreviewWindow.tsx",
+    "src/windows/DataLibraryWindow.tsx"
+  ],
+  "project": ["src/**/*.{ts,tsx}"]
+}

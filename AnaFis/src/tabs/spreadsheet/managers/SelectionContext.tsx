@@ -1,4 +1,5 @@
-import React, { createContext, useRef, ReactNode } from 'react';
+import type React from 'react';
+import { createContext, type ReactNode, useRef } from 'react';
 
 type SelectionHandler = (cellRef: string) => void;
 
@@ -15,7 +16,9 @@ interface SelectionProviderProps {
   children: ReactNode;
 }
 
-export const SelectionProvider: React.FC<SelectionProviderProps> = ({ children }) => {
+export const SelectionProvider: React.FC<SelectionProviderProps> = ({
+  children,
+}) => {
   const handlersRef = useRef<Map<string, SelectionHandler>>(new Map());
 
   const registerHandler = (id: string, handler: SelectionHandler) => {

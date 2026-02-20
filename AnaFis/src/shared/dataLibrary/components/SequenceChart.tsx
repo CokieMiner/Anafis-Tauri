@@ -1,225 +1,87 @@
-import React, { useEffect, useRef, memo } from 'react';
 import { Box, Typography } from '@mui/material';
-import * as echarts from 'echarts';
+import type React from 'react';
+import { memo, useMemo } from 'react';
 import type { DataSequence } from '@/core/types/dataLibrary';
+import Plot from '@/shared/components/PlotlyChart';
+import {
+  ANAFIS_CHART_CONFIG,
+  ANAFIS_DARK_AXIS,
+  ANAFIS_DARK_LAYOUT,
+  CHART_COLORS,
+} from '@/shared/components/plotlyTheme';
 
 interface SequenceChartProps {
   sequence: DataSequence | null;
 }
 
 const SequenceChart: React.FC<SequenceChartProps> = memo(({ sequence }) => {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
-
-  // Initialize chart instance once
-  useEffect(() => {
-    if (!chartRef.current || chartInstanceRef.current) { return; }
-
-    // Create chart instance
-    chartInstanceRef.current = echarts.init(chartRef.current, null, {
-      renderer: 'canvas',
-      devicePixelRatio: 2,
-    });
-
-    // Set up responsive resize handling
-    let resizeTimeout: number | undefined = undefined;
-    const debouncedResize = () => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-      }
-      resizeTimeout = setTimeout(() => {
-        if (chartInstanceRef.current) {
-          chartInstanceRef.current.resize();
-        }
-      }, 100); // 100ms debounce
-    };
-
-    // Use ResizeObserver for container size changes (preferred over window resize)
-    let resizeObserver: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(debouncedResize);
-      resizeObserver.observe(chartRef.current);
-    } else {
-      // Fallback to window resize event if ResizeObserver not available
-      window.addEventListener('resize', debouncedResize);
+  const { data: traces, layout } = useMemo((): {
+    data: Plotly.Data[];
+    layout: Partial<Plotly.Layout>;
+  } => {
+    if (!sequence || sequence.data.length === 0) {
+      return { data: [], layout: ANAFIS_DARK_LAYOUT };
     }
 
-    return () => {
-      // Cleanup resize handling
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-      }
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      } else {
-        window.removeEventListener('resize', debouncedResize);
-      }
+    const xData = Array.from({ length: sequence.data.length }, (_, i) => i);
+    const yData = sequence.data;
 
-      // Cleanup chart instance
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.dispose();
-        chartInstanceRef.current = null;
-      }
-    };
-  }, []); // Empty dependency array - only run once on mount
-
-  // Update chart when sequence changes
-  useEffect(() => {
-    if (!chartInstanceRef.current) { return; }
-
-    // Always clear chart first
-    chartInstanceRef.current.clear();
-
-    // Exit early if no sequence is provided
-    if (!sequence) {
-      return;
-    }
-
-    // Set new data if sequence exists
-    const currentSequence = sequence;
-
-    // Create local copy of uncertainties to avoid modifying props
-    let uncertainties = currentSequence.uncertainties;
+    let uncertainties = sequence.uncertainties;
     if (!uncertainties || !Array.isArray(uncertainties)) {
-      console.warn('[SequenceChart] Sequence uncertainties is missing or not an array, using empty array:', currentSequence);
       uncertainties = [];
     }
-
-    // Validate data length alignment
-    const dataLength = currentSequence.data.length;
-    const uncertaintiesLength = uncertainties.length;
-
-    if (dataLength === 0) {
-      console.warn('[SequenceChart] Sequence data is empty');
-      return;
+    if (uncertainties.length > 0 && uncertainties.length !== yData.length) {
+      console.warn(`[SequenceChart] Uncertainties length mismatch, truncating`);
+      uncertainties = uncertainties.slice(0, yData.length);
     }
 
-    if (uncertaintiesLength > 0 && uncertaintiesLength !== dataLength) {
-      console.warn(`[SequenceChart] Uncertainties length (${uncertaintiesLength}) doesn't match data length (${dataLength}), truncating uncertainties`);
-      uncertainties = uncertainties.slice(0, dataLength);
-    }
-
-    const xData = Array.from({ length: dataLength }, (_, i) => i);
-    const yData = currentSequence.data;
-    const errorData = uncertainties;
-    const series: echarts.SeriesOption[] = [
-      {
-        name: currentSequence.name,
-        type: 'line',
-        data: xData.map((x, i) => [x, yData[i]]),
-        showSymbol: true,
-        symbolSize: 4,
-        itemStyle: { color: '#90caf9' },
-        lineStyle: { color: '#90caf9', width: 2 },
-      },
-    ];
-
-      // Add error bars if uncertainties exist
-      if (errorData.length > 0) {
-        series.push({
-          name: 'Uncertainties',
-          type: 'custom',
-          renderItem: (_params: echarts.CustomSeriesRenderItemParams, api: echarts.CustomSeriesRenderItemAPI) => {
-            const point = api.coord([api.value(0), api.value(1)]);
-            const errorValue = api.value(2) as number;
-            const yTop = api.coord([api.value(0), (api.value(1) as number) + errorValue]);
-            const yBottom = api.coord([api.value(0), (api.value(1) as number) - errorValue]);
-
-          // Ensure all coordinates are valid numbers
-          if (typeof point[0] !== 'number' || typeof point[1] !== 'number' ||
-              typeof yTop[1] !== 'number' || typeof yBottom[1] !== 'number') {
-            return null;
-          }
-
-          return {
-            type: 'group',
-            children: [
-              {
-                type: 'line',
-                shape: {
-                  x1: point[0],
-                  y1: yTop[1],
-                  x2: point[0],
-                  y2: yBottom[1]
-                },
-                style: { stroke: '#f44336', lineWidth: 1.5 },
-              },
-              {
-                type: 'line',
-                shape: {
-                  x1: point[0] - 4,
-                  y1: yTop[1],
-                  x2: point[0] + 4,
-                  y2: yTop[1]
-                },
-                style: { stroke: '#f44336', lineWidth: 1.5 },
-              },
-              {
-                type: 'line',
-                shape: {
-                  x1: point[0] - 4,
-                  y1: yBottom[1],
-                  x2: point[0] + 4,
-                  y2: yBottom[1]
-                },
-                style: { stroke: '#f44336', lineWidth: 1.5 },
-              },
-            ],
-          };
-        },
-        data: xData.map((x, i) => [x, yData[i], errorData[i]]),
-        z: 1,
-        silent: true,
-      });
-    }
-
-    const option: echarts.EChartsOption = {
-      backgroundColor: 'transparent',
-      grid: {
-        left: 60,
-        right: 20,
-        top: 20,
-        bottom: 40,
-        containLabel: false,
-      },
-      xAxis: {
-        type: 'value',
-        name: 'Index',
-        nameLocation: 'middle',
-        nameGap: 30,
-        nameTextStyle: { color: '#ffffff', fontSize: 11 },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.3)' } },
-        axisLabel: { color: '#ffffff', fontSize: 10 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      },
-      yAxis: {
-        type: 'value',
-        name: `${currentSequence.name} (${currentSequence.unit})`,
-        nameLocation: 'middle',
-        nameGap: 45,
-        nameTextStyle: { color: '#ffffff', fontSize: 11 },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.3)' } },
-        axisLabel: { color: '#ffffff', fontSize: 10 },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      },
-      series,
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross' },
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        borderColor: '#90caf9',
-        textStyle: { color: '#ffffff' },
-      },
+    const trace: Plotly.Data = {
+      x: xData,
+      y: yData,
+      mode: 'lines+markers',
+      type: 'scatter',
+      name: sequence.name,
+      marker: { color: CHART_COLORS.line, size: 4 },
+      line: { color: CHART_COLORS.line, width: 2 },
     };
 
-    chartInstanceRef.current.setOption(option, true);
+    if (uncertainties.length > 0) {
+      trace.error_y = {
+        type: 'data',
+        array: uncertainties,
+        visible: true,
+        color: CHART_COLORS.error,
+        thickness: 1.5,
+        width: 4,
+      };
+    }
+
+    return {
+      data: [trace],
+      layout: {
+        ...ANAFIS_DARK_LAYOUT,
+        xaxis: {
+          ...ANAFIS_DARK_AXIS,
+          title: { text: 'Index', font: { color: '#aaa', size: 11 } },
+        },
+        yaxis: {
+          ...ANAFIS_DARK_AXIS,
+          title: {
+            text: `${sequence.name} (${sequence.unit})`,
+            font: { color: '#aaa', size: 11 },
+          },
+        },
+        hovermode: 'closest',
+      },
+    };
   }, [sequence]);
 
   return (
     <Box sx={{ bgcolor: 'background.paper', p: 2, borderRadius: 1 }}>
-      <Typography variant="h6" gutterBottom>Chart Preview</Typography>
+      <Typography variant="h6" gutterBottom>
+        Chart Preview
+      </Typography>
       <Box
-        ref={chartRef}
         sx={{
           width: '100%',
           height: 300,
@@ -228,10 +90,18 @@ const SequenceChart: React.FC<SequenceChartProps> = memo(({ sequence }) => {
           justifyContent: 'center',
         }}
       >
-        {!sequence && (
+        {!sequence ? (
           <Typography variant="h6" color="text.secondary">
             Select a sequence to view chart
           </Typography>
+        ) : (
+          <Plot
+            data={traces}
+            layout={layout}
+            config={ANAFIS_CHART_CONFIG}
+            useResizeHandler
+            style={{ width: '100%', height: '100%' }}
+          />
         )}
       </Box>
     </Box>

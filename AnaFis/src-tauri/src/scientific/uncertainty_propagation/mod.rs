@@ -1,10 +1,14 @@
 //! Uncertainty Propagation Module
 //!
-//! Generates Excel formulas and calculates uncertainty propagation using symb_anafis.
+//! Generates Excel formulas and calculates uncertainty propagation using `symb_anafis`.
 
+/// Numerical uncertainty propagation calculator.
 pub mod calculator;
+/// Confidence level conversions and validation.
 pub mod confidence;
+/// Tools for converting expressions to Excel formulas.
 pub mod excel_conversion;
+/// Shared types for uncertainty propagation.
 pub mod types;
 
 // Re-export calculator commands and types
@@ -20,38 +24,50 @@ use std::collections::{HashMap, HashSet};
 use symb_anafis::{parse, uncertainty_propagation};
 use thiserror::Error;
 
+/// Errors that can occur during uncertainty propagation.
 #[derive(Debug, Error)]
 pub enum UncertaintyError {
+    /// Failed to parse the mathematical formula.
     #[error("Formula parsing failed: {0}")]
     ParseError(String),
 
+    /// Errors during conversion to Excel formula.
     #[error("Excel conversion failed: {0}")]
     Conversion(#[from] excel_conversion::ConversionError),
 
+    /// Errors during confidence level conversions.
     #[error("Confidence calculation failed: {0}")]
     Confidence(#[from] confidence::ConfidenceError),
 
+    /// Errors during Excel range parsing.
     #[error("Range parsing failed: {0}")]
     Range(#[from] excel_conversion::RangeError),
 
+    /// Numerical failure during uncertainty propagation.
     #[error("Uncertainty propagation failed: {0}")]
     UncertaintyPropagation(String),
 
+    /// Variable has mismatched lengths between its value and uncertainty ranges.
     #[error("Variable '{0}' has mismatched value and uncertainty range lengths")]
     MismatchedVariableRanges(String),
 
+    /// Different variables have different range lengths.
     #[error("All variable ranges must have the same length")]
     MismatchedRangeLengths,
 }
 
 /// Generate Excel formulas for uncertainty propagation (synchronous)
+///
+/// # Errors
+/// Returns an error message if formula parsing or Excel conversion fails.
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned types for arguments")]
 pub fn generate_uncertainty_formulas(
     variables: Vec<Variable>,
     formula: String,
     output_confidence: f64,
 ) -> Result<UncertaintyFormulas, String> {
-    match generate_uncertainty_formulas_inner(variables, formula, output_confidence) {
+    match generate_uncertainty_formulas_inner(&variables, &formula, output_confidence) {
         Ok(result) => Ok(result),
         Err(e) => Ok(UncertaintyFormulas {
             value_formulas: vec![],
@@ -63,8 +79,8 @@ pub fn generate_uncertainty_formulas(
 }
 
 fn generate_uncertainty_formulas_inner(
-    variables: Vec<Variable>,
-    formula: String,
+    variables: &[Variable],
+    formula: &str,
     output_confidence: f64,
 ) -> Result<UncertaintyFormulas, UncertaintyError> {
     let formula_normalized = formula.to_lowercase();
@@ -74,8 +90,7 @@ fn generate_uncertainty_formulas_inner(
     for name in &normalized_var_names {
         if !seen.insert(name.clone()) {
             return Err(UncertaintyError::ParseError(format!(
-                "Variable names must be unique ignoring case (collision on '{}')",
-                name
+                "Variable names must be unique ignoring case (collision on '{name}')"
             )));
         }
     }
@@ -89,7 +104,7 @@ fn generate_uncertainty_formulas_inner(
     let mut row_count = 0;
     let mut var_info = Vec::new();
 
-    for var in &variables {
+    for var in variables {
         let val_range = parse_excel_range(&var.value_range)?;
         let unc_range = if var.uncertainty_range.is_empty() {
             None
@@ -114,7 +129,7 @@ fn generate_uncertainty_formulas_inner(
     let output_sigma = confidence_to_sigma(output_confidence)?;
 
     // Get uncertainty expression from symb_anafis
-    let all_vars: Vec<&str> = normalized_var_names.iter().map(|s| s.as_str()).collect();
+    let all_vars: Vec<&str> = normalized_var_names.iter().map(std::string::String::as_str).collect();
     let sigma_expr = uncertainty_propagation(&expr, &all_vars, None)
         .map_err(|e| UncertaintyError::UncertaintyPropagation(e.to_string()))?;
 
@@ -146,7 +161,7 @@ fn generate_uncertainty_formulas_inner(
                 let converted_sigma = if (conversion_factor - 1.0).abs() < 1e-10 {
                     sigma_cell.clone()
                 } else {
-                    format!("({}) * {}", sigma_cell, conversion_factor)
+                    format!("({sigma_cell}) * {conversion_factor}")
                 };
                 sigma_var_map.insert(format!("sigma_{}", name.to_lowercase()), converted_sigma);
             }
@@ -194,7 +209,7 @@ mod tests {
         ];
 
         let result =
-            generate_uncertainty_formulas_inner(variables, "sin(a) * b".to_string(), 95.0).unwrap();
+            generate_uncertainty_formulas_inner(&variables, "sin(a) * b", 95.0).unwrap();
 
         assert!(result.success);
         assert_eq!(result.uncertainty_formulas.len(), 2);
@@ -213,7 +228,7 @@ mod tests {
         }];
 
         let result =
-            generate_uncertainty_formulas_inner(variables, "AlotA^2".to_string(), 95.0).unwrap();
+            generate_uncertainty_formulas_inner(&variables, "AlotA^2", 95.0).unwrap();
         assert!(result.success);
         assert_eq!(result.value_formulas, vec!["=A1^2".to_string()]);
         assert!(!result.uncertainty_formulas[0].contains("sigma_alota"));

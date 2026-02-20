@@ -1,12 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     /* Bundler mode */
@@ -22,21 +18,7 @@
     /* Path mapping for cleaner imports */
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "@core/*": [
-        "src/core/*"
-      ],
-      "@shared/*": [
-        "src/shared/*"
-      ],
-      "@tabs/*": [
-        "src/tabs/*"
-      ],
-      "@windows/*": [
-        "src/windows/*"
-      ]
+      "@/*": ["src/*"]
     },
     /* Enhanced linting */
     "strict": true,
@@ -50,18 +32,10 @@
     /* Additional type checking */
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
-    "types": [
-      "vite/client"
-    ]
+    "types": ["vite/client"]
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src-tauri"
-  ],
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "src-tauri"],
   "references": [
     {
       "path": "./tsconfig.node.json"

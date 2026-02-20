@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 
 export interface Tab<TState = Record<string, unknown>> {
   id: string;

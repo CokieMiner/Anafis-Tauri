@@ -1,68 +1,63 @@
 // UniverSpreadsheet.tsx - Improved plugin mode with proper Facade API integration
-import { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
 // Extend window interface for instance tracking
 declare global {
-    interface Window {
-        __UNIVER_INSTANCES__?: Set<string>;
-    }
+  interface Window {
+    __UNIVER_INSTANCES__?: Set<string>;
+  }
 }
 
 import { useTheme } from '@mui/material';
 import {
-    IWorkbookData,
-    ICommandInfo,
-    IRange,
-    ICellData,
-    ICommandService,
-    IUniverInstanceService,
-    Workbook,
-    UniverInstanceType,
-    LocaleType,
-    mergeLocales,
-    Univer,
+  type ICellData,
+  type ICommandInfo,
+  ICommandService,
+  type IRange,
+  IUniverInstanceService,
+  type IWorkbookData,
+  LocaleType,
+  mergeLocales,
+  Univer,
+  UniverInstanceType,
+  type Workbook,
 } from '@univerjs/core';
-
-// LAYER 1: Core infrastructure plugins (no dependencies)
-import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
-import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
-import { UniverNetworkPlugin } from '@univerjs/network';
-
-// LAYER 2: UI and Document foundation
-import { UniverUIPlugin } from '@univerjs/ui';
 import { UniverDocsPlugin } from '@univerjs/docs';
 import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
-
+// Import locales
+import docsUIEnUS from '@univerjs/docs-ui/locale/en-US';
+import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
+// LAYER 1: Core infrastructure plugins (no dependencies)
+import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
+// LAYER 7: Find & Replace (depends on UI)
+import { UniverFindReplacePlugin } from '@univerjs/find-replace';
+import findReplaceEnUS from '@univerjs/find-replace/locale/en-US';
+import { UniverNetworkPlugin } from '@univerjs/network';
 // LAYER 3: Base Sheets (depends on Docs, UI, Engines)
 import { UniverSheetsPlugin } from '@univerjs/sheets';
-import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
-
-// LAYER 4: Formula extensions (depends on Sheets UI)
-import { IRegisterFunctionService, UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula';
-import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
-
-// LAYER 5: Number formatting (depends on Sheets UI)
-import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
-import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui';
-
+import sheetsEnUS from '@univerjs/sheets/locale/en-US';
 // LAYER 6: Filter functionality (depends on Sheets UI)
 import { UniverSheetsFilterPlugin } from '@univerjs/sheets-filter';
 import { UniverSheetsFilterUIPlugin } from '@univerjs/sheets-filter-ui';
-
-// LAYER 7: Find & Replace (depends on UI)
-import { UniverFindReplacePlugin } from '@univerjs/find-replace';
-import { UniverSheetsFindReplacePlugin } from '@univerjs/sheets-find-replace';
-
-// Import locales
-import docsUIEnUS from '@univerjs/docs-ui/locale/en-US';
-import sheetsEnUS from '@univerjs/sheets/locale/en-US';
-import sheetsFormulaEnUS from '@univerjs/sheets-formula/locale/en-US';
-import sheetsFormulaUIEnUS from '@univerjs/sheets-formula-ui/locale/en-US';
-import sheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
-import sheetsNumfmtUIEnUS from '@univerjs/sheets-numfmt-ui/locale/en-US';
-import uiEnUS from '@univerjs/ui/locale/en-US';
 import sheetsFilterUIEnUS from '@univerjs/sheets-filter-ui/locale/en-US';
-import findReplaceEnUS from '@univerjs/find-replace/locale/en-US';
+import { UniverSheetsFindReplacePlugin } from '@univerjs/sheets-find-replace';
+// LAYER 4: Formula extensions (depends on Sheets UI)
+import {
+  IRegisterFunctionService,
+  UniverSheetsFormulaPlugin,
+} from '@univerjs/sheets-formula';
+import sheetsFormulaEnUS from '@univerjs/sheets-formula/locale/en-US';
+import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
+import sheetsFormulaUIEnUS from '@univerjs/sheets-formula-ui/locale/en-US';
+// LAYER 5: Number formatting (depends on Sheets UI)
+import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
+import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui';
+import sheetsNumfmtUIEnUS from '@univerjs/sheets-numfmt-ui/locale/en-US';
+import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
+import sheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
+// LAYER 2: UI and Document foundation
+import { UniverUIPlugin } from '@univerjs/ui';
+import uiEnUS from '@univerjs/ui/locale/en-US';
 
 // Import styles FIRST - before Facade APIs
 // Styles must be loaded before Facade initialization
@@ -84,313 +79,383 @@ import '@univerjs/sheets-ui/facade';
 import '@univerjs/sheets-formula/facade';
 import '@univerjs/sheets-numfmt/facade';
 
-import { 
-  registerCustomFunctions,
-  rangeToA1,
+import {
   parseCellRef,
-  parseRange
+  parseRange,
+  rangeToA1,
+  registerCustomFunctions,
 } from '@/tabs/spreadsheet/univer/index';
 
 interface Props {
-    initialData: IWorkbookData;
-    onCellChange: (cellRef: string, value: ICellData) => void;
-    onFormulaIntercept: (cellRef: string, formula: string) => void;
-    onSelectionChange?: (cellRef: string) => void;
-    onUniverReady?: (univerInstance: Univer) => void;
-    tabId?: string; // Optional tab ID for better instance tracking
+  initialData: IWorkbookData;
+  onCellChange: (cellRef: string, value: ICellData) => void;
+  onFormulaIntercept: (cellRef: string, formula: string) => void;
+  onSelectionChange?: (cellRef: string) => void;
+  onUniverReady?: (univerInstance: Univer) => void;
+  tabId?: string; // Optional tab ID for better instance tracking
 }
 
 export interface UniverSpreadsheetRef {
-    updateCell: (cellRef: string, value: { v?: string | number; f?: string }) => void;
-    getCellValue: (cellRef: string) => string | number | null;
-    getRange: (rangeRef: string) => (string | number)[][];
-    univer: Univer | null;
+  updateCell: (
+    cellRef: string,
+    value: { v?: string | number; f?: string }
+  ) => void;
+  getCellValue: (cellRef: string) => string | number | null;
+  getRange: (rangeRef: string) => (string | number)[][];
+  univer: Univer | null;
 }
 
 const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
-    ({ initialData, onCellChange, onFormulaIntercept, onSelectionChange, onUniverReady, tabId }, ref) => {
-        const theme = useTheme();
-        const containerRef = useRef<HTMLDivElement>(null);
-        const univerRef = useRef<Univer | null>(null);
-        const isInitializedRef = useRef(false);
-        const onCellChangeRef = useRef(onCellChange);
-        const onFormulaInterceptRef = useRef(onFormulaIntercept);
-        const onSelectionChangeRef = useRef(onSelectionChange);
-        const onUniverReadyRef = useRef(onUniverReady);
-        // Generate unique container ID for this instance
-        const containerIdRef = useRef(
-            tabId && tabId.length > 0
-                ? `univer-container-${tabId}`
-                : `univer-container-${Math.random().toString(36).substring(2, 11)}`
+  (
+    {
+      initialData,
+      onCellChange,
+      onFormulaIntercept,
+      onSelectionChange,
+      onUniverReady,
+      tabId,
+    },
+    ref
+  ) => {
+    const theme = useTheme();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const univerRef = useRef<Univer | null>(null);
+    const isInitializedRef = useRef(false);
+    const onCellChangeRef = useRef(onCellChange);
+    const onFormulaInterceptRef = useRef(onFormulaIntercept);
+    const onSelectionChangeRef = useRef(onSelectionChange);
+    const onUniverReadyRef = useRef(onUniverReady);
+    // Generate unique container ID for this instance
+    const containerIdRef = useRef(
+      tabId && tabId.length > 0
+        ? `univer-container-${tabId}`
+        : `univer-container-${Math.random().toString(36).substring(2, 11)}`
+    );
+
+    // Keep refs updated
+    useEffect(() => {
+      onCellChangeRef.current = onCellChange;
+      onFormulaInterceptRef.current = onFormulaIntercept;
+      onSelectionChangeRef.current = onSelectionChange;
+      onUniverReadyRef.current = onUniverReady;
+    }, [onCellChange, onFormulaIntercept, onSelectionChange, onUniverReady]);
+
+    useImperativeHandle(ref, () => ({
+      updateCell: (
+        cellRef: string,
+        value: { v?: string | number; f?: string }
+      ) => {
+        if (!univerRef.current) {
+          return;
+        }
+
+        try {
+          const injector = univerRef.current.__getInjector();
+          const commandService = injector.get(ICommandService);
+          const instanceService = injector.get(IUniverInstanceService);
+          const workbook = instanceService.getFocusedUnit() as Workbook;
+          const activeSheet = workbook.getActiveSheet();
+          const indices = parseCellRef(cellRef);
+          if (!indices) {
+            return;
+          }
+
+          const { row, col: colIndex } = indices;
+
+          const cellValue = typeof value === 'object' ? value : { v: value };
+
+          void commandService.executeCommand('sheet.command.set-range-values', {
+            unitId: workbook.getUnitId(),
+            subUnitId: activeSheet.getSheetId(),
+            range: {
+              startRow: row,
+              startColumn: colIndex,
+              endRow: row,
+              endColumn: colIndex,
+            },
+            value: [[cellValue]],
+          });
+        } catch (error) {
+          console.error('Failed to update cell:', error);
+        }
+      },
+      getCellValue: (cellRef: string): string | number | null => {
+        if (!univerRef.current) {
+          return null;
+        }
+
+        try {
+          const injector = univerRef.current.__getInjector();
+          const instanceService = injector.get(IUniverInstanceService);
+          const workbook = instanceService.getFocusedUnit() as Workbook;
+          const activeSheet = workbook.getActiveSheet();
+          const indices = parseCellRef(cellRef);
+          if (!indices) {
+            return null;
+          }
+
+          const { row, col: colIndex } = indices;
+
+          const cellData = activeSheet.getCellRaw(row, colIndex);
+          if (!cellData) {
+            return null;
+          }
+
+          return cellData.v !== undefined
+            ? (cellData.v as string | number)
+            : null;
+        } catch (error) {
+          console.error('Failed to get cell value:', error);
+          return null;
+        }
+      },
+      getRange: (rangeRef: string): (string | number)[][] => {
+        if (!univerRef.current) {
+          return [];
+        }
+
+        try {
+          const injector = univerRef.current.__getInjector();
+          const instanceService = injector.get(IUniverInstanceService);
+          const workbook = instanceService.getFocusedUnit() as Workbook;
+          const activeSheet = workbook.getActiveSheet();
+          const parsedRange = parseRange(rangeRef);
+          if (!parsedRange) {
+            return [];
+          }
+
+          const {
+            startCol: startColIndex,
+            startRow,
+            endCol: endColIndex,
+            endRow,
+          } = parsedRange;
+
+          const result: (string | number)[][] = [];
+          for (let row = startRow; row <= endRow; row++) {
+            const rowValues: (string | number)[] = [];
+            for (let col = startColIndex; col <= endColIndex; col++) {
+              const cellData = activeSheet.getCellRaw(row, col);
+              const value =
+                cellData && cellData.v !== undefined
+                  ? (cellData.v as string | number)
+                  : '';
+              rowValues.push(value);
+            }
+            result.push(rowValues);
+          }
+
+          return result;
+        } catch (error) {
+          console.error('Failed to get range:', error);
+          return [];
+        }
+      },
+      get univer() {
+        return univerRef.current;
+      },
+    }));
+
+    useEffect(() => {
+      if (!containerRef.current || isInitializedRef.current) {
+        return;
+      }
+
+      const containerId = containerIdRef.current;
+
+      // Track active instances to help with debugging
+      window.__UNIVER_INSTANCES__ ??= new Set();
+
+      isInitializedRef.current = true;
+      window.__UNIVER_INSTANCES__.add(containerId);
+
+      if (import.meta.env.DEV) {
+        console.log(
+          `Initializing Univer instance for container: ${containerIdRef.current}`
         );
+        console.log(`Active instances: ${window.__UNIVER_INSTANCES__.size}`);
+      }
 
-        // Keep refs updated
-        useEffect(() => {
-            onCellChangeRef.current = onCellChange;
-            onFormulaInterceptRef.current = onFormulaIntercept;
-            onSelectionChangeRef.current = onSelectionChange;
-            onUniverReadyRef.current = onUniverReady;
-        }, [onCellChange, onFormulaIntercept, onSelectionChange, onUniverReady]);
+      // Create Univer instance with direct plugin registration
+      const univer = new Univer({
+        darkMode: true,
+        locale: LocaleType.EN_US,
+        locales: {
+          [LocaleType.EN_US]: mergeLocales(
+            docsUIEnUS,
+            sheetsEnUS,
+            sheetsFormulaEnUS,
+            sheetsFormulaUIEnUS,
+            sheetsUIEnUS,
+            sheetsNumfmtUIEnUS,
+            uiEnUS,
+            sheetsFilterUIEnUS,
+            findReplaceEnUS
+          ),
+        },
+      });
 
-        useImperativeHandle(ref, () => ({
-            updateCell: (cellRef: string, value: { v?: string | number; f?: string }) => {
-                if (!univerRef.current) { return; }
+      // Register plugins in dependency order (simplified)
+      // Core infrastructure
+      univer.registerPlugin(UniverRenderEnginePlugin);
+      univer.registerPlugin(UniverFormulaEnginePlugin);
+      univer.registerPlugin(UniverNetworkPlugin);
 
-                try {
-                    const injector = univerRef.current.__getInjector();
-                    const commandService = injector.get(ICommandService);
-                    const instanceService = injector.get(IUniverInstanceService);
-                    const workbook = instanceService.getFocusedUnit() as Workbook;
-                    const activeSheet = workbook.getActiveSheet();
-                    const indices = parseCellRef(cellRef);
-                    if (!indices) { return; }
+      // UI foundation
+      univer.registerPlugin(UniverUIPlugin, {
+        container: containerIdRef.current,
+      });
+      univer.registerPlugin(UniverDocsPlugin, { hasScroll: false });
+      univer.registerPlugin(UniverDocsUIPlugin);
 
-                    const { row, col: colIndex } = indices;
+      // Sheets functionality
+      univer.registerPlugin(UniverSheetsPlugin);
+      univer.registerPlugin(UniverSheetsUIPlugin);
+      univer.registerPlugin(UniverSheetsFormulaPlugin);
+      univer.registerPlugin(UniverSheetsFormulaUIPlugin);
+      univer.registerPlugin(UniverSheetsNumfmtPlugin);
+      univer.registerPlugin(UniverSheetsNumfmtUIPlugin);
+      univer.registerPlugin(UniverSheetsFilterPlugin);
+      univer.registerPlugin(UniverSheetsFilterUIPlugin);
 
-                    const cellValue = typeof value === 'object' ? value : { v: value };
+      // Find & Replace
+      univer.registerPlugin(UniverFindReplacePlugin);
+      univer.registerPlugin(UniverSheetsFindReplacePlugin);
 
-                    void commandService.executeCommand('sheet.command.set-range-values', {
-                        unitId: workbook.getUnitId(),
-                        subUnitId: activeSheet.getSheetId(),
-                        range: {
-                            startRow: row,
-                            startColumn: colIndex,
-                            endRow: row,
-                            endColumn: colIndex
-                        },
-                        value: [[cellValue]]
-                    });
-                } catch (error) {
-                    console.error('Failed to update cell:', error);
-                }
-            },
-            getCellValue: (cellRef: string): string | number | null => {
-                if (!univerRef.current) { return null; }
+      univerRef.current = univer;
 
-                try {
-                    const injector = univerRef.current.__getInjector();
-                    const instanceService = injector.get(IUniverInstanceService);
-                    const workbook = instanceService.getFocusedUnit() as Workbook;
-                    const activeSheet = workbook.getActiveSheet();
-                    const indices = parseCellRef(cellRef);
-                    if (!indices) { return null; }
+      univer.createUnit(UniverInstanceType.UNIVER_SHEET, initialData);
 
-                    const { row, col: colIndex } = indices;
+      // Register custom mathematical functions with high precision
+      const injector = univer.__getInjector();
+      const formulaEngine = injector.get(IRegisterFunctionService);
 
-                    const cellData = activeSheet.getCellRaw(row, colIndex);
-                    if (!cellData) { return null; }
+      // Register custom mathematical functions with the formula engine
+      registerCustomFunctions(formulaEngine);
+      const commandService = injector.get(ICommandService);
 
-                    return cellData.v !== undefined ? cellData.v as string | number : null;
-                } catch (error) {
-                    console.error('Failed to get cell value:', error);
-                    return null;
-                }
-            },
-            getRange: (rangeRef: string): (string | number)[][] => {
-                if (!univerRef.current) { return []; }
+      // Disposal flag to prevent handlers from running after cleanup
+      let isDisposed = false;
 
-                try {
-                    const injector = univerRef.current.__getInjector();
-                    const instanceService = injector.get(IUniverInstanceService);
-                    const workbook = instanceService.getFocusedUnit() as Workbook;
-                    const activeSheet = workbook.getActiveSheet();
-                    const parsedRange = parseRange(rangeRef);
-                    if (!parsedRange) { return []; }
+      // Simplified event handling
+      const handleCommand = (command: ICommandInfo) => {
+        if (isDisposed) {
+          return;
+        }
 
-                    const { startCol: startColIndex, startRow, endCol: endColIndex, endRow } = parsedRange;
-
-                    const result: (string | number)[][] = [];
-                    for (let row = startRow; row <= endRow; row++) {
-                        const rowValues: (string | number)[] = [];
-                        for (let col = startColIndex; col <= endColIndex; col++) {
-                            const cellData = activeSheet.getCellRaw(row, col);
-                            const value = cellData && cellData.v !== undefined ? cellData.v as string | number : '';
-                            rowValues.push(value);
-                        }
-                        result.push(rowValues);
-                    }
-
-                    return result;
-                } catch (error) {
-                    console.error('Failed to get range:', error);
-                    return [];
-                }
-            },
-            get univer() {
-                return univerRef.current;
+        // Selection changes
+        if (command.id === 'sheet.operation.set-selections') {
+          const params = command.params as {
+            selections?: Array<{ range?: IRange }>;
+          };
+          if (params.selections?.[0]?.range) {
+            try {
+              const cellRef = rangeToA1(params.selections[0].range);
+              onSelectionChangeRef.current?.(cellRef);
+            } catch (error) {
+              console.warn(
+                '[UniverSpreadsheet] Error converting selection range:',
+                error
+              );
             }
-        }));
+          }
+          return;
+        }
 
-        useEffect(() => {
-            if (!containerRef.current || isInitializedRef.current) {
-                return;
-            }
+        // Cell changes and formula interception
+        if (
+          command.id === 'sheet.mutation.set-range-values' ||
+          command.id === 'sheet.command.set-range-values'
+        ) {
+          const params = command.params as {
+            range?: IRange;
+            value?: ICellData[][];
+          };
+          if (!params.range) {
+            return;
+          }
 
-            const containerId = containerIdRef.current;
+          try {
+            const cellRef = rangeToA1(params.range);
+            const cellValue = params.value?.[0]?.[0];
 
-            // Track active instances to help with debugging
-            window.__UNIVER_INSTANCES__ ??= new Set();
-
-            isInitializedRef.current = true;
-            window.__UNIVER_INSTANCES__.add(containerId);
-
-            if (import.meta.env.DEV) {
-                console.log(`Initializing Univer instance for container: ${containerIdRef.current}`);
-                console.log(`Active instances: ${window.__UNIVER_INSTANCES__.size}`);
-            }
-
-            // Create Univer instance with direct plugin registration
-            const univer = new Univer({
-                darkMode: true,
-                locale: LocaleType.EN_US,
-                locales: {
-                    [LocaleType.EN_US]: mergeLocales(
-                        docsUIEnUS,
-                        sheetsEnUS,
-                        sheetsFormulaEnUS,
-                        sheetsFormulaUIEnUS,
-                        sheetsUIEnUS,
-                        sheetsNumfmtUIEnUS,
-                        uiEnUS,
-                        sheetsFilterUIEnUS,
-                        findReplaceEnUS
-                    ),
-                },
-            });
-
-            // Register plugins in dependency order (simplified)
-            // Core infrastructure
-            univer.registerPlugin(UniverRenderEnginePlugin);
-            univer.registerPlugin(UniverFormulaEnginePlugin);
-            univer.registerPlugin(UniverNetworkPlugin);
-
-            // UI foundation
-            univer.registerPlugin(UniverUIPlugin, { container: containerIdRef.current });
-            univer.registerPlugin(UniverDocsPlugin, { hasScroll: false });
-            univer.registerPlugin(UniverDocsUIPlugin);
-
-            // Sheets functionality
-            univer.registerPlugin(UniverSheetsPlugin);
-            univer.registerPlugin(UniverSheetsUIPlugin);
-            univer.registerPlugin(UniverSheetsFormulaPlugin);
-            univer.registerPlugin(UniverSheetsFormulaUIPlugin);
-            univer.registerPlugin(UniverSheetsNumfmtPlugin);
-            univer.registerPlugin(UniverSheetsNumfmtUIPlugin);
-            univer.registerPlugin(UniverSheetsFilterPlugin);
-            univer.registerPlugin(UniverSheetsFilterUIPlugin);
-
-            // Find & Replace
-            univer.registerPlugin(UniverFindReplacePlugin);
-            univer.registerPlugin(UniverSheetsFindReplacePlugin);
-
-            univerRef.current = univer;
-
-            univer.createUnit(UniverInstanceType.UNIVER_SHEET, initialData);
-
-            // Register custom mathematical functions with high precision
-            const injector = univer.__getInjector();
-            const formulaEngine = injector.get(IRegisterFunctionService);
-
-            // Register custom mathematical functions with the formula engine
-            registerCustomFunctions(formulaEngine);
-            const commandService = injector.get(ICommandService);
-
-            // Disposal flag to prevent handlers from running after cleanup
-            let isDisposed = false;
-
-            // Simplified event handling
-            const handleCommand = (command: ICommandInfo) => {
-                if (isDisposed) {return;}
-
-                // Selection changes
-                if (command.id === 'sheet.operation.set-selections') {
-                    const params = command.params as { selections?: Array<{ range?: IRange }> };
-                    if (params.selections?.[0]?.range) {
-                        try {
-                            const cellRef = rangeToA1(params.selections[0].range);
-                            onSelectionChangeRef.current!(cellRef);
-                        } catch (error) {
-                            console.warn('[UniverSpreadsheet] Error converting selection range:', error);
-                        }
-                    }
-                    return;
-                }
-
-                // Cell changes and formula interception
-                if (command.id === 'sheet.mutation.set-range-values' || command.id === 'sheet.command.set-range-values') {
-                    const params = command.params as { range?: IRange; value?: ICellData[][] };
-                    if (!params.range) {return;}
-
-                    try {
-                        const cellRef = rangeToA1(params.range);
-                        const cellValue = params.value?.[0]?.[0];
-
-                        // Handle formula interception
-                        if (cellValue?.v && typeof cellValue.v === 'string' && cellValue.v.startsWith('=')) {
-                            onFormulaInterceptRef.current(cellRef, cellValue.v);
-                        }
-
-                        // Handle cell change for mutations
-                        if (command.id === 'sheet.mutation.set-range-values' && cellValue) {
-                            onCellChangeRef.current(cellRef, cellValue);
-                        }
-                    } catch (error) {
-                        console.warn('[UniverSpreadsheet] Error handling cell command:', error);
-                    }
-                }
-            };
-
-            const commandDisposable = commandService.onCommandExecuted(handleCommand);
-
-            // Notify parent that Univer is ready
-            if (onUniverReadyRef.current) {
-                onUniverReadyRef.current(univer);
+            // Handle formula interception
+            if (
+              cellValue?.v &&
+              typeof cellValue.v === 'string' &&
+              cellValue.v.startsWith('=')
+            ) {
+              onFormulaInterceptRef.current(cellRef, cellValue.v);
             }
 
-            return () => {
-                // Set disposal flag FIRST to stop all handlers immediately
-                isDisposed = true;
-                
-                if (import.meta.env.DEV) {
-                    console.log('Cleaning up Univer...');
-                }
+            // Handle cell change for mutations
+            if (command.id === 'sheet.mutation.set-range-values' && cellValue) {
+              onCellChangeRef.current(cellRef, cellValue);
+            }
+          } catch (error) {
+            console.warn(
+              '[UniverSpreadsheet] Error handling cell command:',
+              error
+            );
+          }
+        }
+      };
 
-                commandDisposable.dispose();
+      const commandDisposable = commandService.onCommandExecuted(handleCommand);
 
-                if (univerRef.current) {
-                    if (import.meta.env.DEV) {
-                        console.log(`Disposing Univer instance for container: ${containerId}`);
-                    }
-                    univerRef.current.dispose();
-                    univerRef.current = null;
-                }
+      // Notify parent that Univer is ready
+      if (onUniverReadyRef.current) {
+        onUniverReadyRef.current(univer);
+      }
 
-                // Remove from instance tracking
-                if (window.__UNIVER_INSTANCES__) {
-                    window.__UNIVER_INSTANCES__.delete(containerId);
-                    if (import.meta.env.DEV) {
-                        console.log(`Active instances after cleanup: ${window.__UNIVER_INSTANCES__.size}`);
-                    }
-                }
+      return () => {
+        // Set disposal flag FIRST to stop all handlers immediately
+        isDisposed = true;
 
-                isInitializedRef.current = false;
-            };
-        }, [initialData]);
+        if (import.meta.env.DEV) {
+          console.log('Cleaning up Univer...');
+        }
 
-        return (
-            <div
-                ref={containerRef}
-                id={containerIdRef.current}
-                className="univer-spreadsheet-container"
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    minHeight: '400px',
-                    backgroundColor: theme.palette.background.paper
-                }}
-            />
-        );
-    }
+        commandDisposable.dispose();
+
+        if (univerRef.current) {
+          if (import.meta.env.DEV) {
+            console.log(
+              `Disposing Univer instance for container: ${containerId}`
+            );
+          }
+          univerRef.current.dispose();
+          univerRef.current = null;
+        }
+
+        // Remove from instance tracking
+        if (window.__UNIVER_INSTANCES__) {
+          window.__UNIVER_INSTANCES__.delete(containerId);
+          if (import.meta.env.DEV) {
+            console.log(
+              `Active instances after cleanup: ${window.__UNIVER_INSTANCES__.size}`
+            );
+          }
+        }
+
+        isInitializedRef.current = false;
+      };
+    }, [initialData]);
+
+    return (
+      <div
+        ref={containerRef}
+        id={containerIdRef.current}
+        className="univer-spreadsheet-container"
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '400px',
+          backgroundColor: theme.palette.background.paper,
+        }}
+      />
+    );
+  }
 );
 
 export default UniverSpreadsheet;

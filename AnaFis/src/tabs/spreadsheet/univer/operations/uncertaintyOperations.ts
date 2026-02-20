@@ -1,14 +1,14 @@
 // uncertaintyOperations.ts - High-level uncertainty propagation operations
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { ValidationPipeline } from '@/tabs/spreadsheet/univer/utils/ValidationPipeline';
-import { Result, ok, err } from '@/core/types/result';
+
+import { err, ok, type Result } from '@/core/types/result';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import {
-  SpreadsheetError,
-  SpreadsheetErrorCode,
   ErrorCategory,
   ErrorSeverity,
+  logError,
   normalizeError,
-  logError
+  SpreadsheetError,
+  SpreadsheetErrorCode,
 } from '@/tabs/spreadsheet/univer/utils/errors';
 
 // Types for uncertainty operations
@@ -32,60 +32,6 @@ export interface PropagationResult {
 export interface PropagationError {
   message: string;
   code?: string;
-}
-
-/**
- * Validate the complete uncertainty propagation setup using the unified validation pipeline.
- *
- * @param variables - Array of input variables with ranges and confidence levels
- * @param outputValueRange - Range where result values will be written (e.g., "C1:C10")
- * @param outputUncertaintyRange - Range where result uncertainties will be written (e.g., "D1:D10")
- * @param spreadsheetRef - Reference to the spreadsheet API
- * @returns Promise resolving to Result with validation success or detailed error
- */
-export async function validateUncertaintySetup(
-  variables: Variable[],
-  outputValueRange: string,
-  outputUncertaintyRange: string,
-  spreadsheetRef: SpreadsheetRef
-): Promise<Result<void, ValidationError>> {
-  try {
-    // Use the unified validation pipeline
-    const validationResult = await ValidationPipeline.validateUncertaintySetup(
-      variables,
-      outputValueRange,
-      outputUncertaintyRange,
-      spreadsheetRef
-    );
-
-    if (!validationResult.isValid) {
-      // Return the first error as the main error
-      const firstError = validationResult.errors[0];
-      if (firstError) {
-        const error = new SpreadsheetError(
-          firstError.message,
-          SpreadsheetErrorCode.INVALID_RANGE,
-          ErrorCategory.VALIDATION,
-          ErrorSeverity.HIGH,
-          { operation: 'validateUncertaintySetup', context: { variables, outputValueRange, outputUncertaintyRange } }
-        );
-        logError(error);
-        return err({
-          message: error.message,
-          code: error.code
-        });
-      }
-    }
-
-    return ok(undefined);
-  } catch (error) {
-    const spreadsheetError = normalizeError(error, 'validateUncertaintySetup');
-    logError(spreadsheetError);
-    return err({
-      message: spreadsheetError.message,
-      code: spreadsheetError.code
-    });
-  }
 }
 
 /**
@@ -130,14 +76,14 @@ export async function runUncertaintyPropagation(
       success: boolean;
       error?: string;
     }>('generate_uncertainty_formulas', {
-      variables: variables.map(v => ({
+      variables: variables.map((v) => ({
         name: v.name,
         value_range: v.valueRange,
         uncertainty_range: v.uncertaintyRange,
-        confidence: v.confidence
+        confidence: v.confidence,
       })),
       formula,
-      outputConfidence
+      outputConfidence,
     });
 
     if (!result.success || result.error) {
@@ -147,12 +93,15 @@ export async function runUncertaintyPropagation(
         SpreadsheetErrorCode.FORMULA_ERROR,
         ErrorCategory.DATA,
         ErrorSeverity.HIGH,
-        { operation: 'runUncertaintyPropagation', context: { variables, formula, outputConfidence } }
+        {
+          operation: 'runUncertaintyPropagation',
+          context: { variables, formula, outputConfidence },
+        }
       );
       logError(error);
       return err({
         message: error.message,
-        code: error.code
+        code: error.code,
       });
     }
 
@@ -162,33 +111,42 @@ export async function runUncertaintyPropagation(
     // PERFORMANCE OPTIMIZATION: Use direct formula insertion instead of triple conversion
     // This bypasses: String → CellValue[][] → ICellData[][] → Spreadsheet
     try {
-      await spreadsheetRef.insertFormulas(outputValueRange, result.value_formulas);
-      await spreadsheetRef.insertFormulas(outputUncertaintyRange, result.uncertainty_formulas);
+      await spreadsheetRef.insertFormulas(
+        outputValueRange,
+        result.value_formulas
+      );
+      await spreadsheetRef.insertFormulas(
+        outputUncertaintyRange,
+        result.uncertainty_formulas
+      );
     } catch (error) {
       const errorObj = new SpreadsheetError(
         `Failed to write formulas to spreadsheet: ${String(error)}. Make sure the output ranges are valid and writable.`,
         SpreadsheetErrorCode.OPERATION_FAILED,
         ErrorCategory.SYSTEM,
         ErrorSeverity.HIGH,
-        { operation: 'runUncertaintyPropagation', context: { outputValueRange, outputUncertaintyRange } }
+        {
+          operation: 'runUncertaintyPropagation',
+          context: { outputValueRange, outputUncertaintyRange },
+        }
       );
       logError(errorObj);
       return err({
         message: errorObj.message,
-        code: errorObj.code
+        code: errorObj.code,
       });
     }
 
     return ok({
       valueFormulas: result.value_formulas,
-      uncertaintyFormulas: result.uncertainty_formulas
+      uncertaintyFormulas: result.uncertainty_formulas,
     });
   } catch (error) {
     const spreadsheetError = normalizeError(error, 'runUncertaintyPropagation');
     logError(spreadsheetError);
     return err({
       message: spreadsheetError.message,
-      code: spreadsheetError.code
+      code: spreadsheetError.code,
     });
   }
 }

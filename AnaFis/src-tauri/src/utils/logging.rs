@@ -1,8 +1,8 @@
 // src-tauri/src/logging.rs
-use anyhow::Result;
 use std::fs::OpenOptions;
+use std::io::Result;
 use tracing::info;
-use tracing_subscriber::{EnvFilter, fmt, prelude::*};
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 /// Initialize structured logging with file and console output
 pub fn init_logging() -> Result<()> {
@@ -19,7 +19,6 @@ pub fn init_logging() -> Result<()> {
     let file_layer = fmt::layer().with_writer(file).with_ansi(false);
 
     let console_layer = fmt::layer().with_writer(std::io::stderr);
-
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .with(file_layer)

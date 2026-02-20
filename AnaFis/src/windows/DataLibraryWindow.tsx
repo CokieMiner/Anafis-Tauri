@@ -1,52 +1,57 @@
-import React, { useState, memo } from 'react';
-import ReactDOM from 'react-dom/client';
-import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 import {
-  ThemeProvider,
-  CssBaseline,
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Chip,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
-  FormControl,
-  InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Stack,
-  Alert,
-  Divider,
-  IconButton,
-  LinearProgress,
-} from '@mui/material';
-import {
-  Search as SearchIcon,
-  Delete as DeleteIcon,
-  Label as LabelIcon,
-  FileDownload as ExportIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  Delete as DeleteIcon,
+  FileDownload as ExportIcon,
   FirstPage as FirstPageIcon,
+  Label as LabelIcon,
   LastPage as LastPageIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CssBaseline,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControl,
+  IconButton,
+  InputLabel,
+  LinearProgress,
+  MenuItem,
+  Select,
+  type SelectChangeEvent,
+  Stack,
+  TextField,
+  ThemeProvider,
+  Typography,
+} from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
+import React, { memo, useState } from 'react';
+import ReactDOM from 'react-dom/client';
+import type {
+  DataSequence,
+  UpdateSequenceRequest,
+} from '@/core/types/dataLibrary';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
-import SequenceList from '@/shared/dataLibrary/components/SequenceList';
 import SequenceDetails from '@/shared/dataLibrary/components/SequenceDetails';
+import SequenceList from '@/shared/dataLibrary/components/SequenceList';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
-import type { UpdateSequenceRequest, DataSequence } from '@/core/types/dataLibrary';
+import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 // Toolbar props interface
 interface DataLibraryToolbarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   sortBy: 'name' | 'date_created' | 'date_modified' | 'size';
-  setSortBy: (sortBy: 'name' | 'date_created' | 'date_modified' | 'size') => void;
+  setSortBy: (
+    sortBy: 'name' | 'date_created' | 'date_modified' | 'size'
+  ) => void;
   sortOrder: 'ascending' | 'descending';
   setSortOrder: (sortOrder: 'ascending' | 'descending') => void;
   selectedIds: Set<string>;
@@ -58,92 +63,106 @@ interface DataLibraryToolbarProps {
 }
 
 // Toolbar component for better organization
-const DataLibraryToolbar = memo(({
-  searchQuery,
-  setSearchQuery,
-  sortBy,
-  setSortBy,
-  sortOrder,
-  setSortOrder,
-  selectedIds,
-  sequences,
-  onExport,
-  onBulkDelete,
-  onSelectAll,
-  onSelectNone
-}: DataLibraryToolbarProps) => (
-  <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-    <Stack direction="row" spacing={2} alignItems="center">
-      <TextField
-        size="small"
-        placeholder="Search sequences..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        slotProps={{
-          input: {
-            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-          }
-        }}
-        sx={{ flexGrow: 1 }}
-      />
+const DataLibraryToolbar = memo(
+  ({
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    selectedIds,
+    sequences,
+    onExport,
+    onBulkDelete,
+    onSelectAll,
+    onSelectNone,
+  }: DataLibraryToolbarProps) => (
+    <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <TextField
+          size="small"
+          placeholder="Search sequences..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+              ),
+            },
+          }}
+          sx={{ flexGrow: 1 }}
+        />
 
-      <FormControl size="small" sx={{ minWidth: 150 }}>
-        <InputLabel>Sort By</InputLabel>
-        <Select
-          value={sortBy}
-          label="Sort By"
-          onChange={(e: SelectChangeEvent) => setSortBy(e.target.value as 'name' | 'date_created' | 'date_modified' | 'size')}
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Sort By</InputLabel>
+          <Select
+            value={sortBy}
+            label="Sort By"
+            onChange={(e: SelectChangeEvent) =>
+              setSortBy(
+                e.target.value as
+                  | 'name'
+                  | 'date_created'
+                  | 'date_modified'
+                  | 'size'
+              )
+            }
+          >
+            <MenuItem value="name">Name</MenuItem>
+            <MenuItem value="date_created">Date Created</MenuItem>
+            <MenuItem value="date_modified">Date Modified</MenuItem>
+            <MenuItem value="size">Size</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Order</InputLabel>
+          <Select
+            value={sortOrder}
+            label="Order"
+            onChange={(e: SelectChangeEvent) =>
+              setSortOrder(e.target.value as 'ascending' | 'descending')
+            }
+          >
+            <MenuItem value="ascending">Ascending</MenuItem>
+            <MenuItem value="descending">Descending</MenuItem>
+          </Select>
+        </FormControl>
+
+        <Button
+          variant="contained"
+          startIcon={<ExportIcon />}
+          onClick={onExport}
+          disabled={selectedIds.size === 0}
         >
-          <MenuItem value="name">Name</MenuItem>
-          <MenuItem value="date_created">Date Created</MenuItem>
-          <MenuItem value="date_modified">Date Modified</MenuItem>
-          <MenuItem value="size">Size</MenuItem>
-        </Select>
-      </FormControl>
+          Export ({selectedIds.size})
+        </Button>
 
-      <FormControl size="small" sx={{ minWidth: 120 }}>
-        <InputLabel>Order</InputLabel>
-        <Select
-          value={sortOrder}
-          label="Order"
-          onChange={(e: SelectChangeEvent) => setSortOrder(e.target.value as 'ascending' | 'descending')}
+        <Button
+          variant="contained"
+          color="error"
+          startIcon={<DeleteIcon />}
+          onClick={onBulkDelete}
+          disabled={selectedIds.size === 0}
         >
-          <MenuItem value="ascending">Ascending</MenuItem>
-          <MenuItem value="descending">Descending</MenuItem>
-        </Select>
-      </FormControl>
-
-      <Button
-        variant="contained"
-        startIcon={<ExportIcon />}
-        onClick={onExport}
-        disabled={selectedIds.size === 0}
-      >
-        Export ({selectedIds.size})
-      </Button>
-
-      <Button
-        variant="contained"
-        color="error"
-        startIcon={<DeleteIcon />}
-        onClick={onBulkDelete}
-        disabled={selectedIds.size === 0}
-      >
-        Delete ({selectedIds.size})
-      </Button>
-
-      {selectedIds.size > 0 ? (
-        <Button size="small" variant="outlined" onClick={onSelectNone}>
-          Clear Selection
+          Delete ({selectedIds.size})
         </Button>
-      ) : sequences.length > 0 ? (
-        <Button size="small" variant="outlined" onClick={onSelectAll}>
-          Select All
-        </Button>
-      ) : null}
-    </Stack>
-  </Box>
-));
+
+        {selectedIds.size > 0 ? (
+          <Button size="small" variant="outlined" onClick={onSelectNone}>
+            Clear Selection
+          </Button>
+        ) : sequences.length > 0 ? (
+          <Button size="small" variant="outlined" onClick={onSelectAll}>
+            Select All
+          </Button>
+        ) : null}
+      </Stack>
+    </Box>
+  )
+);
 
 export const DataLibraryWindowContent: React.FC = () => {
   const {
@@ -201,7 +220,9 @@ export const DataLibraryWindowContent: React.FC = () => {
 
   // Simplified handlers using the custom hook
   const handleDelete = async () => {
-    if (!selectedSequence) {return;}
+    if (!selectedSequence) {
+      return;
+    }
 
     setIsDeleting(true);
     try {
@@ -229,12 +250,16 @@ export const DataLibraryWindowContent: React.FC = () => {
   };
 
   const handleDuplicate = () => {
-    if (!selectedSequence) {return;}
+    if (!selectedSequence) {
+      return;
+    }
     void handleDuplicateSequence(selectedSequence.id, selectedSequence.name);
   };
 
   const handleOpenEditDialog = () => {
-    if (!selectedSequence) {return;}
+    if (!selectedSequence) {
+      return;
+    }
     setEditName(selectedSequence.name);
     setEditDescription(selectedSequence.description);
     setEditUnit(selectedSequence.unit);
@@ -243,7 +268,9 @@ export const DataLibraryWindowContent: React.FC = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (!selectedSequence) {return;}
+    if (!selectedSequence) {
+      return;
+    }
 
     const request: UpdateSequenceRequest = {
       id: selectedSequence.id,
@@ -263,8 +290,9 @@ export const DataLibraryWindowContent: React.FC = () => {
     // Compare tags using Sets for order-insensitive comparison
     const originalTagsSet = new Set(selectedSequence.tags);
     const editTagsSet = new Set(editTags);
-    const tagsChanged = originalTagsSet.size !== editTagsSet.size ||
-      [...originalTagsSet].some(tag => !editTagsSet.has(tag));
+    const tagsChanged =
+      originalTagsSet.size !== editTagsSet.size ||
+      [...originalTagsSet].some((tag) => !editTagsSet.has(tag));
 
     if (tagsChanged) {
       request.tags = editTags;
@@ -275,7 +303,9 @@ export const DataLibraryWindowContent: React.FC = () => {
       setEditDialogOpen(false);
     } catch (err) {
       console.error('Failed to update sequence:', err);
-      setError(`Failed to update sequence: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Failed to update sequence: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   };
 
@@ -287,7 +317,7 @@ export const DataLibraryWindowContent: React.FC = () => {
   };
 
   const handleRemoveTag = (tag: string) => {
-    setEditTags(editTags.filter(t => t !== tag));
+    setEditTags(editTags.filter((t) => t !== tag));
   };
 
   // Export handlers
@@ -300,17 +330,19 @@ export const DataLibraryWindowContent: React.FC = () => {
     try {
       const { save } = await import('@tauri-apps/plugin-dialog');
       const filePath = await save({
-        filters: [{
-          name: 'CSV',
-          extensions: ['csv']
-        }],
-        defaultPath: `anafis_export.csv`
+        filters: [
+          {
+            name: 'CSV',
+            extensions: ['csv'],
+          },
+        ],
+        defaultPath: `anafis_export.csv`,
       });
 
       if (filePath) {
         await invoke('export_sequences_csv', {
           sequenceIds: Array.from(selectedIds),
-          filePath
+          filePath,
         });
 
         setExportDialogOpen(false);
@@ -319,12 +351,22 @@ export const DataLibraryWindowContent: React.FC = () => {
       }
     } catch (err) {
       console.error('Export failed:', err);
-      setError(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Export failed: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   };
 
   return (
-    <Box sx={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+    <Box
+      sx={{
+        width: '100%',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.default',
+      }}
+    >
       <CustomTitleBar title="Data Library" />
 
       {/* Toolbar */}
@@ -346,9 +388,11 @@ export const DataLibraryWindowContent: React.FC = () => {
       {/* Tag filters */}
       {allTags.length > 0 && (
         <Box sx={{ px: 2, pb: 1 }}>
-          <Typography variant="caption" color="text.secondary">Filter by tags:</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Filter by tags:
+          </Typography>
           <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {allTags.map(tag => (
+            {allTags.map((tag) => (
               <Chip
                 key={tag}
                 label={tag}
@@ -367,7 +411,15 @@ export const DataLibraryWindowContent: React.FC = () => {
 
       {/* Pagination controls */}
       {totalCount > 0 && (
-        <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             Showing {sequences.length} of {totalCount} sequences
           </Typography>
@@ -382,7 +434,9 @@ export const DataLibraryWindowContent: React.FC = () => {
                 <MenuItem value={100}>100</MenuItem>
               </Select>
             </FormControl>
-            <Typography variant="body2" color="text.secondary">per page</Typography>
+            <Typography variant="body2" color="text.secondary">
+              per page
+            </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <IconButton
                 size="small"
@@ -431,7 +485,15 @@ export const DataLibraryWindowContent: React.FC = () => {
       {isLoadingSequences && <LinearProgress />}
 
       {/* Main content */}
-      <Box sx={{ display: 'flex', flexGrow: 1, overflowX: 'hidden', overflowY: 'hidden', minWidth: 0 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexGrow: 1,
+          overflowX: 'hidden',
+          overflowY: 'hidden',
+          minWidth: 0,
+        }}
+      >
         <SequenceList
           sequences={sequences}
           selectedSequence={selectedSequence}
@@ -440,7 +502,15 @@ export const DataLibraryWindowContent: React.FC = () => {
           onToggleSelection={handleToggleSelection}
         />
 
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowX: 'hidden',
+          }}
+        >
           <SequenceDetails
             sequence={selectedSequence}
             statistics={selectedStats}
@@ -453,7 +523,12 @@ export const DataLibraryWindowContent: React.FC = () => {
       </Box>
 
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Edit Sequence</DialogTitle>
         <DialogContent>
           <TextField
@@ -480,9 +555,11 @@ export const DataLibraryWindowContent: React.FC = () => {
             margin="normal"
           />
           <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>Tags</Typography>
+            <Typography variant="subtitle2" gutterBottom>
+              Tags
+            </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-              {editTags.map(tag => (
+              {editTags.map((tag) => (
                 <Chip
                   key={tag}
                   label={tag}
@@ -505,57 +582,100 @@ export const DataLibraryWindowContent: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={() => void handleSaveEdit()} variant="contained">Save</Button>
+          <Button onClick={() => void handleSaveEdit()} variant="contained">
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => !isDeleting && setDeleteDialogOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => !isDeleting && setDeleteDialogOpen(false)}
+      >
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete "{selectedSequence?.name}"? This action cannot be undone.
+            Are you sure you want to delete "{selectedSequence?.name}"? This
+            action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>Cancel</Button>
-          <Button onClick={() => void handleDelete()} color="error" variant="contained" disabled={isDeleting}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => void handleDelete()}
+            color="error"
+            variant="contained"
+            disabled={isDeleting}
+          >
             {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Bulk Delete Confirmation Dialog */}
-      <Dialog open={bulkDeleteDialogOpen} onClose={() => !isBulkDeleting && setBulkDeleteDialogOpen(false)}>
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onClose={() => !isBulkDeleting && setBulkDeleteDialogOpen(false)}
+      >
         <DialogTitle>Confirm Bulk Delete</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete {selectedIds.size} sequence{selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.
+            Are you sure you want to delete {selectedIds.size} sequence
+            {selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setBulkDeleteDialogOpen(false)} disabled={isBulkDeleting}>Cancel</Button>
-          <Button onClick={() => void handleBulkDeleteConfirm()} color="error" variant="contained" disabled={isBulkDeleting}>
-            {isBulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size} Sequence${selectedIds.size > 1 ? 's' : ''}`}
+          <Button
+            onClick={() => setBulkDeleteDialogOpen(false)}
+            disabled={isBulkDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => void handleBulkDeleteConfirm()}
+            color="error"
+            variant="contained"
+            disabled={isBulkDeleting}
+          >
+            {isBulkDeleting
+              ? 'Deleting...'
+              : `Delete ${selectedIds.size} Sequence${selectedIds.size > 1 ? 's' : ''}`}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Export Dialog */}
-      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Export Sequences</DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
-            Export {selectedIds.size} sequence{selectedIds.size > 1 ? 's' : ''} to CSV format
+            Export {selectedIds.size} sequence{selectedIds.size > 1 ? 's' : ''}{' '}
+            to CSV format
           </Typography>
 
           <Alert severity="info" sx={{ mt: 2 }}>
-            CSV format: Each sequence becomes a column with headers. Uncertainties included as separate columns.
+            CSV format: Each sequence becomes a column with headers.
+            Uncertainties included as separate columns.
           </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
-          <Button onClick={() => void handleExport()} variant="contained" startIcon={<ExportIcon />}>
+          <Button
+            onClick={() => void handleExport()}
+            variant="contained"
+            startIcon={<ExportIcon />}
+          >
             Export
           </Button>
         </DialogActions>
@@ -566,11 +686,14 @@ export const DataLibraryWindowContent: React.FC = () => {
 
 const theme = createAnafisTheme();
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <DataLibraryWindowContent />
-    </ThemeProvider>
-  </React.StrictMode>
-);
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <DataLibraryWindowContent />
+      </ThemeProvider>
+    </React.StrictMode>
+  );
+}

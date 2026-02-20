@@ -1,10 +1,11 @@
 // Tab color configuration - centralized for consistency
-import React from 'react';
+
+import CalculateIcon from '@mui/icons-material/Calculate';
+import CasinoIcon from '@mui/icons-material/Casino';
 import HomeIcon from '@mui/icons-material/Home';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import CalculateIcon from '@mui/icons-material/Calculate';
-import CasinoIcon from '@mui/icons-material/Casino';
+import React from 'react';
 
 // Color scheme type
 type ColorScheme = {
@@ -20,44 +21,44 @@ const COLOR_SCHEMES: Record<string, ColorScheme> = {
     primary: '#9c27b0',
     secondary: '#9c27b0',
     accent: '#9c27b0',
-    icon: '#9c27b0'
+    icon: '#9c27b0',
   },
   spreadsheet: {
     primary: '#2196f3',
     secondary: '#64b5f6',
     accent: '#64b5f6',
-    icon: '#64b5f6'
+    icon: '#64b5f6',
   },
   fitting: {
     primary: '#ff9800',
     secondary: '#ffb74d',
     accent: '#ffb74d',
-    icon: '#ffb74d'
+    icon: '#ffb74d',
   },
   solver: {
     primary: '#4caf50',
     secondary: '#81c784',
     accent: '#81c784',
-    icon: '#81c784'
+    icon: '#81c784',
   },
   montecarlo: {
     primary: '#e91e63',
     secondary: '#f06292',
     accent: '#f06292',
-    icon: '#f06292'
+    icon: '#f06292',
   },
   settings: {
     primary: '#9c27b0',
     secondary: '#ba68c8',
     accent: '#ba68c8',
-    icon: '#ba68c8'
+    icon: '#ba68c8',
   },
   default: {
     primary: '#9c27b0',
     secondary: '#ba68c8',
     accent: '#ba68c8',
-    icon: '#ba68c8'
-  }
+    icon: '#ba68c8',
+  },
 };
 
 // Memoization cache for tab colors
@@ -83,26 +84,33 @@ const setColorCache = (tabId: string, scheme: ColorScheme) => {
 };
 
 export const getTabColors = (tabId: string) => {
+  const defaultColors = COLOR_SCHEMES.default ?? {
+    primary: '#9c27b0',
+    secondary: '#ba68c8',
+    accent: '#ba68c8',
+    icon: '#ba68c8',
+  };
+
   // Check cache first
   if (colorCache.has(tabId)) {
-    return colorCache.get(tabId)!;
+    return colorCache.get(tabId) ?? defaultColors;
   }
 
   let colors: ColorScheme;
   if (tabId === 'home') {
-    colors = COLOR_SCHEMES['home']!;
+    colors = COLOR_SCHEMES.home ?? defaultColors;
   } else if (tabId.includes('spreadsheet')) {
-    colors = COLOR_SCHEMES['spreadsheet']!;
+    colors = COLOR_SCHEMES.spreadsheet ?? defaultColors;
   } else if (tabId.includes('fitting')) {
-    colors = COLOR_SCHEMES['fitting']!;
+    colors = COLOR_SCHEMES.fitting ?? defaultColors;
   } else if (tabId.includes('solver')) {
-    colors = COLOR_SCHEMES['solver']!;
+    colors = COLOR_SCHEMES.solver ?? defaultColors;
   } else if (tabId.includes('montecarlo')) {
-    colors = COLOR_SCHEMES['montecarlo']!;
+    colors = COLOR_SCHEMES.montecarlo ?? defaultColors;
   } else if (tabId.includes('settings')) {
-    colors = COLOR_SCHEMES['settings']!;
+    colors = COLOR_SCHEMES.settings ?? defaultColors;
   } else {
-    colors = COLOR_SCHEMES['default']!;
+    colors = defaultColors;
   }
 
   // Cache the result with bounded eviction
@@ -114,11 +122,37 @@ export const getTabColors = (tabId: string) => {
 export const getTabIcon = (tabId: string, fontSize: string = '1rem') => {
   const colors = getTabColors(tabId);
 
-  if (tabId === 'home') {return React.createElement(HomeIcon, { sx: { fontSize, color: colors.icon } });}
-  if (tabId.includes('optimized-spreadsheet')) {return React.createElement(TableChartIcon, { sx: { fontSize, color: colors.icon } });}
-  if (tabId.includes('spreadsheet')) {return React.createElement(TableChartIcon, { sx: { fontSize, color: colors.icon } });}
-  if (tabId.includes('fitting')) {return React.createElement(TrendingUpIcon, { sx: { fontSize, color: colors.icon } });}
-  if (tabId.includes('solver')) {return React.createElement(CalculateIcon, { sx: { fontSize, color: colors.icon } });}
-  if (tabId.includes('montecarlo')) {return React.createElement(CasinoIcon, { sx: { fontSize, color: colors.icon } });}
-  return React.createElement(HomeIcon, { sx: { fontSize, color: colors.icon } });
+  if (tabId === 'home') {
+    return React.createElement(HomeIcon, {
+      sx: { fontSize, color: colors.icon },
+    });
+  }
+  if (tabId.includes('optimized-spreadsheet')) {
+    return React.createElement(TableChartIcon, {
+      sx: { fontSize, color: colors.icon },
+    });
+  }
+  if (tabId.includes('spreadsheet')) {
+    return React.createElement(TableChartIcon, {
+      sx: { fontSize, color: colors.icon },
+    });
+  }
+  if (tabId.includes('fitting')) {
+    return React.createElement(TrendingUpIcon, {
+      sx: { fontSize, color: colors.icon },
+    });
+  }
+  if (tabId.includes('solver')) {
+    return React.createElement(CalculateIcon, {
+      sx: { fontSize, color: colors.icon },
+    });
+  }
+  if (tabId.includes('montecarlo')) {
+    return React.createElement(CasinoIcon, {
+      sx: { fontSize, color: colors.icon },
+    });
+  }
+  return React.createElement(HomeIcon, {
+    sx: { fontSize, color: colors.icon },
+  });
 };

@@ -1,33 +1,50 @@
 //! Uncertainty Calculator
 //!
-//! Provides numerical uncertainty propagation using symb_anafis.
+//! Provides numerical uncertainty propagation using `symb_anafis`.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use symb_anafis::{CovEntry, CovarianceMatrix, parse, uncertainty_propagation};
 
+/// Represents a variable input for the uncertainty calculator.
 #[derive(Deserialize, Clone)]
 pub struct CalculatorVariable {
+    /// Name of the variable.
     pub name: String,
+    /// Mean value of the variable.
     pub value: f64,
+    /// Absolute uncertainty (standard deviation) of the variable.
     pub uncertainty: f64,
 }
 
+/// Result of an uncertainty propagation calculation.
 #[derive(Serialize, Clone)]
 pub struct CalculationResult {
+    /// Calculated value of the expression.
     pub value: f64,
+    /// Propagated uncertainty.
     pub uncertainty: f64,
+    /// Original formula string.
     pub formula: String,
+    /// Map of partial derivatives at the evaluation point.
     pub derivatives: HashMap<String, f64>,
+    /// Confidence level (default 0.95).
     pub confidence_level: f64,
 }
 
+/// Result of LaTeX formula generation.
 #[derive(Serialize, Clone)]
 pub struct LatexResult {
+    /// String representation of the result.
     pub string: String,
+    /// LaTeX formatted string of the uncertainty expression.
     pub latex: String,
 }
 
+/// Normalizes a list of variable names.
+///
+/// # Errors
+/// Returns an error if there are duplicate names (case-insensitive).
 fn normalize_variable_names(variable_names: &[String]) -> Result<Vec<String>, String> {
     let mut normalized = Vec::with_capacity(variable_names.len());
     let mut seen = HashSet::new();
@@ -36,8 +53,7 @@ fn normalize_variable_names(variable_names: &[String]) -> Result<Vec<String>, St
         let lower = name.to_lowercase();
         if !seen.insert(lower.clone()) {
             return Err(format!(
-                "Variable names must be unique ignoring case (collision on '{}')",
-                name
+                "Variable names must be unique ignoring case (collision on '{name}')"
             ));
         }
         normalized.push(lower);
@@ -47,7 +63,11 @@ fn normalize_variable_names(variable_names: &[String]) -> Result<Vec<String>, St
 }
 
 /// Calculate uncertainty propagation
+///
+/// # Errors
+/// Returns an error if the formula is invalid, symbols are unknown, or numerical errors occur.
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned types for arguments")]
 pub fn calculate_uncertainty(
     formula: String,
     variables: Vec<CalculatorVariable>,
@@ -66,13 +86,13 @@ pub fn calculate_uncertainty(
 
     // Parse formula
     let expr = parse(&formula_normalized, &known_symbols, &HashSet::new(), None)
-        .map_err(|e| format!("Failed to parse formula: {}", e))?;
+        .map_err(|e| format!("Failed to parse formula: {e}"))?;
 
     // Evaluate value
     let value_str = expr.evaluate(&values_map, &HashMap::new()).to_string();
     let value = value_str
         .parse::<f64>()
-        .map_err(|e| format!("Failed to parse result '{}': {}", value_str, e))?;
+        .map_err(|e| format!("Failed to parse result '{value_str}': {e}"))?;
 
     if !value.is_finite() {
         return Err("Expression evaluated to non-finite value".to_string());
@@ -88,17 +108,17 @@ pub fn calculate_uncertainty(
     // Calculate uncertainty
     let var_refs: Vec<&str> = normalized_variable_names
         .iter()
-        .map(|s| s.as_str())
+        .map(std::string::String::as_str)
         .collect();
     let sigma_expr = uncertainty_propagation(&expr, &var_refs, Some(&cov))
-        .map_err(|e| format!("Uncertainty propagation failed: {:?}", e))?;
+        .map_err(|e| format!("Uncertainty propagation failed: {e:?}"))?;
 
     let sigma_str = sigma_expr
         .evaluate(&values_map, &HashMap::new())
         .to_string();
     let uncertainty = sigma_str
         .parse::<f64>()
-        .map_err(|e| format!("Failed to parse uncertainty '{}': {}", sigma_str, e))?;
+        .map_err(|e| format!("Failed to parse uncertainty '{sigma_str}': {e}"))?;
 
     // Calculate derivatives for display
     let symbols: Vec<symb_anafis::Symbol> = normalized_variable_names
@@ -107,7 +127,7 @@ pub fn calculate_uncertainty(
         .collect();
     let sym_refs: Vec<&symb_anafis::Symbol> = symbols.iter().collect();
     let gradient =
-        symb_anafis::gradient(&expr, &sym_refs).map_err(|e| format!("Gradient failed: {:?}", e))?;
+        symb_anafis::gradient(&expr, &sym_refs).map_err(|e| format!("Gradient failed: {e:?}"))?;
 
     let mut derivatives = HashMap::new();
     for (i, name) in variable_names.iter().enumerate() {
@@ -133,7 +153,11 @@ pub fn calculate_uncertainty(
 }
 
 /// Generate LaTeX representation
+///
+/// # Errors
+/// Returns an error if the formula is invalid or symbols are unknown.
 #[tauri::command]
+#[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned types for arguments")]
 pub fn generate_latex(formula: String, variables: Vec<String>) -> Result<LatexResult, String> {
     if variables.is_empty() {
         return Err("Please provide at least one variable".into());
@@ -144,14 +168,14 @@ pub fn generate_latex(formula: String, variables: Vec<String>) -> Result<LatexRe
     let known_symbols: HashSet<String> = normalized_variables.iter().cloned().collect();
 
     let expr = parse(&formula_normalized, &known_symbols, &HashSet::new(), None)
-        .map_err(|e| format!("Failed to parse formula: {}", e))?;
+        .map_err(|e| format!("Failed to parse formula: {e}"))?;
 
-    let var_refs: Vec<&str> = normalized_variables.iter().map(|s| s.as_str()).collect();
+    let var_refs: Vec<&str> = normalized_variables.iter().map(std::string::String::as_str).collect();
     let sigma_expr = uncertainty_propagation(&expr, &var_refs, None)
-        .map_err(|e| format!("Uncertainty propagation failed: {:?}", e))?;
+        .map_err(|e| format!("Uncertainty propagation failed: {e:?}"))?;
 
     Ok(LatexResult {
-        string: format!("sigma_f = {}", expr),
+        string: format!("sigma_f = {expr}"),
         latex: format!("\\sigma_f = {}", sigma_expr.to_latex()),
     })
 }

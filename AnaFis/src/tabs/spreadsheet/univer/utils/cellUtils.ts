@@ -2,7 +2,10 @@
  * Utility functions for cell reference parsing and conversion
  */
 
-import { CellReference, type RangeBounds } from '@/tabs/spreadsheet/utils/CellReference';
+import {
+  CellReference,
+  type RangeBounds,
+} from '@/tabs/spreadsheet/utils/CellReference';
 
 // Re-export for backward compatibility
 export type { RangeBounds };
@@ -21,7 +24,9 @@ export function columnToLetter(col: number): string {
  * @param cellRef Cell reference like 'A1', 'B2', 'AA10'
  * @returns Object with row and col properties, or null if invalid
  */
-export function parseCellRef(cellRef: string): { row: number; col: number } | null {
+export function parseCellRef(
+  cellRef: string
+): { row: number; col: number } | null {
   try {
     return CellReference.parseCell(cellRef);
   } catch {
@@ -31,14 +36,14 @@ export function parseCellRef(cellRef: string): { row: number; col: number } | nu
 
 /**
  * Parse range reference (A1 notation) to 0-based bounds.
- * 
+ *
  * @example
- * parseRange("A1:C10") 
+ * parseRange("A1:C10")
  * // Returns { startCol: 0, startRow: 0, endCol: 2, endRow: 9 }
- * 
- * parseRange("B5") 
+ *
+ * parseRange("B5")
  * // Returns { startCol: 1, startRow: 4, endCol: 1, endRow: 4 }
- * 
+ *
  * @param rangeRef - Range in A1 notation (e.g., "A1:C10" or "B5")
  * @returns RangeBounds with 0-based coordinates, or null if invalid
  */
@@ -57,22 +62,4 @@ export function parseRange(rangeRef: string): RangeBounds | null {
  */
 export function letterToColumn(letter: string): number {
   return CellReference.letterToColumn(letter);
-}
-
-/**
- * Parses range or single cell reference and returns all coordinates
- * @param cellRef Cell reference like 'A1' or range like 'A1:C3'
- * @returns Array of coordinate objects for bounds calculation
- */
-export function parseRangeOrCell(cellRef: string): { row: number; col: number }[] {
-  try {
-    if (cellRef.includes(':')) {
-      const parsed = CellReference.parseRange(cellRef);
-      return [parsed.start, parsed.end];
-    } else {
-      return [CellReference.parseCell(cellRef)];
-    }
-  } catch {
-    return [];
-  }
 }

@@ -9,7 +9,11 @@ use std::io::{BufWriter, Write};
 
 /// Export data to Markdown format (simplified - expects 2D array)
 #[tauri::command]
-pub async fn export_to_markdown(
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
+pub fn export_to_markdown(
     data: Vec<serde_json::Value>,
     file_path: String,
     _config: ExportConfig,
@@ -19,14 +23,13 @@ pub async fn export_to_markdown(
     }
 
     // Create file with buffered writer
-    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {e}"))?;
     let mut writer = BufWriter::new(file);
 
     // Process data rows - all rows are treated as data
-    for row in data.iter() {
-        let row_array = match row.as_array() {
-            Some(arr) => arr,
-            None => continue,
+    for row in &data {
+        let Some(row_array) = row.as_array() else {
+            continue;
         };
 
         // Format row cells
@@ -41,18 +44,18 @@ pub async fn export_to_markdown(
                     _ => cell.to_string(),
                 };
                 // Escape pipe characters in markdown
-                cell_content.replace("|", "\\|")
+                cell_content.replace('|', "\\|")
             })
             .collect();
 
         // Write the row
         let row_str = formatted_cells.join(" | ");
-        writeln!(writer, "| {} |", row_str).map_err(|e| format!("Failed to write row: {}", e))?;
+        writeln!(writer, "| {row_str} |").map_err(|e| format!("Failed to write row: {e}"))?;
     }
 
     writer
         .flush()
-        .map_err(|e| format!("Failed to flush writer: {}", e))?;
+        .map_err(|e| format!("Failed to flush writer: {e}"))?;
 
     Ok(())
 }

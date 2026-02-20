@@ -9,7 +9,11 @@ use std::io::{BufWriter, Write};
 
 /// Export data to CSV/TSV/TXT format (simplified - expects 2D array)
 #[tauri::command]
-pub async fn export_to_text(
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
+pub fn export_to_text(
     data: Vec<serde_json::Value>,
     file_path: String,
     config: ExportConfig,
@@ -26,14 +30,13 @@ pub async fn export_to_text(
     let line_ending = "\r\n";
 
     // Create file with buffered writer for performance
-    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    let file = File::create(&file_path).map_err(|e| format!("Failed to create file: {e}"))?;
     let mut writer = BufWriter::new(file);
 
     // Export data rows - each element should be an array
-    for row_value in data.iter() {
-        let row_array = match row_value.as_array() {
-            Some(arr) => arr,
-            None => continue,
+    for row_value in &data {
+        let Some(row_array) = row_value.as_array() else {
+            continue;
         };
 
         // Format and write the row
@@ -43,12 +46,12 @@ pub async fn export_to_text(
             .collect();
 
         write!(writer, "{}{}", formatted_row.join(delimiter), line_ending)
-            .map_err(|e| format!("Failed to write row: {}", e))?;
+            .map_err(|e| format!("Failed to write row: {e}"))?;
     }
 
     writer
         .flush()
-        .map_err(|e| format!("Failed to flush writer: {}", e))?;
+        .map_err(|e| format!("Failed to flush writer: {e}"))?;
 
     Ok(())
 }
@@ -68,8 +71,8 @@ fn format_cell_value(value: &Value, delimiter: &str, quote_char: char) -> String
 
             if needs_quoting {
                 // Escape quote characters by doubling them
-                let escaped = s.replace(quote_char, &format!("{}{}", quote_char, quote_char));
-                format!("{}{}{}", quote_char, escaped, quote_char)
+                let escaped = s.replace(quote_char, &format!("{quote_char}{quote_char}"));
+                format!("{quote_char}{escaped}{quote_char}")
             } else {
                 s.clone()
             }

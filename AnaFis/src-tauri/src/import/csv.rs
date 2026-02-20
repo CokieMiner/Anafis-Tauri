@@ -18,13 +18,13 @@ use std::io::{BufRead, BufReader};
 
 /// Detect file encoding by reading the first few bytes
 fn detect_encoding(file_path: &str) -> Result<&'static Encoding, String> {
-    let file = File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+    let file = File::open(file_path).map_err(|e| format!("Failed to open file: {e}"))?;
 
     let mut reader = BufReader::new(file);
     let mut buffer = vec![0u8; 1024];
     let bytes_read = reader
         .read_until(b'\n', &mut buffer)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+        .map_err(|e| format!("Failed to read file: {e}"))?;
 
     // Try to detect encoding based on BOM or content
     if bytes_read >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF {
@@ -60,7 +60,7 @@ pub fn parse_delimited_file(
     };
 
     // Read file with detected encoding
-    let file = File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+    let file = File::open(file_path).map_err(|e| format!("Failed to open file: {e}"))?;
 
     let mut reader = BufReader::new(file);
     let mut lines = Vec::new();
@@ -68,7 +68,7 @@ pub fn parse_delimited_file(
 
     while reader
         .read_until(b'\n', &mut buffer)
-        .map_err(|e| format!("Failed to read file: {}", e))?
+        .map_err(|e| format!("Failed to read file: {e}"))?
         > 0
     {
         let (decoded, _, had_errors) = encoding.decode(&buffer);
@@ -133,11 +133,7 @@ pub fn parse_delimited_file(
     }
 
     // If first row as header, skip it (we'll handle headers in the frontend)
-    let data_start = if first_row_as_header && !rows.is_empty() {
-        1
-    } else {
-        0
-    };
+    let data_start = usize::from(first_row_as_header && !rows.is_empty());
 
     // Convert to JSON values
     let mut sheet_data: Vec<Vec<Value>> = Vec::new();
@@ -169,7 +165,7 @@ pub fn parse_delimited_file(
 }
 
 /// Import CSV file
-pub async fn import_csv(
+pub fn import_csv(
     file_path: &str,
     skip_rows: usize,
     first_row_as_header: bool,
@@ -179,7 +175,7 @@ pub async fn import_csv(
 }
 
 /// Import TSV file
-pub async fn import_tsv(
+pub fn import_tsv(
     file_path: &str,
     skip_rows: usize,
     first_row_as_header: bool,
@@ -189,7 +185,7 @@ pub async fn import_tsv(
 }
 
 /// Import TXT file with custom delimiter
-pub async fn import_txt(
+pub fn import_txt(
     file_path: &str,
     delimiter: &str,
     skip_rows: usize,

@@ -3,7 +3,7 @@
 //! This module handles importing data from various file formats into the application.
 //!
 //! ## Supported Formats
-//! - **LOSSLESS**: anafispread (native format - full IWorkbookData snapshots)
+//! - **LOSSLESS**: anafispread (native format - full `IWorkbookData` snapshots)
 //! - **TEXT INTERCHANGE**: csv, tsv, txt (for external application data)
 //! - **COLUMNAR**: parquet (efficient binary columnar format)
 //!
@@ -23,7 +23,7 @@ fn validate_and_canonicalize_path(file_path: &str) -> Result<PathBuf, String> {
     let path = Path::new(file_path);
     let canonical_path = path
         .canonicalize()
-        .map_err(|e| format!("Failed to canonicalize path '{}': {}", file_path, e))?;
+        .map_err(|e| format!("Failed to canonicalize path '{file_path}': {e}"))?;
 
     // Verify the canonicalized path is within allowed directories
     // For security, restrict to user's home directory and system temp directories
@@ -45,7 +45,7 @@ fn validate_and_canonicalize_path(file_path: &str) -> Result<PathBuf, String> {
 
     // Verify file exists
     if !canonical_path.exists() {
-        return Err(format!("File not found: {}", file_path));
+        return Err(format!("File not found: {file_path}"));
     }
 
     Ok(canonical_path)
@@ -107,8 +107,7 @@ pub async fn import_spreadsheet_file(
                 false, // We'll handle headers in the frontend
                 Some(&options.encoding),
             )
-            .await
-            .map_err(|e| import_error(format!("CSV import failed: {}", e)))
+            .map_err(|e| import_error(format!("CSV import failed: {e}")))
         }
         "tsv" => {
             csv::import_tsv(
@@ -117,8 +116,7 @@ pub async fn import_spreadsheet_file(
                 false, // We'll handle headers in the frontend
                 Some(&options.encoding),
             )
-            .await
-            .map_err(|e| import_error(format!("TSV import failed: {}", e)))
+            .map_err(|e| import_error(format!("TSV import failed: {e}")))
         }
         "txt" => {
             csv::import_txt(
@@ -128,8 +126,7 @@ pub async fn import_spreadsheet_file(
                 false, // We'll handle headers in the frontend
                 Some(&options.encoding),
             )
-            .await
-            .map_err(|e| import_error(format!("TXT import failed: {}", e)))
+            .map_err(|e| import_error(format!("TXT import failed: {e}")))
         }
         "anafispread" => {
             // Special case: .anafispread should use direct import
@@ -138,8 +135,7 @@ pub async fn import_spreadsheet_file(
             ))
         }
         "parquet" => parquet::import_parquet(&canonical_path.to_string_lossy())
-            .await
-            .map_err(|e| import_error(format!("Parquet import failed: {}", e))),
+            .map_err(|e| import_error(format!("Parquet import failed: {e}"))),
         _ => Err(validation_error(
             format!("Unsupported format: {}", options.format),
             Some("format".to_string()),
@@ -147,7 +143,7 @@ pub async fn import_spreadsheet_file(
     }
 }
 /// Direct import command for .anafispread format
-/// Returns raw IWorkbookData without conversion for lossless snapshot loading
+/// Returns raw `IWorkbookData` without conversion for lossless snapshot loading
 #[tauri::command]
 pub async fn import_anafis_spread_direct(file_path: String) -> CommandResult<serde_json::Value> {
     // Validate and canonicalize path to prevent directory traversal
@@ -157,8 +153,7 @@ pub async fn import_anafis_spread_direct(file_path: String) -> CommandResult<ser
     // Return raw IWorkbookData without any conversion
     // This preserves the complete Univer snapshot structure for lossless restore
     anafispread::import_anafis_spread(canonical_path.to_string_lossy().to_string())
-        .await
-        .map_err(|e| import_error(format!("AnaFis spread import failed: {}", e)))
+        .map_err(|e| import_error(format!("AnaFis spread import failed: {e}")))
 }
 
 /// Get file metadata - called before import to show file info
@@ -174,7 +169,7 @@ pub async fn get_file_metadata(
 
     // Get file size
     let metadata = std::fs::metadata(&canonical_path)
-        .map_err(|e| file_not_found(format!("Failed to read file metadata: {}", e)))?;
+        .map_err(|e| file_not_found(format!("Failed to read file metadata: {e}")))?;
     let size = metadata.len();
 
     // Get extension
@@ -237,7 +232,6 @@ async fn get_text_file_dimensions(
 
     // Determine delimiter based on file extension
     let delimiter = match extension {
-        "csv" => ",",
         "tsv" => "\t",
         "txt" => {
             // For TXT files, use provided delimiter or default to "|"

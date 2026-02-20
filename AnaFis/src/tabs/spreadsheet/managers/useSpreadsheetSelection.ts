@@ -1,6 +1,6 @@
-import { useRef, useEffect, useCallback, useReducer } from 'react';
-import { useSelectionContext } from './useSelectionContext';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { CellReference } from '@/tabs/spreadsheet/utils/CellReference';
+import { useSelectionContext } from './useSelectionContext';
 
 // Simplified cache interfaces
 interface ParsedCell {
@@ -35,10 +35,7 @@ type UIAction<T> =
   | { type: 'ENTER_SELECTION_MODE'; inputType: T }
   | { type: 'EXIT_SELECTION_MODE' };
 
-function uiReducer<T>(
-  state: UIState<T>,
-  action: UIAction<T>
-): UIState<T> {
+function uiReducer<T>(state: UIState<T>, action: UIAction<T>): UIState<T> {
   switch (action.type) {
     case 'ENTER_SELECTION_MODE':
       return {
@@ -112,7 +109,7 @@ class SimpleRangeCache {
         minCol: cell.colNum,
         maxCol: cell.colNum,
         minRow: cell.row,
-        maxRow: cell.row
+        maxRow: cell.row,
       };
       this.setCache('range', range, parsedRange);
       return parsedRange;
@@ -141,14 +138,18 @@ class SimpleRangeCache {
       minCol: Math.min(start.colNum, end.colNum),
       maxCol: Math.max(start.colNum, end.colNum),
       minRow: Math.min(start.row, end.row),
-      maxRow: Math.max(start.row, end.row)
+      maxRow: Math.max(start.row, end.row),
     };
 
     this.setCache('range', range, parsedRange);
     return parsedRange;
   }
 
-  private setCache(type: 'cell' | 'range' | 'column', key: string, value: ParsedCell | ParsedRange | number): void {
+  private setCache(
+    type: 'cell' | 'range' | 'column',
+    key: string,
+    value: ParsedCell | ParsedRange | number
+  ): void {
     if (type === 'cell') {
       if (this.cellCache.size >= this.maxSize) {
         this.cellCache.clear();
@@ -178,7 +179,8 @@ class SimpleRangeCache {
       cellCache: { size: this.cellCache.size, maxSize: this.maxSize },
       rangeCache: { size: this.rangeCache.size, maxSize: this.maxSize },
       columnCache: { size: this.columnCache.size, maxSize: this.maxSize },
-      totalEntries: this.cellCache.size + this.rangeCache.size + this.columnCache.size
+      totalEntries:
+        this.cellCache.size + this.rangeCache.size + this.columnCache.size,
     };
   }
 }
@@ -195,9 +197,9 @@ interface UseSpreadsheetSelectionReturn<T> {
   handleInputBlur: () => void;
   isSelectionMode: boolean;
   getCacheStats: () => {
-    cellCache: { size: number; maxSize: number; };
-    rangeCache: { size: number; maxSize: number; };
-    columnCache: { size: number; maxSize: number; };
+    cellCache: { size: number; maxSize: number };
+    rangeCache: { size: number; maxSize: number };
+    columnCache: { size: number; maxSize: number };
     totalEntries: number;
   };
 }
@@ -271,7 +273,11 @@ export function useSpreadsheetSelection<T>({
 
     const handleSelection = (selection: string) => {
       const state = internalStateRef.current;
-      if (!state.isActive || !uiState.isSelectionMode || !uiState.focusedInput) {
+      if (
+        !state.isActive ||
+        !uiState.isSelectionMode ||
+        !uiState.focusedInput
+      ) {
         return;
       }
 
@@ -286,7 +292,10 @@ export function useSpreadsheetSelection<T>({
           console.warn('Invalid selection format:', selection);
           return;
         }
-        updateInternalState({ anchorCell: firstCell, lastSelection: selection });
+        updateInternalState({
+          anchorCell: firstCell,
+          lastSelection: selection,
+        });
         updateField(uiState.focusedInput, selection);
         return;
       }
@@ -296,7 +305,7 @@ export function useSpreadsheetSelection<T>({
         updateInternalState({
           isActive: false,
           lastSelection: '',
-          anchorCell: ''
+          anchorCell: '',
         });
         dispatch({ type: 'EXIT_SELECTION_MODE' });
         return;
@@ -308,7 +317,16 @@ export function useSpreadsheetSelection<T>({
 
     const unregister = registerHandler(sidebarDataAttribute, handleSelection);
     return unregister;
-  }, [uiState.focusedInput, uiState.isSelectionMode, onSelectionChange, updateField, isAnchorInRange, dispatch, registerHandler, sidebarDataAttribute, updateInternalState]);
+  }, [
+    uiState.focusedInput,
+    uiState.isSelectionMode,
+    onSelectionChange,
+    updateField,
+    isAnchorInRange,
+    registerHandler,
+    sidebarDataAttribute,
+    updateInternalState,
+  ]);
 
   // Exit selection mode on sidebar clicks
   useEffect(() => {
@@ -321,12 +339,14 @@ export function useSpreadsheetSelection<T>({
       const target = e.target as HTMLElement;
 
       if (sidebar?.contains(target)) {
-        const isInteractiveElement = target.closest('button, select, .MuiAutocomplete-root');
+        const isInteractiveElement = target.closest(
+          'button, select, .MuiAutocomplete-root'
+        );
         if (isInteractiveElement) {
           updateInternalState({
             isActive: false,
             lastSelection: '',
-            anchorCell: ''
+            anchorCell: '',
           });
           dispatch({ type: 'EXIT_SELECTION_MODE' });
         }
@@ -340,16 +360,19 @@ export function useSpreadsheetSelection<T>({
     return () => {
       document.removeEventListener('click', handleSidebarClick);
     };
-  }, [sidebarDataAttribute, uiState.isSelectionMode, dispatch, updateInternalState]);
+  }, [sidebarDataAttribute, uiState.isSelectionMode, updateInternalState]);
 
-  const handleInputFocus = useCallback((inputType: T) => {
-    updateInternalState({
-      lastSelection: '',
-      anchorCell: '',
-      isActive: true
-    });
-    dispatch({ type: 'ENTER_SELECTION_MODE', inputType });
-  }, [dispatch, updateInternalState]);
+  const handleInputFocus = useCallback(
+    (inputType: T) => {
+      updateInternalState({
+        lastSelection: '',
+        anchorCell: '',
+        isActive: true,
+      });
+      dispatch({ type: 'ENTER_SELECTION_MODE', inputType });
+    },
+    [updateInternalState]
+  );
 
   const handleInputBlur = useCallback(() => {
     // Keep selection mode active on blur

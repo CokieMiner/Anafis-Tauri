@@ -42,7 +42,7 @@ pub enum ExportFormat {
     Html,
     /// Markdown table
     Markdown,
-    /// AnaFis spreadsheet format
+    /// `AnaFis` spreadsheet format
     #[serde(rename = "anafispread")]
     AnaFisSpread,
 }
@@ -97,21 +97,16 @@ pub async fn export_data(
     match export_config.format {
         ExportFormat::Csv | ExportFormat::Tsv | ExportFormat::Txt => {
             text::export_to_text(data, file_path, export_config)
-                .await
-                .map_err(|e| export_error(format!("Text export failed: {}", e)))
+                .map_err(|e| export_error(format!("Text export failed: {e}")))
         }
         ExportFormat::Parquet => parquet::export_to_parquet(data, file_path, export_config)
-            .await
-            .map_err(|e| export_error(format!("Parquet export failed: {}", e))),
+            .map_err(|e| export_error(format!("Parquet export failed: {e}"))),
         ExportFormat::Html => html::export_to_html(data, file_path, export_config)
-            .await
-            .map_err(|e| export_error(format!("HTML export failed: {}", e))),
+            .map_err(|e| export_error(format!("HTML export failed: {e}"))),
         ExportFormat::Markdown => markdown::export_to_markdown(data, file_path, export_config)
-            .await
-            .map_err(|e| export_error(format!("Markdown export failed: {}", e))),
+            .map_err(|e| export_error(format!("Markdown export failed: {e}"))),
         ExportFormat::Tex => tex::export_to_latex(data, file_path, export_config)
-            .await
-            .map_err(|e| export_error(format!("LaTeX export failed: {}", e))),
+            .map_err(|e| export_error(format!("LaTeX export failed: {e}"))),
         ExportFormat::AnaFisSpread => {
             // For anafispread, we need to pass the data directly (not as array)
             let workbook_data = if data.len() == 1 {
@@ -123,8 +118,7 @@ pub async fn export_data(
                 ));
             };
             anafispread::export_anafispread(workbook_data, file_path)
-                .await
-                .map_err(|e| export_error(format!("AnaFis spread export failed: {}", e)))
+                .map_err(|e| export_error(format!("AnaFis spread export failed: {e}")))
         }
     }
 }

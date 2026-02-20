@@ -5,9 +5,14 @@
  * including state management, validation, and API calls.
  */
 
-import { useState, useCallback } from 'react';
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { ExportFormat, ExportRangeMode, ExportService, ExportOptions } from '@/core/types/export';
+import { useCallback, useState } from 'react';
+import type {
+  ExportFormat,
+  ExportOptions,
+  ExportRangeMode,
+  ExportService,
+} from '@/core/types/export';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 interface UseExportOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
@@ -62,7 +67,10 @@ export function useExport({
         return;
       }
 
-      const result = await exportService.exportWithDialog(options, spreadsheetAPI);
+      const result = await exportService.exportWithDialog(
+        options,
+        spreadsheetAPI
+      );
 
       if (result.ok) {
         setSuccess(result.value.message ?? 'Export completed successfully');
@@ -70,11 +78,20 @@ export function useExport({
         setError(result.error.message);
       }
     } catch (err) {
-      setError(`Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(
+        `Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
     } finally {
       setIsExporting(false);
     }
-  }, [exportFormat, rangeMode, customRange, customDelimiter, exportService, spreadsheetRef]);
+  }, [
+    exportFormat,
+    rangeMode,
+    customRange,
+    customDelimiter,
+    exportService,
+    spreadsheetRef,
+  ]);
 
   // Handle export to data library
   const handleExportToLibrary = useCallback(async (): Promise<void> => {
@@ -90,26 +107,42 @@ export function useExport({
         return;
       }
 
-      const result = await exportService.exportToDataLibrary({
-        libraryName,
-        libraryDescription,
-        libraryTags,
-        libraryUnit,
-        dataRange,
-        uncertaintyRange,
-      }, spreadsheetAPI);
+      const result = await exportService.exportToDataLibrary(
+        {
+          libraryName,
+          libraryDescription,
+          libraryTags,
+          libraryUnit,
+          dataRange,
+          uncertaintyRange,
+        },
+        spreadsheetAPI
+      );
 
       if (result.ok) {
-        setSuccess(result.value.message ?? 'Successfully saved to Data Library');
+        setSuccess(
+          result.value.message ?? 'Successfully saved to Data Library'
+        );
       } else {
         setError(result.error.message);
       }
     } catch (err) {
-      setError(`Failed to save to Data Library: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Failed to save to Data Library: ${err instanceof Error ? err.message : String(err)}`
+      );
     } finally {
       setIsExporting(false);
     }
-  }, [libraryName, libraryDescription, libraryTags, libraryUnit, dataRange, uncertaintyRange, exportService, spreadsheetRef]);
+  }, [
+    libraryName,
+    libraryDescription,
+    libraryTags,
+    libraryUnit,
+    dataRange,
+    uncertaintyRange,
+    exportService,
+    spreadsheetRef,
+  ]);
 
   // Clear export result
   const clearResult = useCallback(() => {
@@ -118,12 +151,15 @@ export function useExport({
   }, []);
 
   // Handle selection change for custom range
-  const handleSelectionChange = useCallback((selection: string) => {
-    if (rangeMode === 'custom') {
-      setCustomRange(selection);
-    }
-    onSelectionChange?.(selection);
-  }, [rangeMode, onSelectionChange]);
+  const handleSelectionChange = useCallback(
+    (selection: string) => {
+      if (rangeMode === 'custom') {
+        setCustomRange(selection);
+      }
+      onSelectionChange?.(selection);
+    },
+    [rangeMode, onSelectionChange]
+  );
 
   return {
     // State

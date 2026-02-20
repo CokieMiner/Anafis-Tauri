@@ -1,6 +1,6 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from 'path';
+import path from 'node:path';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -18,31 +18,6 @@ export default defineConfig(() => ({
     alias: {
       // Main src alias
       '@': path.resolve(__dirname, './src'),
-      
-      // Core application logic and global infrastructure
-      '@/core': path.resolve(__dirname, './src/core'),
-      '@/core/types': path.resolve(__dirname, './src/core/types'),
-      '@/core/contexts': path.resolve(__dirname, './src/core/contexts'),
-      '@/core/managers': path.resolve(__dirname, './src/core/managers'),
-      '@/core/utils': path.resolve(__dirname, './src/core/utils'),
-      
-      // Shared components, utilities, and services used across the app
-      '@/shared': path.resolve(__dirname, './src/shared'),
-      '@/shared/components': path.resolve(__dirname, './src/shared/components'),
-      '@/shared/types': path.resolve(__dirname, './src/shared/types'),
-      '@/shared/utils': path.resolve(__dirname, './src/shared/utils'),
-      '@/shared/dataLibrary': path.resolve(__dirname, './src/shared/dataLibrary'),
-      
-      // Tab modules (tab-specific features)
-      '@/tabs': path.resolve(__dirname, './src/tabs'),
-      '@/tabs/home': path.resolve(__dirname, './src/tabs/home'),
-      '@/tabs/spreadsheet': path.resolve(__dirname, './src/tabs/spreadsheet'),
-      '@/tabs/fitting': path.resolve(__dirname, './src/tabs/fitting'),
-      '@/tabs/solver': path.resolve(__dirname, './src/tabs/solver'),
-      '@/tabs/montecarlo': path.resolve(__dirname, './src/tabs/montecarlo'),
-      
-      // Floating windows
-      '@/windows': path.resolve(__dirname, './src/windows'),
     },
     // Deduplicate shared dependencies to prevent multiple instances
     dedupe: [
@@ -64,92 +39,17 @@ export default defineConfig(() => ({
   // Enhanced build configuration with performance optimizations
   build: {
     // Target modern browsers for better optimization
-    target: 'es2022',
+    target: 'esnext',
     rollupOptions: {
       input: {
-        main: "./index.html",
-        tab: "./tab.html",
-        settings: "./settings.html",
-        "uncertainty-calculator": "./uncertainty-calculator.html",
-        "latex-preview": "./latex-preview.html",
-        "data-library": "./data-library.html",
+        main: './index.html',
+        tab: './tab.html',
+        settings: './settings.html',
+        'uncertainty-calculator': './uncertainty-calculator.html',
+        'latex-preview': './latex-preview.html',
+        'data-library': './data-library.html',
       },
       output: {
-        // Enhanced chunk splitting strategy
-        manualChunks: (id) => {
-          // React ecosystem
-          if (id.includes('react') || id.includes('react-dom')) {
-            return 'vendor-react';
-          }
-          // Material-UI ecosystem
-          if (id.includes('@mui') || id.includes('@emotion')) {
-            return 'vendor-mui';
-          }
-          // Core Univer dependencies (must be in same chunk to avoid duplicate DI)
-          if (id.includes('@wendellhu/redi') || 
-              id.includes('@univerjs/core') || 
-              id.includes('@univerjs/design') ||
-              id.includes('@univerjs/engine-render') ||
-              id.includes('@univerjs/engine-formula') ||
-              id.includes('@univerjs/network')) {
-            return 'vendor-univer-core';
-          }
-          // Other Univer packages
-          if (id.includes('@univerjs')) {
-            return 'vendor-univer-plugins';
-          }
-          // Charts and visualization
-          if (id.includes('echarts')) {
-            return 'vendor-charts';
-          }
-          // Math and LaTeX
-          if (id.includes('katex') || id.includes('react-katex')) {
-            return 'vendor-math';
-          }
-          // Tauri APIs
-          if (id.includes('@tauri-apps')) {
-            return 'vendor-tauri';
-          }
-          // Drag and drop
-          if (id.includes('@dnd-kit')) {
-            return 'vendor-dnd';
-          }
-          // State management and utilities
-          if (id.includes('zustand')) {
-            return 'vendor-utils';
-          }
-          // Node modules that aren't specifically chunked
-          if (id.includes('node_modules')) {
-            return 'vendor-misc';
-          }
-        },
-        // Optimized file naming
-        chunkFileNames: (chunkInfo) => {
-          // Helper to create safe filename identifiers
-          const createSafeIdentifier = (input: string): string => {
-            return input
-              .replace(/[^a-zA-Z0-9-_]/g, '-') // Replace special chars with dashes
-              .replace(/-+/g, '-') // Collapse multiple dashes
-              .replace(/^-|-$/g, '') // Remove leading/trailing dashes
-              .substring(0, 50); // Limit length
-          };
-
-          // Prefer chunkInfo.name for better identification
-          if (chunkInfo.name) {
-            return `assets/js/${createSafeIdentifier(chunkInfo.name)}-[hash].js`;
-          }
-
-          // Fallback to facadeModuleId with more path context
-          if (chunkInfo.facadeModuleId) {
-            // Include last 2 path segments for better uniqueness
-            const pathParts = chunkInfo.facadeModuleId.split('/').filter(Boolean);
-            const relevantParts = pathParts.slice(-2); // Last 2 segments
-            const baseName = relevantParts.join('-').replace(/\.(tsx?|jsx?)$/, '');
-            return `assets/js/${createSafeIdentifier(baseName)}-[hash].js`;
-          }
-
-          return 'assets/js/chunk-[hash].js';
-        },
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
           if (assetInfo.name?.endsWith('.css')) {
@@ -174,14 +74,14 @@ export default defineConfig(() => ({
         unknownGlobalSideEffects: false,
       },
     },
-    outDir: "dist",
-    assetsDir: "assets",
+    outDir: 'dist',
+    assetsDir: 'assets',
     // Optimized chunk size limits
     chunkSizeWarningLimit: 800,
     // Source maps for debugging (disabled for production)
     sourcemap: process.env.NODE_ENV === 'development',
     // Enhanced minification
-    minify: 'terser',
+    minify: 'terser' as const,
     terserOptions: {
       compress: {
         drop_console: true,
@@ -204,7 +104,7 @@ export default defineConfig(() => ({
     emptyOutDir: true,
   },
   // Base path for production builds
-  base: "./",
+  base: './',
   // Enhanced dependency optimization
   optimizeDeps: {
     include: [
@@ -245,13 +145,13 @@ export default defineConfig(() => ({
     host: host || false,
     hmr: host
       ? {
-          protocol: "ws",
+          protocol: 'ws',
           host,
           port: 1421,
         }
       : undefined,
     watch: {
-      ignored: ["**/src-tauri/**", "**/node_modules/**"],
+      ignored: ['**/src-tauri/**', '**/node_modules/**'],
       usePolling: false, // Better performance on most systems
     },
     // Faster cold start
@@ -268,8 +168,10 @@ export default defineConfig(() => ({
   // Performance optimizations
   esbuild: {
     // Remove console logs in production
-    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+    drop: (process.env.NODE_ENV === 'production'
+      ? ['console', 'debugger']
+      : []) as ('console' | 'debugger')[],
     // Target modern browsers
-    target: 'es2022',
+    target: 'esnext',
   },
 }));

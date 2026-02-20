@@ -1,6 +1,14 @@
-import { Component, ReactNode, ErrorInfo } from 'react';
-import { Box, Typography, Button, Paper, Alert, AlertTitle, IconButton } from '@mui/material';
-import { ErrorOutline, Refresh, Close } from '@mui/icons-material';
+import { Close, ErrorOutline, Refresh } from '@mui/icons-material';
+import {
+  Alert,
+  AlertTitle,
+  Box,
+  Button,
+  IconButton,
+  Paper,
+  Typography,
+} from '@mui/material';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 interface SidebarErrorBoundaryProps {
@@ -17,7 +25,10 @@ interface State {
   retryCount: number;
 }
 
-export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, State> {
+export class SidebarErrorBoundary extends Component<
+  SidebarErrorBoundaryProps,
+  State
+> {
   constructor(props: SidebarErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -36,11 +47,14 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`Sidebar Error Boundary (${this.props.sidebarName}) caught an error:`, {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-    });
+    console.error(
+      `Sidebar Error Boundary (${this.props.sidebarName}) caught an error:`,
+      {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+      }
+    );
 
     this.setState({ errorInfo });
   }
@@ -82,7 +96,12 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
         >
           {/* Header */}
           <Box sx={{ ...sidebarStyles.header, mb: 2 }}>
-            <Typography sx={{ ...sidebarStyles.text.header, color: anafisColors.buttons.close }}>
+            <Typography
+              sx={{
+                ...sidebarStyles.text.header,
+                color: anafisColors.buttons.close,
+              }}
+            >
               ⚠️ {sidebarName} Error
             </Typography>
             <IconButton
@@ -100,13 +119,16 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
                 sx={{
                   fontSize: 48,
                   color: anafisColors.buttons.close,
-                  mb: 2
+                  mb: 2,
                 }}
               />
               <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
                 Something went wrong
               </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+              <Typography
+                variant="body2"
+                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+              >
                 The {sidebarName.toLowerCase()} encountered an error
               </Typography>
             </Box>
@@ -117,7 +139,7 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
                 mb: 3,
                 bgcolor: 'rgba(244, 67, 54, 0.1)',
                 color: 'white',
-                '& .MuiAlert-icon': { color: anafisColors.buttons.close }
+                '& .MuiAlert-icon': { color: anafisColors.buttons.close },
               }}
             >
               <AlertTitle sx={{ fontWeight: 'bold' }}>Error Details</AlertTitle>
@@ -125,7 +147,14 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
                 {error?.message ?? 'An unexpected error occurred.'}
               </Typography>
               {retryCount > 0 && (
-                <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'rgba(255, 255, 255, 0.6)' }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: 1,
+                    color: 'rgba(255, 255, 255, 0.6)',
+                  }}
+                >
                   Retry attempts: {retryCount}
                 </Typography>
               )}
@@ -139,7 +168,7 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
                 onClick={this.handleRetry}
                 sx={{
                   bgcolor: anafisColors.spreadsheet,
-                  '&:hover': { bgcolor: '#1565c0' }
+                  '&:hover': { bgcolor: '#1565c0' },
                 }}
               >
                 Try Again
@@ -154,8 +183,8 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
                   color: 'white',
                   '&:hover': {
                     borderColor: 'rgba(255, 255, 255, 0.5)',
-                    bgcolor: 'rgba(255, 255, 255, 0.05)'
-                  }
+                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  },
                 }}
               >
                 Close Sidebar
@@ -164,7 +193,14 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
 
             {import.meta.env.DEV && error?.stack && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', display: 'block', mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    display: 'block',
+                    mb: 1,
+                  }}
+                >
                   Stack Trace (Development):
                 </Typography>
                 <Paper
@@ -173,7 +209,7 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
                     bgcolor: '#0a0a0a',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     maxHeight: 120,
-                    overflow: 'auto'
+                    overflow: 'auto',
                   }}
                 >
                   <Typography
@@ -184,7 +220,7 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
                       fontFamily: 'monospace',
                       fontSize: '10px',
                       whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word'
+                      wordBreak: 'break-word',
                     }}
                   >
                     {error.stack}
@@ -202,4 +238,4 @@ export class SidebarErrorBoundary extends Component<SidebarErrorBoundaryProps, S
 }
 
 // Import sidebar styles (assuming it exists)
-import { sidebarStyles } from "@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles"
+import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';

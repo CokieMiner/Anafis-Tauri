@@ -2,8 +2,12 @@
  * Utility functions for applying protection rules to Univer workbooks
  */
 
+import {
+  ICommandService,
+  IPermissionService,
+  IUniverInstanceService,
+} from '@univerjs/core';
 import { ERROR_MESSAGES } from './constants';
-import { ICommandService, IUniverInstanceService, IPermissionService } from '@univerjs/core';
 import { SpreadsheetOperationError } from './errors';
 export interface ProtectionResource {
   name: string;
@@ -32,7 +36,7 @@ export async function applyProtectionRules(
       AddWorksheetProtectionMutation,
       AddRangeProtectionMutation,
       WorksheetEditPermission,
-      RangeProtectionPermissionEditPoint
+      RangeProtectionPermissionEditPoint,
     } = await import('@univerjs/sheets');
 
     interface UniverseInstance {
@@ -41,9 +45,9 @@ export async function applyProtectionRules(
 
     const injector = (univerInstance as UniverseInstance).__getInjector();
     const commandService = injector.get(ICommandService) as {
-      executeCommand: (commandId: string, params: unknown) => Promise<boolean>
+      executeCommand: (commandId: string, params: unknown) => Promise<boolean>;
     };
-    const instanceService = injector.get(IUniverInstanceService) as{
+    const instanceService = injector.get(IUniverInstanceService) as {
       getFocusedUnit: () => { getUnitId: () => string } | null;
     };
     const permissionService = injector.get(IPermissionService) as {
@@ -73,73 +77,115 @@ export async function applyProtectionRules(
     }
 
     for (const resource of resources) {
-      if (resource.name.includes('PROTECTION') || resource.name.includes('PERMISSION')) {
+      if (
+        resource.name.includes('PROTECTION') ||
+        resource.name.includes('PERMISSION')
+      ) {
         try {
-          const protectionData = JSON.parse(resource.data || '{}') as ProtectionData;
+          const protectionData = JSON.parse(
+            resource.data || '{}'
+          ) as ProtectionData;
 
           // Re-validate workbook and unitId before each resource to avoid stale references
           const currentWorkbook = instanceService.getFocusedUnit();
           if (currentWorkbook?.getUnitId() !== expectedUnitId) {
-            console.warn('⚠️ Workbook changed during protection application, skipping protection');
+            console.warn(
+              '⚠️ Workbook changed during protection application, skipping protection'
+            );
             continue;
           }
 
           if (protectionData.worksheetProtections) {
-            for (const [sheetId, protection] of Object.entries(protectionData.worksheetProtections)) {
+            for (const [sheetId, protection] of Object.entries(
+              protectionData.worksheetProtections
+            )) {
               if (typeof protection === 'object' && protection !== null) {
                 try {
-                  const success = await commandService.executeCommand(AddWorksheetProtectionMutation.id, {
-                    unitId: expectedUnitId,
-                    subUnitId: sheetId,
-                    rule: protection,
-                  });
+                  const success = await commandService.executeCommand(
+                    AddWorksheetProtectionMutation.id,
+                    {
+                      unitId: expectedUnitId,
+                      subUnitId: sheetId,
+                      rule: protection,
+                    }
+                  );
 
                   if (success) {
-                    const editPermission = new WorksheetEditPermission(expectedUnitId, sheetId);
-                    permissionService.updatePermissionPoint(editPermission.id, false);
+                    const editPermission = new WorksheetEditPermission(
+                      expectedUnitId,
+                      sheetId
+                    );
+                    permissionService.updatePermissionPoint(
+                      editPermission.id,
+                      false
+                    );
                     protectionCount++;
                   } else {
-                    console.warn(`⚠️ Worksheet protection command returned false for ${sheetId}, may not be supported`);
+                    console.warn(
+                      `⚠️ Worksheet protection command returned false for ${sheetId}, may not be supported`
+                    );
                   }
                 } catch (cmdError) {
-                  console.warn(`⚠️ Failed to execute worksheet protection command for ${sheetId}:`, cmdError);
+                  console.warn(
+                    `⚠️ Failed to execute worksheet protection command for ${sheetId}:`,
+                    cmdError
+                  );
                 }
               }
             }
           }
 
           if (protectionData.rangeProtections) {
-            for (const [sheetId, protections] of Object.entries(protectionData.rangeProtections)) {
+            for (const [sheetId, protections] of Object.entries(
+              protectionData.rangeProtections
+            )) {
               if (Array.isArray(protections)) {
                 for (const protection of protections) {
                   // Re-validate workbook before each command
                   const currentWorkbook = instanceService.getFocusedUnit();
                   if (currentWorkbook?.getUnitId() !== expectedUnitId) {
-                    console.warn('⚠️ Workbook changed during protection application, skipping this protection');
+                    console.warn(
+                      '⚠️ Workbook changed during protection application, skipping this protection'
+                    );
                     continue;
                   }
 
                   try {
-                    const success = await commandService.executeCommand(AddRangeProtectionMutation.id, {
-                      unitId: expectedUnitId,
-                      subUnitId: sheetId,
-                      rules: [protection],
-                    });
+                    const success = await commandService.executeCommand(
+                      AddRangeProtectionMutation.id,
+                      {
+                        unitId: expectedUnitId,
+                        subUnitId: sheetId,
+                        rules: [protection],
+                      }
+                    );
 
                     if (success) {
-                      const protectionRule = protection as { permissionId: string; name?: string };
-                      const editPermission = new RangeProtectionPermissionEditPoint(
-                        expectedUnitId,
-                        sheetId,
-                        protectionRule.permissionId
+                      const protectionRule = protection as {
+                        permissionId: string;
+                        name?: string;
+                      };
+                      const editPermission =
+                        new RangeProtectionPermissionEditPoint(
+                          expectedUnitId,
+                          sheetId,
+                          protectionRule.permissionId
+                        );
+                      permissionService.updatePermissionPoint(
+                        editPermission.id,
+                        false
                       );
-                      permissionService.updatePermissionPoint(editPermission.id, false);
                       protectionCount++;
                     } else {
-                      console.warn(`⚠️ Range protection command returned false for ${sheetId}, may not be supported`);
+                      console.warn(
+                        `⚠️ Range protection command returned false for ${sheetId}, may not be supported`
+                      );
                     }
                   } catch (cmdError) {
-                    console.warn(`⚠️ Failed to execute range protection command for ${sheetId}:`, cmdError);
+                    console.warn(
+                      `⚠️ Failed to execute range protection command for ${sheetId}:`,
+                      cmdError
+                    );
                   }
                 }
               }
@@ -152,17 +198,23 @@ export async function applyProtectionRules(
             console.warn(`⚠️ No protection rules applied from ${resource.name}`);
           }
         } catch (error) {
-          console.warn(`⚠️ Error processing resource "${resource.name}": ${error instanceof Error ? error.message : String(error)}`);
+          console.warn(
+            `⚠️ Error processing resource "${resource.name}": ${error instanceof Error ? error.message : String(error)}`
+          );
           // Don't throw - continue with next resource
         }
       }
     }
 
     if (protectionCount === 0) {
-      console.warn('⚠️ No protection rules were successfully applied from any resource');
+      console.warn(
+        '⚠️ No protection rules were successfully applied from any resource'
+      );
     }
   } catch (error) {
-    console.error(`❌ Protection application error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `❌ Protection application error: ${error instanceof Error ? error.message : String(error)}`
+    );
     // Don't re-throw - let this be a best-effort operation
   }
 }

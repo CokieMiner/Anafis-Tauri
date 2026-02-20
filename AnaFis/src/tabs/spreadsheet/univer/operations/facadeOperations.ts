@@ -1,47 +1,22 @@
 // facadeOperations.ts - Core spreadsheet operations using Facade API exclusively
-import { CellValue } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { safeSpreadsheetOperation, safeSpreadsheetOperationSync } from '@/tabs/spreadsheet/univer';
+
 import type { FUniver } from '@univerjs/core/facade';
-import type { FWorkbook } from '@univerjs/sheets/facade';
+import type { CellValue } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import {
+  safeSpreadsheetOperation,
+  safeSpreadsheetOperationSync,
+} from '@/tabs/spreadsheet/univer';
 import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
 import { convertFromUniverCellData } from '@/tabs/spreadsheet/univer/utils/dataConversion';
 import {
-  SpreadsheetError,
-  SpreadsheetErrorCode,
   ErrorCategory,
   ErrorSeverity,
-  normalizeError,
-  logError
+  SpreadsheetError,
+  SpreadsheetErrorCode,
 } from '@/tabs/spreadsheet/univer/utils/errors';
 
 // Type for the univer API reference
 export type UniverRef = { current: ReturnType<typeof FUniver.newAPI> | null };
-
-/**
- * Get workbook instance from Facade API
- */
-export function getWorkbook(univerRef: UniverRef): FWorkbook | null {
-  if (!univerRef.current) {
-    const error = new SpreadsheetError(
-      'Univer reference is null',
-      SpreadsheetErrorCode.SPREADSHEET_NOT_READY,
-      ErrorCategory.SYSTEM,
-      ErrorSeverity.HIGH,
-      { operation: 'getWorkbook' }
-    );
-    logError(error);
-    return null;
-  }
-
-  // Use Facade API exclusively
-  try {
-    return univerRef.current.getActiveWorkbook();
-  } catch (error) {
-    const spreadsheetError = normalizeError(error, 'getWorkbook');
-    logError(spreadsheetError);
-    return null;
-  }
-}
 
 /**
  * Update a single cell using Facade API.
@@ -61,8 +36,9 @@ export function updateCell(
   cellRef: string,
   value: { v?: string | number; f?: string }
 ): void {
-  return safeSpreadsheetOperationSync(() => {
-    const workbook = univerRef.current!.getActiveWorkbook()!;
+  safeSpreadsheetOperationSync(() => {
+    const workbook = univerRef.current?.getActiveWorkbook();
+    if (!workbook) return;
     const sheet = workbook.getActiveSheet();
     const range = sheet.getRange(cellRef);
     if (value.v !== undefined) {
@@ -86,9 +62,13 @@ export function updateCell(
  * @returns The cell value (string, number, or null)
  * @throws {Error} If the spreadsheet operation fails
  */
-export function getCellValue(univerRef: UniverRef, cellRef: string): string | number | null {
+export function getCellValue(
+  univerRef: UniverRef,
+  cellRef: string
+): string | number | null {
   return safeSpreadsheetOperationSync(() => {
-    const workbook = univerRef.current!.getActiveWorkbook()!;
+    const workbook = univerRef.current?.getActiveWorkbook();
+    if (!workbook) return null;
     const sheet = workbook.getActiveSheet();
     const range = sheet.getRange(cellRef);
     const value = range.getValue();
@@ -114,22 +94,34 @@ export function getCellValue(univerRef: UniverRef, cellRef: string): string | nu
  * @returns Promise resolving to 2D array of cell values
  * @throws {Error} If the spreadsheet operation fails after retries
  */
-export async function getRange(univerRef: UniverRef, rangeRef: string): Promise<(string | number)[][]> {
-  return safeSpreadsheetOperation(() => {
-    const workbook = univerRef.current!.getActiveWorkbook()!;
-    const sheet = workbook.getActiveSheet();
-    const range = sheet.getRange(rangeRef);
-    const values = range.getValues();
+export async function getRange(
+  univerRef: UniverRef,
+  rangeRef: string
+): Promise<(string | number)[][]> {
+  return safeSpreadsheetOperation(
+    () => {
+      const workbook = univerRef.current?.getActiveWorkbook();
+      if (!workbook) return [];
+      const sheet = workbook.getActiveSheet();
+      const range = sheet.getRange(rangeRef);
+      const values = range.getValues();
 
-    // Convert any boolean values to strings and handle null/undefined
-    return values.map((row: unknown[]) =>
-      row.map((cell: unknown) => {
-        if (cell === null || cell === undefined) {return '';}
-        if (typeof cell === 'boolean') {return cell.toString();}
-        return cell as string | number;
-      })
-    );
-  }, 'get range', []);
+      // Convert any boolean values to strings and handle null/undefined
+      return values.map((row: unknown[]) =>
+        row.map((cell: unknown) => {
+          if (cell === null || cell === undefined) {
+            return '';
+          }
+          if (typeof cell === 'boolean') {
+            return cell.toString();
+          }
+          return cell as string | number;
+        })
+      );
+    },
+    'get range',
+    []
+  );
 }
 
 /**
@@ -155,30 +147,35 @@ function convertToCellValue(cell: unknown): CellValue {
  * @returns Promise resolving to 2D array of CellValue objects
  * @throws {Error} If the spreadsheet operation fails after retries
  */
-export async function getRangeFull(univerRef: UniverRef, rangeRef: string): Promise<CellValue[][]> {
-  return safeSpreadsheetOperation(() => {
-    const workbook = univerRef.current?.getActiveWorkbook();
-    if (!workbook) {
-      throw new SpreadsheetError(
-        ERROR_MESSAGES.NO_ACTIVE_WORKBOOK,
-        SpreadsheetErrorCode.SPREADSHEET_NOT_READY,
-        ErrorCategory.SYSTEM,
-        ErrorSeverity.HIGH,
-        { operation: 'getRangeFull', context: { rangeRef } }
-      );
-    }
+export async function getRangeFull(
+  univerRef: UniverRef,
+  rangeRef: string
+): Promise<CellValue[][]> {
+  return safeSpreadsheetOperation(
+    () => {
+      const workbook = univerRef.current?.getActiveWorkbook();
+      if (!workbook) {
+        throw new SpreadsheetError(
+          ERROR_MESSAGES.NO_ACTIVE_WORKBOOK,
+          SpreadsheetErrorCode.SPREADSHEET_NOT_READY,
+          ErrorCategory.SYSTEM,
+          ErrorSeverity.HIGH,
+          { operation: 'getRangeFull', context: { rangeRef } }
+        );
+      }
 
-    const sheet = workbook.getActiveSheet();
+      const sheet = workbook.getActiveSheet();
 
-    const range = sheet.getRange(rangeRef);
+      const range = sheet.getRange(rangeRef);
 
-    const cellDatas = range.getCellDatas();
+      const cellDatas = range.getCellDatas();
 
-    // Convert ICellData[][] to CellValue[][] using safe conversion
-    return cellDatas.map((row: unknown[]) =>
-      row.map(convertToCellValue)
-    );
-  }, 'get range full', []);
+      // Convert ICellData[][] to CellValue[][] using safe conversion
+      return cellDatas.map((row: unknown[]) => row.map(convertToCellValue));
+    },
+    'get range full',
+    []
+  );
 }
 
 /**
@@ -203,8 +200,8 @@ export function getSelection(univerRef: UniverRef): string | null {
     const selection = sheet.getSelection();
 
     // Get the active range from selection
-    const activeRange = selection!.getActiveRange();
+    const activeRange = selection?.getActiveRange();
 
-    return activeRange!.getA1Notation();
+    return activeRange?.getA1Notation() ?? null;
   }, 'get selection');
 }

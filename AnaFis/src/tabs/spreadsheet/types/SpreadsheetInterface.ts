@@ -15,8 +15,8 @@
 // The code in adapters can still support sync handlers for backward
 // compatibility by checking whether the returned value is a Promise.
 
-import { ExportService } from '@/core/types/export';
-import { ImportService } from '@/core/types/import';
+import type { ExportService } from '@/core/types/export';
+import type { ImportService } from '@/core/types/import';
 
 // ============================================================================
 // ABSTRACT STYLE TYPES (Library-Independent)
@@ -71,7 +71,21 @@ export interface SpreadsheetStyle {
  * Border style specification
  */
 export interface BorderStyle {
-  style: 'none' | 'thin' | 'medium' | 'dashed' | 'dotted' | 'thick' | 'double' | 'hair' | 'mediumDashed' | 'dashDot' | 'mediumDashDot' | 'dashDotDot' | 'mediumDashDotDot' | 'slantDashDot';
+  style:
+    | 'none'
+    | 'thin'
+    | 'medium'
+    | 'dashed'
+    | 'dotted'
+    | 'thick'
+    | 'double'
+    | 'hair'
+    | 'mediumDashed'
+    | 'dashDot'
+    | 'mediumDashDot'
+    | 'dashDotDot'
+    | 'mediumDashDotDot'
+    | 'slantDashDot';
   color?: string;
 }
 
@@ -83,12 +97,12 @@ export interface SpreadsheetCapabilities {
   supportsMergedCells: boolean;
   supportsCharts: boolean;
   supportsComments: boolean;
-  
+
   // Performance characteristics
   maxRows: number;
   maxColumns: number;
   maxSheets: number;
-  
+
   // Implementation metadata
   libraryName: string;
   libraryVersion: string;
@@ -114,7 +128,9 @@ export interface CellValue {
 export interface SpreadsheetRef {
   // Core cell operations
   updateCell: (cellRef: string, value: CellValue) => Promise<void>;
-  batchUpdateCells: (updates: Array<{ cellRef: string; value: CellValue }>) => Promise<void>;
+  batchUpdateCells: (
+    updates: Array<{ cellRef: string; value: CellValue }>
+  ) => Promise<void>;
   getCellValue: (cellRef: string) => Promise<string | number | null>;
 
   // Range operations
@@ -123,7 +139,11 @@ export interface SpreadsheetRef {
   getRangeFull: (rangeRef: string) => Promise<CellValue[][]>;
 
   // Direct formula insertion (performance optimization)
-  insertFormulas: (rangeOrStartCell: string, formulas: string[] | string[][], direction?: 'vertical' | 'horizontal') => Promise<void>;
+  insertFormulas: (
+    rangeOrStartCell: string,
+    formulas: string[] | string[][],
+    direction?: 'vertical' | 'horizontal'
+  ) => Promise<void>;
 
   // Selection and state
   getSelection: () => Promise<string | null>;
@@ -140,7 +160,12 @@ export interface SpreadsheetRef {
 
   // Range utilities (added for proper abstraction)
   getUsedRange: () => Promise<string>;
-  getSheetBounds: (sheetId?: string) => Promise<{ startCol: number; startRow: number; endCol: number; endRow: number }>;
+  getSheetBounds: (sheetId?: string) => Promise<{
+    startCol: number;
+    startRow: number;
+    endCol: number;
+    endRow: number;
+  }>;
 
   // Append mode operations (for importing sheets into existing workbook)
   getNewlyCreatedSheet: (sheetName: string) => Promise<unknown>;
@@ -149,7 +174,12 @@ export interface SpreadsheetRef {
     sheetData: {
       name: string;
       cellDataMatrix?: Record<number, Record<number, unknown>> | null;
-      mergeData?: Array<{ startRow: number; startColumn: number; endRow: number; endColumn: number }>;
+      mergeData?: Array<{
+        startRow: number;
+        startColumn: number;
+        endRow: number;
+        endColumn: number;
+      }>;
     },
     options?: { includeFormulas?: boolean; includeFormatting?: boolean }
   ) => Promise<void>;

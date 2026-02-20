@@ -85,40 +85,6 @@ impl std::fmt::Display for ErrorResponse {
 /// Type alias for command results using standardized errors
 pub type CommandResult<T> = Result<T, ErrorResponse>;
 
-/// Helper functions for creating standardized errors
-#[allow(dead_code)]
-pub fn internal_error(message: impl Into<String>) -> ErrorResponse {
-    ErrorResponse {
-        version: API_VERSION.to_string(),
-        code: ErrorCode::InternalError,
-        message: message.into(),
-        details: None,
-        field: None,
-    }
-}
-
-#[allow(dead_code)]
-pub fn invalid_input(message: impl Into<String>) -> ErrorResponse {
-    ErrorResponse {
-        version: API_VERSION.to_string(),
-        code: ErrorCode::InvalidInput,
-        message: message.into(),
-        details: None,
-        field: None,
-    }
-}
-
-#[allow(dead_code)]
-pub fn not_found(resource: impl Into<String>) -> ErrorResponse {
-    ErrorResponse {
-        version: API_VERSION.to_string(),
-        code: ErrorCode::NotFound,
-        message: format!("{} not found", resource.into()),
-        details: None,
-        field: None,
-    }
-}
-
 pub fn file_not_found(path: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
         version: API_VERSION.to_string(),
@@ -136,6 +102,16 @@ pub fn validation_error(message: impl Into<String>, field: Option<String>) -> Er
         message: message.into(),
         details: None,
         field,
+    }
+}
+
+pub fn internal_error(message: impl Into<String>) -> ErrorResponse {
+    ErrorResponse {
+        version: API_VERSION.to_string(),
+        code: ErrorCode::InternalError,
+        message: message.into(),
+        details: None,
+        field: None,
     }
 }
 
@@ -187,30 +163,4 @@ pub fn window_error(message: impl Into<String>) -> ErrorResponse {
         details: None,
         field: None,
     }
-}
-
-/// Convert a generic error into a standardized error response
-#[allow(dead_code)]
-pub fn from_generic_error<E: std::fmt::Display>(error: E, code: ErrorCode) -> ErrorResponse {
-    ErrorResponse {
-        version: API_VERSION.to_string(),
-        code,
-        message: error.to_string(),
-        details: None,
-        field: None,
-    }
-}
-
-/// Add details to an existing error response
-#[allow(dead_code)]
-pub fn with_details(mut error: ErrorResponse, details: impl Into<String>) -> ErrorResponse {
-    error.details = Some(details.into());
-    error
-}
-
-/// Add field information to an existing error response
-#[allow(dead_code)]
-pub fn with_field(mut error: ErrorResponse, field: impl Into<String>) -> ErrorResponse {
-    error.field = Some(field.into());
-    error
 }

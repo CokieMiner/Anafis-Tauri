@@ -1,6 +1,9 @@
 // RangeValidator.ts - Centralized range validation utilities
-import { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { parseRange, type RangeBounds } from '@/tabs/spreadsheet/univer/utils/cellUtils';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import {
+  parseRange,
+  type RangeBounds,
+} from '@/tabs/spreadsheet/univer/utils/cellUtils';
 import { normalizeRangeRef } from '@/tabs/spreadsheet/univer/utils/validation';
 import { SpreadsheetValidationError } from './errors';
 
@@ -8,6 +11,7 @@ import { SpreadsheetValidationError } from './errors';
  * Centralized range validation utilities
  * Provides comprehensive validation for spreadsheet ranges with fail-fast error handling
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for range operations
 export class RangeValidator {
   /**
    * Validate range format (A1 notation)
@@ -26,7 +30,8 @@ export class RangeValidator {
     try {
       normalizeRangeRef(range.trim());
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Invalid range format';
+      const message =
+        error instanceof Error ? error.message : 'Invalid range format';
       throw new SpreadsheetValidationError(
         `Invalid range format "${range}": ${message}`,
         'range',
@@ -41,7 +46,7 @@ export class RangeValidator {
    * @throws {Error} If range exceeds sheet bounds
    */
   static validateBounds(range: string, maxRows: number, maxCols: number): void {
-    this.validateFormat(range);
+    RangeValidator.validateFormat(range);
 
     const bounds = parseRange(range);
     if (!bounds) {
@@ -77,8 +82,8 @@ export class RangeValidator {
    * @throws {Error} If ranges overlap
    */
   static validateNoOverlap(range1: string, range2: string): void {
-    this.validateFormat(range1);
-    this.validateFormat(range2);
+    RangeValidator.validateFormat(range1);
+    RangeValidator.validateFormat(range2);
 
     const bounds1 = parseRange(range1);
     const bounds2 = parseRange(range2);
@@ -92,7 +97,7 @@ export class RangeValidator {
       );
     }
 
-    if (this.rangesIntersect(bounds1, bounds2)) {
+    if (RangeValidator.rangesIntersect(bounds1, bounds2)) {
       throw new SpreadsheetValidationError(
         `Ranges "${range1}" and "${range2}" overlap`,
         'ranges',
@@ -106,8 +111,11 @@ export class RangeValidator {
    * Validate range exists and is accessible in spreadsheet
    * @throws {Error} If range is not accessible
    */
-  static async validateAccessible(range: string, spreadsheetAPI: SpreadsheetRef): Promise<void> {
-    this.validateFormat(range);
+  static async validateAccessible(
+    range: string,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<void> {
+    RangeValidator.validateFormat(range);
 
     try {
       await spreadsheetAPI.getRange(range);
@@ -125,8 +133,11 @@ export class RangeValidator {
    * Validate range is writable (can read and write data)
    * @throws {Error} If range is not writable
    */
-  static async validateWritable(range: string, spreadsheetAPI: SpreadsheetRef): Promise<void> {
-    await this.validateAccessible(range, spreadsheetAPI);
+  static async validateWritable(
+    range: string,
+    spreadsheetAPI: SpreadsheetRef
+  ): Promise<void> {
+    await RangeValidator.validateAccessible(range, spreadsheetAPI);
 
     try {
       const testData = await spreadsheetAPI.getRange(range);
@@ -135,7 +146,10 @@ export class RangeValidator {
           `Range "${range}" appears to be empty or inaccessible`,
           'range',
           'validateWritable',
-          { range, dataLength: Array.isArray(testData) ? testData.length : 'not array' }
+          {
+            range,
+            dataLength: Array.isArray(testData) ? testData.length : 'not array',
+          }
         );
       }
     } catch (error) {
@@ -155,9 +169,10 @@ export class RangeValidator {
   static validateNoOverlaps(ranges: string[]): void {
     for (let i = 0; i < ranges.length; i++) {
       for (let j = i + 1; j < ranges.length; j++) {
-        const range1 = ranges[i]!;
-        const range2 = ranges[j]!;
-        this.validateNoOverlap(range1, range2);
+        const range1 = ranges[i];
+        const range2 = ranges[j];
+        if (!range1 || !range2) continue;
+        RangeValidator.validateNoOverlap(range1, range2);
       }
     }
   }
@@ -166,10 +181,13 @@ export class RangeValidator {
    * Validate ranges don't overlap with a set of reference ranges
    * @throws {Error} If any range overlaps with reference ranges
    */
-  static validateNoOverlapWithReferences(ranges: string[], referenceRanges: string[]): void {
+  static validateNoOverlapWithReferences(
+    ranges: string[],
+    referenceRanges: string[]
+  ): void {
     for (const range of ranges) {
       for (const refRange of referenceRanges) {
-        this.validateNoOverlap(range, refRange);
+        RangeValidator.validateNoOverlap(range, refRange);
       }
     }
   }
@@ -178,10 +196,15 @@ export class RangeValidator {
    * Check if two range bounds intersect
    * @private
    */
-  private static rangesIntersect(bounds1: RangeBounds, bounds2: RangeBounds): boolean {
-    return !(bounds1.endRow < bounds2.startRow ||
-             bounds1.startRow > bounds2.endRow ||
-             bounds1.endCol < bounds2.startCol ||
-             bounds1.startCol > bounds2.endCol);
+  private static rangesIntersect(
+    bounds1: RangeBounds,
+    bounds2: RangeBounds
+  ): boolean {
+    return !(
+      bounds1.endRow < bounds2.startRow ||
+      bounds1.startRow > bounds2.endRow ||
+      bounds1.endCol < bounds2.startCol ||
+      bounds1.startCol > bounds2.endCol
+    );
   }
 }

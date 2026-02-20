@@ -1,14 +1,23 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { SortableContext, horizontalListSortingStrategy, useSortable} from '@dnd-kit/sortable';
+import {
+  horizontalListSortingStrategy,
+  SortableContext,
+  useSortable,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Box, IconButton, TextField } from '@mui/material';
+import React, { useMemo, useRef, useState } from 'react';
 import { useTabStore } from '@/core/managers/TabStateManager';
-import { Box, TextField, IconButton } from '@mui/material';
-import { CloseIcon } from '@/icons';
-import { getTabColors, getTabIcon } from '@/core/utils/tabColors';
 import type { Tab } from '@/core/types/tabs';
+import { getTabColors, getTabIcon } from '@/core/utils/tabColors';
+import { CloseIcon } from '@/icons';
 
 // Enhanced DraggableTab component with advanced features
-function DraggableTab({ tab, isActive, onActivate, onClose }: {
+function DraggableTab({
+  tab,
+  isActive,
+  onActivate,
+  onClose,
+}: {
   tab: Tab;
   isActive: boolean;
   onActivate: () => void;
@@ -77,14 +86,17 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
   };
 
   // Enhanced style calculation with tilt for phantom
-  const style = useMemo(() => ({
-    transform: isDragging
-      ? `${CSS.Transform.toString(transform)} scale(0.9) rotate(3deg)`
-      : CSS.Transform.toString(transform),
-    transition: isDragging ? 'none' : transition,
-    opacity: isDragging ? 0.3 : 1,
-    zIndex: isDragging ? 1000 : 1,
-  }), [transform, transition, isDragging]);
+  const style = useMemo(
+    () => ({
+      transform: isDragging
+        ? `${CSS.Transform.toString(transform)} scale(0.9) rotate(3deg)`
+        : CSS.Transform.toString(transform),
+      transition: isDragging ? 'none' : transition,
+      opacity: isDragging ? 0.3 : 1,
+      zIndex: isDragging ? 1000 : 1,
+    }),
+    [transform, transition, isDragging]
+  );
 
   // Color calculation based on tab type using shared configuration
   const colors = useMemo(() => getTabColors(tab.id), [tab.id]);
@@ -121,14 +133,12 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
         userSelect: 'none',
         transition: 'all 0.2s ease-in-out',
         background: isActive
-          ? 'rgba(255, 255, 255, 0.05)'  // Keep dark background even when active
+          ? 'rgba(255, 255, 255, 0.05)' // Keep dark background even when active
           : isDragging
             ? 'rgba(255, 255, 255, 0.03)'
             : 'rgba(255, 255, 255, 0.02)',
         border: `2px solid ${isActive ? colors.accent : 'rgba(255, 255, 255, 0.08)'}`,
-        color: isActive || isDragging
-          ? '#ffffff'
-          : 'rgba(255, 255, 255, 0.7)',
+        color: isActive || isDragging ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
         boxShadow: isActive
           ? `0 2px 8px ${colors.primary}40`
           : isDragging
@@ -136,30 +146,30 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
             : 'none',
         '&:hover': {
           background: isActive
-            ? 'rgba(255, 255, 255, 0.08)'  // Keep dark background on hover too
+            ? 'rgba(255, 255, 255, 0.08)' // Keep dark background on hover too
             : isDragging
               ? colors.secondary
               : 'rgba(255, 255, 255, 0.08)',
-          borderColor: isActive
-            ? colors.accent
-            : colors.primary,
+          borderColor: isActive ? colors.accent : colors.primary,
           color: '#ffffff',
           transform: isDragging ? 'none' : 'translateY(-1px)',
           boxShadow: isActive
             ? `0 4px 12px ${colors.primary}50`
             : `0 2px 8px ${colors.primary}20`,
         },
-        '&::before': isDragging ? {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          borderRadius: '8px',
-          background: `rgba(255, 255, 255, 0.1)`,
-          zIndex: -1,
-        } : {},
+        '&::before': isDragging
+          ? {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: '8px',
+              background: `rgba(255, 255, 255, 0.1)`,
+              zIndex: -1,
+            }
+          : {},
       }}
       role="tab"
       aria-label={`${tab.title} tab${isActive ? ' (active)' : ''}`}
@@ -210,47 +220,55 @@ function DraggableTab({ tab, isActive, onActivate, onClose }: {
               height: '100%',
             }}
           >
-            <Box sx={{
-              width: '18px',
-              height: '3px',
-              backgroundColor: `${colors.accent} !important`,
-              background: `${colors.accent} !important`,
-              color: `${colors.accent} !important`,
-              borderRadius: '2px',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-              border: 'none',
-            }} />
-            <Box sx={{
-              width: '18px',
-              height: '3px',
-              backgroundColor: `${colors.accent} !important`,
-              background: `${colors.accent} !important`,
-              color: `${colors.accent} !important`,
-              borderRadius: '2px',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-              border: 'none',
-            }} />
-            <Box sx={{
-              width: '18px',
-              height: '3px',
-              backgroundColor: `${colors.accent} !important`,
-              background: `${colors.accent} !important`,
-              color: `${colors.accent} !important`,
-              borderRadius: '2px',
-              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-              border: 'none',
-            }} />
+            <Box
+              sx={{
+                width: '18px',
+                height: '3px',
+                backgroundColor: `${colors.accent} !important`,
+                background: `${colors.accent} !important`,
+                color: `${colors.accent} !important`,
+                borderRadius: '2px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+                border: 'none',
+              }}
+            />
+            <Box
+              sx={{
+                width: '18px',
+                height: '3px',
+                backgroundColor: `${colors.accent} !important`,
+                background: `${colors.accent} !important`,
+                color: `${colors.accent} !important`,
+                borderRadius: '2px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+                border: 'none',
+              }}
+            />
+            <Box
+              sx={{
+                width: '18px',
+                height: '3px',
+                backgroundColor: `${colors.accent} !important`,
+                background: `${colors.accent} !important`,
+                color: `${colors.accent} !important`,
+                borderRadius: '2px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+                border: 'none',
+              }}
+            />
           </Box>
         </Box>
       )}
 
       {/* Tab Icon */}
-      <Box sx={{
-        mr: 1,
-        display: 'flex',
-        alignItems: 'center',
-        flexShrink: 0
-      }}>
+      <Box
+        sx={{
+          mr: 1,
+          display: 'flex',
+          alignItems: 'center',
+          flexShrink: 0,
+        }}
+      >
         {renderTabIcon()}
       </Box>
 
@@ -345,15 +363,17 @@ export function DraggableTabBar() {
 
   // Ensure home tab is always first, then sort other tabs
   const sortedTabs = useMemo(() => {
-    const homeTab = tabs.find(tab => tab.id === 'home');
-    const otherTabs = tabs.filter(tab => tab.id !== 'home');
+    const homeTab = tabs.find((tab) => tab.id === 'home');
+    const otherTabs = tabs.filter((tab) => tab.id !== 'home');
     const result = homeTab ? [homeTab, ...otherTabs] : tabs;
     return result;
   }, [tabs]);
 
   // Memoize tab IDs for SortableContext (excluding home tab from sorting)
   const sortableTabIds = useMemo(() => {
-    const ids = sortedTabs.filter(tab => tab.id !== 'home').map((t: Tab) => t.id);
+    const ids = sortedTabs
+      .filter((tab) => tab.id !== 'home')
+      .map((t: Tab) => t.id);
     return ids;
   }, [sortedTabs]);
 
@@ -368,7 +388,8 @@ export function DraggableTabBar() {
         width: '100%',
       }}
     >
-        <Box sx={{
+      <Box
+        sx={{
           display: 'flex',
           alignItems: 'center',
           minHeight: '52px',
@@ -387,9 +408,12 @@ export function DraggableTabBar() {
             background: 'rgba(255, 255, 255, 0.15)',
             borderRadius: '2px',
           },
-        }}>
-          {/* Render home tab first (not draggable) */}
-          {sortedTabs.filter(tab => tab.id === 'home').map((tab: Tab) => (
+        }}
+      >
+        {/* Render home tab first (not draggable) */}
+        {sortedTabs
+          .filter((tab) => tab.id === 'home')
+          .map((tab: Tab) => (
             <Box
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -406,61 +430,79 @@ export function DraggableTabBar() {
                 cursor: 'pointer',
                 userSelect: 'none',
                 transition: 'all 0.2s ease-in-out',
-                background: activeTabId === tab.id
-                  ? 'rgba(255, 255, 255, 0.05)'  // Keep dark background for home tab too
-                  : 'rgba(255, 255, 255, 0.05)',
-                border: activeTabId === tab.id
-                  ? `2px solid #ba68c8`
-                  : '1px solid rgba(255, 255, 255, 0.12)',
-                color: activeTabId === tab.id
-                  ? '#ffffff'
-                  : 'rgba(255, 255, 255, 0.7)',
-                boxShadow: activeTabId === tab.id
-                  ? `0 2px 8px rgba(156, 39, 176, 0.4)`
-                  : 'none',
+                background:
+                  activeTabId === tab.id
+                    ? 'rgba(255, 255, 255, 0.05)' // Keep dark background for home tab too
+                    : 'rgba(255, 255, 255, 0.05)',
+                border:
+                  activeTabId === tab.id
+                    ? `2px solid #ba68c8`
+                    : '1px solid rgba(255, 255, 255, 0.12)',
+                color:
+                  activeTabId === tab.id
+                    ? '#ffffff'
+                    : 'rgba(255, 255, 255, 0.7)',
+                boxShadow:
+                  activeTabId === tab.id
+                    ? `0 2px 8px rgba(156, 39, 176, 0.4)`
+                    : 'none',
                 '&:hover': {
-                  background: activeTabId === tab.id
-                    ? 'rgba(255, 255, 255, 0.08)'  // Keep dark background on hover for home tab
-                    : `rgba(255, 255, 255, 0.08)`,
-                  borderColor: activeTabId === tab.id
-                    ? '#ba68c8'
-                    : '#9c27b0',
+                  background:
+                    activeTabId === tab.id
+                      ? 'rgba(255, 255, 255, 0.08)' // Keep dark background on hover for home tab
+                      : `rgba(255, 255, 255, 0.08)`,
+                  borderColor: activeTabId === tab.id ? '#ba68c8' : '#9c27b0',
                   color: '#ffffff',
                   transform: 'translateY(-1px)',
-                  boxShadow: activeTabId === tab.id
-                    ? `0 4px 12px rgba(156, 39, 176, 0.5)`
-                    : `0 2px 8px rgba(156, 39, 176, 0.2)`,
+                  boxShadow:
+                    activeTabId === tab.id
+                      ? `0 4px 12px rgba(156, 39, 176, 0.5)`
+                      : `0 2px 8px rgba(156, 39, 176, 0.2)`,
                 },
               }}
             >
               {/* Home Icon */}
-              <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <Box
+                sx={{
+                  mr: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
                 {getTabIcon('home', '1rem')}
               </Box>
 
               {/* Title */}
-              <Box sx={{
-                flex: 1,
-                fontWeight: activeTabId === tab.id ? 600 : 500,
-                fontSize: '0.85rem',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                mr: 1,
-                letterSpacing: '0.025em',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                minWidth: 0,
-              }}>
+              <Box
+                sx={{
+                  flex: 1,
+                  fontWeight: activeTabId === tab.id ? 600 : 500,
+                  fontSize: '0.85rem',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  mr: 1,
+                  letterSpacing: '0.025em',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  minWidth: 0,
+                }}
+              >
                 {tab.title}
               </Box>
             </Box>
           ))}
 
-          {/* Render other tabs in sortable context */}
-          <SortableContext items={sortableTabIds} strategy={horizontalListSortingStrategy}>
-            {sortedTabs.filter(tab => tab.id !== 'home').map((tab: Tab) => {
+        {/* Render other tabs in sortable context */}
+        <SortableContext
+          items={sortableTabIds}
+          strategy={horizontalListSortingStrategy}
+        >
+          {sortedTabs
+            .filter((tab) => tab.id !== 'home')
+            .map((tab: Tab) => {
               return (
                 <MemoizedDraggableTab
                   key={tab.id}
@@ -470,7 +512,7 @@ export function DraggableTabBar() {
                   onClose={() => void removeTab(tab.id)}
                 />
               );
-          })}
+            })}
         </SortableContext>
       </Box>
     </Box>

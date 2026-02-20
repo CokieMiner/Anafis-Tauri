@@ -7,11 +7,11 @@ export interface DataSequence {
   description: string;
   tags: string[];
   unit: string;
-  source: string;  // e.g., "Sheet1, A1:A100"
+  source: string; // e.g., "Sheet1, A1:A100"
   data: number[];
   uncertainties?: number[];
   is_pinned: boolean;
-  created_at: string;  // ISO 8601 format
+  created_at: string; // ISO 8601 format
   modified_at: string; // ISO 8601 format
 }
 

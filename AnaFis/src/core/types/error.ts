@@ -4,8 +4,6 @@
 // Error responses include error codes, messages, and optional details for better
 // frontend error handling and user experience.
 
-export const API_VERSION = '1.0.0';
-
 export enum ErrorCode {
   // Generic errors
   InternalError = 'INTERNAL_ERROR',
@@ -56,8 +54,15 @@ export interface ErrorResponse {
 export type CommandResult<T> = T | ErrorResponse;
 
 // Helper functions for error handling
-export function isErrorResponse<T>(result: CommandResult<T>): result is ErrorResponse {
-  return typeof result === 'object' && result !== null && 'code' in result && 'message' in result;
+export function isErrorResponse<T>(
+  result: CommandResult<T>
+): result is ErrorResponse {
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    'code' in result &&
+    'message' in result
+  );
 }
 
 export function getErrorMessage(error: ErrorResponse): string {
@@ -65,12 +70,4 @@ export function getErrorMessage(error: ErrorResponse): string {
     return `${error.field}: ${error.message}`;
   }
   return error.message;
-}
-
-export function getDetailedErrorMessage(error: ErrorResponse): string {
-  let message = getErrorMessage(error);
-  if (error.details) {
-    message += `\n\nDetails: ${error.details}`;
-  }
-  return message;
 }
