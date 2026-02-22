@@ -39,13 +39,18 @@ fn fit_custom_odr_inner(request: &OdrFitRequest) -> OdrResult<OdrFitResponse> {
     let prepared = prepare_data(request)?;
     let normalized_parameter_names = normalize_identifiers(&request.parameter_names, "parameter")?;
 
-    validate_symbol_sets(&prepared.independent_names, &normalized_parameter_names)?;
+    validate_symbol_sets(&prepared.variable_names, &normalized_parameter_names)?;
 
-    let compiled_model = get_or_compile_model(
-        &request.model_formula,
-        &prepared.independent_names,
-        &normalized_parameter_names,
-    )?;
+    let mut compiled_models = Vec::with_capacity(request.layers.len());
+    for layer in &request.layers {
+        let compiled = get_or_compile_model(
+            &layer.formula,
+            &layer.dependent_variable,
+            &layer.independent_variables,
+            &normalized_parameter_names,
+        )?;
+        compiled_models.push(compiled);
+    }
 
     let parameter_count = normalized_parameter_names.len();
     let initial_guess = if let Some(initial) = &request.initial_guess {
@@ -74,24 +79,25 @@ fn fit_custom_odr_inner(request: &OdrFitRequest) -> OdrResult<OdrFitResponse> {
         .clamp(5, 5000);
 
     let (params, final_state, iterations) = solve_odr(
-        &compiled_model,
+        &compiled_models,
         &prepared,
         initial_guess,
+        &normalized_parameter_names,
         max_iterations,
         DEFAULT_TOLERANCE,
         DEFAULT_DAMPING,
     )?;
 
     Ok(build_response(
-        &compiled_model,
+        &compiled_models,
         &prepared,
         params,
-        final_state,
+        &final_state,
         iterations,
-        &request.dependent_variable,
     ))
 }
 
+#[allow(clippy::too_many_lines, reason = "Grid evaluation requires validation and generation logic")]
 fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridEvaluationResponse> {
     let normalized_parameter_names = normalize_identifiers(&request.parameter_names, "parameter")?;
     let normalized_independent_names =
@@ -126,6 +132,7 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
 
     let compiled_model = get_or_compile_model(
         &request.model_formula,
+        "z", // dummy dependent name since grid just evals the raw function
         &normalized_independent_names,
         &normalized_parameter_names,
     )?;
@@ -211,19 +218,19 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
 
 #[allow(clippy::too_many_lines, reason = "Building complex fit response")]
 fn build_response(
-    model: &super::engine::CompiledModel,
+    models: &[std::sync::Arc<super::engine::CompiledModel>],
     prepared: &super::engine::PreparedData,
     parameter_values: Vec<f64>,
-    final_state: super::engine::EvaluationState,
+    final_state: &super::engine::EvaluationState,
     iterations: usize,
-    dependent_variable: &str,
 ) -> OdrFitResponse {
     let parameter_count = parameter_values.len();
     let point_count = prepared.point_count;
+    let total_residuals = point_count * models.len();
 
-    let (normal_matrix, _) = build_normal_equations(&final_state);
+    let (normal_matrix, _) = build_normal_equations(final_state);
 
-    let degrees_of_freedom = point_count.cast_signed() - parameter_count.cast_signed();
+    let degrees_of_freedom = total_residuals.cast_signed() - parameter_count.cast_signed();
     let chi_squared_reduced = if degrees_of_freedom > 0 {
         #[allow(
             clippy::cast_precision_loss,
@@ -257,7 +264,6 @@ fn build_response(
     let (parameter_uncertainties, parameter_covariance) =
         match invert_information_matrix(normal_matrix) {
             Ok(covariance) => {
-                // Build full covariance matrix with scaling applied
                 let cov_matrix: Vec<Vec<f64>> = (0..parameter_count)
                     .map(|i| {
                         (0..parameter_count)
@@ -283,32 +289,61 @@ fn build_response(
             }
         };
 
-    let residual_sum_of_squares: f64 = final_state
-        .residuals
-        .iter()
-        .map(|value| value * value)
-        .sum();
+    let mut flat_residuals = Vec::with_capacity(total_residuals);
+    let mut flat_fitted = Vec::with_capacity(total_residuals);
+
+    for residuals in &final_state.layer_residuals {
+        flat_residuals.extend_from_slice(residuals);
+    }
+    for fitted in &final_state.layer_fitted_values {
+        flat_fitted.extend_from_slice(fitted);
+    }
+
+    let residual_sum_of_squares: f64 = flat_residuals.iter().map(|value| value * value).sum();
     #[allow(
         clippy::cast_precision_loss,
         reason = "Point count casting to f64 for RMSE calculation"
     )]
-    let rmse = (residual_sum_of_squares / point_count as f64).sqrt();
+    let rmse = (residual_sum_of_squares / total_residuals as f64).sqrt();
 
-    #[allow(
-        clippy::cast_precision_loss,
-        reason = "Point count casting to f64 for mean calculation"
-    )]
-    let mean_y = prepared.dependent_values.iter().sum::<f64>() / point_count as f64;
-    let total_sum_of_squares: f64 = prepared
-        .dependent_values
-        .iter()
-        .map(|value| (value - mean_y).powi(2))
-        .sum();
-    let r_squared = if total_sum_of_squares > 0.0 {
-        1.0 - residual_sum_of_squares / total_sum_of_squares
-    } else {
-        1.0
-    };
+    // Use only the primary/last layer for R-squared rendering if applicable,
+    // or compute a global Rsquared across the combined data variance.
+    let r_squared = models.last().map_or(1.0, |last_model| {
+        // Find dependent index for last layer
+        let dep_idx_tgt = prepared
+            .variable_names
+            .iter()
+            .position(|name| name == &last_model.dependent_name)
+            .unwrap_or(0);
+
+        let target_data = &prepared.variable_values[dep_idx_tgt];
+        #[allow(
+            clippy::cast_precision_loss,
+            reason = "Point count casting to f64 for mean calculation"
+        )]
+        let mean_y = target_data.iter().sum::<f64>() / point_count as f64;
+        let total_sum_of_squares: f64 = target_data
+            .iter()
+            .map(|value| (value - mean_y).powi(2))
+            .sum();
+
+        // Sum only the residuals of the last layer
+        let last_layer_residuals = final_state
+            .layer_residuals
+            .last()
+            .expect("layer_residuals should have at least one layer");
+        let layer_rss: f64 = last_layer_residuals.iter().map(|val| val * val).sum();
+
+        if total_sum_of_squares > 0.0 {
+            1.0 - layer_rss / total_sum_of_squares
+        } else {
+            1.0
+        }
+    });
+
+    let primary_model = models
+        .last()
+        .expect("models should have at least one layer for response building");
 
     OdrFitResponse {
         success: true,
@@ -318,15 +353,15 @@ fn build_response(
             Some(warnings.join(" | "))
         },
         iterations,
-        formula: model.formula.clone(),
-        dependent_variable: dependent_variable.trim().to_lowercase(),
-        independent_variables: model.independent_names.clone(),
-        parameter_names: model.parameter_names.clone(),
+        formula: primary_model.formula.clone(),
+        dependent_variable: primary_model.dependent_name.clone(),
+        independent_variables: primary_model.independent_names.clone(),
+        parameter_names: primary_model.parameter_names.clone(),
         parameter_values,
         parameter_uncertainties,
         parameter_covariance,
-        residuals: final_state.residuals,
-        fitted_values: final_state.fitted_values,
+        residuals: flat_residuals,
+        fitted_values: flat_fitted,
         chi_squared: final_state.chi_squared,
         chi_squared_reduced,
         rmse,

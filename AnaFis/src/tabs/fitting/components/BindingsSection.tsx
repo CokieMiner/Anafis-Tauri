@@ -1,4 +1,4 @@
-// § 3. Bindings Section — Map formula variables to data columns + axis assignment
+// § 4. Bindings Section — Map formula variables to data columns + axis assignment
 
 import {
   Autocomplete,
@@ -233,7 +233,7 @@ export default function BindingsSection({
         variant="subtitle2"
         sx={{ fontWeight: 700, mb: 0.5, color: 'primary.main' }}
       >
-        3. Mappings
+        4. Mappings
       </Typography>
 
       <Box

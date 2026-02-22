@@ -8,17 +8,9 @@ import {
   Box,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
   IconButton,
-  InputLabel,
-  MenuItem,
   Paper,
   type PaperProps,
-  Select,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -35,6 +27,8 @@ import {
   type ImportedData,
 } from '../types/fittingTypes';
 import { parseCsvText } from '../utils/csvParser';
+import CsvSettingsDialog from './CsvSettingsDialog';
+import DataPreviewTable from './DataPreviewTable';
 
 interface DataSourceSectionProps {
   mode: DataSourceMode;
@@ -72,8 +66,6 @@ const amberInputSx = {
   '& .MuiInputBase-input': { caretColor: '#ffb300' },
   '& .MuiSelect-icon': { color: 'rgba(255,179,0,0.8)' },
 };
-
-const MAX_PREVIEW_ROWS = 5;
 
 function SolidPaper(props: PaperProps) {
   return (
@@ -206,10 +198,6 @@ export default function DataSourceSection({
     }
   }, [csvSettings, onDataImported]);
 
-  const previewRows = importedData
-    ? Math.min(MAX_PREVIEW_ROWS, importedData.rowCount)
-    : 0;
-
   return (
     <Box sx={sectionSx}>
       <Typography
@@ -306,236 +294,15 @@ export default function DataSourceSection({
       )}
 
       {importedData && importedData.columns.length > 0 && (
-        <Box sx={{ mt: 1 }}>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ mb: 0.5, display: 'block' }}
-          >
-            {importedData.rowCount} rows · {importedData.columns.length} cols (
-            {importedData.sourceName})
-          </Typography>
-
-          <Box
-            sx={{
-              overflow: 'auto',
-              maxHeight: 140,
-              borderRadius: 1,
-              border: '1px solid rgba(148, 163, 184, 0.12)',
-              background: 'rgba(0,0,0,0.2)',
-              '&::-webkit-scrollbar': { width: 4, height: 4 },
-              '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(255,179,0,0.25)',
-                borderRadius: 2,
-              },
-            }}
-          >
-            <Box
-              component="table"
-              sx={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '0.7rem',
-                fontFamily: 'monospace',
-                tableLayout: 'fixed',
-              }}
-            >
-              <Box component="thead">
-                <Box component="tr">
-                  {importedData.columns.map((col) => (
-                    <Box
-                      component="th"
-                      key={`th-${col.name}`}
-                      sx={{
-                        px: 0.75,
-                        py: 0.4,
-                        textAlign: 'left',
-                        fontWeight: 700,
-                        fontSize: '0.65rem',
-                        color: col.name.startsWith('σ')
-                          ? 'warning.dark'
-                          : 'text.secondary',
-                        borderBottom: '1px solid rgba(148,163,184,0.15)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: 90,
-                      }}
-                      title={col.name}
-                    >
-                      {col.name}
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-
-              <Box component="tbody">
-                {Array.from({ length: previewRows }, (_, rowIdx) => (
-                  <Box
-                    component="tr"
-                    // biome-ignore lint/suspicious/noArrayIndexKey: Table row order is static
-                    key={`preview-tr-${rowIdx}`}
-                    sx={{
-                      '&:hover': { background: 'rgba(255,179,0,0.04)' },
-                    }}
-                  >
-                    {importedData.columns.map((col) => (
-                      <Box
-                        component="td"
-                        key={`td-${col.name}`}
-                        sx={{
-                          px: 0.75,
-                          py: 0.25,
-                          color: 'text.secondary',
-                          borderBottom: '1px solid rgba(255,255,255,0.03)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          maxWidth: 90,
-                        }}
-                      >
-                        {col.data[rowIdx] !== undefined
-                          ? Number(col.data[rowIdx]).toPrecision(5)
-                          : '—'}
-                      </Box>
-                    ))}
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          </Box>
-        </Box>
+        <DataPreviewTable importedData={importedData} />
       )}
 
-      <Dialog
+      <CsvSettingsDialog
         open={advancedOpen}
+        settings={csvSettings}
         onClose={() => setAdvancedOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{
-          paper: {
-            sx: {
-              backgroundColor: '#0f0f14 !important',
-              backgroundImage: 'none !important',
-              opacity: 1,
-              backdropFilter: 'none !important',
-              mixBlendMode: 'normal',
-              border: '1px solid rgba(255,179,0,0.15)',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-            },
-          },
-        }}
-      >
-        <DialogTitle>Import Settings</DialogTitle>
-        <DialogContent
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            pt: 2,
-          }}
-        >
-          <FormControl size="small" fullWidth sx={[amberInputSx, { mt: 1 }]}>
-            <InputLabel>Separator</InputLabel>
-            <Select
-              color="warning"
-              value={csvSettings.separator}
-              label="Separator"
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#1a1a22 !important',
-                    backgroundImage: 'none !important',
-                    opacity: 1,
-                    backdropFilter: 'none !important',
-                    mixBlendMode: 'normal',
-                    color: 'rgba(255,255,255,0.95)',
-                    '& .MuiMenuItem-root': { color: 'inherit' },
-                    '& .MuiMenuItem-root:hover': {
-                      backgroundColor: 'rgba(255,179,0,0.06)',
-                    },
-                    '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
-                      {
-                        backgroundColor: 'rgba(255,179,0,0.12) !important',
-                        color: 'inherit',
-                      },
-                  },
-                },
-              }}
-              onChange={(event) => {
-                setCsvSettings((prev) => ({
-                  ...prev,
-                  separator: event.target.value,
-                }));
-              }}
-            >
-              <MenuItem value="auto">Auto-detect</MenuItem>
-              <MenuItem value=",">Comma (,)</MenuItem>
-              <MenuItem value=";">Semicolon (;)</MenuItem>
-              <MenuItem value={'\t'}>Tab</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl size="small" fullWidth sx={amberInputSx}>
-            <InputLabel>Decimal</InputLabel>
-            <Select
-              color="warning"
-              value={csvSettings.decimalFormat}
-              label="Decimal"
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    backgroundColor: '#1a1a22 !important',
-                    backgroundImage: 'none !important',
-                    opacity: 1,
-                    backdropFilter: 'none !important',
-                    mixBlendMode: 'normal',
-                    color: 'rgba(255,255,255,0.95)',
-                    '& .MuiMenuItem-root': { color: 'inherit' },
-                    '& .MuiMenuItem-root:hover': {
-                      backgroundColor: 'rgba(255,179,0,0.06)',
-                    },
-                    '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
-                      {
-                        backgroundColor: 'rgba(255,179,0,0.12) !important',
-                        color: 'inherit',
-                      },
-                  },
-                },
-              }}
-              onChange={(event) => {
-                setCsvSettings((prev) => ({
-                  ...prev,
-                  decimalFormat: event.target.value,
-                }));
-              }}
-            >
-              <MenuItem value=".">Point (.)</MenuItem>
-              <MenuItem value=",">Comma (,)</MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            color="warning"
-            size="small"
-            type="number"
-            label="Skip rows"
-            value={csvSettings.skipRows}
-            sx={amberInputSx}
-            onChange={(event) => {
-              setCsvSettings((prev) => ({
-                ...prev,
-                skipRows: Math.max(0, Number(event.target.value)),
-              }));
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button color="warning" onClick={() => setAdvancedOpen(false)}>
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSettingsChange={setCsvSettings}
+      />
     </Box>
   );
 }

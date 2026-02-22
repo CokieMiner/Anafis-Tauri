@@ -14,12 +14,12 @@ import {
   type FitState,
   type FitStatus,
   type ImportedData,
-  type IndependentVariableInput,
   type OdrFitRequest,
   type OdrFitResponse,
   type ParameterConfig,
   type VariableBinding,
 } from '../types/fittingTypes';
+import { buildFitRequest } from '../utils/requestBuilder';
 
 const AXES: Array<'x' | 'y' | 'z'> = ['x', 'y', 'z'];
 
@@ -309,74 +309,24 @@ export function useFitState() {
   const activeFormula = state.customFormula;
 
   const buildRequest = useCallback((): OdrFitRequest | null => {
-    const importedData = state.importedData;
-    if (!importedData) {
-      return null;
-    }
-
-    const colByName = (name: string | null) => {
-      if (!name) {
-        return undefined;
-      }
-      return importedData.columns.find((col) => col.name === name);
-    };
-
-    const yCol = colByName(state.dependentBinding.dataColumn);
-    if (!yCol) {
-      return null;
-    }
-    const sigmaYCol = colByName(state.dependentBinding.uncColumn);
-
-    const independentVariables: IndependentVariableInput[] = [];
-    for (const binding of state.variableBindings) {
-      const col = colByName(binding.dataColumn);
-      if (!col) {
-        return null;
-      }
-
-      const input: IndependentVariableInput = {
-        name: binding.variableName,
-        values: col.data,
-      };
-
-      const uncCol = colByName(binding.uncColumn);
-      if (uncCol) {
-        input.uncertainties = uncCol.data;
-      }
-
-      independentVariables.push(input);
-    }
-
-    if (independentVariables.length === 0) {
-      return null;
-    }
-
-    const dependentName =
-      yCol.name.trim().length > 0 ? yCol.name.toLowerCase() : 'y';
-
-    const request: OdrFitRequest = {
-      modelFormula: activeFormula,
-      dependentVariable: dependentName,
-      independentVariables,
-      observedValues: yCol.data,
-      parameterNames: state.parameterConfigs
-        .filter((p) => !p.fixed)
-        .map((p) => p.name),
-      initialGuess: state.parameterConfigs
-        .filter((p) => !p.fixed)
-        .map((p) => p.initialValue),
-      maxIterations: state.advancedSettings.maxIterations,
-    };
-
-    if (sigmaYCol) {
-      request.observedUncertainties = sigmaYCol.data;
-    }
-    if (state.correlationMatrices) {
-      request.pointCorrelations = state.correlationMatrices;
-    }
-
-    return request;
-  }, [state, activeFormula]);
+    return buildFitRequest(
+      state.importedData,
+      activeFormula,
+      state.variableBindings,
+      state.dependentBinding,
+      state.parameterConfigs,
+      state.advancedSettings,
+      state.correlationMatrices
+    );
+  }, [
+    state.importedData,
+    activeFormula,
+    state.variableBindings,
+    state.dependentBinding,
+    state.parameterConfigs,
+    state.advancedSettings,
+    state.correlationMatrices,
+  ]);
 
   const runFit = useCallback(async () => {
     const request = buildRequest();

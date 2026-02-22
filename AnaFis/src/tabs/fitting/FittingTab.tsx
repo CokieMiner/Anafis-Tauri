@@ -2,9 +2,11 @@ import { Box } from '@mui/material';
 import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
 import { useMemo } from 'react';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import AxisSettingsSection from './components/AxisSettingsSection';
 import BindingsSection from './components/BindingsSection';
 import DataSourceSection from './components/DataSourceSection';
+import FitSettingsSection from './components/FitSettingsSection';
 import FitVisualization from './components/FitVisualization';
 import ModelSection from './components/ModelSection';
 import ResidualsPanel from './components/ResidualsPanel';
@@ -16,21 +18,22 @@ const PANEL_GAP = 2;
 const FittingTab = () => {
   const baseTheme = useTheme();
 
+  // Use unified theme colors for fitting tab
   const fittingTheme = useMemo(
     () =>
       createTheme(baseTheme, {
         palette: {
           primary: {
-            main: '#ffb300',
-            light: '#ffca28',
-            dark: '#f57c00',
-            contrastText: '#111111',
+            main: anafisTheme.colors.tabs.fitting.main,
+            light: anafisTheme.colors.tabs.fitting.light,
+            dark: anafisTheme.colors.tabs.fitting.dark,
+            contrastText: anafisTheme.colors.tabs.fitting.contrast,
           },
           warning: {
-            main: '#ffb300',
-            light: '#ffca28',
-            dark: '#f57c00',
-            contrastText: '#111111',
+            main: anafisTheme.colors.tabs.fitting.main,
+            light: anafisTheme.colors.tabs.fitting.light,
+            dark: anafisTheme.colors.tabs.fitting.dark,
+            contrastText: anafisTheme.colors.tabs.fitting.contrast,
           },
         },
       }),
@@ -60,8 +63,7 @@ const FittingTab = () => {
           height: '100%',
           p: 2,
           boxSizing: 'border-box',
-          background:
-            'radial-gradient(circle at 20% 50%, rgba(30, 27, 75, 0.12) 0%, transparent 52%), radial-gradient(circle at 80% 20%, rgba(127, 29, 29, 0.10) 0%, transparent 48%), radial-gradient(circle at 45% 82%, rgba(88, 28, 135, 0.09) 0%, transparent 44%), linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(7, 7, 8, 1) 100%)',
+          background: anafisTheme.gradients.backgroundRadialFitting,
           overflow: 'auto',
         }}
       >
@@ -89,7 +91,7 @@ const FittingTab = () => {
               pr: 0.5,
               '&::-webkit-scrollbar': { width: 5 },
               '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(255,179,0,0.3)',
+                background: `${anafisTheme.colors.tabs.fitting.main}4D`,
                 borderRadius: 4,
               },
             }}
@@ -109,6 +111,13 @@ const FittingTab = () => {
               onFormulaChange={fit.setFormula}
               onVariableNamesChange={fit.setVariableNames}
               onParameterNamesChange={fit.setParameterNames}
+            />
+
+            <FitSettingsSection
+              parameterConfigs={fit.state.parameterConfigs}
+              advancedSettings={fit.state.advancedSettings}
+              onUpdateParameterConfig={fit.updateParameterConfig}
+              onUpdateAdvancedSettings={fit.setAdvancedSettings}
             />
 
             <BindingsSection

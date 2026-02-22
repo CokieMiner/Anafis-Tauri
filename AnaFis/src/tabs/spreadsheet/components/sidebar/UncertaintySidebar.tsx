@@ -19,8 +19,10 @@ import { useUncertaintyPropagation } from '@/tabs/spreadsheet/components/sidebar
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
+import type { UncertaintyState } from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import type { Variable } from '@/tabs/spreadsheet/univer/operations/uncertaintyOperations';
 
 type FocusedInputType =
   | { type: 'valueRange'; varIndex: number }
@@ -35,6 +37,22 @@ interface UncertaintySidebarProps {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   onPropagationComplete?: (resultRange: string) => void;
+  // External state from SidebarStateManager (for persistence)
+  externalState?: UncertaintyState;
+  externalActions?: {
+    setVariables: (variables: Variable[]) => void;
+    addVariable: () => void;
+    removeVariable: (index: number) => void;
+    updateVariable: (
+      index: number,
+      field: keyof Variable,
+      value: string | number
+    ) => void;
+    setFormula: (formula: string) => void;
+    setOutputValueRange: (range: string) => void;
+    setOutputUncertaintyRange: (range: string) => void;
+    setOutputConfidence: (confidence: number) => void;
+  };
 }
 
 const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
@@ -44,6 +62,8 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
     spreadsheetRef,
     onSelectionChange,
     onPropagationComplete,
+    externalState,
+    externalActions,
   }) => {
     // Use the uncertainty propagation hook - all business logic is now here
     const {
@@ -66,6 +86,8 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
     } = useUncertaintyPropagation({
       spreadsheetRef,
       ...(onPropagationComplete && { onComplete: onPropagationComplete }),
+      externalState,
+      externalActions,
     });
 
     const [selectedVariable, setSelectedVariable] = useState<number>(0);

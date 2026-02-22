@@ -202,6 +202,20 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
                     onPropagationComplete={(_resultRange: string) => {
                       // Could refresh spreadsheet or show notification here
                     }}
+                    externalState={sidebarState.uncertainty}
+                    externalActions={{
+                      setVariables: sidebarActions.setUncertaintyVariables,
+                      addVariable: sidebarActions.addUncertaintyVariable,
+                      removeVariable: sidebarActions.removeUncertaintyVariable,
+                      updateVariable: sidebarActions.updateUncertaintyVariable,
+                      setFormula: sidebarActions.setUncertaintyFormula,
+                      setOutputValueRange:
+                        sidebarActions.setUncertaintyOutputValueRange,
+                      setOutputUncertaintyRange:
+                        sidebarActions.setUncertaintyOutputUncertaintyRange,
+                      setOutputConfidence:
+                        sidebarActions.setUncertaintyOutputConfidence,
+                    }}
                   />
                 </SidebarErrorBoundary>
               )}
@@ -238,6 +252,19 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
                     onClose={() => sidebarActions.setActiveSidebar(null)}
                     spreadsheetRef={spreadsheetRef}
                     onSelectionChange={handleSelectionChange}
+                    externalState={sidebarState.quickPlot}
+                    externalActions={{
+                      setXRange: sidebarActions.setQuickPlotXRange,
+                      setYRange: sidebarActions.setQuickPlotYRange,
+                      setErrorRange: sidebarActions.setQuickPlotErrorRange,
+                      setXLabel: sidebarActions.setQuickPlotXLabel,
+                      setYLabel: sidebarActions.setQuickPlotYLabel,
+                      setPlotType: sidebarActions.setQuickPlotType,
+                      setShowErrorBars:
+                        sidebarActions.setQuickPlotShowErrorBars,
+                      setExportTheme: sidebarActions.setQuickPlotExportTheme,
+                      setExportFormat: sidebarActions.setQuickPlotExportFormat,
+                    }}
                   />
                 </SidebarErrorBoundary>
               )}
@@ -254,6 +281,23 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
                       spreadsheetRef={spreadsheetRef}
                       onSelectionChange={handleSelectionChange}
                       exportService={sidebarState.services.exportService}
+                      externalState={sidebarState.export}
+                      externalActions={{
+                        setFormat: sidebarActions.setExportFormat,
+                        setRangeMode: sidebarActions.setExportRangeMode,
+                        setCustomRange: sidebarActions.setExportCustomRange,
+                        setCustomDelimiter:
+                          sidebarActions.setExportCustomDelimiter,
+                        setMode: sidebarActions.setExportMode,
+                        setLibraryName: sidebarActions.setExportLibraryName,
+                        setLibraryDescription:
+                          sidebarActions.setExportLibraryDescription,
+                        setLibraryTags: sidebarActions.setExportLibraryTags,
+                        setLibraryUnit: sidebarActions.setExportLibraryUnit,
+                        setDataRange: sidebarActions.setExportDataRange,
+                        setUncertaintyRange:
+                          sidebarActions.setExportUncertaintyRange,
+                      }}
                     />
                   </SidebarErrorBoundary>
                 )}
@@ -270,6 +314,15 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
                       spreadsheetRef={spreadsheetRef}
                       onSelectionChange={handleSelectionChange}
                       importService={sidebarState.services.importService}
+                      externalState={sidebarState.import}
+                      externalActions={{
+                        setMode: sidebarActions.setImportMode,
+                        setTargetRange: sidebarActions.setImportTargetRange,
+                        setLibraryDataRange:
+                          sidebarActions.setImportLibraryDataRange,
+                        setLibraryUncertaintyRange:
+                          sidebarActions.setImportLibraryUncertaintyRange,
+                      }}
                     />
                   </SidebarErrorBoundary>
                 )}

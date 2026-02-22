@@ -22,6 +22,7 @@ import { createRoot } from 'react-dom/client';
 import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { createNoTransitionTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 import VariableManager from '@/windows/uncertaintyCalculator/components/VariableManager';
 
@@ -444,7 +445,7 @@ function UncertaintyCalculatorWindow() {
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          bgcolor: 'background.default',
+          background: anafisTheme.gradients.backgroundRadial,
           overflow: 'hidden',
         }}
       >

@@ -19,15 +19,17 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useEffect } from 'react';
-import type {
-  ExportFormat,
-  ExportRangeMode,
-  ExportService,
-} from '@/core/types/export';
+import type { ExportService } from '@/core/types/export';
 import { useExport } from '@/tabs/spreadsheet/components/sidebar/logic/useExport';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
+import type {
+  ExportFormat,
+  ExportMode,
+  ExportRangeMode,
+  ExportSidebarState,
+} from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
@@ -39,10 +41,33 @@ interface ExportSidebarProps {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
   exportService: ExportService;
+  // External state from SidebarStateManager (for persistence)
+  externalState?: ExportSidebarState;
+  externalActions?: {
+    setFormat: (format: ExportFormat) => void;
+    setRangeMode: (rangeMode: ExportRangeMode) => void;
+    setCustomRange: (customRange: string) => void;
+    setCustomDelimiter: (customDelimiter: string) => void;
+    setMode: (mode: ExportMode) => void;
+    setLibraryName: (libraryName: string) => void;
+    setLibraryDescription: (libraryDescription: string) => void;
+    setLibraryTags: (libraryTags: string) => void;
+    setLibraryUnit: (libraryUnit: string) => void;
+    setDataRange: (dataRange: string) => void;
+    setUncertaintyRange: (uncertaintyRange: string) => void;
+  };
 }
 
 const ExportSidebar = React.memo<ExportSidebarProps>(
-  ({ open, onClose, spreadsheetRef, onSelectionChange, exportService }) => {
+  ({
+    open,
+    onClose,
+    spreadsheetRef,
+    onSelectionChange,
+    exportService,
+    externalState,
+    externalActions,
+  }) => {
     // Use the export hook - all business logic is now here
     const {
       exportFormat,
@@ -76,6 +101,8 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
       spreadsheetRef,
       exportService,
       ...(onSelectionChange && { onSelectionChange }),
+      externalState,
+      externalActions,
     });
 
     // State

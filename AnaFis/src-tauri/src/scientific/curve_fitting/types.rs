@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Input data for an independent variable in an ODR fit.
+/// Input data for a variable (independent or dependent) in an ODR fit.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IndependentVariableInput {
-    /// The name of the independent variable.
+pub struct VariableInput {
+    /// The name of the variable.
     pub name: String,
     /// The observed values for this variable.
     pub values: Vec<f64>,
@@ -13,28 +13,38 @@ pub struct IndependentVariableInput {
     pub uncertainties: Option<Vec<f64>>, // Absolute uncertainties
 }
 
-/// Request structure for performing a custom ODR fit.
+/// A single equation layer in a multilayered ODR fit.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelLayer {
+    /// The mathematical model formula (e.g., "a*x + b").
+    pub formula: String,
+    /// The name of the dependent variable for this layer.
+    pub dependent_variable: String,
+    /// Names of the specific independent variables used in this layer.
+    pub independent_variables: Vec<String>,
+}
+
+/// Request structure for performing a custom multi-layer ODR fit.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OdrFitRequest {
-    /// The mathematical model formula (e.g., "a*x + b").
-    pub model_formula: String,
-    /// The name of the dependent variable.
-    pub dependent_variable: String,
-    /// List of independent variables and their data.
-    pub independent_variables: Vec<IndependentVariableInput>,
-    /// Observed values for the dependent variable.
-    pub observed_values: Vec<f64>,
-    /// Optional absolute uncertainties for the dependent variable.
-    pub observed_uncertainties: Option<Vec<f64>>, // Absolute uncertainties
-    /// Names of the parameters to be fitted.
+    /// The layers forming the system to be fitted.
+    pub layers: Vec<ModelLayer>,
+    /// List of ALL independent variables and their data.
+    pub independent_variables: Vec<VariableInput>,
+    /// List of ALL dependent observations/targets and their data.
+    pub dependent_variables: Vec<VariableInput>,
+    /// Combined names of the parameters to be fitted globally.
     pub parameter_names: Vec<String>,
-    /// Optional initial guess for parameter values.
+    /// Optional initial guess for global parameter values.
     pub initial_guess: Option<Vec<f64>>,
     /// Optional maximum number of iterations.
     pub max_iterations: Option<usize>,
     /// Optional full correlation matrices between measurements.
     pub point_correlations: Option<Vec<Vec<Vec<f64>>>>,
+    /// If true, applies 1/sqrt(N) weighting for count distributions on dependent variables.
+    pub use_poisson_weighting: Option<bool>,
 }
 
 /// Response containing the results of an ODR fit.

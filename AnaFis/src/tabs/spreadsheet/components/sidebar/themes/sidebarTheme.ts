@@ -1,190 +1,165 @@
-// AnaFis Sidebar Theme - Unified design system for all sidebars
-// Inspired by Home tab aesthetics with blue accents
+/**
+ * AnaFis Sidebar Theme - Re-exports from unified theme system
+ * This file maintains backwards compatibility while using the unified theme
+ *
+ * @deprecated Import from '@/shared/theme/unifiedTheme' instead
+ */
 
-// Color constants for better performance and consistency
-const COLORS = {
-  PRIMARY: '#2196f3',
-  PRIMARY_DARK: '#1976d2',
-  SECONDARY: '#64b5f6',
-  ACCENT: '#90caf9',
-  SUCCESS: '#4caf50',
-  WARNING: '#ff9800',
-  ERROR: '#f44336',
-} as const;
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 
-const TEXT_COLORS = {
-  PRIMARY: 'rgba(255, 255, 255, 0.95)',
-  SECONDARY: 'rgba(255, 255, 255, 0.8)',
-  TERTIARY: 'rgba(255, 255, 255, 0.6)',
-  DISABLED: 'rgba(255, 255, 255, 0.4)',
-} as const;
-
-// Shared hover effects to reduce duplication
-const HOVER_EFFECTS = {
-  primary: {
-    transform: 'translateY(-1px)',
-    boxShadow: '0 4px 15px rgba(33, 150, 243, 0.4)',
-  },
-} as const;
-
+// Re-export for backwards compatibility
 export const sidebarTheme = {
-  // Color Palette
+  // Color Palette - derived from unified theme
   colors: {
-    primary: COLORS.PRIMARY,
-    primaryDark: COLORS.PRIMARY_DARK,
-    primaryContrast: TEXT_COLORS.PRIMARY,
-    secondary: COLORS.SECONDARY,
-    accent: COLORS.ACCENT,
-    success: COLORS.SUCCESS,
-    warning: COLORS.WARNING,
-    error: COLORS.ERROR,
-    hover: COLORS.PRIMARY_DARK,
-    disabledBg: '#555555',
-    disabledText: 'rgba(255, 255, 255, 0.5)',
-    text: TEXT_COLORS,
+    primary: anafisTheme.colors.sidebar.primary,
+    primaryDark: anafisTheme.colors.sidebar.primaryDark,
+    primaryContrast: anafisTheme.colors.sidebar.primaryContrast,
+    secondary: anafisTheme.colors.sidebar.secondary,
+    accent: anafisTheme.colors.sidebar.accent,
+    success: anafisTheme.colors.status.success.main,
+    warning: anafisTheme.colors.status.warning.main,
+    error: anafisTheme.colors.status.error.main,
+    hover: anafisTheme.colors.sidebar.hover,
+    disabledBg: anafisTheme.colors.sidebar.disabledBg,
+    disabledText: anafisTheme.colors.sidebar.disabledText,
+    text: {
+      PRIMARY: anafisTheme.colors.text.primary,
+      SECONDARY: anafisTheme.colors.text.secondary,
+      TERTIARY: anafisTheme.colors.text.tertiary,
+      DISABLED: anafisTheme.colors.text.disabled,
+    },
   },
 
-  // Background Gradients (Home tab inspired)
+  // Background Gradients - from unified theme
   backgrounds: {
-    container:
-      'radial-gradient(circle at 20% 50%, rgba(30, 27, 75, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(127, 29, 29, 0.05) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(88, 28, 135, 0.05) 0%, transparent 50%)',
-    header:
-      'radial-gradient(circle at 20% 50%, rgba(30, 27, 75, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(127, 29, 29, 0.05) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(88, 28, 135, 0.05) 0%, transparent 50%)',
-    card: 'linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(42, 42, 42, 0.4) 100%)',
-    section: 'rgba(33, 150, 243, 0.05)',
-    hover: 'rgba(33, 150, 243, 0.1)',
+    container: anafisTheme.gradients.backgroundRadial,
+    header: anafisTheme.gradients.backgroundRadial,
+    card: anafisTheme.gradients.card,
+    section: `${anafisTheme.colors.sidebar.primary}0D`, // 0.05 opacity
+    hover: `${anafisTheme.colors.sidebar.primary}1A`, // 0.1 opacity
   },
 
   // Border Styles
   borders: {
-    container: '1px solid rgba(33, 150, 243, 0.3)',
-    leftAccent: '3px solid #2196f3',
-    section: '1px solid rgba(33, 150, 243, 0.2)',
-    card: '1px solid rgba(33, 150, 243, 0.1)',
-    focus: '1px solid #2196f3',
+    container: `1px solid ${anafisTheme.colors.sidebar.primary}4D`,
+    leftAccent: `3px solid ${anafisTheme.colors.sidebar.primary}`,
+    section: `1px solid ${anafisTheme.colors.sidebar.primary}33`,
+    card: `1px solid ${anafisTheme.colors.sidebar.primary}1A`,
+    focus: `1px solid ${anafisTheme.colors.sidebar.primary}`,
   },
 
-  // Shadow Effects
+  // Shadow Effects - from unified theme
   shadows: {
-    container: '0 8px 32px rgba(33, 150, 243, 0.2)',
-    card: '0 4px 15px rgba(33, 150, 243, 0.1)',
-    cardHover: '0 8px 25px rgba(33, 150, 243, 0.15)',
-    button: '0 4px 15px rgba(33, 150, 243, 0.4)',
+    container: anafisTheme.shadows.container,
+    card: anafisTheme.shadows.card,
+    cardHover: anafisTheme.shadows.cardHover,
+    button: anafisTheme.shadows.primary,
   },
 
-  // Typography Scale
+  // Typography Scale - from unified theme
   typography: {
     header: {
-      fontSize: '1.5rem',
-      fontWeight: 700,
-      color: '#2196f3',
-      lineHeight: 1.2,
+      ...anafisTheme.typography.header,
+      color: anafisTheme.colors.sidebar.primary,
     },
     sectionTitle: {
-      fontSize: '1rem',
-      fontWeight: 600,
-      color: '#64b5f6',
-      textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      lineHeight: 1.3,
+      ...anafisTheme.typography.sectionTitle,
+      color: anafisTheme.colors.sidebar.secondary,
     },
     label: {
-      fontSize: '0.875rem',
-      color: 'rgba(255, 255, 255, 0.9)',
-      fontWeight: 500,
-      lineHeight: 1.4,
+      ...anafisTheme.typography.label,
+      color: anafisTheme.colors.text.primary,
     },
     caption: {
-      fontSize: '0.75rem',
-      color: 'rgba(255, 255, 255, 0.7)',
-      lineHeight: 1.5,
+      ...anafisTheme.typography.caption,
+      color: anafisTheme.colors.text.tertiary,
     },
     body: {
-      fontSize: '0.875rem',
-      color: 'rgba(255, 255, 255, 0.9)',
-      lineHeight: 1.6,
+      ...anafisTheme.typography.body,
+      color: anafisTheme.colors.text.primary,
     },
   },
 
-  // Spacing Scale
+  // Spacing Scale - from unified theme
   spacing: {
-    container: 2.5, // 20px
-    section: 2, // 16px
-    element: 1.5, // 12px
-    tight: 1, // 8px
-    loose: 3, // 24px
+    container: anafisTheme.spacing.xl, // 20px
+    section: anafisTheme.spacing.lg, // 16px
+    element: anafisTheme.spacing.md, // 12px
+    tight: anafisTheme.spacing.sm, // 8px
+    loose: anafisTheme.spacing.xxl, // 24px
   },
 
-  // Border Radius
+  // Border Radius - from unified theme
   radius: {
-    container: '12px 0 0 12px',
-    card: '12px',
-    button: '8px',
-    input: '6px',
+    container: anafisTheme.radius.container,
+    card: anafisTheme.radius.card,
+    button: anafisTheme.radius.button,
+    input: anafisTheme.radius.input,
   },
 
-  // Transitions
+  // Transitions - from unified theme
   transitions: {
-    default: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    hover: 'all 0.2s ease-in-out',
-    focus: 'all 0.15s ease-out',
-    transform: 'transform 0.2s ease-in-out',
+    default: anafisTheme.transitions.default,
+    hover: anafisTheme.transitions.hover,
+    focus: anafisTheme.transitions.focus,
+    transform: anafisTheme.transitions.transform,
   },
 
   // Component-specific styles
   components: {
     button: {
       primary: {
-        background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
-        color: 'white',
+        background: anafisTheme.gradients.buttonPrimary,
+        color: anafisTheme.colors.sidebar.primaryContrast,
         '&:hover': {
-          background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-          ...HOVER_EFFECTS.primary,
+          background: anafisTheme.gradients.buttonPrimaryHover,
+          transform: 'translateY(-1px)',
+          boxShadow: anafisTheme.shadows.primary,
         },
       },
       secondary: {
-        borderColor: 'rgba(33, 150, 243, 0.5)',
-        color: '#64b5f6',
+        borderColor: `${anafisTheme.colors.sidebar.primary}80`,
+        color: anafisTheme.colors.sidebar.secondary,
         '&:hover': {
-          borderColor: '#2196f3',
-          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+          borderColor: anafisTheme.colors.sidebar.primary,
+          backgroundColor: `${anafisTheme.colors.sidebar.primary}1A`,
           transform: 'translateY(-1px)',
         },
       },
-      // Default button style for all sidebar buttons
       default: {
-        backgroundColor: COLORS.PRIMARY,
-        color: 'white',
+        backgroundColor: anafisTheme.colors.sidebar.primary,
+        color: anafisTheme.colors.sidebar.primaryContrast,
         border: 'none',
         '&:hover': {
-          backgroundColor: COLORS.PRIMARY_DARK,
-          ...HOVER_EFFECTS.primary,
+          backgroundColor: anafisTheme.colors.sidebar.hover,
+          transform: 'translateY(-1px)',
+          boxShadow: anafisTheme.shadows.primary,
         },
       },
     },
     input: {
       root: {
         '& .MuiOutlinedInput-root': {
-          backgroundColor: 'rgba(33, 150, 243, 0.05)',
-          borderRadius: '6px',
+          backgroundColor: `${anafisTheme.colors.sidebar.primary}0D`,
+          borderRadius: anafisTheme.radius.input,
           '& fieldset': {
-            borderColor: 'rgba(33, 150, 243, 0.2)',
+            borderColor: `${anafisTheme.colors.sidebar.primary}33`,
           },
           '&:hover fieldset': {
-            borderColor: 'rgba(33, 150, 243, 0.4)',
+            borderColor: `${anafisTheme.colors.sidebar.primary}66`,
           },
           '&.Mui-focused fieldset': {
-            borderColor: '#2196f3',
+            borderColor: anafisTheme.colors.sidebar.primary,
           },
         },
         '& .MuiInputLabel-root': {
-          color: '#64b5f6',
+          color: anafisTheme.colors.sidebar.secondary,
           '&.Mui-focused': {
-            color: '#2196f3',
+            color: anafisTheme.colors.sidebar.primary,
           },
         },
         '& input': {
-          color: 'rgba(255, 255, 255, 0.9)',
+          color: anafisTheme.colors.text.primary,
         },
       },
     },

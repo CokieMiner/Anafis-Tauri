@@ -9,14 +9,19 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useEffect } from 'react';
-import type { ImportSidebarProps } from '@/core/types/import';
+import type { ImportService } from '@/core/types/import';
 import { FileImportPanel } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/FileImportPanel';
 import { LibraryImportPanel } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/LibraryImportPanel';
 import { useImport } from '@/tabs/spreadsheet/components/sidebar/logic/useImport';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
+import type {
+  ImportMode,
+  ImportSidebarState,
+} from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
+import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 type FocusedInputType =
   | 'targetRange'
@@ -24,12 +29,36 @@ type FocusedInputType =
   | 'libraryUncertaintyRange'
   | null;
 
+interface ImportSidebarProps {
+  open: boolean;
+  onClose: () => void;
+  spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
+  onSelectionChange?: (selection: string) => void;
+  importService: ImportService;
+  // External state from SidebarStateManager (for persistence)
+  externalState?: ImportSidebarState;
+  externalActions?: {
+    setMode: (mode: ImportMode) => void;
+    setTargetRange: (targetRange: string) => void;
+    setLibraryDataRange: (libraryDataRange: string) => void;
+    setLibraryUncertaintyRange: (libraryUncertaintyRange: string) => void;
+  };
+}
+
 /**
  * Import Sidebar Container Component
  * Manages mode switching between file import and library import
  */
 const ImportSidebar = React.memo<ImportSidebarProps>(
-  ({ open, onClose, spreadsheetRef, onSelectionChange, importService }) => {
+  ({
+    open,
+    onClose,
+    spreadsheetRef,
+    onSelectionChange,
+    importService,
+    externalState,
+    externalActions,
+  }) => {
     // Use the import hook - all business logic is now here
     const {
       importMode,
@@ -43,6 +72,8 @@ const ImportSidebar = React.memo<ImportSidebarProps>(
     } = useImport({
       spreadsheetRef,
       importService,
+      externalState,
+      externalActions,
     });
 
     // Spreadsheet selection hook for range inputs

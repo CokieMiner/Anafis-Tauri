@@ -6,6 +6,8 @@
  *
  * Uses Plotly.js for rendering — chart options are returned as Plotly data/layout
  * and the consuming component renders via <Plot />.
+ *
+ * Supports both internal state (useState) and external state (from SidebarStateManager).
  */
 
 import { invoke } from '@tauri-apps/api/core';
@@ -13,31 +15,80 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Plotly } from '@/shared/components/PlotlyChart';
 import { CHART_COLORS, getThemeLayout } from '@/shared/components/plotlyTheme';
+import type {
+  ExportTheme,
+  PlotType,
+  QuickPlotExportFormat,
+  QuickPlotState,
+} from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 interface UseQuickPlotOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
+  // Optional external state (from SidebarStateManager)
+  externalState?: QuickPlotState | undefined;
+  externalActions?:
+    | {
+        setXRange: (value: string) => void;
+        setYRange: (value: string) => void;
+        setErrorRange: (value: string) => void;
+        setXLabel: (value: string) => void;
+        setYLabel: (value: string) => void;
+        setPlotType: (value: PlotType) => void;
+        setShowErrorBars: (value: boolean) => void;
+        setExportTheme: (value: ExportTheme) => void;
+        setExportFormat: (value: QuickPlotExportFormat) => void;
+      }
+    | undefined;
 }
-
-type PlotType = 'scatter' | 'line' | 'both';
-type ExportFormat = 'png' | 'svg';
-type ExportTheme = 'dark' | 'light';
 
 export function useQuickPlot({
   spreadsheetRef,
   onSelectionChange,
+  externalState,
+  externalActions,
 }: UseQuickPlotOptions) {
-  // Quick plot configuration state
-  const [xRange, setXRange] = useState<string>('');
-  const [yRange, setYRange] = useState<string>('');
-  const [errorRange, setErrorRange] = useState<string>('');
-  const [xLabel, setXLabel] = useState<string>('');
-  const [yLabel, setYLabel] = useState<string>('');
-  const [plotType, setPlotType] = useState<PlotType>('scatter');
-  const [showErrorBars, setShowErrorBars] = useState<boolean>(false);
+  // Use external state if provided, otherwise use internal state
+  const [internalXRange, setInternalXRange] = useState<string>('');
+  const [internalYRange, setInternalYRange] = useState<string>('');
+  const [internalErrorRange, setInternalErrorRange] = useState<string>('');
+  const [internalXLabel, setInternalXLabel] = useState<string>('');
+  const [internalYLabel, setInternalYLabel] = useState<string>('');
+  const [internalPlotType, setInternalPlotType] = useState<PlotType>('scatter');
+  const [internalShowErrorBars, setInternalShowErrorBars] =
+    useState<boolean>(false);
+  const [internalExportTheme, setInternalExportTheme] =
+    useState<ExportTheme>('dark');
+  const [internalExportFormat, setInternalExportFormat] =
+    useState<QuickPlotExportFormat>('png');
 
-  // Plot data and state
+  // Determine which state to use (external or internal)
+  const xRange = externalState?.xRange ?? internalXRange;
+  const yRange = externalState?.yRange ?? internalYRange;
+  const errorRange = externalState?.errorRange ?? internalErrorRange;
+  const xLabel = externalState?.xLabel ?? internalXLabel;
+  const yLabel = externalState?.yLabel ?? internalYLabel;
+  const plotType = externalState?.plotType ?? internalPlotType;
+  const showErrorBars = externalState?.showErrorBars ?? internalShowErrorBars;
+  const exportTheme = externalState?.exportTheme ?? internalExportTheme;
+  const exportFormat = externalState?.exportFormat ?? internalExportFormat;
+
+  // Determine which setters to use (external or internal)
+  const setXRange = externalActions?.setXRange ?? setInternalXRange;
+  const setYRange = externalActions?.setYRange ?? setInternalYRange;
+  const setErrorRange = externalActions?.setErrorRange ?? setInternalErrorRange;
+  const setXLabel = externalActions?.setXLabel ?? setInternalXLabel;
+  const setYLabel = externalActions?.setYLabel ?? setInternalYLabel;
+  const setPlotType = externalActions?.setPlotType ?? setInternalPlotType;
+  const setShowErrorBars =
+    externalActions?.setShowErrorBars ?? setInternalShowErrorBars;
+  const setExportTheme =
+    externalActions?.setExportTheme ?? setInternalExportTheme;
+  const setExportFormat =
+    externalActions?.setExportFormat ?? setInternalExportFormat;
+
+  // Plot data and state (always internal - derived from spreadsheet)
   const [xData, setXData] = useState<number[]>([]);
   const [yData, setYData] = useState<number[]>([]);
   const [errorData, setErrorData] = useState<number[] | undefined>(undefined);
@@ -49,13 +100,11 @@ export function useQuickPlot({
   const chartRef = useRef<HTMLDivElement>(null);
   const chartReady = true; // Plotly is always ready
 
-  // Export state
+  // Export state (always internal - transient UI state)
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [exportTheme, setExportTheme] = useState<ExportTheme>('dark');
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
   const [isExporting, setIsExporting] = useState(false);
 
-  // Save to library state
+  // Save to library state (always internal - transient UI state)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [xSequenceName, setXSequenceName] = useState('');
   const [ySequenceName, setYSequenceName] = useState('');

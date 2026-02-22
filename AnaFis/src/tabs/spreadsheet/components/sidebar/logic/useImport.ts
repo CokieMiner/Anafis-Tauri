@@ -3,6 +3,8 @@
  *
  * This hook encapsulates all the business logic for importing data into spreadsheets,
  * including state management, file selection, and API calls.
+ *
+ * Supports both internal state (useState) and external state (from SidebarStateManager).
  */
 
 import { useCallback, useState } from 'react';
@@ -11,15 +13,61 @@ import type {
   ImportOptions,
   ImportService,
 } from '@/core/types/import';
+import type {
+  ImportMode,
+  ImportSidebarState,
+} from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
 interface UseImportOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
   importService: ImportService;
+  // Optional external state (from SidebarStateManager)
+  externalState?: ImportSidebarState | undefined;
+  externalActions?:
+    | {
+        setMode: (mode: ImportMode) => void;
+        setTargetRange: (targetRange: string) => void;
+        setLibraryDataRange: (libraryDataRange: string) => void;
+        setLibraryUncertaintyRange: (libraryUncertaintyRange: string) => void;
+      }
+    | undefined;
 }
 
-export function useImport({ spreadsheetRef, importService }: UseImportOptions) {
-  // Import state
+export function useImport({
+  spreadsheetRef,
+  importService,
+  externalState,
+  externalActions,
+}: UseImportOptions) {
+  // Internal state (used when external state is not provided)
+  const [internalImportMode, setInternalImportMode] =
+    useState<ImportMode>('file');
+  const [internalTargetRange, setInternalTargetRange] = useState<string>('A1');
+  const [internalLibraryDataRange, setInternalLibraryDataRange] =
+    useState<string>('A1');
+  const [internalLibraryUncertaintyRange, setInternalLibraryUncertaintyRange] =
+    useState<string>('B1');
+
+  // Use external state if provided, otherwise use internal state
+  const importMode = externalState?.mode ?? internalImportMode;
+  const targetRange = externalState?.targetRange ?? internalTargetRange;
+  const libraryDataRange =
+    externalState?.libraryDataRange ?? internalLibraryDataRange;
+  const libraryUncertaintyRange =
+    externalState?.libraryUncertaintyRange ?? internalLibraryUncertaintyRange;
+
+  // Determine which setters to use
+  const setImportMode = externalActions?.setMode ?? setInternalImportMode;
+  const setTargetRange =
+    externalActions?.setTargetRange ?? setInternalTargetRange;
+  const setLibraryDataRange =
+    externalActions?.setLibraryDataRange ?? setInternalLibraryDataRange;
+  const setLibraryUncertaintyRange =
+    externalActions?.setLibraryUncertaintyRange ??
+    setInternalLibraryUncertaintyRange;
+
+  // Processing state (always internal - transient UI state)
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -28,15 +76,6 @@ export function useImport({ spreadsheetRef, importService }: UseImportOptions) {
     detectedFormat: string;
   } | null>(null);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
-
-  // Import mode: 'file' or 'library'
-  const [importMode, setImportMode] = useState<'file' | 'library'>('file');
-
-  // Range state (shared between components)
-  const [targetRange, setTargetRange] = useState<string>('A1');
-  const [libraryDataRange, setLibraryDataRange] = useState<string>('A1');
-  const [libraryUncertaintyRange, setLibraryUncertaintyRange] =
-    useState<string>('B1');
 
   // Select file for import
   const selectFile = useCallback(async (): Promise<boolean> => {
@@ -101,26 +140,8 @@ export function useImport({ spreadsheetRef, importService }: UseImportOptions) {
     setSuccess(null);
   }, []);
 
-  // Clear file selection
-  const clearSelection = useCallback(() => {
-    setSelectedFile(null);
-    setFileMetadata(null);
-    setError(null);
-    setSuccess(null);
-  }, []);
-
-  // Get supported formats
-  const getSupportedFormats = useCallback(() => {
-    return importService.getSupportedFormats();
-  }, [importService]);
-
   return {
     // State
-    isImporting,
-    error,
-    success,
-    selectedFile,
-    fileMetadata,
     importMode,
     setImportMode,
     targetRange,
@@ -129,12 +150,15 @@ export function useImport({ spreadsheetRef, importService }: UseImportOptions) {
     setLibraryDataRange,
     libraryUncertaintyRange,
     setLibraryUncertaintyRange,
+    isImporting,
+    error,
+    success,
+    selectedFile,
+    fileMetadata,
 
     // Actions
     selectFile,
     importFile,
     clearResult,
-    clearSelection,
-    getSupportedFormats,
   };
 }

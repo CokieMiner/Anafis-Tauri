@@ -1,36 +1,38 @@
 import { createTheme } from '@mui/material/styles';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 
-// AnaFis Color Palette - Unified theme system
+// Re-export anafisColors for backwards compatibility
+// This now derives from the unified theme
 export const anafisColors = {
   // Primary theme colors
-  primary: '#9c27b0', // Purple - default/fallback
-  spreadsheet: '#2196f3', // Blue - spreadsheet related
+  primary: anafisTheme.colors.primary.main,
+  spreadsheet: anafisTheme.colors.tabs.spreadsheet.main,
 
   // Tab-specific colors
   tabs: {
-    home: '#9c27b0', // Purple
-    spreadsheet: '#2196f3', // Blue
-    fitting: '#ff9800', // Orange
-    solver: '#4caf50', // Green
-    montecarlo: '#e91e63', // Pink
+    home: anafisTheme.colors.tabs.home.main,
+    spreadsheet: anafisTheme.colors.tabs.spreadsheet.main,
+    fitting: anafisTheme.colors.tabs.fitting.main,
+    solver: anafisTheme.colors.tabs.solver.main,
+    montecarlo: anafisTheme.colors.tabs.montecarlo.main,
   },
 
   // Top bar button colors (bright versions)
   buttons: {
-    minimize: '#4caf50', // Bright green
-    maximize: '#2196f3', // Bright blue
-    close: '#f44336', // Bright red
+    minimize: anafisTheme.colors.windowControls.minimize.main,
+    maximize: anafisTheme.colors.windowControls.maximize.main,
+    close: anafisTheme.colors.windowControls.close.main,
   },
 
   // UI element colors
   ui: {
-    background: '#0a0a0a',
-    paper: '#111111',
-    border: 'rgba(255, 255, 255, 0.08)',
+    background: anafisTheme.colors.background.primary,
+    paper: anafisTheme.colors.background.paper,
+    border: anafisTheme.colors.border.default,
     text: {
-      primary: '#ffffff',
-      secondary: 'rgba(255, 255, 255, 0.8)',
-      tertiary: 'rgba(255, 255, 255, 0.6)',
+      primary: anafisTheme.colors.text.primary,
+      secondary: anafisTheme.colors.text.secondary,
+      tertiary: anafisTheme.colors.text.tertiary,
     },
   },
 };

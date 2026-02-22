@@ -116,7 +116,7 @@ export default function AxisSettingsSection({
         variant="subtitle2"
         sx={{ fontWeight: 700, mb: 0.5, color: 'primary.main' }}
       >
-        4. Axis Settings
+        5. Axis Settings
       </Typography>
       {visibleAxes.length > 0 && (
         <Typography

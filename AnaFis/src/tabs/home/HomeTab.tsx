@@ -21,6 +21,7 @@ import React, { useCallback, useMemo } from 'react';
 
 // Import centralized tab colors
 import { getTabColors } from '@/core/utils/tabColors';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 
 interface HomeTabProps {
   openNewTab: (id: string, title: string, content: React.ReactNode) => void;
@@ -166,8 +167,7 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
         gap: 4,
         boxSizing: 'border-box',
         overflow: 'auto',
-        background:
-          'radial-gradient(circle at 20% 50%, rgba(30, 27, 75, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(127, 29, 29, 0.05) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(88, 28, 135, 0.05) 0%, transparent 50%)',
+        background: anafisTheme.gradients.backgroundRadial,
         width: '100%', // Ensure full width
       }}
     >

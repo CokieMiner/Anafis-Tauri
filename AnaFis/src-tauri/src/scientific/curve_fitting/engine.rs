@@ -1,7 +1,7 @@
 use nalgebra::{DMatrix, DVector};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
-use symb_anafis::{CompiledEvaluator, Symbol, gradient, parse, symb};
+use symb_anafis::{CompiledEvaluator, Expr, Symbol, eval_f64, gradient, parse, symb};
 
 use super::types::{OdrError, OdrFitRequest, OdrResult};
 
@@ -26,52 +26,58 @@ pub const MODEL_CACHE_MAX_ENTRIES: usize = 64;
 /// Tolerance for eigenvalue checks to ensure Positive Semi-Definiteness.
 pub const PSD_EIGEN_TOLERANCE: f64 = 1e-10;
 
-/// A model that has been compiled into executable bytecode.
+/// A model that has been compiled into executable bytecode for a specific layer.
 #[derive(Debug)]
 pub struct CompiledModel {
     /// The original mathematical formula.
     pub formula: String,
+    /// The name of the dependent variable for this layer.
+    pub dependent_name: String,
     /// Names of the parameters to be fitted.
     pub parameter_names: Vec<String>,
     /// Names of the independent variables.
     pub independent_names: Vec<String>,
-    /// Compiled evaluator for the main formula.
+    /// The parsed expression for the main formula (for `eval_f64`).
+    pub model_expr: Expr,
+    /// Parsed expressions for the partial derivatives with respect to each parameter.
+    pub parameter_gradient_exprs: Vec<Expr>, // d f / d p_j
+    /// Parsed expressions for the partial derivatives with respect to each independent variable.
+    pub independent_gradient_exprs: Vec<Expr>, // d f / d x_k
+    /// Compiled evaluator for the main formula (fallback).
     pub model_evaluator: CompiledEvaluator,
-    /// Compiled evaluators for the partial derivatives with respect to each parameter.
+    /// Compiled evaluators for the partial derivatives with respect to each parameter (fallback).
     pub parameter_gradient_evaluators: Vec<CompiledEvaluator>, // d f / d p_j
-    /// Compiled evaluators for the partial derivatives with respect to each independent variable.
+    /// Compiled evaluators for the partial derivatives with respect to each independent variable (fallback).
     pub independent_gradient_evaluators: Vec<CompiledEvaluator>, // d f / d x_k
 }
 
 /// Data prepared and validated for the ODR solver.
 pub struct PreparedData {
-    /// Names of the independent variables.
-    pub independent_names: Vec<String>,
-    /// Matrix of independent values: [`variable_index`][`point_index`].
-    pub independent_values: Vec<Vec<f64>>, // [var][point]
-    /// Vector of dependent (observed) values.
-    pub dependent_values: Vec<f64>,
-    /// Full covariance matrices for each data point.
-    /// Format: <code>[point_index][dimension_index][dimension_index]</code>, where dimension = `n_independent` + 1.
-    pub point_covariances: Vec<Vec<Vec<f64>>>, // [point][dim][dim], dim = n_independent + 1
+    /// Combined names of all variables (independent and dependent).
+    pub variable_names: Vec<String>,
+    /// Matrix of variable values: [`variable_index`][`point_index`].
+    pub variable_values: Vec<Vec<f64>>,
+    /// Full covariance matrices for each data point across the combined variable space.
+    /// Format: `[point_index][dim][dim]`, where `dim = variable_names.len()`.
+    pub point_covariances: Vec<Vec<Vec<f64>>>,
     /// Total number of data points.
     pub point_count: usize,
     /// Whether any near-zero uncertainties were clamped to a minimum value.
     pub had_uncertainty_clamp: bool,
 }
 
-/// The current state of an ODR evaluation, including residuals and Jacobians.
+/// The current state of an ODR evaluation across all layers.
 pub struct EvaluationState {
-    /// Current weighted total chi-squared value.
+    /// Current weighted total chi-squared value across all layers.
     pub chi_squared: f64,
-    /// Raw residuals (observed - predicted).
-    pub residuals: Vec<f64>,
-    /// Values predicted by the model at the current state.
-    pub fitted_values: Vec<f64>,
-    /// Residuals weighted by the inverse covariance matrix.
-    pub weighted_residuals: DVector<f64>,
-    /// Jacobian matrix weighted by the inverse covariance matrix.
-    pub weighted_jacobian: DMatrix<f64>,
+    /// Raw residuals (observed - predicted) for each layer: [`layer_idx`][point_idx].
+    pub layer_residuals: Vec<Vec<f64>>,
+    /// Values predicted by the models at the current state: [`layer_idx`][point_idx].
+    pub layer_fitted_values: Vec<Vec<f64>>,
+    /// Flattened residuals weighted by the inverse covariance matrix.
+    pub flat_weighted_residuals: DVector<f64>,
+    /// Global Jacobian matrix weighted by the inverse covariance matrix.
+    pub global_weighted_jacobian: DMatrix<f64>,
 }
 
 /// LRU cache for compiled models to avoid redundant recompilation.
@@ -208,12 +214,14 @@ pub fn validate_symbol_sets(independent: &[String], parameters: &[String]) -> Od
 /// Builds a cache key for a model based on its formula and variable names.
 fn build_model_cache_key(
     formula: &str,
+    dependent_name: &str,
     independent_names: &[String],
     parameter_names: &[String],
 ) -> String {
     format!(
-        "{}||x:{}||p:{}",
+        "{}|{}|x:{}|p:{}",
         formula.trim().to_lowercase(),
+        dependent_name.trim().to_lowercase(),
         independent_names.join(","),
         parameter_names.join(",")
     )
@@ -225,10 +233,11 @@ fn build_model_cache_key(
 /// Returns `OdrError` if model compilation fails or cache is poisoned.
 pub fn get_or_compile_model(
     model_formula: &str,
+    dependent_name: &str,
     independent_names: &[String],
     parameter_names: &[String],
 ) -> OdrResult<Arc<CompiledModel>> {
-    let key = build_model_cache_key(model_formula, independent_names, parameter_names);
+    let key = build_model_cache_key(model_formula, dependent_name, independent_names, parameter_names);
 
     {
         let mut cache = MODEL_CACHE.lock().map_err(|_| OdrError::CachePoisoned)?;
@@ -239,6 +248,7 @@ pub fn get_or_compile_model(
 
     let compiled = Arc::new(compile_model_inner(
         model_formula,
+        dependent_name,
         independent_names,
         parameter_names,
     )?);
@@ -257,6 +267,7 @@ pub fn get_or_compile_model(
 /// Internal function to compile a model formula into evaluators.
 fn compile_model_inner(
     model_formula: &str,
+    dependent_name: &str,
     independent_names: &[String],
     parameter_names: &[String],
 ) -> OdrResult<CompiledModel> {
@@ -290,12 +301,14 @@ fn compile_model_inner(
         .map_err(|error| OdrError::Compile(format!("parameter gradients: {error:?}")))?;
 
     let mut parameter_gradient_evaluators = Vec::with_capacity(parameter_gradients.len());
+    let mut parameter_gradient_exprs = Vec::with_capacity(parameter_gradients.len());
     for gradient_expr in parameter_gradients {
         parameter_gradient_evaluators.push(
             CompiledEvaluator::compile(&gradient_expr, &evaluator_order, None).map_err(
                 |error| OdrError::Compile(format!("parameter derivative evaluator: {error:?}")),
             )?,
         );
+        parameter_gradient_exprs.push(gradient_expr);
     }
 
     let independent_symbols: Vec<Symbol> =
@@ -305,108 +318,123 @@ fn compile_model_inner(
         .map_err(|error| OdrError::Compile(format!("independent gradients: {error:?}")))?;
 
     let mut independent_gradient_evaluators = Vec::with_capacity(independent_gradients.len());
+    let mut independent_gradient_exprs = Vec::with_capacity(independent_gradients.len());
     for gradient_expr in independent_gradients {
         independent_gradient_evaluators.push(
             CompiledEvaluator::compile(&gradient_expr, &evaluator_order, None).map_err(
                 |error| OdrError::Compile(format!("independent derivative evaluator: {error:?}")),
             )?,
         );
+        independent_gradient_exprs.push(gradient_expr);
     }
 
     Ok(CompiledModel {
         formula,
+        dependent_name: dependent_name.to_lowercase(),
         parameter_names: parameter_names.to_vec(),
         independent_names: independent_names.to_vec(),
+        model_expr: expr,
+        parameter_gradient_exprs,
+        independent_gradient_exprs,
         model_evaluator,
         parameter_gradient_evaluators,
         independent_gradient_evaluators,
     })
 }
 
-/// Prepares data for ODR fitting.
+/// Prepares data for ODR fitting by combining all observed variables into a single unified space.
 ///
 /// # Errors
 /// Returns `OdrError::Validation` if data length or values are invalid.
 pub fn prepare_data(request: &OdrFitRequest) -> OdrResult<PreparedData> {
-    if request.independent_variables.is_empty() {
+    if request.layers.is_empty() {
         return Err(OdrError::Validation(
-            "At least one independent variable is required".to_string(),
+            "At least one model layer is required".to_string(),
         ));
     }
 
-    if request.observed_values.len() < 2 {
+    if request.dependent_variables.is_empty() {
+        return Err(OdrError::Validation(
+            "At least one dependent variable observation is required".to_string(),
+        ));
+    }
+
+    let point_count = request.dependent_variables[0].values.len();
+    if point_count < 2 {
         return Err(OdrError::Validation(
             "At least two observations are required for fitting".to_string(),
         ));
     }
 
-    let point_count = request.observed_values.len();
-    let dependent_values = sanitize_values(&request.observed_values, "observed values")?;
+    let use_poisson = request.use_poisson_weighting.unwrap_or(false);
 
-    let (dependent_uncertainties, mut had_uncertainty_clamp) =
-        if let Some(uncertainties) = &request.observed_uncertainties {
-            if uncertainties.len() != point_count {
-                return Err(OdrError::Validation(format!(
-                    "Observed uncertainty length mismatch: expected {}, got {}",
-                    point_count,
-                    uncertainties.len()
-                )));
-            }
-            sanitize_uncertainties(uncertainties, "observed uncertainties")?
-        } else {
-            (vec![1.0; point_count], false)
-        };
+    let mut variable_names = Vec::new();
+    let mut variable_values = Vec::new();
+    let mut variable_sigmas = Vec::new();
+    let mut had_uncertainty_clamp = false;
 
-    let raw_independent_names: Vec<String> = request
-        .independent_variables
-        .iter()
-        .map(|variable| variable.name.clone())
-        .collect();
-    let independent_names = normalize_identifiers(&raw_independent_names, "independent variable")?;
-
-    let mut independent_values = Vec::with_capacity(request.independent_variables.len());
-    let mut independent_sigmas = Vec::with_capacity(request.independent_variables.len());
-
-    for variable in &request.independent_variables {
-        if variable.values.len() != point_count {
+    let mut process_variable = |var: &super::types::VariableInput, is_dependent: bool| -> OdrResult<()> {
+        if var.values.len() != point_count {
             return Err(OdrError::Validation(format!(
-                "Independent variable '{}' length mismatch: expected {}, got {}",
-                variable.name,
-                point_count,
-                variable.values.len()
+                "Variable '{}' length mismatch: expected {}, got {}",
+                var.name, point_count, var.values.len()
             )));
         }
 
-        independent_values.push(sanitize_values(&variable.values, &variable.name)?);
+        let name = var.name.trim().to_lowercase();
+        validate_identifier(&name, "variable")?;
 
-        if let Some(uncertainties) = &variable.uncertainties {
+        if variable_names.contains(&name) {
+            return Err(OdrError::Validation(format!(
+                "Duplicate expected variable name mapping: {name}"
+            )));
+        }
+
+        variable_names.push(name);
+        variable_values.push(sanitize_values(&var.values, &var.name)?);
+
+        if let Some(uncertainties) = &var.uncertainties {
             if uncertainties.len() != point_count {
                 return Err(OdrError::Validation(format!(
                     "Uncertainty length mismatch for '{}': expected {}, got {}",
-                    variable.name,
+                    var.name,
                     point_count,
                     uncertainties.len()
                 )));
             }
-            let (sigma, clamped) = sanitize_uncertainties(uncertainties, &variable.name)?;
+            let (sigma, clamped) = sanitize_uncertainties(uncertainties, &var.name)?;
             had_uncertainty_clamp |= clamped;
-            independent_sigmas.push(sigma);
+            variable_sigmas.push(sigma);
+        } else if is_dependent && use_poisson {
+            let mut sigma = Vec::with_capacity(point_count);
+            for val in &var.values {
+                let err = if *val <= 1.0 { 1.0 } else { val.sqrt() };
+                sigma.push(err);
+            }
+            variable_sigmas.push(sigma);
         } else {
-            independent_sigmas.push(vec![0.0; point_count]);
+            variable_sigmas.push(vec![0.0; point_count]);
         }
+
+        Ok(())
+    };
+
+    for var in &request.independent_variables {
+        process_variable(var, false)?;
+    }
+    for var in &request.dependent_variables {
+        process_variable(var, true)?;
     }
 
     let point_covariances = build_point_covariances(
         point_count,
-        &independent_sigmas,
-        &dependent_uncertainties,
+        &variable_sigmas,
         request.point_correlations.as_deref(),
     )?;
 
     Ok(PreparedData {
-        independent_names,
-        independent_values,
-        dependent_values,
+        variable_names,
+        variable_values,
         point_covariances,
         point_count,
         had_uncertainty_clamp,
@@ -451,33 +479,13 @@ fn sanitize_uncertainties(values: &[f64], label: &str) -> OdrResult<(Vec<f64>, b
     Ok((sanitized, had_clamp))
 }
 
-/// Constructs the full covariance matrix for each measurement point.
+/// Constructs the full covariance matrix for each measurement point in the unified variable space.
 fn build_point_covariances(
     point_count: usize,
-    independent_sigmas: &[Vec<f64>],
-    dependent_sigmas: &[f64],
+    variable_sigmas: &[Vec<f64>],
     point_correlations: Option<&[Vec<Vec<f64>>]>,
 ) -> OdrResult<Vec<Vec<Vec<f64>>>> {
-    let dim = independent_sigmas.len() + 1;
-
-    if dependent_sigmas.len() != point_count {
-        return Err(OdrError::Validation(format!(
-            "Dependent uncertainty length mismatch: expected {}, got {}",
-            point_count,
-            dependent_sigmas.len()
-        )));
-    }
-
-    for (idx, sigma) in independent_sigmas.iter().enumerate() {
-        if sigma.len() != point_count {
-            return Err(OdrError::Validation(format!(
-                "Independent uncertainty length mismatch for var {}: expected {}, got {}",
-                idx,
-                point_count,
-                sigma.len()
-            )));
-        }
-    }
+    let dim = variable_sigmas.len();
 
     if let Some(correlations) = point_correlations
         && correlations.len() != point_count
@@ -493,10 +501,9 @@ fn build_point_covariances(
 
     for point in 0..point_count {
         let mut sigmas = vec![0.0; dim];
-        for var_idx in 0..independent_sigmas.len() {
-            sigmas[var_idx] = independent_sigmas[var_idx][point];
+        for var_idx in 0..dim {
+            sigmas[var_idx] = variable_sigmas[var_idx][point];
         }
-        sigmas[dim - 1] = dependent_sigmas[point];
 
         let covariance = if let Some(correlations) = point_correlations {
             let corr = &correlations[point];
@@ -607,21 +614,22 @@ fn is_positive_semidefinite(matrix: &[Vec<f64>]) -> bool {
         .all(|value| value.is_finite() && *value >= -PSD_EIGEN_TOLERANCE)
 }
 
-/// Solves the Orthogonal Distance Regression (ODR) problem using Levenberg-Marquardt.
+/// Solves the Orthogonal Distance Regression (ODR) problem using Levenberg-Marquardt across all layers simultaneously.
 ///
 /// # Errors
 /// Returns `OdrError` if numerical convergence fails or fitting error occurs.
 pub fn solve_odr(
-    model: &CompiledModel,
+    models: &[Arc<CompiledModel>],
     data: &PreparedData,
     mut parameters: Vec<f64>,
+    global_parameter_names: &[String],
     max_iterations: usize,
     tolerance: f64,
     initial_damping: f64,
 ) -> OdrResult<(Vec<f64>, EvaluationState, usize)> {
     let mut damping = initial_damping;
     let mut nu = 2.0;
-    let mut current = evaluate_model(model, data, &parameters)?;
+    let mut current = evaluate_model(models, data, &parameters, global_parameter_names)?;
     let mut iterations = 0;
 
     for iteration in 0..max_iterations {
@@ -669,11 +677,11 @@ pub fn solve_odr(
             continue;
         }
 
-        let trial = evaluate_model(model, data, &trial_parameters)?;
+        let trial = evaluate_model(models, data, &trial_parameters, global_parameter_names)?;
         let actual_reduction = current.chi_squared - trial.chi_squared;
 
         let h_delta = &normal_matrix * &delta;
-        let mut predicted_reduction = -2.0f64.mul_add(gradient_vector.dot(&delta), delta.dot(&h_delta));
+        let mut predicted_reduction = -2.0f64.mul_add(gradient_vector.dot(&delta), -delta.dot(&h_delta));
         if !predicted_reduction.is_finite() || predicted_reduction <= MIN_VARIANCE {
             predicted_reduction = MIN_VARIANCE;
         }
@@ -701,128 +709,245 @@ pub fn solve_odr(
     Ok((parameters, current, iterations))
 }
 
-/// Evaluates the model at current parameters.
+/// Evaluates the multi-layer model at the current global parameters.
 ///
 /// # Errors
-/// Returns `OdrError::Numerical` if model or gradients evaluate to non-finite values.
+/// Returns `OdrError::Numerical` if models or gradients evaluate to non-finite values.
+#[allow(clippy::too_many_lines, reason = "Multi-layer ODR evaluation requires comprehensive logic")]
 pub fn evaluate_model(
-    model: &CompiledModel,
+    models: &[Arc<CompiledModel>],
     data: &PreparedData,
-    parameters: &[f64],
+    global_parameters: &[f64],
+    global_parameter_names: &[String],
 ) -> OdrResult<EvaluationState> {
-    let variable_count = data.independent_names.len();
-    let parameter_count = model.parameter_names.len();
     let point_count = data.point_count;
+    let global_parameter_count = global_parameters.len();
+    let var_count = data.variable_names.len();
 
-    let mut columns: Vec<&[f64]> = Vec::with_capacity(variable_count + parameter_count);
-    for values in &data.independent_values {
-        columns.push(values);
-    }
-
-    let parameter_columns: Vec<Vec<f64>> = parameters
-        .iter()
-        .map(|parameter| vec![*parameter; point_count])
-        .collect();
-    for values in &parameter_columns {
-        columns.push(values);
-    }
-
-    let fitted_values = evaluate_compiled_batch_or_scalar(
-        &model.model_evaluator,
-        &columns,
-        point_count,
-        "model evaluator",
-    )?;
-
-    let independent_derivatives: Vec<Vec<f64>> = model
-        .independent_gradient_evaluators
-        .iter()
-        .enumerate()
-        .map(|(idx, evaluator)| {
-            evaluate_compiled_batch_or_scalar(
-                evaluator,
-                &columns,
-                point_count,
-                &format!("independent gradient evaluator {idx}"),
-            )
-        })
-        .collect::<OdrResult<Vec<Vec<f64>>>>()?;
-
-    let parameter_derivatives: Vec<Vec<f64>> = model
-        .parameter_gradient_evaluators
-        .iter()
-        .enumerate()
-        .map(|(idx, evaluator)| {
-            evaluate_compiled_batch_or_scalar(
-                evaluator,
-                &columns,
-                point_count,
-                &format!("parameter gradient evaluator {idx}"),
-            )
-        })
-        .collect::<OdrResult<Vec<Vec<f64>>>>()?;
-
-    let mut residuals = Vec::with_capacity(point_count);
-    let mut weighted_residuals = Vec::with_capacity(point_count);
-    let mut weighted_jacobian = vec![0.0; point_count * parameter_count];
     let mut chi_squared = 0.0;
+    
+    let mut layer_residuals = Vec::with_capacity(models.len());
+    let mut layer_fitted_values = Vec::with_capacity(models.len());
+    
+    let total_rows = point_count * models.len();
+    let mut flat_weighted_residuals = vec![0.0; total_rows];
+    let mut global_weighted_jacobian = vec![0.0; total_rows * global_parameter_count];
 
-    let obs_dim = variable_count + 1; // [x1..xn, y]
-    let mut a = vec![0.0; obs_dim];
+    for (layer_idx, model) in models.iter().enumerate() {
+        let dep_var_idx = data.variable_names.iter().position(|name| name == &model.dependent_name).ok_or_else(|| {
+            OdrError::Validation(format!("Dependent variable {} not found in data", model.dependent_name))
+        })?;
 
-    for point in 0..point_count {
-        let fitted = fitted_values[point];
-        if !fitted.is_finite() {
-            return Err(OdrError::Numerical(format!(
-                "Model evaluated to non-finite value at data point {point}"
-            )));
+        let mut indep_var_indices = Vec::with_capacity(model.independent_names.len());
+        for name in &model.independent_names {
+            let idx = data.variable_names.iter().position(|n| n == name).ok_or_else(|| {
+                OdrError::Validation(format!("Independent variable {name} not found in data"))
+            })?;
+            indep_var_indices.push(idx);
         }
 
-        let residual = data.dependent_values[point] - fitted;
+        let mut local_parameters = Vec::with_capacity(model.parameter_names.len());
+        let mut param_global_to_local = Vec::with_capacity(model.parameter_names.len());
 
-        for var_idx in 0..variable_count {
-            let dfdx = independent_derivatives[var_idx][point];
-            if !dfdx.is_finite() {
+        for local_name in &model.parameter_names {
+            let global_idx = global_parameter_names.iter().position(|name| name == local_name).ok_or_else(|| {
+                OdrError::Validation(format!("Parameter {local_name} not found in global parameters"))
+            })?;
+            local_parameters.push(global_parameters[global_idx]);
+            param_global_to_local.push(global_idx);
+        }
+
+        let mut columns: Vec<&[f64]> = Vec::with_capacity(indep_var_indices.len() + local_parameters.len());
+        for &idx in &indep_var_indices {
+            columns.push(&data.variable_values[idx]);
+        }
+
+        let parameter_columns: Vec<Vec<f64>> = local_parameters
+            .iter()
+            .map(|parameter| vec![*parameter; point_count])
+            .collect();
+        for values in &parameter_columns {
+            columns.push(values);
+        }
+
+        // Use eval_f64 for SIMD+parallel batch evaluation of model + all gradients
+        let batch_result = evaluate_model_and_gradients_batch(
+            &model.model_expr,
+            &model.independent_gradient_exprs,
+            &model.parameter_gradient_exprs,
+            &model.independent_names,
+            &model.parameter_names,
+            &columns,
+            point_count,
+            layer_idx,
+        )?;
+        let fitted_values = batch_result.fitted_values;
+        let independent_derivatives = batch_result.independent_derivatives;
+        let parameter_derivatives = batch_result.parameter_derivatives;
+
+        let mut current_residuals = Vec::with_capacity(point_count);
+
+        for point in 0..point_count {
+            let fitted = fitted_values[point];
+            if !fitted.is_finite() {
                 return Err(OdrError::Numerical(format!(
-                    "Independent gradient evaluated to non-finite value at point {point}"
+                    "Model evaluated to non-finite value at data point {point} in layer {layer_idx}"
                 )));
             }
-            a[var_idx] = -dfdx;
-        }
-        a[obs_dim - 1] = 1.0;
 
-        let sigma = &data.point_covariances[point];
-        let sigma_a = mat_vec(sigma, &a);
-        let s2 = dot(&a, &sigma_a).max(MIN_VARIANCE);
+            let residual = data.variable_values[dep_var_idx][point] - fitted;
+            current_residuals.push(residual);
 
-        let inv_sqrt_s2 = 1.0 / s2.sqrt();
-        let weighted_residual = residual * inv_sqrt_s2;
-
-        for parameter_idx in 0..parameter_count {
-            let dfdp = parameter_derivatives[parameter_idx][point];
-            if !dfdp.is_finite() {
-                return Err(OdrError::Numerical(format!(
-                    "Parameter gradient evaluated to non-finite value at point {point}"
-                )));
+            let mut a = vec![0.0; var_count];
+            for (local_idx, &global_var_idx) in indep_var_indices.iter().enumerate() {
+                let dfdx = independent_derivatives[local_idx][point];
+                if !dfdx.is_finite() {
+                    return Err(OdrError::Numerical(format!(
+                        "Independent gradient evaluated to non-finite value at point {point} layer {layer_idx}"
+                    )));
+                }
+                a[global_var_idx] = -dfdx;
             }
-            weighted_jacobian[point * parameter_count + parameter_idx] = -dfdp * inv_sqrt_s2;
-        }
+            a[dep_var_idx] = 1.0;
 
-        chi_squared += weighted_residual.powi(2);
-        residuals.push(residual);
-        weighted_residuals.push(weighted_residual);
+            let sigma = &data.point_covariances[point];
+            let sigma_a = mat_vec(sigma, &a);
+            let s2 = dot(&a, &sigma_a).max(MIN_VARIANCE);
+
+            let inv_sqrt_s2 = 1.0 / s2.sqrt();
+            let weighted_residual = residual * inv_sqrt_s2;
+            
+            let row_idx = layer_idx * point_count + point;
+            flat_weighted_residuals[row_idx] = weighted_residual;
+            chi_squared += weighted_residual * weighted_residual;
+
+            for (local_param_idx, &global_param_idx) in param_global_to_local.iter().enumerate() {
+                let dfdp = parameter_derivatives[local_param_idx][point];
+                if !dfdp.is_finite() {
+                    return Err(OdrError::Numerical(format!(
+                        "Parameter gradient evaluated to non-finite value at point {point} layer {layer_idx}"
+                    )));
+                }
+                let j_val = -dfdp * inv_sqrt_s2;
+                let j_idx = row_idx * global_parameter_count + global_param_idx;
+                global_weighted_jacobian[j_idx] = j_val;
+            }
+        }
+        
+        layer_residuals.push(current_residuals);
+        layer_fitted_values.push(fitted_values);
     }
 
     Ok(EvaluationState {
         chi_squared,
-        residuals,
-        fitted_values,
-        weighted_residuals: DVector::from_vec(weighted_residuals),
-        weighted_jacobian: DMatrix::from_row_slice(
-            point_count,
-            parameter_count,
-            &weighted_jacobian,
+        layer_residuals,
+        layer_fitted_values,
+        flat_weighted_residuals: DVector::from_vec(flat_weighted_residuals),
+        global_weighted_jacobian: DMatrix::from_row_slice(
+            total_rows,
+            global_parameter_count,
+            &global_weighted_jacobian,
         ),
+    })
+}
+
+/// Result of batch evaluation containing model values and derivatives.
+pub struct BatchEvaluationResult {
+    /// Model fitted values.
+    pub fitted_values: Vec<f64>,
+    /// Derivatives with respect to independent variables.
+    pub independent_derivatives: Vec<Vec<f64>>,
+    /// Derivatives with respect to parameters.
+    pub parameter_derivatives: Vec<Vec<f64>>,
+}
+
+/// Evaluates the model and all its gradients in a single batched call using `eval_f64`.
+///
+/// This leverages SIMD vectorization and parallel evaluation for maximum performance.
+///
+/// # Errors
+/// Returns `OdrError::Numerical` if evaluation fails or produces non-finite values.
+#[allow(clippy::too_many_arguments, reason = "All parameters needed for batch evaluation")]
+fn evaluate_model_and_gradients_batch(
+    model_expr: &Expr,
+    independent_gradient_exprs: &[Expr],
+    parameter_gradient_exprs: &[Expr],
+    independent_names: &[String],
+    parameter_names: &[String],
+    columns: &[&[f64]],
+    _point_count: usize,
+    layer_idx: usize,
+) -> OdrResult<BatchEvaluationResult> {
+    let total_exprs = 1 + independent_gradient_exprs.len() + parameter_gradient_exprs.len();
+    
+    // Build expression list: [model, df/dx1, df/dx2, ..., df/dp1, df/dp2, ...]
+    let mut exprs: Vec<&Expr> = Vec::with_capacity(total_exprs);
+    exprs.push(model_expr);
+    for expr in independent_gradient_exprs {
+        exprs.push(expr);
+    }
+    for expr in parameter_gradient_exprs {
+        exprs.push(expr);
+    }
+    
+    // Build variable names for each expression (all use the same variable order)
+    let mut all_var_names: Vec<&str> = Vec::with_capacity(independent_names.len() + parameter_names.len());
+    for name in independent_names {
+        all_var_names.push(name.as_str());
+    }
+    for name in parameter_names {
+        all_var_names.push(name.as_str());
+    }
+    
+    // Each expression uses the same variable order
+    let var_names: Vec<&[&str]> = exprs.iter().map(|_| &all_var_names[..]).collect();
+    
+    // Build data: each expression gets the same columnar data
+    // data[expr_idx][var_idx][point_idx]
+    let data: Vec<&[&[f64]]> = exprs.iter().map(|_| columns).collect();
+    
+    // Call eval_f64 for SIMD+parallel batch evaluation
+    let results = eval_f64(&exprs, &var_names, &data)
+        .map_err(|error| OdrError::Numerical(format!(
+            "eval_f64 failed for layer {layer_idx}: {error:?}"
+        )))?;
+    
+    // Validate and split results
+    let mut offset = 0;
+    
+    // Model values
+    let fitted_values = validate_evaluation_output(
+        results[offset].clone(),
+        &format!("model evaluator layer {layer_idx}"),
+    )?;
+    offset += 1;
+    
+    // Independent derivatives
+    let mut independent_derivatives = Vec::with_capacity(independent_gradient_exprs.len());
+    for (idx, _) in independent_gradient_exprs.iter().enumerate() {
+        let deriv = validate_evaluation_output(
+            results[offset].clone(),
+            &format!("independent gradient evaluator {idx} layer {layer_idx}"),
+        )?;
+        independent_derivatives.push(deriv);
+        offset += 1;
+    }
+    
+    // Parameter derivatives
+    let mut parameter_derivatives = Vec::with_capacity(parameter_gradient_exprs.len());
+    for (idx, _) in parameter_gradient_exprs.iter().enumerate() {
+        let deriv = validate_evaluation_output(
+            results[offset].clone(),
+            &format!("parameter gradient evaluator {idx} layer {layer_idx}"),
+        )?;
+        parameter_derivatives.push(deriv);
+        offset += 1;
+    }
+    
+    Ok(BatchEvaluationResult {
+        fitted_values,
+        independent_derivatives,
+        parameter_derivatives,
     })
 }
 
@@ -888,9 +1013,9 @@ fn dot(left: &[f64], right: &[f64]) -> f64 {
 #[must_use] 
 /// Constructs the normal equations (`AtA` and `Atb`) from the Jacobian and residuals.
 pub fn build_normal_equations(state: &EvaluationState) -> (DMatrix<f64>, DVector<f64>) {
-    let j_t = state.weighted_jacobian.transpose();
-    let normal = &j_t * &state.weighted_jacobian;
-    let gradient = &j_t * &state.weighted_residuals;
+    let j_t = state.global_weighted_jacobian.transpose();
+    let normal = &j_t * &state.global_weighted_jacobian;
+    let gradient = &j_t * &state.flat_weighted_residuals;
     (normal, gradient)
 }
 

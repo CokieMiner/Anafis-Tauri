@@ -3,6 +3,7 @@ import { Box, IconButton, Typography, useTheme } from '@mui/material';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import type React from 'react';
 import { useEffect, useState } from 'react';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 
 // Define Tauri window interface
 interface TauriWindow {
@@ -220,8 +221,8 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
       }}
       style={{
         height: '36px',
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        background: anafisTheme.gradients.titleBar,
+        borderBottom: `1px solid ${anafisTheme.colors.border.light}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -231,7 +232,7 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
         WebkitUserSelect: 'none',
         position: 'relative',
         zIndex: 1000,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+        boxShadow: anafisTheme.shadows.sm,
         cursor: 'default',
       }}
     >
@@ -333,33 +334,35 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             borderRadius: 0,
             color:
               !isTauri || !windowReady
-                ? 'rgba(255, 255, 255, 0.3)'
-                : 'rgba(255, 255, 255, 0.8)',
+                ? anafisTheme.colors.text.disabled
+                : anafisTheme.colors.text.secondary,
             backgroundColor: 'transparent',
             border: 'none',
             outline: 'none',
             boxShadow: 'none',
-            transition: 'all 0.2s ease-in-out',
+            transition: anafisTheme.transitions.hover,
             '&:hover': {
               backgroundColor:
                 !isTauri || !windowReady
                   ? 'transparent'
-                  : `${theme.palette.success.main} !important`,
+                  : `${anafisTheme.colors.windowControls.minimize.main} !important`,
               color:
                 !isTauri || !windowReady
-                  ? 'rgba(255, 255, 255, 0.3)'
-                  : '#ffffff',
+                  ? anafisTheme.colors.text.disabled
+                  : anafisTheme.colors.text.primary,
               transform: !isTauri || !windowReady ? 'none' : 'scale(1.1)',
               boxShadow:
                 !isTauri || !windowReady
                   ? 'none'
-                  : '0 2px 8px rgba(76, 175, 80, 0.4)',
+                  : `0 2px 8px ${anafisTheme.colors.windowControls.minimize.main}66`,
               outline: 'none !important',
               border: 'none !important',
             },
             '&:active': {
               backgroundColor:
-                !isTauri || !windowReady ? 'transparent' : '#388e3c !important',
+                !isTauri || !windowReady
+                  ? 'transparent'
+                  : `${anafisTheme.colors.windowControls.minimize.dark} !important`,
               transform: !isTauri || !windowReady ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',
@@ -376,7 +379,7 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
               boxShadow: 'none !important',
             },
             '&.Mui-disabled': {
-              color: 'rgba(255, 255, 255, 0.3)',
+              color: anafisTheme.colors.text.disabled,
             },
           }}
         >
@@ -393,27 +396,27 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             borderRadius: 0,
             color:
               !isTauri || !windowReady
-                ? 'rgba(255, 255, 255, 0.3)'
-                : 'rgba(255, 255, 255, 0.8)',
+                ? anafisTheme.colors.text.disabled
+                : anafisTheme.colors.text.secondary,
             backgroundColor: 'transparent',
             border: 'none',
             outline: 'none',
             boxShadow: 'none',
-            transition: 'all 0.2s ease-in-out',
+            transition: anafisTheme.transitions.hover,
             '&:hover': {
               backgroundColor:
                 !isTauri || !windowReady
                   ? 'transparent'
-                  : `${theme.palette.secondary.main} !important`,
+                  : `${anafisTheme.colors.windowControls.maximize.main} !important`,
               color:
                 !isTauri || !windowReady
-                  ? 'rgba(255, 255, 255, 0.3)'
-                  : '#ffffff',
+                  ? anafisTheme.colors.text.disabled
+                  : anafisTheme.colors.text.primary,
               transform: !isTauri || !windowReady ? 'none' : 'scale(1.1)',
               boxShadow:
                 !isTauri || !windowReady
                   ? 'none'
-                  : `0 2px 8px ${theme.palette.secondary.main}40`,
+                  : `0 2px 8px ${anafisTheme.colors.windowControls.maximize.main}66`,
               outline: 'none !important',
               border: 'none !important',
             },
@@ -421,7 +424,7 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
               backgroundColor:
                 !isTauri || !windowReady
                   ? 'transparent'
-                  : `${theme.palette.secondary.main} !important`,
+                  : `${anafisTheme.colors.windowControls.maximize.main} !important`,
               transform: !isTauri || !windowReady ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',
@@ -438,7 +441,7 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
               boxShadow: 'none !important',
             },
             '&.Mui-disabled': {
-              color: 'rgba(255, 255, 255, 0.3)',
+              color: anafisTheme.colors.text.disabled,
             },
           }}
         >
@@ -446,7 +449,7 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             sx={{
               fontSize: '14px',
               transform: isMaximized ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease-in-out',
+              transition: anafisTheme.transitions.transform,
             }}
           />
         </IconButton>
@@ -461,27 +464,27 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
             borderRadius: 0,
             color:
               !isTauri || !windowReady
-                ? 'rgba(255, 255, 255, 0.3)'
-                : 'rgba(255, 255, 255, 0.8)',
+                ? anafisTheme.colors.text.disabled
+                : anafisTheme.colors.text.secondary,
             backgroundColor: 'transparent',
             border: 'none',
             outline: 'none',
             boxShadow: 'none',
-            transition: 'all 0.2s ease-in-out',
+            transition: anafisTheme.transitions.hover,
             '&:hover': {
               backgroundColor:
                 !isTauri || !windowReady
                   ? 'transparent'
-                  : `${theme.palette.error.main} !important`,
+                  : `${anafisTheme.colors.windowControls.close.main} !important`,
               color:
                 !isTauri || !windowReady
-                  ? 'rgba(255, 255, 255, 0.3)'
-                  : '#ffffff',
+                  ? anafisTheme.colors.text.disabled
+                  : anafisTheme.colors.text.primary,
               transform: !isTauri || !windowReady ? 'none' : 'scale(1.1)',
               boxShadow:
                 !isTauri || !windowReady
                   ? 'none'
-                  : '0 2px 8px rgba(244, 67, 54, 0.4)',
+                  : `0 2px 8px ${anafisTheme.colors.windowControls.close.main}66`,
               outline: 'none !important',
               border: 'none !important',
             },
@@ -489,7 +492,7 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
               backgroundColor:
                 !isTauri || !windowReady
                   ? 'transparent'
-                  : `${theme.palette.error.dark} !important`,
+                  : `${anafisTheme.colors.windowControls.close.dark} !important`,
               transform: !isTauri || !windowReady ? 'none' : 'scale(0.95)',
               outline: 'none !important',
               border: 'none !important',
@@ -506,7 +509,7 @@ const CustomTitleBar: React.FC<{ title: string }> = ({ title }) => {
               boxShadow: 'none !important',
             },
             '&.Mui-disabled': {
-              color: 'rgba(255, 255, 255, 0.3)',
+              color: anafisTheme.colors.text.disabled,
             },
           }}
         >

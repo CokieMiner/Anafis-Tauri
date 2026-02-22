@@ -27,6 +27,12 @@ import { useQuickPlot } from '@/tabs/spreadsheet/components/sidebar/logic/useQui
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
+import type {
+  ExportTheme,
+  PlotType,
+  QuickPlotExportFormat,
+  QuickPlotState,
+} from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
@@ -39,13 +45,33 @@ interface QuickPlotSidebarProps {
   onClose: () => void;
   spreadsheetRef?: React.RefObject<SpreadsheetRef | null>;
   onSelectionChange?: (selection: string) => void;
+  // External state from SidebarStateManager (for persistence)
+  externalState?: QuickPlotState;
+  externalActions?: {
+    setXRange: (value: string) => void;
+    setYRange: (value: string) => void;
+    setErrorRange: (value: string) => void;
+    setXLabel: (value: string) => void;
+    setYLabel: (value: string) => void;
+    setPlotType: (value: PlotType) => void;
+    setShowErrorBars: (value: boolean) => void;
+    setExportTheme: (value: ExportTheme) => void;
+    setExportFormat: (value: QuickPlotExportFormat) => void;
+  };
 }
 
 type FocusedInputType = 'xRange' | 'yRange' | 'errorRange' | null;
 
 const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
-  ({ open, onClose, spreadsheetRef, onSelectionChange }) => {
-    // Use the QuickPlot hook for all plotting logic
+  ({
+    open,
+    onClose,
+    spreadsheetRef,
+    onSelectionChange,
+    externalState,
+    externalActions,
+  }) => {
+    // Use the QuickPlot hook for all plotting logic, with external state if provided
     const {
       // Configuration state
       xRange,
@@ -106,6 +132,8 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
     } = useQuickPlot({
       spreadsheetRef: spreadsheetRef ?? { current: null },
       onSelectionChange: onSelectionChange ?? (() => {}),
+      externalState,
+      externalActions,
     });
 
     // Use the spreadsheet selection hook
@@ -493,8 +521,6 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
               sx={{
                 ...sidebarStyles.button.primary,
                 mb: 2,
-                fontSize: 12,
-                py: 1,
               }}
             >
               {isGenerating ? 'Plotting...' : 'Update Plot'}
@@ -784,7 +810,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                     <RadioGroup
                       value={exportFormat}
                       onChange={(e) =>
-                        setExportFormat(e.target.value as 'png' | 'svg')
+                        setExportFormat(e.target.value as QuickPlotExportFormat)
                       }
                     >
                       <FormControlLabel

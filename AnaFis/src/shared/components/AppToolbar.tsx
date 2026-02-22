@@ -17,28 +17,31 @@ import { invoke } from '@tauri-apps/api/core';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { AddIcon, CalculateIcon, SettingsIcon, StorageIcon } from '@/icons';
 import TabButton from '@/shared/components/TabButton';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
+
+// Re-export anafisColors for backwards compatibility with TabButton
+const anafisColors = {
+  primary: anafisTheme.colors.primary.main,
+};
 
 interface AppToolbarProps {
   onAddTab: (id: string, title: string, content: React.ReactNode) => void;
   createTabContent: (tabType: string, tabId: string) => React.ReactNode;
 }
 
-// Static styles to prevent recreation
+// Static styles to prevent recreation - using unified theme
 const TOOLBAR_STYLES = {
-  background:
-    'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(42, 42, 42, 0.95) 100%)',
+  background: anafisTheme.gradients.toolbar,
   backdropFilter: 'blur(20px)',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+  borderBottom: `1px solid ${anafisTheme.colors.border.light}`,
+  boxShadow: anafisTheme.shadows.lg,
   width: '100%',
 } as const;
 
 const PROJECT_BUTTON_STYLES = {
-  color: '#ffffff',
-  background:
-    'linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%)',
-  border: '1px solid rgba(33, 150, 243, 0.3)',
+  color: anafisTheme.colors.text.primary,
+  background: `linear-gradient(135deg, ${anafisTheme.colors.sidebar.primary}1A 0%, ${anafisTheme.colors.sidebar.primary}0D 100%)`,
+  border: `1px solid ${anafisTheme.colors.sidebar.primary}4D`,
   borderRadius: 2,
   px: 2.5,
   py: 0.8,
@@ -47,25 +50,23 @@ const PROJECT_BUTTON_STYLES = {
   mr: 1,
   minWidth: '120px',
   justifyContent: 'space-between',
-  transition: 'all 0.25s cubic-bezier(.2,.8,.2,1)',
-  boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)',
+  transition: anafisTheme.transitions.default,
+  boxShadow: `0 2px 8px ${anafisTheme.colors.sidebar.primary}26`,
   '&:hover': {
-    background:
-      'linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.08) 100%)',
-    borderColor: 'rgba(33, 150, 243, 0.5)',
+    background: `linear-gradient(135deg, ${anafisTheme.colors.sidebar.primary}26 0%, ${anafisTheme.colors.sidebar.primary}14 100%)`,
+    borderColor: `${anafisTheme.colors.sidebar.primary}80`,
     transform: 'translateY(-1px)',
-    boxShadow: '0 4px 16px rgba(33, 150, 243, 0.25)',
+    boxShadow: `0 4px 16px ${anafisTheme.colors.sidebar.primary}40`,
     color: anafisColors.primary,
   },
   '&:active': {
-    background:
-      'linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(33, 150, 243, 0.03) 100%)',
+    background: `linear-gradient(135deg, ${anafisTheme.colors.sidebar.primary}14 0%, ${anafisTheme.colors.sidebar.primary}08 100%)`,
     transform: 'translateY(0px)',
-    boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)',
+    boxShadow: `0 2px 8px ${anafisTheme.colors.sidebar.primary}26`,
   },
   '&:focus': {
     outline: 'none',
-    boxShadow: '0 0 0 2px rgba(33, 150, 243, 0.3)',
+    boxShadow: `0 0 0 2px ${anafisTheme.colors.sidebar.primary}4D`,
   },
   '& .MuiTouchRipple-root': {
     display: 'none',
@@ -73,13 +74,11 @@ const PROJECT_BUTTON_STYLES = {
 } as const;
 
 const MENU_PAPER_STYLES = {
-  background:
-    'linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(42, 42, 42, 0.98) 100%)',
+  background: anafisTheme.gradients.toolbar,
   backdropFilter: 'blur(20px)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
+  border: `1px solid ${anafisTheme.colors.border.light}`,
   borderRadius: 2,
-  boxShadow:
-    '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+  boxShadow: anafisTheme.shadows.lg,
   mt: 0.5,
   minWidth: '180px',
   '& .MuiMenuItem-root': {
@@ -89,48 +88,48 @@ const MENU_PAPER_STYLES = {
     borderRadius: 1,
     mx: 0.5,
     my: 0.25,
-    transition: 'all 0.2s ease-in-out',
+    transition: anafisTheme.transitions.hover,
     '&:hover': {
-      backgroundColor: 'rgba(33, 150, 243, 0.1)',
+      backgroundColor: `${anafisTheme.colors.sidebar.primary}1A`,
       color: anafisColors.primary,
       transform: 'translateX(2px)',
     },
   },
 } as const;
 
-// Tab button configurations
+// Tab button configurations - using unified theme colors
 const TAB_BUTTONS_CONFIG = [
   {
     label: 'Spreadsheet',
     type: 'spreadsheet',
-    hoverColor: '#64b5f6',
-    hoverBackgroundColor: 'rgba(33, 150, 243, 0.12)',
-    hoverBorderColor: 'rgba(33, 150, 243, 0.2)',
-    hoverBoxShadowColor: 'rgba(33, 150, 243, 0.3)',
+    hoverColor: anafisTheme.colors.tabs.spreadsheet.light,
+    hoverBackgroundColor: `${anafisTheme.colors.tabs.spreadsheet.main}1F`,
+    hoverBorderColor: `${anafisTheme.colors.tabs.spreadsheet.main}33`,
+    hoverBoxShadowColor: `${anafisTheme.colors.tabs.spreadsheet.main}4D`,
   },
   {
     label: 'Fitting',
     type: 'fitting',
-    hoverColor: '#ffb74d',
-    hoverBackgroundColor: 'rgba(255, 152, 0, 0.12)',
-    hoverBorderColor: 'rgba(255, 152, 0, 0.2)',
-    hoverBoxShadowColor: 'rgba(255, 152, 0, 0.3)',
+    hoverColor: anafisTheme.colors.tabs.fitting.light,
+    hoverBackgroundColor: `${anafisTheme.colors.tabs.fitting.main}1F`,
+    hoverBorderColor: `${anafisTheme.colors.tabs.fitting.main}33`,
+    hoverBoxShadowColor: `${anafisTheme.colors.tabs.fitting.main}4D`,
   },
   {
     label: 'Solver',
     type: 'solver',
-    hoverColor: '#81c784',
-    hoverBackgroundColor: 'rgba(76, 175, 80, 0.12)',
-    hoverBorderColor: 'rgba(76, 175, 80, 0.2)',
-    hoverBoxShadowColor: 'rgba(76, 175, 80, 0.3)',
+    hoverColor: anafisTheme.colors.tabs.solver.light,
+    hoverBackgroundColor: `${anafisTheme.colors.tabs.solver.main}1F`,
+    hoverBorderColor: `${anafisTheme.colors.tabs.solver.main}33`,
+    hoverBoxShadowColor: `${anafisTheme.colors.tabs.solver.main}4D`,
   },
   {
     label: 'Monte Carlo',
     type: 'montecarlo',
-    hoverColor: '#f06292',
-    hoverBackgroundColor: 'rgba(233, 30, 99, 0.12)',
-    hoverBorderColor: 'rgba(233, 30, 99, 0.2)',
-    hoverBoxShadowColor: 'rgba(233, 30, 99, 0.3)',
+    hoverColor: anafisTheme.colors.tabs.montecarlo.light,
+    hoverBackgroundColor: `${anafisTheme.colors.tabs.montecarlo.main}1F`,
+    hoverBorderColor: `${anafisTheme.colors.tabs.montecarlo.main}33`,
+    hoverBoxShadowColor: `${anafisTheme.colors.tabs.montecarlo.main}4D`,
   },
 ] as const;
 

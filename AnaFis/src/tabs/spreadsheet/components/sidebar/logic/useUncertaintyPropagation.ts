@@ -4,9 +4,12 @@
  * This hook encapsulates all the business logic for uncertainty propagation,
  * including state management, validation, and API calls. This reduces the
  * UncertaintySidebar component from 15 props to just 4 props.
+ *
+ * Supports both internal state (useState) and external state (from SidebarStateManager).
  */
 
 import { useCallback, useState } from 'react';
+import type { UncertaintyState } from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import {
   runUncertaintyPropagation,
@@ -20,14 +23,34 @@ import {
 interface UseUncertaintyPropagationOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
   onComplete?: (resultRange: string) => void;
+  // Optional external state (from SidebarStateManager)
+  externalState?: UncertaintyState | undefined;
+  externalActions?:
+    | {
+        setVariables: (variables: Variable[]) => void;
+        addVariable: () => void;
+        removeVariable: (index: number) => void;
+        updateVariable: (
+          index: number,
+          field: keyof Variable,
+          value: string | number
+        ) => void;
+        setFormula: (formula: string) => void;
+        setOutputValueRange: (range: string) => void;
+        setOutputUncertaintyRange: (range: string) => void;
+        setOutputConfidence: (confidence: number) => void;
+      }
+    | undefined;
 }
 
 export function useUncertaintyPropagation({
   spreadsheetRef,
   onComplete,
+  externalState,
+  externalActions,
 }: UseUncertaintyPropagationOptions) {
-  // All state is now managed in the hook
-  const [variables, setVariables] = useState<Variable[]>([
+  // Internal state (used when external state is not provided)
+  const [internalVariables, setInternalVariables] = useState<Variable[]>([
     {
       name: 'a',
       valueRange: 'A1:A10',
@@ -35,11 +58,25 @@ export function useUncertaintyPropagation({
       confidence: 95,
     },
   ]);
-  const [formula, setFormula] = useState<string>('');
-  const [outputValueRange, setOutputValueRange] = useState<string>('C1:C10');
-  const [outputUncertaintyRange, setOutputUncertaintyRange] =
+  const [internalFormula, setInternalFormula] = useState<string>('');
+  const [internalOutputValueRange, setInternalOutputValueRange] =
+    useState<string>('C1:C10');
+  const [internalOutputUncertaintyRange, setInternalOutputUncertaintyRange] =
     useState<string>('D1:D10');
-  const [outputConfidence, setOutputConfidence] = useState<number>(95);
+  const [internalOutputConfidence, setInternalOutputConfidence] =
+    useState<number>(95);
+
+  // Use external state if provided, otherwise use internal state
+  const variables = externalState?.variables ?? internalVariables;
+  const formula = externalState?.formula ?? internalFormula;
+  const outputValueRange =
+    externalState?.outputValueRange ?? internalOutputValueRange;
+  const outputUncertaintyRange =
+    externalState?.outputUncertaintyRange ?? internalOutputUncertaintyRange;
+  const outputConfidence =
+    externalState?.outputConfidence ?? internalOutputConfidence;
+
+  // Processing state (always internal - transient UI state)
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
@@ -62,39 +99,60 @@ export function useUncertaintyPropagation({
     []
   );
 
+  // Determine which setters to use
+  const setVariables = externalActions?.setVariables ?? setInternalVariables;
+  const setFormula = externalActions?.setFormula ?? setInternalFormula;
+  const setOutputValueRange =
+    externalActions?.setOutputValueRange ?? setInternalOutputValueRange;
+  const setOutputUncertaintyRange =
+    externalActions?.setOutputUncertaintyRange ??
+    setInternalOutputUncertaintyRange;
+  const setOutputConfidence =
+    externalActions?.setOutputConfidence ?? setInternalOutputConfidence;
+
   // Add a new variable
   const addVariable = useCallback(() => {
-    const nextName = generateNextVariableName(variables.length);
-    const newVariable: Variable = {
-      name: nextName,
-      valueRange: '',
-      uncertaintyRange: '',
-      confidence: 95,
-    };
-    setVariables([...variables, newVariable]);
-  }, [variables, generateNextVariableName]);
+    if (externalActions?.addVariable) {
+      externalActions.addVariable();
+    } else {
+      const nextName = generateNextVariableName(variables.length);
+      const newVariable: Variable = {
+        name: nextName,
+        valueRange: '',
+        uncertaintyRange: '',
+        confidence: 95,
+      };
+      setVariables([...variables, newVariable]);
+    }
+  }, [externalActions, variables, generateNextVariableName, setVariables]);
 
   // Remove a variable
   const removeVariable = useCallback(
     (index: number) => {
-      if (variables.length > 1) {
+      if (externalActions?.removeVariable) {
+        externalActions.removeVariable(index);
+      } else if (variables.length > 1) {
         setVariables(variables.filter((_, i) => i !== index));
       }
     },
-    [variables]
+    [externalActions, variables, setVariables]
   );
 
   // Update a variable
   const updateVariable = useCallback(
     (index: number, field: keyof Variable, value: string | number) => {
-      const updated = [...variables];
-      const currentVar = updated[index];
-      if (currentVar) {
-        updated[index] = { ...currentVar, [field]: value } as Variable;
-        setVariables(updated);
+      if (externalActions?.updateVariable) {
+        externalActions.updateVariable(index, field, value);
+      } else {
+        const updated = [...variables];
+        const currentVar = updated[index];
+        if (currentVar) {
+          updated[index] = { ...currentVar, [field]: value } as Variable;
+          setVariables(updated);
+        }
       }
     },
-    [variables]
+    [externalActions, variables, setVariables]
   );
 
   // Validate the current setup using consolidated validation service

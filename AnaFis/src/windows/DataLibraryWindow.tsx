@@ -42,6 +42,7 @@ import CustomTitleBar from '@/shared/components/CustomTitleBar';
 import SequenceDetails from '@/shared/dataLibrary/components/SequenceDetails';
 import SequenceList from '@/shared/dataLibrary/components/SequenceList';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 // Toolbar props interface
@@ -364,7 +365,7 @@ export const DataLibraryWindowContent: React.FC = () => {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'background.default',
+        background: anafisTheme.gradients.backgroundRadial,
       }}
     >
       <CustomTitleBar title="Data Library" />

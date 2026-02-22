@@ -3,18 +3,23 @@
 
 // ─── Backend mirror types ────────────────────────────────────────────
 
-export interface IndependentVariableInput {
+export interface ModelLayer {
+  formula: string;
+  dependentVariable: string;
+  independentVariables: string[];
+}
+
+export interface VariableInput {
   name: string;
   values: number[];
   uncertainties?: number[];
 }
 
 export interface OdrFitRequest {
-  modelFormula: string;
-  dependentVariable: string;
-  independentVariables: IndependentVariableInput[];
-  observedValues: number[];
-  observedUncertainties?: number[];
+  layers: ModelLayer[];
+  independentVariables: VariableInput[];
+  dependentVariables: VariableInput[];
+  usePoissonWeighting?: boolean;
   parameterNames: string[];
   initialGuess?: number[];
   maxIterations?: number;
