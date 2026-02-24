@@ -1,11 +1,13 @@
 import { Box, Paper } from '@mui/material';
+import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkbookData } from '@/core/managers/WorkbookDataProvider';
 import {
   SidebarErrorBoundary,
   SpreadsheetErrorBoundary,
 } from '@/shared/components/error-boundaries';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import SpreadsheetSidebarToolbar from '@/tabs/spreadsheet/components/SpreadsheetSidebarToolbar';
 import ExportSidebar from '@/tabs/spreadsheet/components/sidebar/ExportSidebar';
 import ImportSidebar from '@/tabs/spreadsheet/components/sidebar/ImportSidebar';
@@ -335,10 +337,35 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
 };
 
 const SpreadsheetTab: React.FC<SpreadsheetTabProps> = (props) => {
+  const baseTheme = useTheme();
+
+  const spreadsheetTheme = useMemo(
+    () =>
+      createTheme(baseTheme, {
+        palette: {
+          primary: {
+            main: anafisTheme.colors.tabs.spreadsheet.main,
+            light: anafisTheme.colors.tabs.spreadsheet.light,
+            dark: anafisTheme.colors.tabs.spreadsheet.dark,
+            contrastText: anafisTheme.colors.tabs.spreadsheet.contrast,
+          },
+          secondary: {
+            main: anafisTheme.colors.tabs.spreadsheet.main,
+            light: anafisTheme.colors.tabs.spreadsheet.light,
+            dark: anafisTheme.colors.tabs.spreadsheet.dark,
+            contrastText: anafisTheme.colors.tabs.spreadsheet.contrast,
+          },
+        },
+      }),
+    [baseTheme]
+  );
+
   return (
-    <SelectionProvider>
-      <SpreadsheetContent {...props} />
-    </SelectionProvider>
+    <ThemeProvider theme={spreadsheetTheme}>
+      <SelectionProvider>
+        <SpreadsheetContent {...props} />
+      </SelectionProvider>
+    </ThemeProvider>
   );
 };
 

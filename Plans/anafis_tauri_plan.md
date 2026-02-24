@@ -4,7 +4,7 @@ This document outlines the comprehensive plan for the ANAFIS desktop application
 
 ## 1. Executive Summary
 
-ANAFIS is envisioned as a **detachable-notebook** desktop application for scientific data analysis. Its core functionality revolves around a tabbed interface where major capabilities—Spreadsheet, Curve-Fitting, Wolfram-like Solver, and Monte-Carlo Simulator—each reside in their own closable and detachable tabs, spawned from a central **Home Menu**. A small, floating Uncertainty Calculator will also be available. Each tab is designed for reusability, with GPU acceleration where beneficial, and communicates via a light **shared data-bus** implemented through Tauri's inter-process communication (IPC).
+ANAFIS is envisioned as a **detachable-notebook** desktop application for scientific data analysis. Its core functionality revolves around a tabbed interface where major capabilities—Spreadsheet, Curve-Fitting, and Wolfram-like Solver—reside in their own closable and detachable tabs, spawned from a central **Home Menu**. A small, floating Uncertainty Calculator is also available. The Monte Carlo module remains in the codebase as a placeholder and is currently hidden from tab-creation UI. Each tab is designed for reusability, with GPU acceleration where beneficial, and communicates via a light **shared data-bus** implemented through Tauri's inter-process communication (IPC).
 
 **Current Status**: Core infrastructure is complete with a fully functional spreadsheet application featuring advanced import/export capabilities, data visualization, and scientific computation tools. The application demonstrates production-ready code quality with zero linting errors and comprehensive type safety.
 
@@ -17,8 +17,7 @@ To ensure code quality and maintainability, the project adheres to the following
 -   **`clippy`**: For linting and identifying common pitfalls.
 
 ### TypeScript/JavaScript (Frontend)
--   **`ESLint`**: For linting and enforcing code style.
--   **`Prettier`**: For automated code formatting.
+-   **`Biome`**: For linting and formatting (single-tool pipeline).
 -   **`TypeScript`**: For static type checking, enhancing code reliability and scalability.
 
 ### General Principles
@@ -28,7 +27,7 @@ To ensure code quality and maintainability, the project adheres to the following
 -   **Library Reuse**: Maximize the use of existing, well-vetted Rust crates and web libraries.
 
 ### Code Quality Achievements ✅
--   **ESLint**: 0 errors, 0 warnings, 0 disable comments across 84 files
+-   **Biome**: 0 errors/warnings in checked files, standardized formatting and linting
 -   **TypeScript**: 100% type coverage, strict null checks, no 'any' types
 -   **Rust**: Clippy compliant, modern Rust idioms, optimized performance
 -   **Build System**: Clean compilation, optimized bundles, zero runtime warnings
@@ -43,7 +42,7 @@ Anafis-Tauri/
 ├── README.md
 ├── AnaFis/                     # Main application directory
 │   ├── data-library.html       # Data Library window HTML
-│   ├── eslint.config.js        # ESLint flat configuration
+│   ├── biome.json              # Biome lint/format configuration
 │   ├── index.html              # Main application HTML
 │   ├── latex-preview.html      # LaTeX preview window HTML
 │   ├── package.json            # Node.js dependencies and scripts
@@ -67,9 +66,9 @@ Anafis-Tauri/
 │   │   │   ├── uncertaintyCalculator/ # Uncertainty calculator components
 │   │   │   └── utils/          # Shared utility functions
 │   │   ├── tabs/               # Tab components
-│   │   │   ├── fitting/        # Curve fitting tab (placeholder)
+│   │   │   ├── fitting/        # Curve fitting tab (active development)
 │   │   │   ├── home/           # Home tab
-│   │   │   ├── montecarlo/     # Monte Carlo tab (placeholder)
+│   │   │   ├── montecarlo/     # Monte Carlo tab (placeholder, deferred in UI)
 │   │   │   ├── solver/         # Equation solver tab (placeholder)
 │   │   │   └── spreadsheet/    # Spreadsheet tab with sidebars
 │   │   ├── types/              # Global type definitions
@@ -118,8 +117,6 @@ Anafis-Tauri/
         ├── 02_statistical_analysis_sidebar.md
         ├── 03_data_smoothing_sidebar.md
         ├── 04_outlier_detection_sidebar.md
-        ├── 05_data_validation_sidebar.md
-        ├── 09_graphs_and_fitting_tab.md
         └── README.md
 ```
 
@@ -132,7 +129,7 @@ This table outlines the primary libraries and crates intended for use across dif
 | **Shell/Notebook** | `tauri`, `tauri-plugin-window` | React, Material-UI | For building the desktop application shell, managing native windows, and creating a responsive UI with consistent Material Design principles. |
 | **Tabs/Solver Tab** | `sympy` through PyO3, `nalgebra` | React, MathJax/KaTeX, ECharts, Material-UI | To provide symbolic mathematics capabilities, numerical computation for solving equations, live LaTeX rendering, interactive plotting of solutions, and consistent UI. **Uses ECharts** for reliable export and smaller bundle. |
 | **GUI/Plotting** | `plotters` (via WebAssembly/Canvas) | **ECharts** (primary), D3.js (advanced), Material-UI | For generating high-quality, interactive data visualizations and plots within the webview, with consistent UI. **ECharts chosen** for: reliable PNG/SVG export, native timeline animation, 500KB size, and no WebKit issues. **Plotly removed** due to export failures and 3MB bundle size. |
-| **Tabs/Monte Carlo Tab** | `ndarray`, `rand` (via WebAssembly) | React, Web Workers | For efficient N-dimensional array operations, random number generation for simulations, and offloading heavy computations to improve UI responsiveness. |
+| **Tabs/Monte Carlo Tab (Deferred)** | `ndarray`, `rand` (via WebAssembly) | React, Web Workers | Deferred from current UI scope; intended for efficient N-dimensional simulations and async processing when reintroduced. |
 | **Core/Data** | `uom` (Units of Measurement) | TypeScript types | For robust handling of physical quantities with units, ensuring type safety and correctness across the application. |
 | **Services/Curve Fitting** | `argmin`, `nalgebra` | React, ECharts | For implementing N-dimensional optimization algorithms for curve fitting and visualizing the fitting results. **Uses ECharts** for consistent plotting. |
 | **Core/Symbolic** | `sympy` through **PyO3 0.27.1** | | For symbolic manipulation and representing expressions as Directed Acyclic Graphs (DAGs) for efficient updates. |
@@ -189,13 +186,13 @@ ANAFIS must fulfill the following core requirements:
 -   **Data Visualization**: ✅ ECharts-based plotting with PNG/SVG export capabilities.
 -   **Scientific Computing**: ✅ Uncertainty propagation and unit conversion with Rust backends.
 -   **File Associations**: ✅ .anafispread files open directly in AnaFis.
--   **Code Quality**: ✅ 0 ESLint errors, full TypeScript safety, Clippy compliance.
+-   **Code Quality**: ✅ Biome lint/format baseline active, full TypeScript safety, Clippy compliance.
 
 ### 📋 **Planned**
 -   **Detachable Tabs**: Tabs must be able to become independent windows (temporarily removed for stability).
 -   **N-dimensional Curve Fitting Tool**: Support for multiple algorithms and comprehensive visualization.
 -   **Equation Solver**: A Wolfram-like solver with step-by-step solutions.
--   **Monte-Carlo Simulation**: Capabilities for running simulations and analyzing results.
+-   **Monte-Carlo Simulation (Deferred)**: Capabilities for running simulations and analyzing results (currently not exposed in tab creation UI).
 -   **Floating Utility Tools**: Small, quick calculation tools (Uncertainty Calculator partially implemented).
 -   **Advanced Sidebars**: Statistical analysis, data smoothing, outlier detection, validation.
 -   **Inter-tab Communication**: Seamless data exchange between different analysis tabs.
@@ -216,7 +213,7 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 -   [x] 6. Spreadsheet Advanced Features (Univer.js integration complete)
 -   [x] 7. Data Library Infrastructure (SQLite + FTS5 search + statistics + export)
 -   [x] 8. Quick Plot Sidebar (ECharts 2D plotting + PNG/SVG export + Data Library integration)
--   [x] 9. Code Quality & Type Safety (ESLint 0 errors/warnings, TypeScript strict, Clippy compliant)
+-   [x] 9. Code Quality & Type Safety (Biome baseline, TypeScript strict, Clippy compliant)
 -   [x] 10. Export System Implementation (10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread)
 -   [x] 11. Export Logic Refactoring (Header handling simplified, explicit data structure markers)
 -   [x] 12. Import System Implementation (CSV, TSV, TXT, Parquet, AnaFisSpread with encoding detection)
@@ -225,7 +222,7 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 -   [x] 15. Dependency Optimization (Removed Polars, direct Arrow/Parquet usage, PyO3 0.27.1)
 -   [x] 16. Uncertainty Propagation Sidebar (Rust backend with formula analysis)
 -   [x] 17. Unit Conversion Sidebar (Comprehensive unit database with dimensional analysis)
--   [x] 18. ESLint Configuration (Flat config v9, 0 disable comments, 0 suppressed messages)
+-   [x] 18. Frontend Linting/Formatting Baseline (Biome pipeline configured and enforced)
 -   [x] 19. TypeScript Strict Mode (100% type coverage, no 'any' types, strict null checks)
 -   [x] 20. Rust Backend Optimization (Clippy compliant, modern Rust idioms)
 -   [x] 21. Statistical Approximations Fixes (Kurtosis formula corrected to use sample variance, skewness test expectations fixed, KS statistic calculation corrected, Burr Type XII PDF missing -ln(lambda) term fixed)
@@ -235,8 +232,9 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 - Data Library with SQLite FTS5 search
 - Import/Export system (10 formats)
 - Spreadsheet with sidebars (Uncertainty, Unit Conversion, Quick Plot, Import, Export)
-- Code quality: 0 ESLint errors, 0 warnings, full TypeScript safety
+- Code quality: Biome + TypeScript strict checks in active use
 - Build system: Clean compilation, optimized bundles
+- Tab creation UI currently exposes Spreadsheet, Fitting, and Solver (Monte Carlo deferred from menu/toolbar)
 
 
 
@@ -272,7 +270,7 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 -   [ ] 44. Fitting Algorithms Implementation (levenberg-marquardt, nalgebra)
 -   [ ] 45. Advanced Visualization (3D plotting with ECharts-GL) integration
 -   [ ] 46. Equation Solver Tab Implementation (Frontend & Rust integration)
--   [ ] 47. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration)
+-   [ ] 47. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration) **[Deferred from current UI scope]**
 -   [ ] 48. Floating Tools Implementation (Uncertainty Calculator, LaTeX Preview)
 -   [ ] 49. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
 -   [ ] 50. Outlier Detection Sidebar (Z-score, IQR methods)
@@ -306,7 +304,7 @@ This section details the implementation strategy for browser-style tabs within t
 **Current Implementation**:
 -   Single-window tabbed interface with drag-to-reorder functionality
 -   Home Tab remains permanently open as application hub
--   Other tabs (Spreadsheet, Fitting, Solver, Monte Carlo) can be opened/closed dynamically
+-   Other tabs (Spreadsheet, Fitting, Solver) can be opened/closed dynamically
 -   Tab state persisted using `tauri-plugin-store`
 -   Optimized tab rendering to prevent unnecessary re-renders
 
@@ -326,7 +324,7 @@ This section details the implementation strategy for browser-style tabs within t
 ### 9.3. Current Tab System
 -   Single-window tabbed interface with drag-to-reorder functionality
 -   Home Tab remains permanently open as application hub
--   Other tabs (Spreadsheet, Fitting, Solver, Monte Carlo) can be opened/closed dynamically
+-   Other tabs (Spreadsheet, Fitting, Solver) can be opened/closed dynamically
 -   Tab state persisted using `tauri-plugin-store`
 -   Optimized tab rendering to prevent unnecessary re-renders
 

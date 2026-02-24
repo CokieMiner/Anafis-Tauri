@@ -1,7 +1,6 @@
 import {
-  ANAFIS_DARK_AXIS,
-  ANAFIS_DARK_LAYOUT,
   CHART_COLORS,
+  getThemeLayout,
 } from '@/shared/components/plotlyTheme';
 import type {
   AxisSettings,
@@ -11,11 +10,12 @@ import type {
   VariableBinding,
 } from '../types/fittingTypes';
 
-export function buildEmptyChart() {
+export function buildEmptyChart(theme: 'dark' | 'light' = 'dark') {
+  const { layout: baseLayout } = getThemeLayout(theme);
   return {
     data: [],
     layout: {
-      ...ANAFIS_DARK_LAYOUT,
+      ...baseLayout,
       annotations: [
         {
           text: 'Import data and run a fit',
@@ -38,8 +38,11 @@ export function build2DChart(
   variableBindings: VariableBinding[],
   dependentBinding: DependentBinding,
   axisSettings: AxisSettings,
-  fitResult: OdrFitResponse | null
+  fitResult: OdrFitResponse | null,
+  theme: 'dark' | 'light' = 'dark'
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
+  const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
+
   const colByName = (name: string | null) =>
     name ? importedData.columns.find((c) => c.name === name) : undefined;
 
@@ -48,7 +51,7 @@ export function build2DChart(
   const xCol = xBinding ? colByName(xBinding.dataColumn) : undefined;
 
   if (!depCol || !xCol) {
-    return { data: [], layout: ANAFIS_DARK_LAYOUT };
+    return { data: [], layout: baseLayout };
   }
 
   const sigDepCol = colByName(dependentBinding.uncColumn);
@@ -69,7 +72,6 @@ export function build2DChart(
       type: 'data',
       array: sigDepCol.data,
       visible: true,
-      color: 'rgba(100,181,246,0.6)',
       thickness: 1.5,
       width: 3,
     };
@@ -80,7 +82,6 @@ export function build2DChart(
       type: 'data',
       array: sigXCol.data,
       visible: true,
-      color: 'rgba(100,181,246,0.4)',
       thickness: 1.5,
       width: 3,
     };
@@ -103,19 +104,6 @@ export function build2DChart(
     });
   }
 
-  const annotations: Plotly.Layout['annotations'] = [];
-  if (fitResult?.success) {
-    annotations.push({
-      text: `χ²red = ${fitResult.chiSquaredReduced.toPrecision(4)}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
-      showarrow: false,
-      font: { color: '#aaa', size: 11, family: 'monospace' },
-      xref: 'paper' as const,
-      yref: 'paper' as const,
-      x: 1,
-      y: 1.05,
-      xanchor: 'right' as const,
-    });
-  }
 
   const axisLabel = (axis: keyof AxisSettings, fallback: string) => {
     const custom = axisSettings[axis].label.trim();
@@ -125,24 +113,23 @@ export function build2DChart(
   return {
     data: traces,
     layout: {
-      ...ANAFIS_DARK_LAYOUT,
+      ...baseLayout,
       xaxis: {
-        ...ANAFIS_DARK_AXIS,
+        ...baseAxis,
         type: axisSettings.x.scale,
         title: {
           text: axisLabel('x', xCol.name),
-          font: { color: '#aaa', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
       yaxis: {
-        ...ANAFIS_DARK_AXIS,
+        ...baseAxis,
         type: axisSettings.y.scale,
         title: {
           text: axisLabel('y', depCol.name),
-          font: { color: '#aaa', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
-      annotations,
     },
   };
 }
@@ -153,8 +140,11 @@ export function build3DChart(
   dependentBinding: DependentBinding,
   axisSettings: AxisSettings,
   fitResult: OdrFitResponse | null,
-  gridData: { x: number[]; y: number[]; z: number[] } | null
+  gridData: { x: number[]; y: number[]; z: number[] } | null,
+  theme: 'dark' | 'light' = 'dark'
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
+  const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
+
   const colByName = (name: string | null) =>
     name ? importedData.columns.find((c) => c.name === name) : undefined;
 
@@ -170,7 +160,7 @@ export function build3DChart(
   const yCol = yBinding ? colByName(yBinding.dataColumn) : undefined;
 
   if (!depCol || !xCol || !yCol) {
-    return { data: [], layout: ANAFIS_DARK_LAYOUT };
+    return { data: [], layout: baseLayout };
   }
 
   const traces: Plotly.Data[] = [
@@ -260,8 +250,9 @@ export function build3DChart(
       xref: 'paper' as const,
       yref: 'paper' as const,
       x: 1,
-      y: 1.02,
+      y: -0.1,
       xanchor: 'right' as const,
+      yanchor: 'top' as const,
     });
   }
 
@@ -273,10 +264,10 @@ export function build3DChart(
   return {
     data: traces,
     layout: {
-      ...ANAFIS_DARK_LAYOUT,
+      ...baseLayout,
       showlegend: true,
       legend: {
-        font: { color: '#aaa', size: 10 },
+        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         bgcolor: 'transparent',
         x: 0,
         y: 1,
@@ -287,26 +278,30 @@ export function build3DChart(
           title: {
             text: axisLabel('x', xCol.name || 'X'),
           },
-          ...ANAFIS_DARK_AXIS,
-          backgroundcolor: 'rgba(14,14,18,0.3)',
+          ...baseAxis,
+          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         yaxis: {
           type: axisSettings.y.scale,
           title: {
             text: axisLabel('y', yCol.name || 'Y'),
           },
-          ...ANAFIS_DARK_AXIS,
-          backgroundcolor: 'rgba(14,14,18,0.3)',
+          ...baseAxis,
+          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         zaxis: {
           type: axisSettings.z.scale,
           title: {
             text: axisLabel('z', depCol.name || 'Z'),
           },
-          ...ANAFIS_DARK_AXIS,
-          backgroundcolor: 'rgba(14,14,18,0.3)',
+          ...baseAxis,
+          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         bgcolor: 'transparent',
+      },
+      margin: {
+        ...baseLayout.margin,
+        b: 40, // Increase bottom margin for annotation
       },
       annotations,
     },
@@ -317,13 +312,16 @@ export function buildPredictedChart(
   importedData: ImportedData,
   dependentBinding: DependentBinding,
   axisSettings: AxisSettings,
-  fitResult: OdrFitResponse | null
+  fitResult: OdrFitResponse | null,
+  theme: 'dark' | 'light' = 'dark'
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
+  const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
+
   if (!fitResult?.success) {
     return {
       data: [],
       layout: {
-        ...ANAFIS_DARK_LAYOUT,
+        ...baseLayout,
         annotations: [
           {
             text: 'Run a fit to see Predicted vs Observed',
@@ -346,7 +344,7 @@ export function buildPredictedChart(
   const observed = colByName(dependentBinding.dataColumn);
 
   if (!observed) {
-    return { data: [], layout: ANAFIS_DARK_LAYOUT };
+    return { data: [], layout: baseLayout };
   }
 
   const allVals = [...fitResult.fittedValues, ...observed.data];
@@ -367,7 +365,6 @@ export function buildPredictedChart(
         mode: 'lines',
         type: 'scatter',
         name: '1:1',
-        line: { color: 'rgba(255,179,0,0.4)', width: 1.5, dash: 'dash' },
       },
       {
         x: fitResult.fittedValues,
@@ -379,33 +376,34 @@ export function buildPredictedChart(
       },
     ],
     layout: {
-      ...ANAFIS_DARK_LAYOUT,
+      ...baseLayout,
       xaxis: {
-        ...ANAFIS_DARK_AXIS,
+        ...baseAxis,
         type: axisSettings.x.scale,
         title: {
           text: axisLabel('x', 'Predicted'),
-          font: { color: '#aaa', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
       yaxis: {
-        ...ANAFIS_DARK_AXIS,
+        ...baseAxis,
         type: axisSettings.y.scale,
         title: {
           text: axisLabel('y', 'Observed'),
-          font: { color: '#aaa', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
       annotations: [
         {
           text: `χ²red = ${fitResult.chiSquaredReduced.toPrecision(4)}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
           showarrow: false,
-          font: { color: '#aaa', size: 11, family: 'monospace' },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 11, family: 'monospace' },
           xref: 'paper' as const,
           yref: 'paper' as const,
           x: 1,
-          y: 1.05,
+          y: -0.15,
           xanchor: 'right' as const,
+          yanchor: 'top' as const,
         },
       ],
     },

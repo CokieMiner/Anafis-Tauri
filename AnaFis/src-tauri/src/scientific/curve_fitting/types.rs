@@ -41,6 +41,10 @@ pub struct OdrFitRequest {
     pub initial_guess: Option<Vec<f64>>,
     /// Optional maximum number of iterations.
     pub max_iterations: Option<usize>,
+    /// Convergence tolerance (default 1e-9).
+    pub tolerance: Option<f64>,
+    /// Initial damping factor for Levenberg-Marquardt (default 1e-3).
+    pub initial_damping: Option<f64>,
     /// Optional full correlation matrices between measurements.
     pub point_correlations: Option<Vec<Vec<Vec<f64>>>>,
     /// If true, applies 1/sqrt(N) weighting for count distributions on dependent variables.

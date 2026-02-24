@@ -78,14 +78,17 @@ fn fit_custom_odr_inner(request: &OdrFitRequest) -> OdrResult<OdrFitResponse> {
         .unwrap_or(DEFAULT_MAX_ITERATIONS)
         .clamp(5, 5000);
 
+    let tolerance = request.tolerance.unwrap_or(DEFAULT_TOLERANCE);
+    let initial_damping = request.initial_damping.unwrap_or(DEFAULT_DAMPING);
+
     let (params, final_state, iterations) = solve_odr(
         &compiled_models,
         &prepared,
         initial_guess,
         &normalized_parameter_names,
         max_iterations,
-        DEFAULT_TOLERANCE,
-        DEFAULT_DAMPING,
+        tolerance,
+        initial_damping,
     )?;
 
     Ok(build_response(

@@ -43,7 +43,6 @@ const HomeTab = lazy(() => import('@/tabs/home/HomeTab'));
 const SpreadsheetTab = lazy(() => import('@/tabs/spreadsheet/SpreadsheetTab'));
 const FittingTab = lazy(() => import('@/tabs/fitting/FittingTab'));
 const SolverTab = lazy(() => import('@/tabs/solver/SolverTab'));
-const MonteCarloTab = lazy(() => import('@/tabs/montecarlo/MonteCarloTab'));
 
 // Static styles to prevent recreation
 const MAIN_CONTAINER_STYLES = {
@@ -109,8 +108,6 @@ function App() {
         return <FittingTab />;
       case 'solver':
         return <SolverTab />;
-      case 'montecarlo':
-        return <MonteCarloTab />;
       default:
         return <HomeTab openNewTab={safeOpenNewTab} />;
     }

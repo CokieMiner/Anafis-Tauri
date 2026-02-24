@@ -23,6 +23,8 @@ export interface OdrFitRequest {
   parameterNames: string[];
   initialGuess?: number[];
   maxIterations?: number;
+  tolerance?: number;
+  initialDamping?: number;
   pointCorrelations?: number[][][]; // [point][dim][dim]
 }
 
@@ -107,6 +109,7 @@ export interface AdvancedSettings {
   maxIterations: number;
   tolerance: number;
   initialDamping: number;
+  usePoissonWeighting?: boolean;
 }
 
 export interface CsvImportSettings {
@@ -128,7 +131,6 @@ export interface AxisSettings {
   y: AxisConfig;
   z: AxisConfig;
 }
-
 export type FitStatus = 'idle' | 'running' | 'success' | 'error';
 
 export interface FitState {
@@ -167,6 +169,7 @@ export const DEFAULT_ADVANCED_SETTINGS: AdvancedSettings = {
   maxIterations: 200,
   tolerance: 1e-9,
   initialDamping: 1e-3,
+  usePoissonWeighting: false,
 };
 
 export const DEFAULT_AXIS_SETTINGS: AxisSettings = {

@@ -1,20 +1,7 @@
-import CasinoIcon from '@mui/icons-material/Casino';
-import DescriptionIcon from '@mui/icons-material/Description';
 import FunctionsIcon from '@mui/icons-material/Functions';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
-import {
-  Avatar,
-  Box,
-  Card,
-  CardContent,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Paper,
-  Typography,
-} from '@mui/material';
+import { Avatar, Box, Card, CardContent, Typography } from '@mui/material';
 import React, { useCallback, useMemo } from 'react';
 
 // Components are now created through the proper tab system, no need for direct imports
@@ -33,14 +20,6 @@ interface QuickAction {
   description: string;
   iconComponent: React.ComponentType;
   colors?: ReturnType<typeof getTabColors>;
-}
-
-interface RecentFile {
-  name: string;
-  type: string;
-  iconComponent: React.ComponentType;
-  color: string;
-  key?: string;
 }
 
 // Memoized constants to prevent recreation on every render
@@ -62,40 +41,6 @@ const QUICK_ACTIONS_CONFIG = [
     title: 'Solver',
     description: 'Mathematical equation solving',
     iconComponent: FunctionsIcon,
-  },
-  {
-    id: 'montecarlo',
-    title: 'Monte Carlo',
-    description: 'Statistical simulations',
-    iconComponent: CasinoIcon,
-  },
-] as const;
-
-// Memoized recent files data
-const RECENT_FILES_DATA = [
-  {
-    name: 'pendulum_data.csv',
-    type: 'Data File',
-    iconComponent: TableChartIcon,
-    color: '#64b5f6',
-  },
-  {
-    name: 'transistor_curves.xlsx',
-    type: 'Spreadsheet',
-    iconComponent: TableChartIcon,
-    color: '#64b5f6',
-  },
-  {
-    name: 'g_measurement.anafis',
-    type: 'Project',
-    iconComponent: DescriptionIcon,
-    color: '#ba68c8',
-  },
-  {
-    name: 'circuit_analysis.fit',
-    type: 'Fitting Result',
-    iconComponent: ShowChartIcon,
-    color: '#ffb74d',
   },
 ] as const;
 
@@ -141,16 +86,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
       QUICK_ACTIONS_CONFIG.map((action) => ({
         ...action,
         colors: getTabColors(action.id),
-      })),
-    []
-  );
-
-  // Memoize recent files with icons to prevent recreation
-  const recentFiles = useMemo(
-    () =>
-      RECENT_FILES_DATA.map((file, index) => ({
-        ...file,
-        key: `${file.name}-${index}`, // Stable key for React
       })),
     []
   );
@@ -252,54 +187,6 @@ const HomeTab: React.FC<HomeTabProps> = ({ openNewTab }) => {
           })}
         </Box>
       </Box>
-
-      {/* Recent Files Section */}
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            height: '100%',
-            flexGrow: 1,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <DescriptionIcon sx={{ color: '#ffffff' }} />
-            <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-              Recent Files
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              flexGrow: 1,
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              background: 'rgba(255, 255, 255, 0.02)',
-              minHeight: '400px', // Ensure it expands
-            }}
-          >
-            <List dense sx={{ p: 0 }}>
-              {recentFiles.map((file, index) => {
-                const IconComponent = file.iconComponent;
-                return (
-                  <RecentFileItem
-                    key={file.key}
-                    file={file}
-                    index={index}
-                    totalFiles={recentFiles.length}
-                    IconComponent={IconComponent}
-                  />
-                );
-              })}
-            </List>
-          </Box>
-        </Paper>
-      </Box>
     </Box>
   );
 };
@@ -363,45 +250,6 @@ const QuickActionCard = React.memo<{
       </CardContent>
     </Card>
   </Box>
-));
-
-// Memoized RecentFileItem component
-const RecentFileItem = React.memo<{
-  file: RecentFile;
-  index: number;
-  totalFiles: number;
-  IconComponent: React.ComponentType<Record<string, unknown>>;
-}>(({ file, index, totalFiles, IconComponent }) => (
-  <ListItemButton
-    sx={{
-      borderBottom:
-        index < totalFiles - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-      '&:hover': {
-        bgcolor: 'rgba(0, 212, 255, 0.1)',
-      },
-    }}
-  >
-    <ListItemIcon>
-      <Avatar
-        sx={{
-          width: 32,
-          height: 32,
-          bgcolor: `${file.color}20`,
-          color: file.color,
-        }}
-      >
-        <IconComponent />
-      </Avatar>
-    </ListItemIcon>
-    <ListItemText
-      primary={file.name}
-      secondary={file.type}
-      slotProps={{
-        primary: { sx: { color: 'text.primary', fontWeight: 500 } },
-        secondary: { sx: { color: 'text.secondary' } },
-      }}
-    />
-  </ListItemButton>
 ));
 
 export default React.memo(HomeTab);

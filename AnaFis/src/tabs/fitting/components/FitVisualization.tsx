@@ -1,7 +1,9 @@
-import { Box, Typography } from '@mui/material';
+import ImageIcon from '@mui/icons-material/Image';
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, Radio, RadioGroup, Tooltip, Typography } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
+import { save } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Plot from '@/shared/components/PlotlyChart';
+import Plot, { Plotly } from '@/shared/components/PlotlyChart';
 import { ANAFIS_CHART_CONFIG } from '@/shared/components/plotlyTheme';
 
 import type {
@@ -12,6 +14,7 @@ import type {
   OdrFitResponse,
   VariableBinding,
 } from '../types/fittingTypes';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import {
   build2DChart,
   build3DChart,
@@ -185,6 +188,122 @@ export default function FitVisualization({
         ? 'Predicted vs Observed'
         : 'Visualization';
 
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'png' | 'svg'>('png');
+  const [exportTheme, setExportTheme] = useState<'dark' | 'light'>('dark');
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    if (mode === 'empty') return;
+    setIsExporting(true);
+    try {
+      const extension = exportFormat;
+      const filterName = exportFormat === 'svg' ? 'SVG Image' : 'PNG Image';
+
+      const filePath = await save({
+        defaultPath: `fit_plot_${Date.now()}.${extension}`,
+        filters: [{ name: filterName, extensions: [extension] }],
+      });
+
+      if (!filePath) {
+        setIsExporting(false);
+        setExportDialogOpen(false);
+        return;
+      }
+
+      // Generate plot data for the requested theme
+      let exportData: Plotly.Data[] = [];
+      let exportLayout: Partial<Plotly.Layout> = {};
+
+      if (mode === '2d') {
+        const result = build2DChart(importedData!, variableBindings, dependentBinding, axisSettings, fitResult, exportTheme);
+        exportData = result.data;
+        exportLayout = result.layout;
+      } else if (mode === '3d') {
+        const result = build3DChart(importedData!, variableBindings, dependentBinding, axisSettings, fitResult, gridData, exportTheme);
+        exportData = result.data;
+        exportLayout = result.layout;
+      } else if (mode === 'predicted') {
+        const result = buildPredictedChart(importedData!, dependentBinding, axisSettings, fitResult, exportTheme);
+        exportData = result.data;
+        exportLayout = result.layout;
+      } else {
+        exportData = data;
+        exportLayout = layout;
+      }
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.width = '1200px';
+      tempDiv.style.height = '800px';
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      document.body.appendChild(tempDiv);
+
+      try {
+        await Plotly.newPlot(tempDiv, exportData, {
+          ...exportLayout,
+          width: 1200,
+          height: 800,
+        });
+
+        if (exportFormat === 'svg') {
+          const svgDataUrl = await Plotly.toImage(tempDiv, {
+            format: 'svg',
+            width: 1200,
+            height: 800,
+          });
+
+          let svgString: string;
+          if (svgDataUrl.includes(';base64,')) {
+            const base64 = svgDataUrl.split(';base64,')[1] ?? '';
+            svgString = atob(base64);
+          } else {
+            const encoded = svgDataUrl.split(',').slice(1).join(',');
+            svgString = decodeURIComponent(encoded);
+          }
+
+          await invoke('save_svg_file', {
+            svgContent: svgString,
+            path: filePath,
+          });
+        } else {
+          const dataURL = await Plotly.toImage(tempDiv, {
+            format: 'png',
+            width: 1200,
+            height: 800,
+            scale: 2,
+          });
+
+          await invoke('save_image_from_data_url', {
+            dataUrl: dataURL,
+            path: filePath,
+          });
+        }
+
+        Plotly.purge(tempDiv);
+      } finally {
+        document.body.removeChild(tempDiv);
+      }
+      setExportDialogOpen(false);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [
+    mode,
+    exportFormat,
+    exportTheme,
+    importedData,
+    variableBindings,
+    dependentBinding,
+    axisSettings,
+    fitResult,
+    gridData,
+    data,
+    layout
+  ]);
+
   return (
     <Box
       sx={{
@@ -198,12 +317,26 @@ export default function FitVisualization({
           'linear-gradient(140deg, rgba(19, 19, 24, 0.95) 0%, rgba(14, 14, 18, 0.9) 100%)',
       }}
     >
-      <Typography
-        variant="subtitle2"
-        sx={{ fontWeight: 600, mb: 0.5, color: 'text.secondary' }}
-      >
-        {modeLabel}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
+        <Typography
+          variant="subtitle2"
+          sx={{ fontWeight: 600, color: 'text.secondary' }}
+        >
+          {modeLabel}
+        </Typography>
+        <Tooltip title="Export Plot">
+          <span>
+            <IconButton
+              size="small"
+              onClick={() => setExportDialogOpen(true)}
+              disabled={isExporting || mode === 'empty'}
+              sx={{ color: 'text.secondary', p: 0.25 }}
+            >
+              {isExporting ? <CircularProgress size={16} /> : <ImageIcon fontSize="small" />}
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
       <Box sx={{ flex: 1, minHeight: 200 }}>
         <Plot
           data={data}
@@ -213,6 +346,52 @@ export default function FitVisualization({
           style={{ width: '100%', height: '100%' }}
         />
       </Box>
+      <Dialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: { sx: { bgcolor: anafisTheme.colors.background.elevated, backgroundImage: 'none', color: anafisTheme.colors.text.primary } },
+        }}
+      >
+        <DialogTitle sx={{ color: anafisTheme.colors.tabs.fitting.main, borderBottom: `1px solid ${anafisTheme.colors.border.light}` }}>
+          Export Plot
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body2" sx={{ color: anafisTheme.colors.text.secondary, mb: 2 }}>
+            Choose export format and theme:
+          </Typography>
+
+          <Typography variant="caption" sx={{ color: anafisTheme.colors.text.tertiary, fontSize: 10, fontWeight: 600, mb: 0.5, display: 'block' }}>
+            FORMAT
+          </Typography>
+          <FormControl sx={{ mb: 2 }}>
+            <RadioGroup value={exportFormat} onChange={(e) => setExportFormat(e.target.value as 'png' | 'svg')}>
+              <FormControlLabel value="png" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>PNG (Raster)</Typography>} />
+              <FormControlLabel value="svg" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>SVG (Vector)</Typography>} />
+            </RadioGroup>
+          </FormControl>
+
+          <Typography variant="caption" sx={{ color: anafisTheme.colors.text.tertiary, fontSize: 10, fontWeight: 600, mb: 0.5, display: 'block' }}>
+            THEME
+          </Typography>
+          <FormControl>
+            <RadioGroup value={exportTheme} onChange={(e) => setExportTheme(e.target.value as 'dark' | 'light')}>
+              <FormControlLabel value="dark" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>Dark background</Typography>} />
+              <FormControlLabel value="light" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>Light background</Typography>} />
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ borderTop: `1px solid ${anafisTheme.colors.border.light}`, p: 2 }}>
+          <Button onClick={() => setExportDialogOpen(false)} disabled={isExporting} sx={{ color: anafisTheme.colors.text.secondary, textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button onClick={() => void handleExport()} disabled={isExporting} variant="contained" sx={{ bgcolor: 'rgba(255, 179, 0, 0.15)', color: anafisTheme.colors.tabs.fitting.main, '&:hover': { bgcolor: 'rgba(255, 179, 0, 0.25)' }, textTransform: 'none', boxShadow: 'none' }}>
+            {isExporting ? 'Exporting...' : 'Export'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -22,6 +22,7 @@ interface BindingsSectionProps {
   variableNames: string[];
   variableBindings: VariableBinding[];
   dependentBinding: DependentBinding;
+  dependentVariableName?: string | undefined;
   onUpdateVariableBinding: (
     variableName: string,
     update: Partial<VariableBinding>
@@ -36,6 +37,7 @@ const sectionSx = {
   border: '1px solid rgba(148, 163, 184, 0.12)',
   background: 'rgba(255,255,255,0.02)',
 };
+const DROPDOWN_MAX_HEIGHT = 300;
 
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
@@ -133,6 +135,20 @@ function BindingRow({
           />
         )}
         slots={{ paper: SolidPaper }}
+        slotProps={{
+          paper: {
+            sx: {
+              maxHeight: DROPDOWN_MAX_HEIGHT,
+              overflowY: 'auto',
+            },
+          },
+          listbox: {
+            sx: {
+              maxHeight: DROPDOWN_MAX_HEIGHT,
+              overflowY: 'auto',
+            },
+          },
+        }}
         disablePortal
         sx={{ position: 'relative', width: '100%', minWidth: 0 }}
       />
@@ -156,6 +172,20 @@ function BindingRow({
           />
         )}
         slots={{ paper: SolidPaper }}
+        slotProps={{
+          paper: {
+            sx: {
+              maxHeight: DROPDOWN_MAX_HEIGHT,
+              overflowY: 'auto',
+            },
+          },
+          listbox: {
+            sx: {
+              maxHeight: DROPDOWN_MAX_HEIGHT,
+              overflowY: 'auto',
+            },
+          },
+        }}
         disablePortal
         sx={{ position: 'relative', width: '100%', minWidth: 0 }}
       />
@@ -167,6 +197,14 @@ function BindingRow({
           value={axis ?? 'x'}
           onChange={(event) => {
             onAxisChange?.(event.target.value);
+          }}
+          MenuProps={{
+            PaperProps: {
+              sx: {
+                maxHeight: DROPDOWN_MAX_HEIGHT,
+                overflowY: 'auto',
+              },
+            },
           }}
           sx={{
             width: '100%',
@@ -214,6 +252,7 @@ export default function BindingsSection({
   variableNames,
   variableBindings,
   dependentBinding,
+  dependentVariableName = 'Dependent',
   onUpdateVariableBinding,
   onUpdateDependentBinding,
 }: BindingsSectionProps) {
@@ -289,7 +328,7 @@ export default function BindingsSection({
           }}
         >
           <BindingRow
-            label="Dependent"
+            label={dependentVariableName}
             isDependent
             dataColumn={dependentBinding.dataColumn}
             uncColumn={dependentBinding.uncColumn}

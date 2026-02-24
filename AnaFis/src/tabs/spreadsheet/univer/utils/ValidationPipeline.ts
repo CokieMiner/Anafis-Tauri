@@ -141,6 +141,36 @@ export interface Validator {
   validate(context: ValidationContext): Promise<ValidationResult>;
 }
 
+// Accept numeric cells returned either as real numbers or numeric strings.
+// Some spreadsheet adapters return display values as strings (e.g. "5.00").
+function isNumericCellValue(cell: string | number | null): boolean {
+  if (typeof cell === 'number') {
+    return Number.isFinite(cell);
+  }
+
+  if (typeof cell !== 'string') {
+    return false;
+  }
+
+  const compactValue = cell.trim().replace(/\s+/g, '');
+  if (!compactValue) {
+    return false;
+  }
+
+  let normalizedValue = compactValue;
+  const commaDecimalPattern = /^[+-]?(?:\d+,\d*|,\d+)(?:[eE][+-]?\d+)?$/;
+  if (commaDecimalPattern.test(compactValue)) {
+    normalizedValue = compactValue.replace(',', '.');
+  }
+
+  const numericPattern = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+  if (!numericPattern.test(normalizedValue)) {
+    return false;
+  }
+
+  return Number.isFinite(Number(normalizedValue));
+}
+
 // Basic field validation (names, ranges, confidence levels)
 class BasicFieldValidator implements Validator {
   validate(context: ValidationContext): Promise<ValidationResult> {
@@ -530,7 +560,7 @@ class DataValidator implements Validator {
   ): void {
     // Check if all data is numeric
     const isAllNumeric = data.every((row) =>
-      row.every((cell) => typeof cell === 'number' && Number.isFinite(cell))
+      row.every((cell) => isNumericCellValue(cell))
     );
 
     if (!isAllNumeric) {

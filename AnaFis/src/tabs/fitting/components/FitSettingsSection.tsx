@@ -1,9 +1,16 @@
-import { Box, TextField, Typography } from '@mui/material';
+import {
+  Box,
+  FormControlLabel,
+  Switch,
+  TextField,
+  Typography,
+} from '@mui/material';
 import type { AdvancedSettings, ParameterConfig } from '../types/fittingTypes';
 
 interface FitSettingsSectionProps {
   parameterConfigs: ParameterConfig[];
   advancedSettings: AdvancedSettings;
+  dependentVariableName?: string | undefined;
   onUpdateParameterConfig: (
     index: number,
     update: Partial<ParameterConfig>
@@ -33,6 +40,7 @@ const amberInputSx = {
 export default function FitSettingsSection({
   parameterConfigs,
   advancedSettings,
+  dependentVariableName,
   onUpdateParameterConfig,
   onUpdateAdvancedSettings,
 }: FitSettingsSectionProps) {
@@ -117,11 +125,76 @@ export default function FitSettingsSection({
             }
             sx={amberInputSx}
             slotProps={{
-              input: { sx: { fontFamily: 'monospace', fontSize: '0.85rem' } },
+              input: {
+                sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                inputProps: { step: '1' },
+              },
+            }}
+          />
+        </Box>
+        <Box>
+          <TextField
+            size="small"
+            fullWidth
+            label="Tolerance"
+            type="number"
+            value={advancedSettings.tolerance}
+            onChange={(e) =>
+              onUpdateAdvancedSettings({
+                ...advancedSettings,
+                tolerance: Number(e.target.value),
+              })
+            }
+            sx={amberInputSx}
+            slotProps={{
+              input: {
+                sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                inputProps: { step: '1e-6' },
+              },
+            }}
+          />
+        </Box>
+        <Box>
+          <TextField
+            size="small"
+            fullWidth
+            label="Initial Damping"
+            type="number"
+            value={advancedSettings.initialDamping}
+            onChange={(e) =>
+              onUpdateAdvancedSettings({
+                ...advancedSettings,
+                initialDamping: Number(e.target.value),
+              })
+            }
+            sx={amberInputSx}
+            slotProps={{
+              input: {
+                sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                inputProps: { step: '0.001' },
+              },
             }}
           />
         </Box>
       </Box>
+      {dependentVariableName && (
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={advancedSettings.usePoissonWeighting ?? false}
+              onChange={(e) =>
+                onUpdateAdvancedSettings({
+                  ...advancedSettings,
+                  usePoissonWeighting: e.target.checked,
+                })
+              }
+            />
+          }
+          label="Use Poisson weighting"
+          sx={{ mt: 1, color: 'text.secondary' }}
+        />
+      )}
     </Box>
   );
 }

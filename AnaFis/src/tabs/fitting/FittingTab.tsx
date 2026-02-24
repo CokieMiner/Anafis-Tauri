@@ -1,6 +1,6 @@
 import { Box } from '@mui/material';
 import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import AxisSettingsSection from './components/AxisSettingsSection';
@@ -12,6 +12,7 @@ import ModelSection from './components/ModelSection';
 import ResidualsPanel from './components/ResidualsPanel';
 import ResultsPanel from './components/ResultsPanel';
 import { useFitState } from './hooks/useFitState';
+import { parseFormula } from './utils/requestBuilder';
 
 const PANEL_GAP = 2;
 
@@ -41,7 +42,42 @@ const FittingTab = () => {
   );
 
   const fit = useFitState();
-  const { sequences: librarySequences } = useDataLibrary();
+  const {
+    sequences: librarySequences,
+    isLoadingSequences: isLibraryLoading,
+    loadSequences: reloadLibrarySequences,
+    setPageSize: setLibraryPageSize,
+  } = useDataLibrary();
+
+  // The fitting selector should expose all sequences, not just the paginated default.
+  useEffect(() => {
+    setLibraryPageSize(10000);
+  }, [setLibraryPageSize]);
+
+  const refreshLibrarySequences = useCallback(() => {
+    void reloadLibrarySequences();
+  }, [reloadLibrarySequences]);
+
+  // Refresh library data when returning to this tab/window.
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshLibrarySequences();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshLibrarySequences();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshLibrarySequences]);
   const visualizationMode = useMemo(() => {
     const varCount = fit.state.variableBindings.length;
     if (varCount === 0) {
@@ -55,6 +91,15 @@ const FittingTab = () => {
     }
     return 'predicted' as const;
   }, [fit.state.variableBindings.length]);
+
+  const dependentVariableName = useMemo(() => {
+    try {
+      const parsed = parseFormula(fit.state.customFormula);
+      return parsed.dependentVariable; // may be undefined
+    } catch {
+      return undefined;
+    }
+  }, [fit.state.customFormula]);
 
   return (
     <ThemeProvider theme={fittingTheme}>
@@ -100,6 +145,8 @@ const FittingTab = () => {
               mode={fit.state.dataSourceMode}
               importedData={fit.state.importedData}
               librarySequences={librarySequences}
+              isLibraryLoading={isLibraryLoading}
+              onRefreshLibrarySequences={refreshLibrarySequences}
               onModeChange={fit.setDataSourceMode}
               onDataImported={fit.setImportedData}
             />
@@ -116,6 +163,7 @@ const FittingTab = () => {
             <FitSettingsSection
               parameterConfigs={fit.state.parameterConfigs}
               advancedSettings={fit.state.advancedSettings}
+              dependentVariableName={dependentVariableName}
               onUpdateParameterConfig={fit.updateParameterConfig}
               onUpdateAdvancedSettings={fit.setAdvancedSettings}
             />
@@ -125,6 +173,7 @@ const FittingTab = () => {
               variableNames={fit.state.variableNames}
               variableBindings={fit.state.variableBindings}
               dependentBinding={fit.state.dependentBinding}
+              dependentVariableName={dependentVariableName}
               onUpdateVariableBinding={fit.updateVariableBinding}
               onUpdateDependentBinding={fit.updateDependentBinding}
             />

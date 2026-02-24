@@ -175,7 +175,7 @@ pub fn generate_latex(formula: String, variables: Vec<String>) -> Result<LatexRe
         .map_err(|e| format!("Uncertainty propagation failed: {e:?}"))?;
 
     Ok(LatexResult {
-        string: format!("sigma_f = {expr}"),
+        string: format!("sigma_f = {sigma_expr}"),
         latex: format!("\\sigma_f = {}", sigma_expr.to_latex()),
     })
 }
@@ -204,6 +204,9 @@ mod tests {
     fn test_generate_latex_simple() {
         let result =
             generate_latex("x + y".to_string(), vec!["x".to_string(), "y".to_string()]).unwrap();
+
+        assert!(result.string.contains("sigma_x"));
+        assert!(result.string.contains("sigma_y"));
         assert!(result.latex.contains("\\sigma"));
     }
 

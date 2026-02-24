@@ -47,37 +47,39 @@ export const createAnafisTheme = () => {
     palette: {
       mode: 'dark',
       primary: {
-        main: anafisColors.primary, // Purple as default
-        light: '#ba68c8',
-        dark: '#7b1fa2',
+        main: anafisTheme.colors.primary.main,
+        light: anafisTheme.colors.primary.light,
+        dark: anafisTheme.colors.primary.dark,
+        contrastText: anafisTheme.colors.primary.contrast,
       },
       secondary: {
-        main: anafisColors.spreadsheet, // Blue for spreadsheet
-        light: '#64b5f6',
-        dark: '#1976d2',
+        main: anafisTheme.colors.secondary.main,
+        light: anafisTheme.colors.secondary.light,
+        dark: anafisTheme.colors.secondary.dark,
+        contrastText: anafisTheme.colors.secondary.contrast,
       },
       background: {
-        default: anafisColors.ui.background,
-        paper: anafisColors.ui.paper,
+        default: anafisTheme.colors.background.primary,
+        paper: anafisTheme.colors.background.paper,
       },
       text: {
-        primary: anafisColors.ui.text.primary,
-        secondary: anafisColors.ui.text.secondary,
+        primary: anafisTheme.colors.text.primary,
+        secondary: anafisTheme.colors.text.secondary,
       },
       success: {
-        main: anafisColors.buttons.minimize, // Green
-        light: '#81c784',
-        dark: '#388e3c',
+        main: anafisTheme.colors.status.success.main,
+        light: anafisTheme.colors.status.success.light,
+        dark: anafisTheme.colors.status.success.dark,
       },
       warning: {
-        main: anafisColors.tabs.fitting, // Orange
-        light: '#ffb74d',
-        dark: '#f57c00',
+        main: anafisTheme.colors.status.warning.main,
+        light: anafisTheme.colors.status.warning.light,
+        dark: anafisTheme.colors.status.warning.dark,
       },
       error: {
-        main: anafisColors.buttons.close, // Red
-        light: '#ef5350',
-        dark: '#d32f2f',
+        main: anafisTheme.colors.status.error.main,
+        light: anafisTheme.colors.status.error.light,
+        dark: anafisTheme.colors.status.error.dark,
       },
     },
     typography: {
@@ -139,20 +141,7 @@ export const createAnafisTheme = () => {
           },
         },
       },
-      MuiTextField: {
-        styleOverrides: {
-          root: {
-            '& .MuiOutlinedInput-root': {
-              '&.Mui-focused fieldset': {
-                borderColor: '#9c27b0', // Use purple primary color
-              },
-            },
-            '& .MuiInputLabel-root.Mui-focused': {
-              color: '#9c27b0', // Use purple primary color
-            },
-          },
-        },
-      },
+
       MuiCssBaseline: {
         styleOverrides: {
           body: {

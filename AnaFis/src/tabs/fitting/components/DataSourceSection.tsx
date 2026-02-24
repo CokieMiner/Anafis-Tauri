@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DataSequence } from '@/core/types/dataLibrary';
 import {
   type CsvImportSettings,
@@ -34,9 +34,13 @@ interface DataSourceSectionProps {
   mode: DataSourceMode;
   importedData: ImportedData | null;
   librarySequences: DataSequence[];
+  isLibraryLoading?: boolean;
+  onRefreshLibrarySequences?: () => void;
   onModeChange: (mode: DataSourceMode) => void;
   onDataImported: (data: ImportedData | null) => void;
 }
+
+const DROPDOWN_MAX_HEIGHT = 300;
 
 const sectionSx = {
   mb: 2,
@@ -124,6 +128,8 @@ export default function DataSourceSection({
   mode,
   importedData,
   librarySequences,
+  isLibraryLoading = false,
+  onRefreshLibrarySequences,
   onModeChange,
   onDataImported,
 }: DataSourceSectionProps) {
@@ -131,9 +137,20 @@ export default function DataSourceSection({
     useState<CsvImportSettings>(DEFAULT_CSV_SETTINGS);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [selectedLibrarySequenceIds, setSelectedLibrarySequenceIds] = useState<
+    string[]
+  >([]);
 
-  const handleLibrarySelect = useCallback(
-    (_: unknown, sequences: DataSequence[]) => {
+  const selectedLibrarySequences = useMemo(
+    () =>
+      selectedLibrarySequenceIds
+        .map((id) => librarySequences.find((seq) => seq.id === id))
+        .filter((seq): seq is DataSequence => Boolean(seq)),
+    [selectedLibrarySequenceIds, librarySequences]
+  );
+
+  const buildImportedDataFromSequences = useCallback(
+    (sequences: DataSequence[]) => {
       try {
         if (sequences.length === 0) {
           setImportError(null);
@@ -171,6 +188,36 @@ export default function DataSourceSection({
     },
     [onDataImported]
   );
+
+  const handleLibrarySelect = useCallback(
+    (_: unknown, sequences: DataSequence[]) => {
+      setSelectedLibrarySequenceIds(sequences.map((seq) => seq.id));
+      buildImportedDataFromSequences(sequences);
+    },
+    [buildImportedDataFromSequences]
+  );
+
+  // Keep selected IDs and imported data in sync when library contents change.
+  useEffect(() => {
+    if (mode !== 'library' || selectedLibrarySequenceIds.length === 0) {
+      return;
+    }
+
+    const nextSelected = selectedLibrarySequenceIds
+      .map((id) => librarySequences.find((seq) => seq.id === id))
+      .filter((seq): seq is DataSequence => Boolean(seq));
+
+    if (nextSelected.length !== selectedLibrarySequenceIds.length) {
+      setSelectedLibrarySequenceIds(nextSelected.map((seq) => seq.id));
+    }
+
+    buildImportedDataFromSequences(nextSelected);
+  }, [
+    mode,
+    selectedLibrarySequenceIds,
+    librarySequences,
+    buildImportedDataFromSequences,
+  ]);
 
   const handleCsvImport = useCallback(async () => {
     try {
@@ -234,7 +281,11 @@ export default function DataSourceSection({
           fullWidth
           size="small"
           options={librarySequences}
+          value={selectedLibrarySequences}
+          loading={isLibraryLoading}
           getOptionLabel={(seq) => seq.name}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          onOpen={() => onRefreshLibrarySequences?.()}
           onChange={handleLibrarySelect}
           renderInput={(params: AutocompleteRenderInputParams) => (
             <TextField
@@ -259,6 +310,20 @@ export default function DataSourceSection({
             ))
           }
           slots={{ paper: SolidPaper }}
+          slotProps={{
+            paper: {
+              sx: {
+                maxHeight: DROPDOWN_MAX_HEIGHT,
+                overflowY: 'auto',
+              },
+            },
+            listbox: {
+              sx: {
+                maxHeight: DROPDOWN_MAX_HEIGHT,
+                overflowY: 'auto',
+              },
+            },
+          }}
           disablePortal
           sx={{ mb: 1, position: 'relative', width: '100%' }}
         />

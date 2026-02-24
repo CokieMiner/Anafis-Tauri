@@ -23,6 +23,7 @@ const sectionSx = {
   border: '1px solid rgba(148, 163, 184, 0.12)',
   background: 'rgba(255,255,255,0.02)',
 };
+const DROPDOWN_MAX_HEIGHT = 300;
 
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
@@ -79,6 +80,14 @@ function AxisRow({
         value={config.scale}
         onChange={(event) => {
           onUpdate({ scale: event.target.value as AxisScale });
+        }}
+        MenuProps={{
+          PaperProps: {
+            sx: {
+              maxHeight: DROPDOWN_MAX_HEIGHT,
+              overflowY: 'auto',
+            },
+          },
         }}
         sx={{
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {

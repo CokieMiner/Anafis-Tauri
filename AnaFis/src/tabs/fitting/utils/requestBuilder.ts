@@ -8,6 +8,21 @@ import type {
   VariableInput,
 } from '../types/fittingTypes';
 
+export function parseFormula(formula: string): {
+  dependentVariable?: string;
+  formulaRhs: string;
+} {
+  const lines = formula.split('\n');
+  const firstLine = lines[0]?.trim() ?? '';
+  const equalsIndex = firstLine.indexOf('=');
+  if (equalsIndex !== -1) {
+    const dependentVariable = firstLine.substring(0, equalsIndex).trim();
+    const formulaRhs = firstLine.substring(equalsIndex + 1).trim();
+    return { dependentVariable, formulaRhs };
+  }
+  return { formulaRhs: firstLine };
+}
+
 export function buildFitRequest(
   importedData: ImportedData | null,
   activeFormula: string,
@@ -61,8 +76,12 @@ export function buildFitRequest(
     return null;
   }
 
+  const { dependentVariable: formulaDependent, formulaRhs } =
+    parseFormula(activeFormula);
+  // Use the dependent variable name from the formula if present, otherwise fall back to column name
   const dependentName =
-    yCol.name.trim().length > 0 ? yCol.name.toLowerCase() : 'y';
+    formulaDependent ??
+    (yCol.name.trim().length > 0 ? yCol.name.toLowerCase() : 'y');
 
   const dependentInput: VariableInput = {
     name: dependentName,
@@ -76,7 +95,7 @@ export function buildFitRequest(
   const request: OdrFitRequest = {
     layers: [
       {
-        formula: activeFormula,
+        formula: formulaRhs,
         dependentVariable: dependentName,
         independentVariables: layerIndependentNames,
       },
@@ -88,10 +107,12 @@ export function buildFitRequest(
       .filter((p) => !p.fixed)
       .map((p) => p.initialValue),
     maxIterations: advancedSettings.maxIterations,
+    tolerance: advancedSettings.tolerance,
+    initialDamping: advancedSettings.initialDamping,
   };
-
-  // Temporarily commented out for single-layer frontend, ready to be wired to UI later
-  // request.usePoissonWeighting = undefined;
+  if (advancedSettings.usePoissonWeighting !== undefined) {
+    request.usePoissonWeighting = advancedSettings.usePoissonWeighting;
+  }
 
   if (correlationMatrices) {
     request.pointCorrelations = correlationMatrices;

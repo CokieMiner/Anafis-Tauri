@@ -23,6 +23,8 @@ interface CsvSettingsDialogProps {
   ) => void;
 }
 
+const DROPDOWN_MAX_HEIGHT = 300;
+
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
     backgroundColor: '#0f0f14',
@@ -81,6 +83,8 @@ export default function CsvSettingsDialog({
             MenuProps={{
               PaperProps: {
                 sx: {
+                  maxHeight: DROPDOWN_MAX_HEIGHT,
+                  overflowY: 'auto',
                   backgroundColor: '#1a1a22 !important',
                   backgroundImage: 'none !important',
                   opacity: 1,
@@ -122,6 +126,8 @@ export default function CsvSettingsDialog({
             MenuProps={{
               PaperProps: {
                 sx: {
+                  maxHeight: DROPDOWN_MAX_HEIGHT,
+                  overflowY: 'auto',
                   backgroundColor: '#1a1a22 !important',
                   backgroundImage: 'none !important',
                   opacity: 1,

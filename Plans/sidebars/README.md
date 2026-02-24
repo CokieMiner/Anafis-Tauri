@@ -367,8 +367,7 @@ Each sidebar must:
 5. **NEXT**: Implement Statistical Analysis Sidebar (Rust backend exists, needs UI component)
 6. **FUTURE**: Implement Graphs & Fitting Tab (requires Data Library integration)
 7. ✅ Update SpreadsheetTab UI - already has toolbar buttons for all implemented sidebars
-8. ~~Implement Rust backend commands for fitting and statistics~~ (statistics backend done, fitting backend planned)
-9. Write tests for each component
+8. Write tests for each component
 
 ---
 

@@ -198,6 +198,10 @@ export function useUncertaintyPropagation({
     }
 
     try {
+      // Always validate against the latest spreadsheet contents.
+      // This avoids stale validation results from short-lived cache entries.
+      ValidationService.clearCache();
+
       // Validate data before sending to backend
       const validationResult = await validateSetup();
       if (!validationResult.isValid) {
