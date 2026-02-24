@@ -1,7 +1,4 @@
-import {
-  CHART_COLORS,
-  getThemeLayout,
-} from '@/shared/components/plotlyTheme';
+import { CHART_COLORS, getThemeLayout } from '@/shared/components/plotlyTheme';
 import type {
   AxisSettings,
   DependentBinding,
@@ -9,6 +6,76 @@ import type {
   OdrFitResponse,
   VariableBinding,
 } from '../types/fittingTypes';
+
+function resolveAxisLabel(
+  axisSettings: AxisSettings,
+  axis: keyof AxisSettings,
+  fallback: string
+) {
+  const custom = axisSettings[axis].label.trim();
+  return custom.length > 0 ? custom : fallback;
+}
+
+function formatFitNumber(value: number, digits: number) {
+  if (!Number.isFinite(value)) {
+    return 'NaN';
+  }
+  if (value === 0) {
+    return '0';
+  }
+  return value.toPrecision(digits);
+}
+
+function buildFitValueLines(fitResult: OdrFitResponse): string[] {
+  return fitResult.parameterNames.map((name, idx) => {
+    const value = fitResult.parameterValues[idx] ?? 0;
+    const uncertainty = fitResult.parameterUncertainties[idx] ?? 0;
+
+    if (Number.isFinite(uncertainty) && Math.abs(uncertainty) > 0) {
+      return `${name} = ${formatFitNumber(value, 5)} ± ${formatFitNumber(
+        uncertainty,
+        2
+      )}`;
+    }
+
+    return `${name} = ${formatFitNumber(value, 5)}`;
+  });
+}
+
+function buildFitSummaryAnnotation(
+  fitResult: OdrFitResponse,
+  theme: 'dark' | 'light'
+): Partial<Plotly.Annotations> {
+  const parameterLines = buildFitValueLines(fitResult);
+
+  return {
+    text: [
+      '<b>Fit summary</b>',
+      `χ²red = ${fitResult.chiSquaredReduced.toPrecision(
+        4
+      )}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
+      ...parameterLines,
+    ].join('<br>'),
+    showarrow: false,
+    align: 'left',
+    xref: 'paper',
+    yref: 'paper',
+    x: 0.99,
+    y: 0.99,
+    xanchor: 'right',
+    yanchor: 'top',
+    font: {
+      color: theme === 'dark' ? '#d0d0d0' : '#333',
+      size: 10,
+      family: 'monospace',
+    },
+    bgcolor:
+      theme === 'dark' ? 'rgba(14, 14, 18, 0.65)' : 'rgba(255, 255, 255, 0.9)',
+    bordercolor: theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+    borderwidth: 1,
+    borderpad: 6,
+  };
+}
 
 export function buildEmptyChart(theme: 'dark' | 'light' = 'dark') {
   const { layout: baseLayout } = getThemeLayout(theme);
@@ -89,6 +156,7 @@ export function build2DChart(
 
   traces.push(scatter);
 
+  const annotations: Partial<Plotly.Annotations>[] = [];
   if (fitResult?.success) {
     const indices = xCol.data
       .map((_, idx) => idx)
@@ -102,23 +170,26 @@ export function build2DChart(
       name: 'Fit',
       line: { color: CHART_COLORS.fit, width: 2.5, shape: 'spline' },
     });
+
+    annotations.push(buildFitSummaryAnnotation(fitResult, theme));
   }
-
-
-  const axisLabel = (axis: keyof AxisSettings, fallback: string) => {
-    const custom = axisSettings[axis].label.trim();
-    return custom.length > 0 ? custom : fallback;
-  };
 
   return {
     data: traces,
     layout: {
       ...baseLayout,
+      showlegend: Boolean(fitResult?.success),
+      legend: {
+        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+        bgcolor: 'transparent',
+        x: 0,
+        y: 1,
+      },
       xaxis: {
         ...baseAxis,
         type: axisSettings.x.scale,
         title: {
-          text: axisLabel('x', xCol.name),
+          text: resolveAxisLabel(axisSettings, 'x', xCol.name),
           font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
@@ -126,10 +197,11 @@ export function build2DChart(
         ...baseAxis,
         type: axisSettings.y.scale,
         title: {
-          text: axisLabel('y', depCol.name),
+          text: resolveAxisLabel(axisSettings, 'y', depCol.name),
           font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
+      annotations,
     },
   };
 }
@@ -241,25 +313,10 @@ export function build3DChart(
     } as Plotly.Data);
   }
 
-  const annotations: Plotly.Layout['annotations'] = [];
+  const annotations: Partial<Plotly.Annotations>[] = [];
   if (fitResult?.success) {
-    annotations.push({
-      text: `χ²red = ${fitResult.chiSquaredReduced.toPrecision(4)}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
-      showarrow: false,
-      font: { color: '#aaa', size: 11, family: 'monospace' },
-      xref: 'paper' as const,
-      yref: 'paper' as const,
-      x: 1,
-      y: -0.1,
-      xanchor: 'right' as const,
-      yanchor: 'top' as const,
-    });
+    annotations.push(buildFitSummaryAnnotation(fitResult, theme));
   }
-
-  const axisLabel = (axis: keyof AxisSettings, fallback: string) => {
-    const custom = axisSettings[axis].label.trim();
-    return custom.length > 0 ? custom : fallback;
-  };
 
   return {
     data: traces,
@@ -276,32 +333,31 @@ export function build3DChart(
         xaxis: {
           type: axisSettings.x.scale,
           title: {
-            text: axisLabel('x', xCol.name || 'X'),
+            text: resolveAxisLabel(axisSettings, 'x', xCol.name || 'X'),
           },
           ...baseAxis,
-          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
+          backgroundcolor:
+            theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         yaxis: {
           type: axisSettings.y.scale,
           title: {
-            text: axisLabel('y', yCol.name || 'Y'),
+            text: resolveAxisLabel(axisSettings, 'y', yCol.name || 'Y'),
           },
           ...baseAxis,
-          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
+          backgroundcolor:
+            theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         zaxis: {
           type: axisSettings.z.scale,
           title: {
-            text: axisLabel('z', depCol.name || 'Z'),
+            text: resolveAxisLabel(axisSettings, 'z', depCol.name || 'Z'),
           },
           ...baseAxis,
-          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
+          backgroundcolor:
+            theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         bgcolor: 'transparent',
-      },
-      margin: {
-        ...baseLayout.margin,
-        b: 40, // Increase bottom margin for annotation
       },
       annotations,
     },
@@ -352,10 +408,9 @@ export function buildPredictedChart(
   const hi = Math.max(...allVals);
   const pad = (hi - lo) * 0.05;
 
-  const axisLabel = (axis: keyof AxisSettings, fallback: string) => {
-    const custom = axisSettings[axis].label.trim();
-    return custom.length > 0 ? custom : fallback;
-  };
+  const annotations: Partial<Plotly.Annotations>[] = [
+    buildFitSummaryAnnotation(fitResult, theme),
+  ];
 
   return {
     data: [
@@ -377,11 +432,18 @@ export function buildPredictedChart(
     ],
     layout: {
       ...baseLayout,
+      showlegend: true,
+      legend: {
+        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+        bgcolor: 'transparent',
+        x: 0,
+        y: 1,
+      },
       xaxis: {
         ...baseAxis,
         type: axisSettings.x.scale,
         title: {
-          text: axisLabel('x', 'Predicted'),
+          text: resolveAxisLabel(axisSettings, 'x', 'Predicted'),
           font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
@@ -389,23 +451,159 @@ export function buildPredictedChart(
         ...baseAxis,
         type: axisSettings.y.scale,
         title: {
-          text: axisLabel('y', 'Observed'),
+          text: resolveAxisLabel(axisSettings, 'y', 'Observed'),
           font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
         },
       },
-      annotations: [
-        {
-          text: `χ²red = ${fitResult.chiSquaredReduced.toPrecision(4)}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
-          showarrow: false,
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 11, family: 'monospace' },
-          xref: 'paper' as const,
-          yref: 'paper' as const,
-          x: 1,
-          y: -0.15,
-          xanchor: 'right' as const,
-          yanchor: 'top' as const,
+      annotations,
+    },
+  };
+}
+
+export function buildResidualsChart(
+  importedData: ImportedData | null,
+  variableBindings: VariableBinding[],
+  dependentBinding: DependentBinding,
+  axisSettings: AxisSettings,
+  fitResult: OdrFitResponse | null,
+  theme: 'dark' | 'light' = 'dark'
+): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
+  const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
+
+  if (!fitResult?.success) {
+    return {
+      data: [],
+      layout: {
+        ...baseLayout,
+        annotations: [
+          {
+            text: 'Residuals will appear after fitting',
+            showarrow: false,
+            font: { color: theme === 'dark' ? '#555' : '#999', size: 12 },
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.5,
+            y: 0.5,
+          },
+        ],
+        xaxis: { visible: false },
+        yaxis: { visible: false },
+      },
+    };
+  }
+
+  let xData: number[] | null = null;
+  let xLabel = 'Index';
+
+  const xBinding =
+    variableBindings.find((binding) => binding.axis?.toLowerCase() === 'x') ??
+    variableBindings[0];
+
+  if (importedData && xBinding?.dataColumn) {
+    const col = importedData.columns.find(
+      (column) => column.name === xBinding.dataColumn
+    );
+    if (col) {
+      xData = col.data;
+      xLabel = col.name;
+    }
+  }
+
+  const residuals = fitResult.residuals;
+  if (residuals.length === 0) {
+    return {
+      data: [],
+      layout: {
+        ...baseLayout,
+        annotations: [
+          {
+            text: 'No residual data available',
+            showarrow: false,
+            font: { color: theme === 'dark' ? '#555' : '#999', size: 12 },
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.5,
+            y: 0.5,
+          },
+        ],
+        xaxis: { visible: false },
+        yaxis: { visible: false },
+      },
+    };
+  }
+
+  const xValues = residuals.map((_, idx) =>
+    xData ? (xData[idx] ?? idx) : idx
+  );
+
+  const sigYCol = dependentBinding.uncColumn
+    ? importedData?.columns.find(
+        (column) => column.name === dependentBinding.uncColumn
+      )
+    : undefined;
+
+  const scatter: Plotly.Data = {
+    x: xValues,
+    y: residuals,
+    mode: 'markers',
+    type: 'scatter',
+    name: 'Residuals',
+    marker: { color: CHART_COLORS.residual, size: 5 },
+  };
+
+  if (sigYCol) {
+    scatter.error_y = {
+      type: 'data',
+      array: sigYCol.data,
+      visible: true,
+      color: 'rgba(239,83,80,0.5)',
+      thickness: 1,
+      width: 2,
+    };
+  }
+
+  const minX = Math.min(...xValues);
+  const maxX = Math.max(...xValues);
+
+  return {
+    data: [
+      scatter,
+      {
+        x: [minX, maxX],
+        y: [0, 0],
+        mode: 'lines',
+        type: 'scatter',
+        name: 'Zero',
+        line: { color: '#666', width: 1, dash: 'dash' },
+        hoverinfo: 'skip',
+      },
+    ],
+    layout: {
+      ...baseLayout,
+      showlegend: true,
+      legend: {
+        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+        bgcolor: 'transparent',
+        x: 0,
+        y: 1,
+      },
+      margin: { l: 50, r: 10, t: 15, b: 40 },
+      xaxis: {
+        ...baseAxis,
+        type: axisSettings.x.scale,
+        title: {
+          text: resolveAxisLabel(axisSettings, 'x', xLabel),
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         },
-      ],
+      },
+      yaxis: {
+        ...baseAxis,
+        type: axisSettings.y.scale,
+        title: {
+          text: resolveAxisLabel(axisSettings, 'y', 'Residual'),
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+        },
+      },
     },
   };
 }
