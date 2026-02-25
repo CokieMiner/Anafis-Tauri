@@ -2,6 +2,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import {
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -34,6 +35,7 @@ import {
   build3DChart,
   buildEmptyChart,
   buildPredictedChart,
+  buildResidualsChart,
 } from '../utils/chartBuilders';
 
 interface FitVisualizationProps {
@@ -42,6 +44,29 @@ interface FitVisualizationProps {
   dependentBinding: DependentBinding;
   fitResult: OdrFitResponse | null;
   axisSettings: AxisSettings;
+}
+
+function assignCartesianAxes(
+  traces: Plotly.Data[],
+  xaxis: 'x' | 'x2',
+  yaxis: 'y' | 'y2'
+): Plotly.Data[] {
+  return traces.map(
+    (trace) =>
+      ({
+        ...(trace as Record<string, unknown>),
+        xaxis,
+        yaxis,
+      }) as Plotly.Data
+  );
+}
+
+function getAnnotations(
+  annotations: Plotly.Layout['annotations'] | undefined
+): Partial<Plotly.Annotations>[] {
+  return Array.isArray(annotations)
+    ? (annotations as Partial<Plotly.Annotations>[])
+    : [];
 }
 
 export default function FitVisualization({
@@ -205,19 +230,25 @@ export default function FitVisualization({
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'svg'>('png');
   const [exportTheme, setExportTheme] = useState<'dark' | 'light'>('dark');
+  const [includeResidualsInExport, setIncludeResidualsInExport] =
+    useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const canIncludeResiduals = Boolean(
+    fitResult?.success && importedData && mode !== 'empty'
+  );
+
+  useEffect(() => {
+    if (!canIncludeResiduals) {
+      setIncludeResidualsInExport(false);
+    }
+  }, [canIncludeResiduals]);
 
   const handleExport = useCallback(async () => {
-    if (mode === 'empty') {
+    if (mode === 'empty' || !importedData) {
       return;
     }
     setIsExporting(true);
     try {
-      if (!importedData) {
-        setExportDialogOpen(false);
-        return;
-      }
-
       const extension = exportFormat;
       const filterName = exportFormat === 'svg' ? 'SVG Image' : 'PNG Image';
 
@@ -274,25 +305,123 @@ export default function FitVisualization({
         exportLayout = layout;
       }
 
+      const shouldIncludeResiduals =
+        includeResidualsInExport && canIncludeResiduals;
+      const exportWidth = 1200;
+      let exportHeight = 800;
+      let finalData = exportData;
+      let finalLayout = exportLayout;
+
+      if (shouldIncludeResiduals) {
+        const residualDomain: [number, number] = [0, 0.2];
+        const mainDomain: [number, number] = [0.22, 1];
+
+        const residualResult = buildResidualsChart(
+          importedData,
+          variableBindings,
+          dependentBinding,
+          axisSettings,
+          fitResult,
+          exportTheme
+        );
+        const residualData = assignCartesianAxes(residualResult.data, 'x', 'y');
+        const mainAnnotations = getAnnotations(exportLayout.annotations);
+        const residualAnnotations = getAnnotations(
+          residualResult.layout.annotations
+        );
+
+        exportHeight = 1000;
+
+        if (mode === '3d') {
+          finalData = [...exportData, ...residualData];
+          finalLayout = {
+            ...exportLayout,
+            scene: {
+              ...(exportLayout.scene ?? {}),
+              domain: { x: [0, 1], y: mainDomain },
+            },
+            xaxis: {
+              ...((residualResult.layout.xaxis ??
+                {}) as Partial<Plotly.LayoutAxis>),
+              domain: [0, 1],
+              anchor: 'y',
+            },
+            yaxis: {
+              ...((residualResult.layout.yaxis ??
+                {}) as Partial<Plotly.LayoutAxis>),
+              domain: residualDomain,
+              anchor: 'x',
+            },
+            annotations: [...mainAnnotations, ...residualAnnotations],
+            margin: {
+              ...(exportLayout.margin ?? {}),
+              t: 40,
+              b: 60,
+            },
+          };
+        } else {
+          const mainX = (exportLayout.xaxis ??
+            {}) as Partial<Plotly.LayoutAxis>;
+          const mainY = (exportLayout.yaxis ??
+            {}) as Partial<Plotly.LayoutAxis>;
+
+          finalData = [
+            ...assignCartesianAxes(exportData, 'x2', 'y2'),
+            ...residualData,
+          ];
+          finalLayout = {
+            ...exportLayout,
+            xaxis: {
+              ...((residualResult.layout.xaxis ??
+                {}) as Partial<Plotly.LayoutAxis>),
+              domain: [0, 1],
+              anchor: 'y',
+            },
+            yaxis: {
+              ...((residualResult.layout.yaxis ??
+                {}) as Partial<Plotly.LayoutAxis>),
+              domain: residualDomain,
+              anchor: 'x',
+            },
+            xaxis2: {
+              ...mainX,
+              domain: [0, 1],
+              anchor: 'y2',
+            },
+            yaxis2: {
+              ...mainY,
+              domain: mainDomain,
+              anchor: 'x2',
+            },
+            annotations: [...mainAnnotations, ...residualAnnotations],
+            margin: {
+              ...(exportLayout.margin ?? {}),
+              t: 40,
+              b: 60,
+            },
+          };
+        }
+      }
+
       const tempDiv = document.createElement('div');
-      tempDiv.style.width = '1200px';
-      tempDiv.style.height = '800px';
+      tempDiv.style.width = `${exportWidth}px`;
+      tempDiv.style.height = `${exportHeight}px`;
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
       document.body.appendChild(tempDiv);
 
       try {
-        await Plotly.newPlot(tempDiv, exportData, {
-          ...exportLayout,
-          width: 1200,
-          height: 800,
+        await Plotly.newPlot(tempDiv, finalData, {
+          ...finalLayout,
+          width: exportWidth,
+          height: exportHeight,
         });
 
         if (exportFormat === 'svg') {
           const svgDataUrl = await Plotly.toImage(tempDiv, {
             format: 'svg',
-            width: 1200,
-            height: 800,
+            width: exportWidth,
+            height: exportHeight,
           });
 
           let svgString: string;
@@ -311,8 +440,8 @@ export default function FitVisualization({
         } else {
           const dataURL = await Plotly.toImage(tempDiv, {
             format: 'png',
-            width: 1200,
-            height: 800,
+            width: exportWidth,
+            height: exportHeight,
             scale: 2,
           });
 
@@ -336,6 +465,8 @@ export default function FitVisualization({
     mode,
     exportFormat,
     exportTheme,
+    includeResidualsInExport,
+    canIncludeResiduals,
     importedData,
     variableBindings,
     dependentBinding,
@@ -420,7 +551,7 @@ export default function FitVisualization({
             variant="body2"
             sx={{ color: anafisTheme.colors.text.secondary, mb: 2 }}
           >
-            Choose export format and theme:
+            Choose export format, theme, and content:
           </Typography>
 
           <Typography
@@ -503,7 +634,7 @@ export default function FitVisualization({
           >
             THEME
           </Typography>
-          <FormControl>
+          <FormControl sx={{ mb: 2 }}>
             <RadioGroup
               value={exportTheme}
               onChange={(e) =>
@@ -560,6 +691,61 @@ export default function FitVisualization({
               />
             </RadioGroup>
           </FormControl>
+
+          <Typography
+            variant="caption"
+            sx={{
+              color: anafisTheme.colors.text.tertiary,
+              fontSize: 10,
+              fontWeight: 600,
+              mb: 0.5,
+              display: 'block',
+            }}
+          >
+            CONTENT
+          </Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={includeResidualsInExport}
+                onChange={(event) =>
+                  setIncludeResidualsInExport(event.target.checked)
+                }
+                disabled={!canIncludeResiduals || isExporting}
+                sx={{
+                  color: 'rgba(255, 179, 0, 0.5)',
+                  '&.Mui-checked': {
+                    color: anafisTheme.colors.tabs.fitting.main,
+                  },
+                }}
+              />
+            }
+            label={
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  color: anafisTheme.colors.text.primary,
+                }}
+              >
+                Include residuals chart
+              </Typography>
+            }
+            sx={{ ml: 0 }}
+          />
+          {!canIncludeResiduals && (
+            <Typography
+              variant="caption"
+              sx={{
+                color: anafisTheme.colors.text.tertiary,
+                fontSize: 11,
+                display: 'block',
+                ml: 0.5,
+              }}
+            >
+              Residuals are available after a successful fit.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions
           sx={{

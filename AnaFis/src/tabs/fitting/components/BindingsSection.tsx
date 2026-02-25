@@ -38,6 +38,20 @@ const sectionSx = {
   background: 'rgba(255,255,255,0.02)',
 };
 const DROPDOWN_MAX_HEIGHT = 300;
+const AUTOCOMPLETE_MENU_SLOTS = {
+  paper: {
+    sx: {
+      maxHeight: DROPDOWN_MAX_HEIGHT,
+      overflow: 'hidden',
+    },
+  },
+  listbox: {
+    sx: {
+      maxHeight: DROPDOWN_MAX_HEIGHT,
+      overflowY: 'auto',
+    },
+  },
+} as const;
 
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
@@ -135,21 +149,7 @@ function BindingRow({
           />
         )}
         slots={{ paper: SolidPaper }}
-        slotProps={{
-          paper: {
-            sx: {
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-              overflowY: 'auto',
-            },
-          },
-          listbox: {
-            sx: {
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-              overflowY: 'auto',
-            },
-          },
-        }}
-        disablePortal
+        slotProps={AUTOCOMPLETE_MENU_SLOTS}
         sx={{ position: 'relative', width: '100%', minWidth: 0 }}
       />
 
@@ -172,21 +172,7 @@ function BindingRow({
           />
         )}
         slots={{ paper: SolidPaper }}
-        slotProps={{
-          paper: {
-            sx: {
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-              overflowY: 'auto',
-            },
-          },
-          listbox: {
-            sx: {
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-              overflowY: 'auto',
-            },
-          },
-        }}
-        disablePortal
+        slotProps={AUTOCOMPLETE_MENU_SLOTS}
         sx={{ position: 'relative', width: '100%', minWidth: 0 }}
       />
 

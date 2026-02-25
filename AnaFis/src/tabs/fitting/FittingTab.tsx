@@ -134,11 +134,6 @@ const FittingTab = () => {
               minHeight: 0,
               overflow: 'auto',
               pr: 0.5,
-              '&::-webkit-scrollbar': { width: 5 },
-              '&::-webkit-scrollbar-thumb': {
-                background: `${anafisTheme.colors.tabs.fitting.main}4D`,
-                borderRadius: 4,
-              },
             }}
           >
             <DataSourceSection
