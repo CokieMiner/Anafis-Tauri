@@ -1,182 +1,71 @@
 # AnaFis Distribution Strategy
 
-**Status**: Ready for implementation  
-**Target Platforms**: Linux (multiple formats), Windows (custom installer)
+## Scope
 
----
+This document defines practical distribution paths for AnaFis now that runtime Python dependencies are removed.
 
-## Linux Distribution (Primary Platform)
+## Goals
 
-### ✅ Distribution Methods
+- Reliable install/update flow on Linux and Windows
+- Predictable first-run behavior
+- Trusted binaries for end users (especially Windows)
 
-1. **Flatpak** (Universal - Recommended)
-   - Location: `Installer/Linux/Flatpak/`
-   - Status: Manifest ready
-   - Distribution: Flathub + direct download
-   - Installation: `flatpak install flathub com.cokieminer.anafis`
-   - **Includes**: Python 3 + SymPy bundled automatically
+## Linux Strategy
 
-2. **AUR (Arch Linux)**
-   - Location: `Installer/Linux/AUR/` (to be created)
-   - Status: Planned
-   - Distribution: AUR repository
-   - Installation: `yay -S anafis` or `paru -S anafis`
-   - **Dependencies**: python, python-sympy (declared in PKGBUILD)
+### Primary
+1. Flatpak
+   - Path: `Installer/Linux/Flatpak/`
+   - Distribution: Flathub + direct bundle
 
-3. **.deb (Debian/Ubuntu)**
-   - Location: `Installer/Linux/Debian/` (to be created)
-   - Status: Planned
-   - Distribution: GitHub Releases + PPA
-   - Installation: `sudo dpkg -i anafis_*.deb`
-   - **Dependencies**: python3 (>= 3.8), python3-sympy (in debian/control)
+### Secondary
+2. Native packages (AUR, .deb, .rpm)
+   - Add only if maintenance capacity is available
 
-4. **.rpm (Fedora/RHEL)**
-   - Location: `Installer/Linux/RPM/` (to be created)
-   - Status: Planned
-   - Distribution: GitHub Releases + COPR
-   - Installation: `sudo dnf install anafis-*.rpm`
-   - **Dependencies**: python3 >= 3.8, python3-sympy (in .spec file)
+### Notes
+- No Python runtime packaging is required for AnaFis.
+- Keep metadata and icons aligned with app version.
 
-### Key Points
-- ✅ **No manual Python installation needed** - Package managers handle it
-- ✅ **Dependencies declared** in package metadata
-- ✅ **Automatic updates** via package manager
-- ✅ **Standard Linux packaging** follows best practices
+## Windows Strategy
 
----
+### Level 0 (testing)
+- Distribute raw `AnaFis.exe`
+- Fastest path, but users may see SmartScreen/Defender warnings
 
-## Windows Distribution
+### Level 1 (serious OSS distribution)
+- Build in GitHub Actions
+- Sign artifacts using SignPath Foundation (OSS)
+- Publish signed assets in Releases
 
-### Custom Installer Application
+## Recommended Release Artifacts
 
-**Location**: `Installer/Windows/INSTALLER_DESIGN.md`
+### Linux
+- `anafis.flatpak` (and/or Flathub publication)
 
-**Approach**: Lightweight installer app (Tauri or NSIS) that:
-1. Checks for Python 3.8+
-2. Installs Python + SymPy if missing
-3. Installs AnaFis binary
-4. Creates shortcuts
-5. Registers in Add/Remove Programs
+## CI/CD Baseline (Windows)
 
-**Distribution**:
-- GitHub Releases (primary)
-- Project website
-- Future: Chocolatey, Winget
+1. Build release artifact
+2. Submit artifact for signing (SignPath or cert-based step)
+3. Verify signature in CI
+4. Upload signed artifacts to Release
 
-**Why custom installer?**:
-- Windows doesn't have universal package manager
-- Python not pre-installed on Windows
-- Users expect simple .exe installer
-- Can bundle Python or download on-demand
+## Checklist Before Public Release
 
----
+### Functional
+- [ ] Clean build on CI
+- [ ] App launches on clean Windows 10/11 VM
+- [ ] App launches on target Linux distro(s)
 
-## macOS Distribution (Future)
+### Trust/Signing
+- [ ] Windows artifacts are signed
+- [ ] Timestamp is present in signature
+- [ ] `Get-AuthenticodeSignature` verification passes
 
-**Planned Approach**:
-- .dmg application bundle
-- Homebrew cask: `brew install --cask anafis`
-- Dependencies: Homebrew handles Python + SymPy
+### Packaging
+- [ ] Version is consistent across app and release notes
+- [ ] Checksums are published for downloadable artifacts
 
----
+## Related Docs
 
-## Current Implementation Status
-
-### ✅ Ready
-- [x] Flatpak manifest with Python dependencies
-- [x] Desktop file for Linux application menu
-- [x] AppStream metadata for app stores
-- [x] Windows installer design document
-- [x] README updated with installation instructions
-
-### 🔄 In Progress
-- [ ] Test Flatpak build process
-- [ ] Create AUR PKGBUILD
-- [ ] Create .deb package with debian/control
-- [ ] Create .rpm package with .spec file
-
-### 📋 Todo
-- [ ] Windows installer implementation (Tauri or NSIS)
-- [ ] Bundle Python 3.11 installer for Windows
-- [ ] Test all package formats on clean VMs
-- [ ] Submit to Flathub for distribution
-- [ ] Create COPR repository for Fedora
-- [ ] Create PPA for Ubuntu
-
----
-
-## Build Requirements
-
-### Linux Packages
-```bash
-# Debian/Ubuntu
-sudo apt install flatpak-builder debhelper
-
-# Fedora
-sudo dnf install flatpak-builder rpm-build
-
-# Arch
-sudo pacman -S flatpak-builder
-```
-
-### Windows Installer
-- Tauri development environment
-- OR NSIS compiler (simpler option)
-- Python 3.11 installer (bundled)
-
----
-
-## Distribution Checklist
-
-Before releasing v0.1.0:
-
-**Linux**:
-- [ ] Test Flatpak on Fedora
-- [ ] Test Flatpak on Ubuntu
-- [ ] Build .deb package
-- [ ] Build .rpm package
-- [ ] Create AUR package
-- [ ] Submit Flatpak to Flathub
-
-**Windows**:
-- [ ] Implement installer app
-- [ ] Test on Windows 10 (clean VM)
-- [ ] Test on Windows 11 (clean VM)
-- [ ] Test with existing Python installation
-- [ ] Test without Python (fresh install)
-
-**Documentation**:
-- [x] Update README with installation methods
-- [x] Document Python requirements
-- [ ] Create installation troubleshooting guide
-- [ ] Add screenshots for AppStream metadata
-
----
-
-## Files Created
-
-### Flatpak
-- `Installer/Linux/Flatpak/com.CokieMiner.AnaFis.yml` - Flatpak manifest
-- `Installer/Linux/Flatpak/com.CokieMiner.AnaFis.desktop` - Desktop entry
-- `Installer/Linux/Flatpak/com.CokieMiner.AnaFis.metainfo.xml` - AppStream metadata
-- `Installer/Linux/Flatpak/README.md` - Build instructions
-
-### Windows
-- `Installer/Windows/INSTALLER_DESIGN.md` - Complete installer design
-
-### Documentation
-- `IMPLEMENTATION_ANALYSIS.md` - Code analysis and architecture review
-- `README.md` - Updated with distribution methods
-
----
-
-## Next Steps
-
-1. **Test Flatpak build** on your Linux system
-2. **Choose Windows installer approach**: Tauri app vs NSIS script
-3. **Create AUR package** for Arch Linux
-4. **Start implementing Data Library Window** (core feature for v0.1.0)
-
----
-
-**Priority**: Linux packages first (your primary platform), Windows installer later.
+- `Installer/Linux/Flatpak/README.md`
+- `Installer/Windows/INSTALLER_DESIGN.md`
+- `README.md`
