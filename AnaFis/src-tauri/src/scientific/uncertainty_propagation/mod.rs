@@ -61,7 +61,10 @@ pub enum UncertaintyError {
 /// # Errors
 /// Returns an error message if formula parsing or Excel conversion fails.
 #[tauri::command]
-#[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned types for arguments")]
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
 pub fn generate_uncertainty_formulas(
     variables: Vec<Variable>,
     formula: String,
@@ -129,7 +132,10 @@ fn generate_uncertainty_formulas_inner(
     let output_sigma = confidence_to_sigma(output_confidence)?;
 
     // Get uncertainty expression from symb_anafis
-    let all_vars: Vec<&str> = normalized_var_names.iter().map(std::string::String::as_str).collect();
+    let all_vars: Vec<&str> = normalized_var_names
+        .iter()
+        .map(std::string::String::as_str)
+        .collect();
     let sigma_expr = uncertainty_propagation(&expr, &all_vars, None)
         .map_err(|e| UncertaintyError::UncertaintyPropagation(e.to_string()))?;
 
@@ -208,8 +214,7 @@ mod tests {
             },
         ];
 
-        let result =
-            generate_uncertainty_formulas_inner(&variables, "sin(a) * b", 95.0).unwrap();
+        let result = generate_uncertainty_formulas_inner(&variables, "sin(a) * b", 95.0).unwrap();
 
         assert!(result.success);
         assert_eq!(result.uncertainty_formulas.len(), 2);
@@ -227,8 +232,7 @@ mod tests {
             confidence: 95.0,
         }];
 
-        let result =
-            generate_uncertainty_formulas_inner(&variables, "AlotA^2", 95.0).unwrap();
+        let result = generate_uncertainty_formulas_inner(&variables, "AlotA^2", 95.0).unwrap();
         assert!(result.success);
         assert_eq!(result.value_formulas, vec!["=A1^2".to_string()]);
         assert!(!result.uncertainty_formulas[0].contains("sigma_alota"));

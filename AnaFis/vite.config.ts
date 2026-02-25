@@ -4,6 +4,94 @@ import { defineConfig } from 'vite';
 
 const host = process.env.TAURI_DEV_HOST;
 
+function getManualChunk(id: string): string | undefined {
+  if (!id.includes('node_modules')) {
+    return undefined;
+  }
+
+  const univerMatch = id.match(/node_modules\/(@univerjs\/[^/]+)\//);
+  if (id.includes('@wendellhu/redi')) {
+    return 'vendor-univer-core';
+  }
+  if (univerMatch?.[1]) {
+    const univerPackage = univerMatch[1].replace('@univerjs/', '');
+
+    if (
+      univerPackage === 'core' ||
+      univerPackage === 'design' ||
+      univerPackage === 'engine-render' ||
+      univerPackage === 'engine-formula' ||
+      univerPackage === 'network' ||
+      univerPackage === 'rpc' ||
+      univerPackage === 'telemetry'
+    ) {
+      return 'vendor-univer-core';
+    }
+
+    if (
+      univerPackage === 'sheets' ||
+      univerPackage === 'sheets-ui' ||
+      univerPackage === 'sheets-formula' ||
+      univerPackage === 'sheets-formula-ui' ||
+      univerPackage === 'sheets-numfmt' ||
+      univerPackage === 'sheets-numfmt-ui'
+    ) {
+      return 'vendor-univer-sheets';
+    }
+
+    if (
+      univerPackage === 'sheets-filter' ||
+      univerPackage === 'sheets-filter-ui' ||
+      univerPackage === 'sheets-find-replace'
+    ) {
+      return 'vendor-univer-sheets-plugins';
+    }
+
+    if (
+      univerPackage === 'ui' ||
+      univerPackage === 'docs' ||
+      univerPackage === 'docs-ui' ||
+      univerPackage === 'drawing' ||
+      univerPackage === 'find-replace'
+    ) {
+      return 'vendor-univer-ui';
+    }
+
+    return 'vendor-univer-misc';
+  }
+
+  if (id.includes('plotly.js-dist-min') || id.includes('react-plotly.js')) {
+    return 'vendor-plotly';
+  }
+
+  if (id.includes('react-katex') || id.includes('katex')) {
+    return 'vendor-katex';
+  }
+
+  if (id.includes('@mui') || id.includes('@emotion')) {
+    return 'vendor-mui';
+  }
+
+  if (id.includes('@dnd-kit')) {
+    return 'vendor-dnd';
+  }
+
+  if (id.includes('@tauri-apps')) {
+    return 'vendor-tauri';
+  }
+
+  if (
+    id.includes('/react/') ||
+    id.includes('/react-dom/') ||
+    id.includes('/scheduler/') ||
+    id.includes('/use-sync-external-store/')
+  ) {
+    return 'vendor-react';
+  }
+
+  return undefined;
+}
+
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [
@@ -63,6 +151,7 @@ export default defineConfig(() => ({
           }
           return 'assets/[name]-[hash][extname]';
         },
+        manualChunks: (id) => getManualChunk(id),
       },
       // Tree shaking optimizations
       // Note: moduleSideEffects is set to true to preserve side effects from external packages
@@ -77,7 +166,7 @@ export default defineConfig(() => ({
     outDir: 'dist',
     assetsDir: 'assets',
     // Optimized chunk size limits
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 8000,
     // Source maps for debugging (disabled for production)
     sourcemap: process.env.NODE_ENV === 'development',
     // Enhanced minification

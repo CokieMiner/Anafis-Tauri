@@ -1,8 +1,11 @@
 // src-tauri/src/window_manager.rs
 use crate::error::{CommandResult, window_error};
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Listener, Manager, WebviewUrl, WebviewWindowBuilder};
 
-#[allow(clippy::struct_excessive_bools, reason = "Window configuration naturally involves many flags")]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Window configuration naturally involves many flags"
+)]
 pub struct WindowConfig {
     pub title: String,
     pub url: String,
@@ -95,15 +98,31 @@ pub fn create_or_focus_window(
     // Ensure transparent background is set (redundant but safe)
     drop(window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0))));
 
-    // Now show the window
-    window.show().map_err(|e| window_error(e.to_string()))?;
+    // Show only after the frontend has rendered at least one frame.
+    // This avoids white/blank flashes on WebView2 during window startup.
+    let focus_on_ready = config.focus_on_create;
+    let window_for_ready = window.clone();
+    window.once("anafis://ready", move |_| {
+        drop(window_for_ready.show());
+        if focus_on_ready {
+            drop(window_for_ready.set_focus());
+        }
+    });
 
-    // Only focus if requested
-    if config.focus_on_create {
-        window
-            .set_focus()
-            .map_err(|e| window_error(e.to_string()))?;
-    }
+    // Fallback: if the ready signal is not emitted, still show the window.
+    let app_handle = app.clone();
+    let fallback_window_id = window_id.to_string();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(2200));
+        if let Some(fallback_window) = app_handle.get_webview_window(&fallback_window_id)
+            && matches!(fallback_window.is_visible(), Ok(false))
+        {
+            drop(fallback_window.show());
+            if focus_on_ready {
+                drop(fallback_window.set_focus());
+            }
+        }
+    });
 
     Ok(())
 }
@@ -126,10 +145,16 @@ pub fn resize_window(
     if let Some(window) = app.get_webview_window(window_id) {
         window
             .set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                #[allow(clippy::cast_possible_truncation, reason = "Screen coordinates fit in u32")]
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    reason = "Screen coordinates fit in u32"
+                )]
                 #[allow(clippy::cast_sign_loss, reason = "Window dimensions are positive")]
                 width: width as u32,
-                #[allow(clippy::cast_possible_truncation, reason = "Screen coordinates fit in u32")]
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    reason = "Screen coordinates fit in u32"
+                )]
                 #[allow(clippy::cast_sign_loss, reason = "Window dimensions are positive")]
                 height: height as u32,
             }))

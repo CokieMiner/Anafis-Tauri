@@ -23,6 +23,7 @@
         "maximizable": true,
         "minimizable": true,
         "closable": true,
+        "visible": false,
         "skipTaskbar": false,
         "label": "main",
         "dragDropEnabled": false,

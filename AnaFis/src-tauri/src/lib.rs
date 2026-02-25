@@ -10,7 +10,7 @@ mod unit_conversion;
 mod utils;
 mod windows;
 
-use tauri::{Emitter, Manager};
+use tauri::{Emitter, Listener, Manager};
 
 /// Main entry point for the `AnaFis` application
 ///
@@ -124,6 +124,32 @@ pub fn run() {
             // Listen for main window events
             let app_handle = app.handle().clone();
             if let Some(main_window) = app.get_webview_window("main") {
+                // Force a dark native background so startup never flashes white
+                // before the frontend stylesheet and React tree are ready.
+                drop(main_window.set_background_color(Some(tauri::webview::Color(
+                    10, 10, 10, 255,
+                ))));
+
+                // Keep hidden until frontend emits a ready event.
+                drop(main_window.hide());
+                let main_window_for_ready = main_window.clone();
+                main_window.once("anafis://ready", move |_| {
+                    drop(main_window_for_ready.show());
+                    drop(main_window_for_ready.set_focus());
+                });
+
+                // Fallback: ensure main window still appears even if the ready signal is missed.
+                let fallback_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(2500));
+                    if let Some(fallback_window) = fallback_handle.get_webview_window("main")
+                        && matches!(fallback_window.is_visible(), Ok(false))
+                    {
+                        drop(fallback_window.show());
+                        drop(fallback_window.set_focus());
+                    }
+                });
+
                 main_window.on_window_event(move |event| {
                     if matches!(event, tauri::WindowEvent::Destroyed) {
                         // Main window is being destroyed, close all child windows

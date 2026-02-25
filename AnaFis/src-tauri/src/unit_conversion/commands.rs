@@ -236,7 +236,10 @@ pub async fn get_supported_categories() -> CommandResult<Vec<String>> {
         "temperature",
         "other",
     ];
-    Ok(SUPPORTED_CATEGORIES.iter().map(std::string::ToString::to_string).collect())
+    Ok(SUPPORTED_CATEGORIES
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect())
 }
 
 // ===== HELPER FUNCTIONS =====

@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { createRoot } from 'react-dom/client';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { notifyWindowReady } from '@/shared/utils/windowReady';
 import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 const theme = createAnafisTheme();
@@ -81,6 +82,7 @@ const renderSettingsWindow = () => {
     try {
       const root = createRoot(container);
       root.render(<SettingsWindow />);
+      notifyWindowReady();
     } catch {
       // SettingsWindow: Error rendering
     }

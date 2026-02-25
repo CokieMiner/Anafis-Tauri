@@ -2,8 +2,7 @@
 
 import { Alert, type AlertColor, Snackbar } from '@mui/material';
 import type React from 'react';
-import { type ReactNode, useCallback, useState } from 'react';
-import { NotificationContext } from '@/core/contexts/notificationContext';
+import { createContext, type ReactNode, useCallback, useState } from 'react';
 
 export interface NotificationData {
   type: AlertColor;
@@ -15,6 +14,9 @@ export interface NotificationContextType {
   showNotification: (notification: NotificationData) => void;
   hideNotification: () => void;
 }
+
+export const NotificationContext =
+  createContext<NotificationContextType | null>(null);
 
 interface NotificationProviderProps {
   children: ReactNode;

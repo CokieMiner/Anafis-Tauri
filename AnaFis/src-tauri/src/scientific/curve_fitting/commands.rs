@@ -1,7 +1,7 @@
 use super::engine::{
-    build_normal_equations, evaluate_compiled_batch_or_scalar, get_or_compile_model,
-    invert_information_matrix, normalize_identifiers, prepare_data, solve_odr,
-    validate_symbol_sets, DEFAULT_DAMPING, DEFAULT_MAX_ITERATIONS, DEFAULT_TOLERANCE,
+    DEFAULT_DAMPING, DEFAULT_MAX_ITERATIONS, DEFAULT_TOLERANCE, build_normal_equations,
+    evaluate_compiled_batch_or_scalar, get_or_compile_model, invert_information_matrix,
+    normalize_identifiers, prepare_data, solve_odr, validate_symbol_sets,
 };
 use super::types::{
     GridEvaluationRequest, GridEvaluationResponse, OdrError, OdrFitRequest, OdrFitResponse,
@@ -100,7 +100,10 @@ fn fit_custom_odr_inner(request: &OdrFitRequest) -> OdrResult<OdrFitResponse> {
     ))
 }
 
-#[allow(clippy::too_many_lines, reason = "Grid evaluation requires validation and generation logic")]
+#[allow(
+    clippy::too_many_lines,
+    reason = "Grid evaluation requires validation and generation logic"
+)]
 fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridEvaluationResponse> {
     let normalized_parameter_names = normalize_identifiers(&request.parameter_names, "parameter")?;
     let normalized_independent_names =

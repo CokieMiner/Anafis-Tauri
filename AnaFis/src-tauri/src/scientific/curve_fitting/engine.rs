@@ -90,7 +90,8 @@ pub struct ModelCache {
 }
 
 /// Global singleton for model caching.
-pub static MODEL_CACHE: std::sync::LazyLock<Mutex<ModelCache>> = std::sync::LazyLock::new(|| Mutex::new(ModelCache::default()));
+pub static MODEL_CACHE: std::sync::LazyLock<Mutex<ModelCache>> =
+    std::sync::LazyLock::new(|| Mutex::new(ModelCache::default()));
 
 impl ModelCache {
     /// Returns a compiled model from the cache if it exists.
@@ -237,7 +238,12 @@ pub fn get_or_compile_model(
     independent_names: &[String],
     parameter_names: &[String],
 ) -> OdrResult<Arc<CompiledModel>> {
-    let key = build_model_cache_key(model_formula, dependent_name, independent_names, parameter_names);
+    let key = build_model_cache_key(
+        model_formula,
+        dependent_name,
+        independent_names,
+        parameter_names,
+    );
 
     {
         let mut cache = MODEL_CACHE.lock().map_err(|_| OdrError::CachePoisoned)?;
@@ -373,51 +379,54 @@ pub fn prepare_data(request: &OdrFitRequest) -> OdrResult<PreparedData> {
     let mut variable_sigmas = Vec::new();
     let mut had_uncertainty_clamp = false;
 
-    let mut process_variable = |var: &super::types::VariableInput, is_dependent: bool| -> OdrResult<()> {
-        if var.values.len() != point_count {
-            return Err(OdrError::Validation(format!(
-                "Variable '{}' length mismatch: expected {}, got {}",
-                var.name, point_count, var.values.len()
-            )));
-        }
-
-        let name = var.name.trim().to_lowercase();
-        validate_identifier(&name, "variable")?;
-
-        if variable_names.contains(&name) {
-            return Err(OdrError::Validation(format!(
-                "Duplicate expected variable name mapping: {name}"
-            )));
-        }
-
-        variable_names.push(name);
-        variable_values.push(sanitize_values(&var.values, &var.name)?);
-
-        if let Some(uncertainties) = &var.uncertainties {
-            if uncertainties.len() != point_count {
+    let mut process_variable =
+        |var: &super::types::VariableInput, is_dependent: bool| -> OdrResult<()> {
+            if var.values.len() != point_count {
                 return Err(OdrError::Validation(format!(
-                    "Uncertainty length mismatch for '{}': expected {}, got {}",
+                    "Variable '{}' length mismatch: expected {}, got {}",
                     var.name,
                     point_count,
-                    uncertainties.len()
+                    var.values.len()
                 )));
             }
-            let (sigma, clamped) = sanitize_uncertainties(uncertainties, &var.name)?;
-            had_uncertainty_clamp |= clamped;
-            variable_sigmas.push(sigma);
-        } else if is_dependent && use_poisson {
-            let mut sigma = Vec::with_capacity(point_count);
-            for val in &var.values {
-                let err = if *val <= 1.0 { 1.0 } else { val.sqrt() };
-                sigma.push(err);
-            }
-            variable_sigmas.push(sigma);
-        } else {
-            variable_sigmas.push(vec![0.0; point_count]);
-        }
 
-        Ok(())
-    };
+            let name = var.name.trim().to_lowercase();
+            validate_identifier(&name, "variable")?;
+
+            if variable_names.contains(&name) {
+                return Err(OdrError::Validation(format!(
+                    "Duplicate expected variable name mapping: {name}"
+                )));
+            }
+
+            variable_names.push(name);
+            variable_values.push(sanitize_values(&var.values, &var.name)?);
+
+            if let Some(uncertainties) = &var.uncertainties {
+                if uncertainties.len() != point_count {
+                    return Err(OdrError::Validation(format!(
+                        "Uncertainty length mismatch for '{}': expected {}, got {}",
+                        var.name,
+                        point_count,
+                        uncertainties.len()
+                    )));
+                }
+                let (sigma, clamped) = sanitize_uncertainties(uncertainties, &var.name)?;
+                had_uncertainty_clamp |= clamped;
+                variable_sigmas.push(sigma);
+            } else if is_dependent && use_poisson {
+                let mut sigma = Vec::with_capacity(point_count);
+                for val in &var.values {
+                    let err = if *val <= 1.0 { 1.0 } else { val.sqrt() };
+                    sigma.push(err);
+                }
+                variable_sigmas.push(sigma);
+            } else {
+                variable_sigmas.push(vec![0.0; point_count]);
+            }
+
+            Ok(())
+        };
 
     for var in &request.independent_variables {
         process_variable(var, false)?;
@@ -681,7 +690,8 @@ pub fn solve_odr(
         let actual_reduction = current.chi_squared - trial.chi_squared;
 
         let h_delta = &normal_matrix * &delta;
-        let mut predicted_reduction = -2.0f64.mul_add(gradient_vector.dot(&delta), -delta.dot(&h_delta));
+        let mut predicted_reduction =
+            -2.0f64.mul_add(gradient_vector.dot(&delta), -delta.dot(&h_delta));
         if !predicted_reduction.is_finite() || predicted_reduction <= MIN_VARIANCE {
             predicted_reduction = MIN_VARIANCE;
         }
@@ -713,7 +723,10 @@ pub fn solve_odr(
 ///
 /// # Errors
 /// Returns `OdrError::Numerical` if models or gradients evaluate to non-finite values.
-#[allow(clippy::too_many_lines, reason = "Multi-layer ODR evaluation requires comprehensive logic")]
+#[allow(
+    clippy::too_many_lines,
+    reason = "Multi-layer ODR evaluation requires comprehensive logic"
+)]
 pub fn evaluate_model(
     models: &[Arc<CompiledModel>],
     data: &PreparedData,
@@ -725,24 +738,35 @@ pub fn evaluate_model(
     let var_count = data.variable_names.len();
 
     let mut chi_squared = 0.0;
-    
+
     let mut layer_residuals = Vec::with_capacity(models.len());
     let mut layer_fitted_values = Vec::with_capacity(models.len());
-    
+
     let total_rows = point_count * models.len();
     let mut flat_weighted_residuals = vec![0.0; total_rows];
     let mut global_weighted_jacobian = vec![0.0; total_rows * global_parameter_count];
 
     for (layer_idx, model) in models.iter().enumerate() {
-        let dep_var_idx = data.variable_names.iter().position(|name| name == &model.dependent_name).ok_or_else(|| {
-            OdrError::Validation(format!("Dependent variable {} not found in data", model.dependent_name))
-        })?;
+        let dep_var_idx = data
+            .variable_names
+            .iter()
+            .position(|name| name == &model.dependent_name)
+            .ok_or_else(|| {
+                OdrError::Validation(format!(
+                    "Dependent variable {} not found in data",
+                    model.dependent_name
+                ))
+            })?;
 
         let mut indep_var_indices = Vec::with_capacity(model.independent_names.len());
         for name in &model.independent_names {
-            let idx = data.variable_names.iter().position(|n| n == name).ok_or_else(|| {
-                OdrError::Validation(format!("Independent variable {name} not found in data"))
-            })?;
+            let idx = data
+                .variable_names
+                .iter()
+                .position(|n| n == name)
+                .ok_or_else(|| {
+                    OdrError::Validation(format!("Independent variable {name} not found in data"))
+                })?;
             indep_var_indices.push(idx);
         }
 
@@ -750,14 +774,20 @@ pub fn evaluate_model(
         let mut param_global_to_local = Vec::with_capacity(model.parameter_names.len());
 
         for local_name in &model.parameter_names {
-            let global_idx = global_parameter_names.iter().position(|name| name == local_name).ok_or_else(|| {
-                OdrError::Validation(format!("Parameter {local_name} not found in global parameters"))
-            })?;
+            let global_idx = global_parameter_names
+                .iter()
+                .position(|name| name == local_name)
+                .ok_or_else(|| {
+                    OdrError::Validation(format!(
+                        "Parameter {local_name} not found in global parameters"
+                    ))
+                })?;
             local_parameters.push(global_parameters[global_idx]);
             param_global_to_local.push(global_idx);
         }
 
-        let mut columns: Vec<&[f64]> = Vec::with_capacity(indep_var_indices.len() + local_parameters.len());
+        let mut columns: Vec<&[f64]> =
+            Vec::with_capacity(indep_var_indices.len() + local_parameters.len());
         for &idx in &indep_var_indices {
             columns.push(&data.variable_values[idx]);
         }
@@ -816,7 +846,7 @@ pub fn evaluate_model(
 
             let inv_sqrt_s2 = 1.0 / s2.sqrt();
             let weighted_residual = residual * inv_sqrt_s2;
-            
+
             let row_idx = layer_idx * point_count + point;
             flat_weighted_residuals[row_idx] = weighted_residual;
             chi_squared += weighted_residual * weighted_residual;
@@ -833,7 +863,7 @@ pub fn evaluate_model(
                 global_weighted_jacobian[j_idx] = j_val;
             }
         }
-        
+
         layer_residuals.push(current_residuals);
         layer_fitted_values.push(fitted_values);
     }
@@ -867,7 +897,10 @@ pub struct BatchEvaluationResult {
 ///
 /// # Errors
 /// Returns `OdrError::Numerical` if evaluation fails or produces non-finite values.
-#[allow(clippy::too_many_arguments, reason = "All parameters needed for batch evaluation")]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "All parameters needed for batch evaluation"
+)]
 fn evaluate_model_and_gradients_batch(
     model_expr: &Expr,
     independent_gradient_exprs: &[Expr],
@@ -879,7 +912,7 @@ fn evaluate_model_and_gradients_batch(
     layer_idx: usize,
 ) -> OdrResult<BatchEvaluationResult> {
     let total_exprs = 1 + independent_gradient_exprs.len() + parameter_gradient_exprs.len();
-    
+
     // Build expression list: [model, df/dx1, df/dx2, ..., df/dp1, df/dp2, ...]
     let mut exprs: Vec<&Expr> = Vec::with_capacity(total_exprs);
     exprs.push(model_expr);
@@ -889,39 +922,39 @@ fn evaluate_model_and_gradients_batch(
     for expr in parameter_gradient_exprs {
         exprs.push(expr);
     }
-    
+
     // Build variable names for each expression (all use the same variable order)
-    let mut all_var_names: Vec<&str> = Vec::with_capacity(independent_names.len() + parameter_names.len());
+    let mut all_var_names: Vec<&str> =
+        Vec::with_capacity(independent_names.len() + parameter_names.len());
     for name in independent_names {
         all_var_names.push(name.as_str());
     }
     for name in parameter_names {
         all_var_names.push(name.as_str());
     }
-    
+
     // Each expression uses the same variable order
     let var_names: Vec<&[&str]> = exprs.iter().map(|_| &all_var_names[..]).collect();
-    
+
     // Build data: each expression gets the same columnar data
     // data[expr_idx][var_idx][point_idx]
     let data: Vec<&[&[f64]]> = exprs.iter().map(|_| columns).collect();
-    
+
     // Call eval_f64 for SIMD+parallel batch evaluation
-    let results = eval_f64(&exprs, &var_names, &data)
-        .map_err(|error| OdrError::Numerical(format!(
-            "eval_f64 failed for layer {layer_idx}: {error:?}"
-        )))?;
-    
+    let results = eval_f64(&exprs, &var_names, &data).map_err(|error| {
+        OdrError::Numerical(format!("eval_f64 failed for layer {layer_idx}: {error:?}"))
+    })?;
+
     // Validate and split results
     let mut offset = 0;
-    
+
     // Model values
     let fitted_values = validate_evaluation_output(
         results[offset].clone(),
         &format!("model evaluator layer {layer_idx}"),
     )?;
     offset += 1;
-    
+
     // Independent derivatives
     let mut independent_derivatives = Vec::with_capacity(independent_gradient_exprs.len());
     for (idx, _) in independent_gradient_exprs.iter().enumerate() {
@@ -932,7 +965,7 @@ fn evaluate_model_and_gradients_batch(
         independent_derivatives.push(deriv);
         offset += 1;
     }
-    
+
     // Parameter derivatives
     let mut parameter_derivatives = Vec::with_capacity(parameter_gradient_exprs.len());
     for (idx, _) in parameter_gradient_exprs.iter().enumerate() {
@@ -943,7 +976,7 @@ fn evaluate_model_and_gradients_batch(
         parameter_derivatives.push(deriv);
         offset += 1;
     }
-    
+
     Ok(BatchEvaluationResult {
         fitted_values,
         independent_derivatives,
@@ -1010,7 +1043,7 @@ fn dot(left: &[f64], right: &[f64]) -> f64 {
     left.iter().zip(right.iter()).map(|(a, b)| a * b).sum()
 }
 
-#[must_use] 
+#[must_use]
 /// Constructs the normal equations (`AtA` and `Atb`) from the Jacobian and residuals.
 pub fn build_normal_equations(state: &EvaluationState) -> (DMatrix<f64>, DVector<f64>) {
     let j_t = state.global_weighted_jacobian.transpose();

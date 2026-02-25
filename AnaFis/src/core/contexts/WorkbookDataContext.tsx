@@ -1,7 +1,6 @@
 // WorkbookDataContext.tsx - Context for managing pending workbook data loading
 import type React from 'react';
-import { type ReactNode, useRef } from 'react';
-import { WorkbookDataContext } from '@/core/contexts/workbookDataContext';
+import { createContext, type ReactNode, useRef } from 'react';
 import type { WorkbookData } from '@/core/types/import';
 
 export interface WorkbookDataContextType {
@@ -9,6 +8,9 @@ export interface WorkbookDataContextType {
   getPendingWorkbookData: (tabId: string) => WorkbookData | undefined;
   clearPendingWorkbookData: (tabId: string) => void;
 }
+
+export const WorkbookDataContext =
+  createContext<WorkbookDataContextType | null>(null);
 
 interface WorkbookDataProviderProps {
   children: ReactNode;

@@ -1,7 +1,4 @@
-import {
-  CHART_COLORS,
-  getThemeLayout,
-} from '@/shared/components/plotlyTheme';
+import { CHART_COLORS, getThemeLayout } from '@/shared/components/plotlyTheme';
 import type {
   AxisSettings,
   DependentBinding,
@@ -103,7 +100,6 @@ export function build2DChart(
       line: { color: CHART_COLORS.fit, width: 2.5, shape: 'spline' },
     });
   }
-
 
   const axisLabel = (axis: keyof AxisSettings, fallback: string) => {
     const custom = axisSettings[axis].label.trim();
@@ -279,7 +275,8 @@ export function build3DChart(
             text: axisLabel('x', xCol.name || 'X'),
           },
           ...baseAxis,
-          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
+          backgroundcolor:
+            theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         yaxis: {
           type: axisSettings.y.scale,
@@ -287,7 +284,8 @@ export function build3DChart(
             text: axisLabel('y', yCol.name || 'Y'),
           },
           ...baseAxis,
-          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
+          backgroundcolor:
+            theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         zaxis: {
           type: axisSettings.z.scale,
@@ -295,7 +293,8 @@ export function build3DChart(
             text: axisLabel('z', depCol.name || 'Z'),
           },
           ...baseAxis,
-          backgroundcolor: theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
+          backgroundcolor:
+            theme === 'dark' ? 'rgba(14,14,18,0.3)' : 'rgba(255,255,255,0.3)',
         },
         bgcolor: 'transparent',
       },
@@ -397,7 +396,11 @@ export function buildPredictedChart(
         {
           text: `χ²red = ${fitResult.chiSquaredReduced.toPrecision(4)}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
           showarrow: false,
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 11, family: 'monospace' },
+          font: {
+            color: theme === 'dark' ? '#aaa' : '#444',
+            size: 11,
+            family: 'monospace',
+          },
           xref: 'paper' as const,
           yref: 'paper' as const,
           x: 1,

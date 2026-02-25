@@ -23,6 +23,7 @@ import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
+import { notifyWindowReady } from '@/shared/utils/windowReady';
 import { createNoTransitionTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 import VariableManager from '@/windows/uncertaintyCalculator/components/VariableManager';
 
@@ -587,6 +588,7 @@ const renderUncertaintyCalculatorWindow = () => {
     try {
       const root = createRoot(container);
       root.render(<UncertaintyCalculatorWindow />);
+      notifyWindowReady();
     } catch {
       // UncertaintyCalculatorWindow: Error rendering
     }

@@ -4,12 +4,15 @@
 //! It provides CRUD operations for storing and retrieving data sequences with
 //! associated metadata and statistics.
 
+use super::models::{
+    BatchImportError, BatchImportRequest, BatchImportResponse, DataSequence, SaveSequenceRequest,
+    SearchRequest, SequenceListResponse, SortBy, SortOrder, UpdateSequenceRequest,
+};
 use chrono::Utc;
 use rusqlite::{Connection, OptionalExtension, Result as SqliteResult, Row, params};
+use std::fmt::Write;
 use std::sync::Mutex;
 use uuid::Uuid;
-use std::fmt::Write;
-use super::models::{SearchRequest, SortBy, SortOrder, DataSequence, SaveSequenceRequest, SequenceListResponse, UpdateSequenceRequest, BatchImportRequest, BatchImportResponse, BatchImportError};
 
 pub struct DataLibraryDatabase {
     conn: Mutex<Connection>,
@@ -456,8 +459,9 @@ impl DataLibraryDatabase {
             // Update FTS table if name, description, or tags changed
             if request.name.is_some() || request.description.is_some() || request.tags.is_some() {
                 // Get current values for FTS update
-                let mut stmt =
-                    conn.prepare("SELECT name, description, tags, source FROM sequences WHERE id = ?")?;
+                let mut stmt = conn.prepare(
+                    "SELECT name, description, tags, source FROM sequences WHERE id = ?",
+                )?;
                 let mut rows = stmt.query(params![request.id])?;
 
                 if let Some(row) = rows.next()? {
@@ -496,7 +500,8 @@ impl DataLibraryDatabase {
     /// Get all unique tags
     pub fn get_all_tags(&self) -> SqliteResult<Vec<String>> {
         let mut all_tags = std::collections::HashSet::new();
-        let tags_json_list: Vec<String> = self.conn
+        let tags_json_list: Vec<String> = self
+            .conn
             .lock()
             .unwrap()
             .prepare("SELECT DISTINCT tags FROM sequences")?
@@ -617,10 +622,7 @@ impl DataLibraryDatabase {
 
     /// Batch import multiple sequences
     /// Returns results for each sequence, continuing on errors
-    pub fn batch_import_sequences(
-        &self,
-        request: BatchImportRequest,
-    ) -> BatchImportResponse {
+    pub fn batch_import_sequences(&self, request: BatchImportRequest) -> BatchImportResponse {
         let mut successful_imports = 0;
         let mut failed_imports = 0;
         let mut errors = Vec::new();

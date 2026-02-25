@@ -3,6 +3,7 @@ import './index.css';
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from '@/App.tsx';
+import { notifyWindowReady } from '@/shared/utils/windowReady';
 import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes/index.ts';
 
 // Prevent pinch-to-zoom on trackpad/touchpad
@@ -40,4 +41,5 @@ if (rootElement) {
       <App />
     </ThemeProvider>
   );
+  notifyWindowReady();
 }

@@ -3,7 +3,7 @@ import { useContext } from 'react';
 import {
   WorkbookDataContext,
   type WorkbookDataContextType,
-} from '@/core/contexts/workbookDataContext';
+} from '@/core/contexts/WorkbookDataContext';
 
 export const useWorkbookData = (): WorkbookDataContextType => {
   const context = useContext(WorkbookDataContext);

@@ -43,6 +43,7 @@ import SequenceDetails from '@/shared/dataLibrary/components/SequenceDetails';
 import SequenceList from '@/shared/dataLibrary/components/SequenceList';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
+import { notifyWindowReady } from '@/shared/utils/windowReady';
 import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 // Toolbar props interface
@@ -697,4 +698,5 @@ if (rootElement) {
       </ThemeProvider>
     </React.StrictMode>
   );
+  notifyWindowReady();
 }

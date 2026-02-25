@@ -12,8 +12,8 @@
 // - Bytes 8-11:  Format version (u32, little-endian, currently 1)
 // - Bytes 12+:   Gzip-compressed JSON data
 
-use flate2::write::GzEncoder;
 use flate2::Compression;
+use flate2::write::GzEncoder;
 use serde_json::Value;
 use std::fs::File;
 use std::io::{BufWriter, Write};

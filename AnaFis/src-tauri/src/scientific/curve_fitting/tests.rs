@@ -167,11 +167,13 @@ fn test_fit_custom_odr_zero_uncertainty_clamp() {
 
     let result = fit_custom_odr(request).unwrap();
     assert!(result.success);
-    assert!(result
-        .message
-        .unwrap_or_default()
-        .to_lowercase()
-        .contains("clamped"));
+    assert!(
+        result
+            .message
+            .unwrap_or_default()
+            .to_lowercase()
+            .contains("clamped")
+    );
 }
 
 #[test]

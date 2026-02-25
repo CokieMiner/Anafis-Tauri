@@ -1,7 +1,20 @@
 // UniverAdapter.tsx - Improved Facade API approach with proper plugin mode integration
 
-import type { ICellData, Univer } from '@univerjs/core';
+import {
+  type ICellData,
+  ICommandService,
+  IPermissionService,
+  IUniverInstanceService,
+  type Univer,
+} from '@univerjs/core';
 import { FUniver } from '@univerjs/core/facade';
+import {
+  AddRangeProtectionMutation,
+  AddWorksheetProtectionMutation,
+  RangeProtectionPermissionEditPoint,
+  RemoveSheetMutation,
+  WorksheetEditPermission,
+} from '@univerjs/sheets';
 import {
   forwardRef,
   useCallback,
@@ -406,11 +419,6 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
           }
 
           try {
-            const { ICommandService, IUniverInstanceService } = await import(
-              '@univerjs/core'
-            );
-            const { RemoveSheetMutation } = await import('@univerjs/sheets');
-
             const univer = univerInstanceRef.current as {
               __getInjector: () => { get: (token: unknown) => unknown };
             };
@@ -686,18 +694,6 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
 
             return (async () => {
               try {
-                const {
-                  ICommandService,
-                  IUniverInstanceService,
-                  IPermissionService,
-                } = await import('@univerjs/core');
-                const {
-                  AddWorksheetProtectionMutation,
-                  AddRangeProtectionMutation,
-                  WorksheetEditPermission,
-                  RangeProtectionPermissionEditPoint,
-                } = await import('@univerjs/sheets');
-
                 const univer = univerInstanceRef.current as {
                   __getInjector: () => { get: (token: unknown) => unknown };
                 };

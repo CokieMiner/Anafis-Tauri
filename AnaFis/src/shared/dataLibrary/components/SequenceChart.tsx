@@ -1,14 +1,15 @@
 import { Box, Typography } from '@mui/material';
 import type React from 'react';
-import { memo, useMemo } from 'react';
+import { lazy, memo, Suspense, useMemo } from 'react';
 import type { DataSequence } from '@/core/types/dataLibrary';
-import Plot from '@/shared/components/PlotlyChart';
 import {
   ANAFIS_CHART_CONFIG,
   ANAFIS_DARK_AXIS,
   ANAFIS_DARK_LAYOUT,
   CHART_COLORS,
 } from '@/shared/components/plotlyTheme';
+
+const Plot = lazy(() => import('@/shared/components/PlotlyChart'));
 
 interface SequenceChartProps {
   sequence: DataSequence | null;
@@ -95,13 +96,21 @@ const SequenceChart: React.FC<SequenceChartProps> = memo(({ sequence }) => {
             Select a sequence to view chart
           </Typography>
         ) : (
-          <Plot
-            data={traces}
-            layout={layout}
-            config={ANAFIS_CHART_CONFIG}
-            useResizeHandler
-            style={{ width: '100%', height: '100%' }}
-          />
+          <Suspense
+            fallback={
+              <Typography variant="body2" color="text.secondary">
+                Loading chart...
+              </Typography>
+            }
+          >
+            <Plot
+              data={traces}
+              layout={layout}
+              config={ANAFIS_CHART_CONFIG}
+              useResizeHandler
+              style={{ width: '100%', height: '100%' }}
+            />
+          </Suspense>
         )}
       </Box>
     </Box>

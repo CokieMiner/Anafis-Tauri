@@ -5,6 +5,7 @@ import { Box, Paper, ThemeProvider } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
 import { createRoot } from 'react-dom/client';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { notifyWindowReady } from '@/shared/utils/windowReady';
 import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 interface LatexPreviewWindowProps {
@@ -195,6 +196,7 @@ if (container) {
   );
   const root = createRoot(container);
   root.render(app);
+  notifyWindowReady();
 }
 
 export default LatexPreviewWindow;

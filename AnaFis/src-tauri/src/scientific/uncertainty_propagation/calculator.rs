@@ -67,7 +67,10 @@ fn normalize_variable_names(variable_names: &[String]) -> Result<Vec<String>, St
 /// # Errors
 /// Returns an error if the formula is invalid, symbols are unknown, or numerical errors occur.
 #[tauri::command]
-#[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned types for arguments")]
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
 pub fn calculate_uncertainty(
     formula: String,
     variables: Vec<CalculatorVariable>,
@@ -157,7 +160,10 @@ pub fn calculate_uncertainty(
 /// # Errors
 /// Returns an error if the formula is invalid or symbols are unknown.
 #[tauri::command]
-#[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned types for arguments")]
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
 pub fn generate_latex(formula: String, variables: Vec<String>) -> Result<LatexResult, String> {
     if variables.is_empty() {
         return Err("Please provide at least one variable".into());
@@ -170,7 +176,10 @@ pub fn generate_latex(formula: String, variables: Vec<String>) -> Result<LatexRe
     let expr = parse(&formula_normalized, &known_symbols, &HashSet::new(), None)
         .map_err(|e| format!("Failed to parse formula: {e}"))?;
 
-    let var_refs: Vec<&str> = normalized_variables.iter().map(std::string::String::as_str).collect();
+    let var_refs: Vec<&str> = normalized_variables
+        .iter()
+        .map(std::string::String::as_str)
+        .collect();
     let sigma_expr = uncertainty_propagation(&expr, &var_refs, None)
         .map_err(|e| format!("Uncertainty propagation failed: {e:?}"))?;
 

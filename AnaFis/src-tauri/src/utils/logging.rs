@@ -2,7 +2,7 @@
 use std::fs::OpenOptions;
 use std::io::Result;
 use tracing::info;
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 /// Initialize structured logging with file and console output
 pub fn init_logging() -> Result<()> {

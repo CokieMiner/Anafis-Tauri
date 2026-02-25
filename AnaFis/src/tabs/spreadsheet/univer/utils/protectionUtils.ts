@@ -7,6 +7,12 @@ import {
   IPermissionService,
   IUniverInstanceService,
 } from '@univerjs/core';
+import {
+  AddRangeProtectionMutation,
+  AddWorksheetProtectionMutation,
+  RangeProtectionPermissionEditPoint,
+  WorksheetEditPermission,
+} from '@univerjs/sheets';
 import { ERROR_MESSAGES } from './constants';
 import { SpreadsheetOperationError } from './errors';
 export interface ProtectionResource {
@@ -32,13 +38,6 @@ export async function applyProtectionRules(
   signal: AbortSignal
 ): Promise<void> {
   try {
-    const {
-      AddWorksheetProtectionMutation,
-      AddRangeProtectionMutation,
-      WorksheetEditPermission,
-      RangeProtectionPermissionEditPoint,
-    } = await import('@univerjs/sheets');
-
     interface UniverseInstance {
       __getInjector: () => { get: (service: unknown) => unknown };
     }

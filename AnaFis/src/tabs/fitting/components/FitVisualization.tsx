@@ -1,11 +1,26 @@
 import ImageIcon from '@mui/icons-material/Image';
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, IconButton, Radio, RadioGroup, Tooltip, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  FormControlLabel,
+  IconButton,
+  Radio,
+  RadioGroup,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot, { Plotly } from '@/shared/components/PlotlyChart';
 import { ANAFIS_CHART_CONFIG } from '@/shared/components/plotlyTheme';
-
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import type {
   AxisSettings,
   DependentBinding,
@@ -14,7 +29,6 @@ import type {
   OdrFitResponse,
   VariableBinding,
 } from '../types/fittingTypes';
-import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import {
   build2DChart,
   build3DChart,
@@ -194,9 +208,16 @@ export default function FitVisualization({
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
-    if (mode === 'empty') return;
+    if (mode === 'empty') {
+      return;
+    }
     setIsExporting(true);
     try {
+      if (!importedData) {
+        setExportDialogOpen(false);
+        return;
+      }
+
       const extension = exportFormat;
       const filterName = exportFormat === 'svg' ? 'SVG Image' : 'PNG Image';
 
@@ -216,15 +237,36 @@ export default function FitVisualization({
       let exportLayout: Partial<Plotly.Layout> = {};
 
       if (mode === '2d') {
-        const result = build2DChart(importedData!, variableBindings, dependentBinding, axisSettings, fitResult, exportTheme);
+        const result = build2DChart(
+          importedData,
+          variableBindings,
+          dependentBinding,
+          axisSettings,
+          fitResult,
+          exportTheme
+        );
         exportData = result.data;
         exportLayout = result.layout;
       } else if (mode === '3d') {
-        const result = build3DChart(importedData!, variableBindings, dependentBinding, axisSettings, fitResult, gridData, exportTheme);
+        const result = build3DChart(
+          importedData,
+          variableBindings,
+          dependentBinding,
+          axisSettings,
+          fitResult,
+          gridData,
+          exportTheme
+        );
         exportData = result.data;
         exportLayout = result.layout;
       } else if (mode === 'predicted') {
-        const result = buildPredictedChart(importedData!, dependentBinding, axisSettings, fitResult, exportTheme);
+        const result = buildPredictedChart(
+          importedData,
+          dependentBinding,
+          axisSettings,
+          fitResult,
+          exportTheme
+        );
         exportData = result.data;
         exportLayout = result.layout;
       } else {
@@ -301,7 +343,7 @@ export default function FitVisualization({
     fitResult,
     gridData,
     data,
-    layout
+    layout,
   ]);
 
   return (
@@ -332,7 +374,11 @@ export default function FitVisualization({
               disabled={isExporting || mode === 'empty'}
               sx={{ color: 'text.secondary', p: 0.25 }}
             >
-              {isExporting ? <CircularProgress size={16} /> : <ImageIcon fontSize="small" />}
+              {isExporting ? (
+                <CircularProgress size={16} />
+              ) : (
+                <ImageIcon fontSize="small" />
+              )}
             </IconButton>
           </span>
         </Tooltip>
@@ -352,42 +398,197 @@ export default function FitVisualization({
         maxWidth="xs"
         fullWidth
         slotProps={{
-          paper: { sx: { bgcolor: anafisTheme.colors.background.elevated, backgroundImage: 'none', color: anafisTheme.colors.text.primary } },
+          paper: {
+            sx: {
+              bgcolor: anafisTheme.colors.background.elevated,
+              backgroundImage: 'none',
+              color: anafisTheme.colors.text.primary,
+            },
+          },
         }}
       >
-        <DialogTitle sx={{ color: anafisTheme.colors.tabs.fitting.main, borderBottom: `1px solid ${anafisTheme.colors.border.light}` }}>
+        <DialogTitle
+          sx={{
+            color: anafisTheme.colors.tabs.fitting.main,
+            borderBottom: `1px solid ${anafisTheme.colors.border.light}`,
+          }}
+        >
           Export Plot
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="body2" sx={{ color: anafisTheme.colors.text.secondary, mb: 2 }}>
+          <Typography
+            variant="body2"
+            sx={{ color: anafisTheme.colors.text.secondary, mb: 2 }}
+          >
             Choose export format and theme:
           </Typography>
 
-          <Typography variant="caption" sx={{ color: anafisTheme.colors.text.tertiary, fontSize: 10, fontWeight: 600, mb: 0.5, display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: anafisTheme.colors.text.tertiary,
+              fontSize: 10,
+              fontWeight: 600,
+              mb: 0.5,
+              display: 'block',
+            }}
+          >
             FORMAT
           </Typography>
           <FormControl sx={{ mb: 2 }}>
-            <RadioGroup value={exportFormat} onChange={(e) => setExportFormat(e.target.value as 'png' | 'svg')}>
-              <FormControlLabel value="png" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>PNG (Raster)</Typography>} />
-              <FormControlLabel value="svg" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>SVG (Vector)</Typography>} />
+            <RadioGroup
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value as 'png' | 'svg')}
+            >
+              <FormControlLabel
+                value="png"
+                control={
+                  <Radio
+                    size="small"
+                    sx={{
+                      color: 'rgba(255, 179, 0, 0.5)',
+                      '&.Mui-checked': {
+                        color: anafisTheme.colors.tabs.fitting.main,
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      color: anafisTheme.colors.text.primary,
+                    }}
+                  >
+                    PNG (Raster)
+                  </Typography>
+                }
+              />
+              <FormControlLabel
+                value="svg"
+                control={
+                  <Radio
+                    size="small"
+                    sx={{
+                      color: 'rgba(255, 179, 0, 0.5)',
+                      '&.Mui-checked': {
+                        color: anafisTheme.colors.tabs.fitting.main,
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      color: anafisTheme.colors.text.primary,
+                    }}
+                  >
+                    SVG (Vector)
+                  </Typography>
+                }
+              />
             </RadioGroup>
           </FormControl>
 
-          <Typography variant="caption" sx={{ color: anafisTheme.colors.text.tertiary, fontSize: 10, fontWeight: 600, mb: 0.5, display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: anafisTheme.colors.text.tertiary,
+              fontSize: 10,
+              fontWeight: 600,
+              mb: 0.5,
+              display: 'block',
+            }}
+          >
             THEME
           </Typography>
           <FormControl>
-            <RadioGroup value={exportTheme} onChange={(e) => setExportTheme(e.target.value as 'dark' | 'light')}>
-              <FormControlLabel value="dark" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>Dark background</Typography>} />
-              <FormControlLabel value="light" control={<Radio size="small" sx={{ color: 'rgba(255, 179, 0, 0.5)', '&.Mui-checked': { color: anafisTheme.colors.tabs.fitting.main } }} />} label={<Typography sx={{ fontSize: 13, color: anafisTheme.colors.text.primary }}>Light background</Typography>} />
+            <RadioGroup
+              value={exportTheme}
+              onChange={(e) =>
+                setExportTheme(e.target.value as 'dark' | 'light')
+              }
+            >
+              <FormControlLabel
+                value="dark"
+                control={
+                  <Radio
+                    size="small"
+                    sx={{
+                      color: 'rgba(255, 179, 0, 0.5)',
+                      '&.Mui-checked': {
+                        color: anafisTheme.colors.tabs.fitting.main,
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      color: anafisTheme.colors.text.primary,
+                    }}
+                  >
+                    Dark background
+                  </Typography>
+                }
+              />
+              <FormControlLabel
+                value="light"
+                control={
+                  <Radio
+                    size="small"
+                    sx={{
+                      color: 'rgba(255, 179, 0, 0.5)',
+                      '&.Mui-checked': {
+                        color: anafisTheme.colors.tabs.fitting.main,
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      color: anafisTheme.colors.text.primary,
+                    }}
+                  >
+                    Light background
+                  </Typography>
+                }
+              />
             </RadioGroup>
           </FormControl>
         </DialogContent>
-        <DialogActions sx={{ borderTop: `1px solid ${anafisTheme.colors.border.light}`, p: 2 }}>
-          <Button onClick={() => setExportDialogOpen(false)} disabled={isExporting} sx={{ color: anafisTheme.colors.text.secondary, textTransform: 'none' }}>
+        <DialogActions
+          sx={{
+            borderTop: `1px solid ${anafisTheme.colors.border.light}`,
+            p: 2,
+          }}
+        >
+          <Button
+            onClick={() => setExportDialogOpen(false)}
+            disabled={isExporting}
+            sx={{
+              color: anafisTheme.colors.text.secondary,
+              textTransform: 'none',
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={() => void handleExport()} disabled={isExporting} variant="contained" sx={{ bgcolor: 'rgba(255, 179, 0, 0.15)', color: anafisTheme.colors.tabs.fitting.main, '&:hover': { bgcolor: 'rgba(255, 179, 0, 0.25)' }, textTransform: 'none', boxShadow: 'none' }}>
+          <Button
+            onClick={() => void handleExport()}
+            disabled={isExporting}
+            variant="contained"
+            sx={{
+              bgcolor: 'rgba(255, 179, 0, 0.15)',
+              color: anafisTheme.colors.tabs.fitting.main,
+              '&:hover': { bgcolor: 'rgba(255, 179, 0, 0.25)' },
+              textTransform: 'none',
+              boxShadow: 'none',
+            }}
+          >
             {isExporting ? 'Exporting...' : 'Export'}
           </Button>
         </DialogActions>

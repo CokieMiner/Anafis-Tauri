@@ -3,7 +3,7 @@
 import { Box, CircularProgress, useTheme } from '@mui/material';
 import React, { Suspense } from 'react';
 import type { Tab } from '@/core/types/tabs';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 
 interface OptimizedTabRendererProps {
   tabs: Tab[];
@@ -24,7 +24,7 @@ const TabLoadingFallback = () => {
         backgroundColor: theme.palette.background.default,
       }}
     >
-      <CircularProgress sx={{ color: anafisColors.primary }} />
+      <CircularProgress sx={{ color: anafisTheme.colors.primary.main }} />
     </Box>
   );
 };

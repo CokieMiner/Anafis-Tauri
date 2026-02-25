@@ -1,7 +1,7 @@
 // src-tauri/src/secondary_windows.rs
 
 use crate::windows::window_manager::{WindowConfig, create_or_focus_window};
-use tauri::{AppHandle, Manager, WindowEvent};
+use tauri::{AppHandle, Listener, Manager, WindowEvent};
 use tokio::sync::Notify;
 use tokio::time::{Duration, timeout};
 use tracing::{error, info};
@@ -27,7 +27,9 @@ pub fn resize_uncertainty_calculator_window(
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
-pub fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
+pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), String> {
+    // NOTE: window creation in sync commands can deadlock on Windows (WebView2 issue).
+    // Keeping this command async avoids that platform-specific lockup.
     let config = WindowConfig {
         title: "Uncertainty Calculator".to_string(),
         url: "uncertainty-calculator.html".to_string(),
@@ -55,7 +57,9 @@ pub fn close_settings_window(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
-pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
+pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
+    // NOTE: window creation in sync commands can deadlock on Windows (WebView2 issue).
+    // Keeping this command async avoids that platform-specific lockup.
     let config = WindowConfig {
         title: "AnaFis Settings".to_string(),
         url: "settings.html".to_string(),
@@ -83,7 +87,9 @@ pub fn close_data_library_window(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
-pub fn open_data_library_window(app: AppHandle) -> Result<(), String> {
+pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
+    // NOTE: window creation in sync commands can deadlock on Windows (WebView2 issue).
+    // Keeping this command async avoids that platform-specific lockup.
     let config = WindowConfig {
         title: "Data Library".to_string(),
         url: "data-library.html".to_string(),
@@ -148,20 +154,22 @@ pub async fn open_latex_preview_window(
                 "Failed to destroy existing LaTeX preview window: {}",
                 destroy_err
             );
-            return Err(format!(
-                "Failed to destroy existing window: {destroy_err}"
-            ));
+            return Err(format!("Failed to destroy existing window: {destroy_err}"));
         }
 
         // Wait for the window to be fully destroyed with a shorter timeout
         // Treat timeout as a hard failure to prevent race conditions
-        if timeout(Duration::from_millis(500), notified_fut).await.is_ok() {
+        if timeout(Duration::from_millis(500), notified_fut)
+            .await
+            .is_ok()
+        {
             info!("Existing LaTeX preview window destroyed successfully");
         } else {
-            error!(
-                "Timeout waiting for window destruction - window may not be fully destroyed"
+            error!("Timeout waiting for window destruction - window may not be fully destroyed");
+            return Err(
+                "Failed to destroy existing window: timeout waiting for destruction confirmation"
+                    .to_string(),
             );
-            return Err("Failed to destroy existing window: timeout waiting for destruction confirmation".to_string());
         }
     }
 
@@ -181,21 +189,34 @@ pub async fn open_latex_preview_window(
     .always_on_top(true)
     .skip_taskbar(true)
     .closable(true)
+    .visible(false)
     .build()
     .map_err(|e| {
         error!("Failed to create window: {}", e);
         format!("Failed to create window: {e}")
     })?;
 
-    // Show and focus the window
-    window.show().map_err(|e| {
-        error!("Failed to show window: {}", e);
-        format!("Failed to show window: {e}")
-    })?;
-    window.set_focus().map_err(|e| {
-        error!("Failed to focus window: {}", e);
-        format!("Failed to focus window: {e}")
-    })?;
+    // Ensure initial background is dark/transparent while hidden.
+    drop(window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0))));
+
+    // Show only after frontend emits readiness event.
+    let ready_window = window.clone();
+    window.once("anafis://ready", move |_| {
+        drop(ready_window.show());
+        drop(ready_window.set_focus());
+    });
+
+    // Fallback in case frontend ready signal is not emitted.
+    let app_handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(2200));
+        if let Some(fallback_window) = app_handle.get_webview_window("latex-preview")
+            && matches!(fallback_window.is_visible(), Ok(false))
+        {
+            drop(fallback_window.show());
+            drop(fallback_window.set_focus());
+        }
+    });
 
     info!("LaTeX preview window opened successfully");
     Ok(())

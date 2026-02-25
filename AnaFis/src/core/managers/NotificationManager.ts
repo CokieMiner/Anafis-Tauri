@@ -3,7 +3,7 @@ import { useContext } from 'react';
 import {
   NotificationContext,
   type NotificationContextType,
-} from '@/core/contexts/notificationContext';
+} from '@/core/contexts/NotificationContext';
 
 export type { NotificationData } from '@/core/contexts/NotificationContext';
 
