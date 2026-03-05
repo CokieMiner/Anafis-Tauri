@@ -34,6 +34,8 @@ fn test_fit_custom_odr_linear_model_no_correlation() {
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(120),
         point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -91,6 +93,8 @@ fn test_fit_custom_odr_with_independent_correlations() {
         initial_guess: Some(vec![0.0, 0.0, 0.0]),
         max_iterations: Some(200),
         point_correlations: Some(repeat_corr(40, &corr)),
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -128,6 +132,8 @@ fn test_fit_custom_odr_with_cross_xy_correlation() {
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(160),
         point_correlations: Some(repeat_corr(30, &corr)),
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -163,17 +169,17 @@ fn test_fit_custom_odr_zero_uncertainty_clamp() {
         initial_guess: Some(vec![0.0, 0.0]),
         max_iterations: Some(200),
         point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
     assert!(result.success);
-    assert!(
-        result
-            .message
-            .unwrap_or_default()
-            .to_lowercase()
-            .contains("clamped")
-    );
+    assert!(result
+        .message
+        .unwrap_or_default()
+        .to_lowercase()
+        .contains("clamped"));
 }
 
 #[test]
@@ -204,6 +210,8 @@ fn test_fit_custom_odr_invalid_correlation_shape() {
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(100),
         point_correlations: Some(bad_corr),
+        initial_damping: None,
+        tolerance: None,
     };
 
     let err = fit_custom_odr(request).unwrap_err();
@@ -239,6 +247,8 @@ fn test_fit_custom_odr_nonlinear_gaussian_like() {
         initial_guess: Some(vec![1.0, 0.2, 0.0]),
         max_iterations: Some(600),
         point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -310,6 +320,8 @@ fn test_fit_custom_odr_multivariable_full_covariance() {
         initial_guess: Some(vec![0.0, 0.0, 0.0, 0.0]),
         max_iterations: Some(300),
         point_correlations: Some(repeat_corr(35, &corr)),
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -364,6 +376,8 @@ fn test_fit_custom_odr_rejects_non_psd_correlation_matrix() {
         initial_guess: Some(vec![1.0, 1.0, 1.0]),
         max_iterations: Some(120),
         point_correlations: Some(repeat_corr(12, &non_psd_corr)),
+        initial_damping: None,
+        tolerance: None,
     };
 
     let err = fit_custom_odr(request).unwrap_err();
@@ -427,6 +441,8 @@ fn test_fit_custom_odr_two_layers_shared_parameter() {
         initial_guess: Some(vec![1.0, 0.0, 0.0]),
         max_iterations: Some(150),
         point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -462,6 +478,8 @@ fn test_fit_custom_odr_poisson_weighting() {
         initial_guess: Some(vec![0.5]),
         max_iterations: Some(100),
         point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
     };
 
     let result = fit_custom_odr(request).unwrap();

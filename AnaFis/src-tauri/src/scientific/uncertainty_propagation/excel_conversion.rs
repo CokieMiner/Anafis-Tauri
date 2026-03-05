@@ -61,27 +61,10 @@ pub fn symb_anafis_to_excel<S: ::std::hash::BuildHasher>(
     symb_anafis_expr: &str,
     var_map: &HashMap<String, String, S>,
 ) -> Result<String, ConversionError> {
-    // Check for unsupported functions before conversion
-    static UNSUPPORTED_FUNCTIONS: &[&str] = &[
-        "Ynm",                // Spherical harmonics (not in Excel)
-        "spherical_harmonic", // Spherical harmonics (not in Excel)
-        "assoc_legendre",     // Associated Legendre polynomials (not in Excel)
-        "elliptic_e",         // Complete elliptic integral of 2nd kind (not in Excel)
-        "zeta_deriv",         // Zeta function derivative (not in Excel)
-        "polygamma",          // Polygamma function (not in Excel)
-        "trigamma",           // Trigamma function (not in Excel)
-        "tetragamma",         // Tetragamma function (not in Excel)
-    ];
+    // All symb_anafis functions are now available as custom formulas in AnaFis
+    // (see math_functions.rs), so no unsupported function check is needed.
 
     let mut excel_formula = symb_anafis_expr.to_string();
-
-    for unsupported in UNSUPPORTED_FUNCTIONS {
-        if excel_formula.contains(unsupported) {
-            return Err(ConversionError::UnsupportedFunction(
-                unsupported.to_string(),
-            ));
-        }
-    }
 
     // Replace variable names with cell references using identifier boundaries.
     // This prevents replacing `a` inside `sigma_a` and similar partial matches.
@@ -98,44 +81,30 @@ pub fn symb_anafis_to_excel<S: ::std::hash::BuildHasher>(
 
     // Convert exponential and roots
     excel_formula = excel_formula.replace("sqrt", "SQRT");
-    // Convert cbrt(x) to POWER(x, 1/3) - must match cbrt( and capture the argument
-    let cbrt_regex = Regex::new(r"cbrt\(([^)]+)\)").unwrap();
-    excel_formula = cbrt_regex
-        .replace_all(&excel_formula, "POWER($1, 1/3)")
-        .to_string();
+    // Convert cbrt directly (custom formula via symb_anafis, no workaround needed)
+    excel_formula = excel_formula.replace("cbrt", "CBRT");
     excel_formula = excel_formula.replace("exp_polar", "EXP"); // Approximation - must come before exp
     excel_formula = excel_formula.replace("exp", "EXP");
 
     // Convert inverse trig (must come before regular trig to avoid double replacement)
+    // ORDER: longer names first (asec before sec, acsc before csc, etc.)
     excel_formula = excel_formula.replace("asin", "ASIN");
     excel_formula = excel_formula.replace("acos", "ACOS");
+    excel_formula = excel_formula.replace("atan2", "ATAN2"); // Must come before atan
     excel_formula = excel_formula.replace("atan", "ATAN");
-    excel_formula = excel_formula.replace("atan2", "ATAN2"); // Two-argument arctangent
     excel_formula = excel_formula.replace("acot", "ACOT");
     excel_formula = excel_formula.replace("asec", "ASEC");
     excel_formula = excel_formula.replace("acsc", "ACSC");
 
-    // Convert regular trig
+    // Convert regular trig (Univer supports COT, SEC, CSC natively)
+    excel_formula = excel_formula.replace("sinc", "SINC"); // Must come before sin
     excel_formula = excel_formula.replace("sin", "SIN");
     excel_formula = excel_formula.replace("sen", "SIN"); // Portuguese/Spanish alias
     excel_formula = excel_formula.replace("cos", "COS");
+    excel_formula = excel_formula.replace("cot", "COT");
+    excel_formula = excel_formula.replace("csc", "CSC");
+    excel_formula = excel_formula.replace("sec", "SEC");
     excel_formula = excel_formula.replace("tan", "TAN");
-
-    // Convert less common trig using workarounds
-    let cot_regex = Regex::new(r"\bcot\(([^)]+)\)").unwrap();
-    excel_formula = cot_regex
-        .replace_all(&excel_formula, "(1/TAN($1))")
-        .to_string();
-
-    let sec_regex = Regex::new(r"\bsec\(([^)]+)\)").unwrap();
-    excel_formula = sec_regex
-        .replace_all(&excel_formula, "(1/COS($1))")
-        .to_string();
-
-    let csc_regex = Regex::new(r"\bcsc\(([^)]+)\)").unwrap();
-    excel_formula = csc_regex
-        .replace_all(&excel_formula, "(1/SIN($1))")
-        .to_string();
 
     // Convert inverse hyperbolic (must come before regular hyperbolic)
     excel_formula = excel_formula.replace("asinh", "ASINH");
@@ -145,38 +114,45 @@ pub fn symb_anafis_to_excel<S: ::std::hash::BuildHasher>(
     excel_formula = excel_formula.replace("asech", "ASECH");
     excel_formula = excel_formula.replace("acsch", "ACSCH");
 
-    // Convert hyperbolic functions
+    // Convert hyperbolic functions (Univer supports COTH, SECH, CSCH natively)
     excel_formula = excel_formula.replace("sinh", "SINH");
     excel_formula = excel_formula.replace("cosh", "COSH");
+    excel_formula = excel_formula.replace("coth", "COTH");
+    excel_formula = excel_formula.replace("csch", "CSCH");
+    excel_formula = excel_formula.replace("sech", "SECH");
     excel_formula = excel_formula.replace("tanh", "TANH");
 
-    // Convert less common hyperbolic using workarounds
-    excel_formula = excel_formula.replace("coth(", "(1/TANH(");
-    excel_formula = excel_formula.replace("sech(", "(1/COSH(");
-    excel_formula = excel_formula.replace("csch(", "(1/SINH(");
-
-    // Convert special functions
+    // Convert special functions (native Excel/Univer)
     excel_formula = excel_formula.replace("erf", "ERF");
     excel_formula = excel_formula.replace("erfc", "ERFC");
-    excel_formula = excel_formula.replace("gamma", "GAMMA");
     excel_formula = excel_formula.replace("besselj", "BESSELJ");
     excel_formula = excel_formula.replace("bessely", "BESSELY");
     excel_formula = excel_formula.replace("besseli", "BESSELI");
     excel_formula = excel_formula.replace("besselk", "BESSELK");
-    excel_formula = excel_formula.replace("beta", "BETA");
+
+    // Convert special functions (available as AnaFis custom formulas via symb_anafis)
+    // ORDER MATTERS: longer names before shorter to avoid partial matches
+    // (e.g. "digamma" must be replaced before "gamma", otherwise "di" + "GAMMA")
+    excel_formula = excel_formula.replace("tetragamma", "TETRAGAMMA");
+    excel_formula = excel_formula.replace("trigamma", "TRIGAMMA");
     excel_formula = excel_formula.replace("digamma", "DIGAMMA");
-    // Note: trigamma, tetragamma, polygamma not supported in Excel
-    excel_formula = excel_formula.replace("lambertw", "LAMBERTW"); // May not be available in all Excel versions
-    excel_formula = excel_formula.replace("hermite", "HERMITE");
+    excel_formula = excel_formula.replace("polygamma", "POLYGAMMA");
+    excel_formula = excel_formula.replace("gamma", "GAMMA");
+    excel_formula = excel_formula.replace("beta", "BETA");
+    excel_formula = excel_formula.replace("zeta_deriv", "ZETA_DERIV"); // Must come before "zeta"
     excel_formula = excel_formula.replace("zeta", "ZETA");
-    // Note: zeta_deriv not supported in Excel
     excel_formula = excel_formula.replace("elliptic_k", "ELLIPTIC_K");
-    // Note: elliptic_e, assoc_legendre, spherical_harmonic, ynm not supported in Excel
+    excel_formula = excel_formula.replace("elliptic_e", "ELLIPTIC_E");
+    excel_formula = excel_formula.replace("hermite", "HERMITE");
+    excel_formula = excel_formula.replace("lambertw", "LAMBERTW");
+    // Spherical harmonics and associated Legendre (custom formulas via symb_anafis)
+    excel_formula = excel_formula.replace("spherical_harmonic", "SPHERICAL_HARMONIC");
+    excel_formula = excel_formula.replace("Ynm", "SPHERICAL_HARMONIC"); // Alias
+    excel_formula = excel_formula.replace("assoc_legendre", "ASSOC_LEGENDRE");
 
     // Convert other functions
     excel_formula = excel_formula.replace("abs", "ABS");
     excel_formula = excel_formula.replace("signum", "SIGN"); // Sign function
-    excel_formula = excel_formula.replace("sinc", "SINC");
     excel_formula = excel_formula.replace("floor", "FLOOR");
     excel_formula = excel_formula.replace("ceil", "CEILING");
     excel_formula = excel_formula.replace("round", "ROUND");
@@ -381,11 +357,11 @@ mod tests {
         var_map.insert("x".to_string(), "A1".to_string());
 
         let result = symb_anafis_to_excel("cbrt(x)", &var_map).unwrap();
-        assert_eq!(result, "POWER(A1, 1/3)");
+        assert_eq!(result, "CBRT(A1)");
 
         // Test with expression
         let result = symb_anafis_to_excel("cbrt(x + 2)", &var_map).unwrap();
-        assert_eq!(result, "POWER(A1 + 2, 1/3)");
+        assert_eq!(result, "CBRT(A1 + 2)");
     }
 
     #[test]
@@ -398,34 +374,45 @@ mod tests {
     }
 
     #[test]
-    fn test_symb_anafis_to_excel_unsupported() {
-        let var_map = HashMap::new();
+    fn test_symb_anafis_to_excel_custom_functions() {
+        let mut var_map = HashMap::new();
+        var_map.insert("x".to_string(), "A1".to_string());
+        var_map.insert("y".to_string(), "B1".to_string());
 
-        // Test original unsupported functions
-        let result = symb_anafis_to_excel("Ynm(x, y, z)", &var_map);
-        assert!(matches!(
-            result,
-            Err(ConversionError::UnsupportedFunction(_))
-        ));
+        // Functions now available as custom formulas via symb_anafis
+        let result = symb_anafis_to_excel("digamma(x)", &var_map).unwrap();
+        assert_eq!(result, "DIGAMMA(A1)");
 
-        // Test newly added unsupported functions
-        let result = symb_anafis_to_excel("elliptic_e(x)", &var_map);
-        assert!(matches!(
-            result,
-            Err(ConversionError::UnsupportedFunction(_))
-        ));
+        let result = symb_anafis_to_excel("trigamma(x)", &var_map).unwrap();
+        assert_eq!(result, "TRIGAMMA(A1)");
 
-        let result = symb_anafis_to_excel("zeta_deriv(1, x)", &var_map);
-        assert!(matches!(
-            result,
-            Err(ConversionError::UnsupportedFunction(_))
-        ));
+        let result = symb_anafis_to_excel("tetragamma(x)", &var_map).unwrap();
+        assert_eq!(result, "TETRAGAMMA(A1)");
 
-        let result = symb_anafis_to_excel("polygamma(1, x)", &var_map);
-        assert!(matches!(
-            result,
-            Err(ConversionError::UnsupportedFunction(_))
-        ));
+        let result = symb_anafis_to_excel("polygamma(2, x)", &var_map).unwrap();
+        assert_eq!(result, "POLYGAMMA(2, A1)");
+
+        let result = symb_anafis_to_excel("zeta_deriv(1, x)", &var_map).unwrap();
+        assert_eq!(result, "ZETA_DERIV(1, A1)");
+
+        let result = symb_anafis_to_excel("elliptic_e(x)", &var_map).unwrap();
+        assert_eq!(result, "ELLIPTIC_E(A1)");
+
+        let result = symb_anafis_to_excel("elliptic_k(x)", &var_map).unwrap();
+        assert_eq!(result, "ELLIPTIC_K(A1)");
+
+        let result = symb_anafis_to_excel("lambertw(x)", &var_map).unwrap();
+        assert_eq!(result, "LAMBERTW(A1)");
+
+        // Spherical harmonics and associated Legendre (now supported as custom formulas)
+        let result = symb_anafis_to_excel("spherical_harmonic(1, 0, x, y)", &var_map).unwrap();
+        assert_eq!(result, "SPHERICAL_HARMONIC(1, 0, A1, B1)");
+
+        let result = symb_anafis_to_excel("Ynm(1, 0, x, y)", &var_map).unwrap();
+        assert_eq!(result, "SPHERICAL_HARMONIC(1, 0, A1, B1)");
+
+        let result = symb_anafis_to_excel("assoc_legendre(2, 1, x)", &var_map).unwrap();
+        assert_eq!(result, "ASSOC_LEGENDRE(2, 1, A1)");
     }
 
     #[test]

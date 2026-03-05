@@ -1,9 +1,7 @@
 app-id: com.CokieMiner.AnaFis
-runtime: org.freedesktop.Platform
-runtime-version: '23.08'
-sdk: org.freedesktop.Sdk
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.rust-stable
+runtime: org.gnome.Platform
+runtime-version: '48'
+sdk: org.gnome.Sdk
 command: anafis
 
 finish-args:
@@ -26,7 +24,7 @@ modules:
       - type: file
         path: ../../../AnaFis/src-tauri/target/release/AnaFis
       - type: file
-        path: ../../../AnaFis/public/icon.png
+        path: icon.png
       - type: file
         path: com.CokieMiner.AnaFis.desktop
       - type: file

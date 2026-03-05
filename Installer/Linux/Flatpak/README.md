@@ -18,9 +18,8 @@ sudo pacman -S flatpak flatpak-builder
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # Install runtime + SDK
-flatpak install flathub org.freedesktop.Platform//23.08
-flatpak install flathub org.freedesktop.Sdk//23.08
-flatpak install flathub org.freedesktop.Sdk.Extension.rust-stable//23.08
+flatpak install flathub org.gnome.Platform//48
+flatpak install flathub org.gnome.Sdk//48
 ```
 
 ## Build Steps

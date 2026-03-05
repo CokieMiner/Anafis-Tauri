@@ -12,6 +12,10 @@ AnaFis/dist/
 AnaFis/src-tauri/target/
 AnaFis/src-tauri/gen/
 Installer/BuildOutputs/
+Installer/Linux/Flatpak/.flatpak-builder/
+Installer/Linux/Flatpak/build-dir/
+Installer/Linux/Flatpak/repo/
+Installer/Linux/Flatpak/*.flatpak
 
 # Logs
 logs/

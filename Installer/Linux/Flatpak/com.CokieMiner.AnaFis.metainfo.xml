@@ -36,7 +36,9 @@
   <url type="bugtracker">https://github.com/CokieMiner/Anafis-Tauri/issues</url>
   <url type="help">https://github.com/CokieMiner/Anafis-Tauri/wiki</url>
 
-  <developer_name>CokieMiner</developer_name>
+  <developer id="com.CokieMiner">
+    <name>CokieMiner</name>
+  </developer>
   <update_contact>pedromamartins@live.com</update_contact>
 
   <releases>

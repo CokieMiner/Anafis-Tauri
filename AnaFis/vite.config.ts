@@ -204,7 +204,6 @@ export default defineConfig(() => ({
       '@mui/icons-material',
       '@emotion/react',
       '@emotion/styled',
-      'echarts',
       'katex',
       'react-katex',
       '@tauri-apps/api',
