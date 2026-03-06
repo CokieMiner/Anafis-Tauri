@@ -440,11 +440,15 @@ class TransactionalImportManager {
         protectionResources,
       ] of protectionBySheet.entries()) {
         if (protectionResources.length > 0) {
-          void spreadsheetAPI.applySheetProtection(
-            newSheetId,
-            protectionResources,
-            this.sheetIdMapping
-          );
+          spreadsheetAPI
+            .applySheetProtection(
+              newSheetId,
+              protectionResources,
+              this.sheetIdMapping
+            )
+            .catch((e: unknown) =>
+              console.warn('applySheetProtection failed (non-fatal):', e)
+            );
         }
       }
     } catch (error) {
@@ -720,6 +724,10 @@ export class ImportService implements ImportService {
     options: ImportOptions,
     spreadsheetRef: React.RefObject<SpreadsheetRef | null>
   ): Promise<Result<ImportResult, ImportError>> {
+    // Create a fresh manager per call so sheetIdMapping and transactionLog
+    // never bleed over from a previous import.
+    this.transactionalManager = new TransactionalImportManager();
+
     try {
       const spreadsheetAPI = spreadsheetRef.current;
       if (!spreadsheetAPI) {

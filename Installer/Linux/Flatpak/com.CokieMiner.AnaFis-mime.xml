@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-anafis-spreadsheet">
+    <comment>AnaFis Spreadsheet</comment>
+    <comment xml:lang="pt">Folha de cálculo AnaFis</comment>
+    <glob pattern="*.anafispread"/>
+    <!-- Magic: first 8 bytes are the ANAFIS\x01\x00 header -->
+    <magic priority="80">
+      <match type="string" value="ANAFIS\x01\x00" offset="0"/>
+    </magic>
+    <icon name="application-x-anafis-spreadsheet"/>
+  </mime-type>
+</mime-info>

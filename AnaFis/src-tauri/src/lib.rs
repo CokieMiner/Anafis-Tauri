@@ -10,7 +10,27 @@ mod unit_conversion;
 mod utils;
 mod windows;
 
-use tauri::{Emitter, Listener, Manager};
+use tauri::{Listener, Manager};
+
+// Startup-file state lives in its own module so that the `#[tauri::command]`
+// proc-macro and `generate_handler!` don't both emit `__cmd__get_startup_file`
+// into the crate-root macro namespace (which causes E0255).
+pub(crate) mod startup {
+    use std::sync::Mutex;
+    use tauri::State;
+
+    pub struct StartupFileState(pub Mutex<Option<String>>);
+
+    #[tauri::command]
+    #[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned State")]
+    pub fn get_startup_file(
+        state: State<'_, StartupFileState>,
+    ) -> Result<Option<String>, String> {
+        let mut file_guard = state.0.lock().map_err(|e| e.to_string())?;
+        // Take the value so it is only returned once.
+        Ok(file_guard.take())
+    }
+}
 
 /// Main entry point for the `AnaFis` application
 ///
@@ -102,6 +122,7 @@ pub fn run() {
             utils::file_operations::read_file_text,
             utils::file_operations::check_ffmpeg_available,
             utils::file_operations::transcode_webm_to_mp4,
+            startup::get_startup_file,
         ])
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -115,20 +136,15 @@ pub fn run() {
 
             // Check for file association open (when app is launched with a file)
             let args: Vec<String> = std::env::args().collect();
+            let mut pending_file = None;
             if args.len() > 1 {
                 let file_path = args[1].clone();
                 if file_path.ends_with(".anafispread") {
                     utils::log_info(&format!("Opening file from association: {file_path}"));
-                    // We'll emit an event to the frontend to handle the file opening
-                    let app_handle = app.handle().clone();
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_millis(500));
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            drop(window.emit("open-file", file_path));
-                        }
-                    });
+                    pending_file = Some(file_path);
                 }
             }
+            app.manage(startup::StartupFileState(std::sync::Mutex::new(pending_file)));
 
             // Initialize Data Library
             match data_library::commands::init_data_library(app.handle()) {

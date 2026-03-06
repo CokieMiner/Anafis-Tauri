@@ -12,7 +12,6 @@ import {
 } from '@dnd-kit/core';
 import { Box } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import React, {
   lazy,
   useCallback,
@@ -158,73 +157,62 @@ function App() {
     }
   }, [tabs.length, storeAddTab, createTabContent]);
 
-  // Listen for file open events from file associations
+  // Check for file associations on mount
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    let isMounted = true;
 
-    const setupListener = async () => {
-      unlisten = await listen<string>('open-file', (event) => {
-        const filePath = event.payload;
-        console.log('File open requested:', filePath);
+    // We only want to process this once on mount
+    const checkStartupFile = async () => {
+      try {
+        const filePath = await invoke<string | null>('get_startup_file');
+        if (filePath && isMounted) {
+          console.log('Startup file detected:', filePath);
 
-        // Handle the async operation without returning a promise
-        void (async () => {
-          try {
-            // Import the .anafispread file
-            const result = await invoke<{
-              success: boolean;
-              message?: string;
-              data?: { workbook: WorkbookData };
-            }>('import_anafis_spread_direct', { filePath });
+          // Import the .anafispread file
+          const workbookData = await invoke<WorkbookData>(
+            'import_anafis_spread_direct',
+            { filePath }
+          );
 
-            if (result.success && result.data?.workbook) {
-              // Always create a new spreadsheet tab for each opened file
-              // This allows users to have multiple files open simultaneously
-              const fileName =
-                filePath.split('/').pop()?.replace('.anafispread', '') ??
-                'Opened File';
-              const tabId = `spreadsheet-opened-${Date.now()}`;
-              handleAddTabRef.current?.(
-                tabId,
-                fileName,
-                undefined,
-                result.data.workbook
-              );
-            } else if (!result.success) {
-              // Show error notification for failed import
-              const errorMessage = result.message ?? 'Unknown import error';
-              showNotification({
-                type: 'error',
-                message: `Failed to open file "${filePath.split('/').pop()}": ${errorMessage}`,
-              });
-            } else {
-              // Show error for successful import but missing workbook data
-              showNotification({
-                type: 'error',
-                message: `Failed to open file "${filePath.split('/').pop()}": Invalid file format or corrupted data`,
-              });
-            }
-          } catch (error) {
-            console.error('Failed to open file:', error);
-            // Show user-facing error notification
-            const fileName = filePath.split('/').pop() ?? 'Unknown file';
-            const errorMessage =
-              error instanceof Error ? error.message : 'Unknown error occurred';
-            showNotification({
-              type: 'error',
-              message: `Failed to open file "${fileName}": ${errorMessage}`,
-            });
+          const fileName =
+            filePath.split('/').pop()?.replace('.anafispread', '') ??
+            'Opened File';
+          const tabId = `spreadsheet-opened-${Date.now()}`;
+
+          // Instead of immediate adding via ref which could be missing, schedule it
+          // if handleAddTabRef isn't perfectly registered yet
+          if (handleAddTabRef.current) {
+            handleAddTabRef.current(tabId, fileName, undefined, workbookData);
+          } else {
+            // Give the app a moment to finish mounting the callback ref
+            setTimeout(() => {
+              if (handleAddTabRef.current) {
+                handleAddTabRef.current(
+                  tabId,
+                  fileName,
+                  undefined,
+                  workbookData
+                );
+              }
+            }, 100);
           }
-        })();
-      });
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('Failed to open startup file:', error);
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error occurred';
+        showNotification({
+          type: 'error',
+          message: `Failed to open file: ${errorMessage}`,
+        });
+      }
     };
 
-    void setupListener();
+    void checkStartupFile();
 
     return () => {
-      if (unlisten) {
-        unlisten();
-      }
+      isMounted = false;
     };
   }, [showNotification]);
 

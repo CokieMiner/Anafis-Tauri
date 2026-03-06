@@ -98,49 +98,45 @@ pub async fn import_spreadsheet_file(
     let canonical_path = validate_and_canonicalize_path(&file_path)
         .map_err(|e| validation_error(e, Some("file_path".to_string())))?;
 
-    // Route to appropriate parser based on format
-    match options.format.as_str() {
-        "csv" => {
-            csv::import_csv(
-                &canonical_path.to_string_lossy(),
+    // All parsers use blocking std::fs I/O; move them off the async executor
+    tokio::task::spawn_blocking(move || {
+        let path_str = canonical_path.to_string_lossy();
+        match options.format.as_str() {
+            "csv" => csv::import_csv(
+                &path_str,
                 options.skip_rows,
-                false, // We'll handle headers in the frontend
+                false,
                 Some(&options.encoding),
             )
-            .map_err(|e| import_error(format!("CSV import failed: {e}")))
-        }
-        "tsv" => {
-            csv::import_tsv(
-                &canonical_path.to_string_lossy(),
+            .map_err(|e| import_error(format!("CSV import failed: {e}"))),
+            "tsv" => csv::import_tsv(
+                &path_str,
                 options.skip_rows,
-                false, // We'll handle headers in the frontend
+                false,
                 Some(&options.encoding),
             )
-            .map_err(|e| import_error(format!("TSV import failed: {e}")))
-        }
-        "txt" => {
-            csv::import_txt(
-                &canonical_path.to_string_lossy(),
+            .map_err(|e| import_error(format!("TSV import failed: {e}"))),
+            "txt" => csv::import_txt(
+                &path_str,
                 &options.delimiter,
                 options.skip_rows,
-                false, // We'll handle headers in the frontend
+                false,
                 Some(&options.encoding),
             )
-            .map_err(|e| import_error(format!("TXT import failed: {e}")))
-        }
-        "anafispread" => {
-            // Special case: .anafispread should use direct import
-            Err(import_error(
+            .map_err(|e| import_error(format!("TXT import failed: {e}"))),
+            "anafispread" => Err(import_error(
                 "Use import_anafis_spread_direct for .anafispread files".to_string(),
-            ))
+            )),
+            "parquet" => parquet::import_parquet(&path_str)
+                .map_err(|e| import_error(format!("Parquet import failed: {e}"))),
+            _ => Err(validation_error(
+                format!("Unsupported format: {}", options.format),
+                Some("format".to_string()),
+            )),
         }
-        "parquet" => parquet::import_parquet(&canonical_path.to_string_lossy())
-            .map_err(|e| import_error(format!("Parquet import failed: {e}"))),
-        _ => Err(validation_error(
-            format!("Unsupported format: {}", options.format),
-            Some("format".to_string()),
-        )),
-    }
+    })
+    .await
+    .map_err(|e| import_error(format!("Import task panicked: {e}")))?
 }
 /// Direct import command for .anafispread format
 /// Returns raw `IWorkbookData` without conversion for lossless snapshot loading
@@ -150,11 +146,14 @@ pub async fn import_anafis_spread_direct(file_path: String) -> CommandResult<ser
     let canonical_path = validate_and_canonicalize_path(&file_path)
         .map_err(|e| validation_error(e, Some("file_path".to_string())))?;
 
-    // Return raw IWorkbookData without any conversion
-    // This preserves the complete Univer snapshot structure for lossless restore
-    anafispread::import_anafis_spread(canonical_path.to_string_lossy().to_string())
-        .map_err(|e| import_error(format!("AnaFis spread import failed: {e}")))
-}
+    let path_str = canonical_path.to_string_lossy().to_string();
+    // anafispread uses blocking std::fs + GzDecoder; move off the async executor
+    tokio::task::spawn_blocking(move || {
+        anafispread::import_anafis_spread(path_str)
+            .map_err(|e| import_error(format!("AnaFis spread import failed: {e}")))
+    })
+    .await
+    .map_err(|e| import_error(format!("Import task panicked: {e}")))?}
 
 /// Get file metadata - called before import to show file info
 /// For TXT files, pass delimiter parameter to use correct column detection
@@ -167,8 +166,9 @@ pub async fn get_file_metadata(
     let canonical_path = validate_and_canonicalize_path(&file_path)
         .map_err(|e| validation_error(e, Some("file_path".to_string())))?;
 
-    // Get file size
-    let metadata = std::fs::metadata(&canonical_path)
+    // Get file size (use tokio::fs to avoid blocking the async executor)
+    let metadata = tokio::fs::metadata(&canonical_path)
+        .await
         .map_err(|e| file_not_found(format!("Failed to read file metadata: {e}")))?;
     let size = metadata.len();
 
