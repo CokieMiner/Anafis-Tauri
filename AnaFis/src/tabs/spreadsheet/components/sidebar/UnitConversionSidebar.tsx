@@ -18,10 +18,10 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { anafisColors } from '@/shared/theme';
 import { useSpreadsheetUnitConversion } from '@/tabs/spreadsheet/components/sidebar/logic/useSpreadsheetUnitConversion';
 import { useUnitConversion } from '@/tabs/spreadsheet/components/sidebar/logic/useUnitConversion';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
@@ -233,17 +233,17 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                     '& .MuiOutlinedInput-root': {
                       bgcolor:
                         activeUnitInput === 'from'
-                          ? 'rgba(33, 150, 243, 0.1)'
-                          : 'rgba(33, 150, 243, 0.05)',
+                          ? `${anafisColors.spreadsheet}1A`
+                          : `${anafisColors.spreadsheet}0D`,
                       borderRadius: '6px',
                       '& fieldset': {
                         borderColor:
                           activeUnitInput === 'from'
                             ? anafisColors.spreadsheet
-                            : 'rgba(33, 150, 243, 0.2)',
+                            : `${anafisColors.spreadsheet}33`,
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(33, 150, 243, 0.4)',
+                        borderColor: `${anafisColors.spreadsheet}66`,
                       },
                       '&.Mui-focused fieldset': {
                         borderColor: anafisColors.spreadsheet,
@@ -271,10 +271,10 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                     sx={{
                       fontSize: 14,
                       height: 26,
-                      bgcolor: 'rgba(33, 150, 243, 0.05)',
-                      border: '1px solid rgba(33, 150, 243, 0.2)',
+                      bgcolor: `${anafisColors.spreadsheet}0D`,
+                      border: `1px solid ${anafisColors.spreadsheet}33`,
                       color: anafisColors.spreadsheet,
-                      '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.15)' },
+                      '&:hover': { bgcolor: `${anafisColors.spreadsheet}26` },
                     }}
                   />
                 ))}
@@ -308,17 +308,17 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                   '& .MuiOutlinedInput-root': {
                     bgcolor:
                       focusedInput === 'value'
-                        ? 'rgba(33, 150, 243, 0.1)'
-                        : 'rgba(33, 150, 243, 0.05)',
+                        ? `${anafisColors.spreadsheet}1A`
+                        : `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
                     '& fieldset': {
                       borderColor:
                         focusedInput === 'value'
                           ? anafisColors.spreadsheet
-                          : 'rgba(33, 150, 243, 0.2)',
+                          : `${anafisColors.spreadsheet}33`,
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -344,7 +344,7 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                 size="small"
                 sx={{
                   color: anafisColors.spreadsheet,
-                  '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.1)' },
+                  '&:hover': { bgcolor: `${anafisColors.spreadsheet}1A` },
                 }}
               >
                 <SwapIcon />
@@ -381,17 +381,17 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                     '& .MuiOutlinedInput-root': {
                       bgcolor:
                         activeUnitInput === 'to'
-                          ? 'rgba(33, 150, 243, 0.1)'
-                          : 'rgba(33, 150, 243, 0.05)',
+                          ? `${anafisColors.spreadsheet}1A`
+                          : `${anafisColors.spreadsheet}0D`,
                       borderRadius: '6px',
                       '& fieldset': {
                         borderColor:
                           activeUnitInput === 'to'
                             ? anafisColors.spreadsheet
-                            : 'rgba(33, 150, 243, 0.2)',
+                            : `${anafisColors.spreadsheet}33`,
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(33, 150, 243, 0.4)',
+                        borderColor: `${anafisColors.spreadsheet}66`,
                       },
                       '&.Mui-focused fieldset': {
                         borderColor: anafisColors.spreadsheet,
@@ -419,10 +419,10 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                     sx={{
                       fontSize: 14,
                       height: 26,
-                      bgcolor: 'rgba(33, 150, 243, 0.05)',
-                      border: '1px solid rgba(33, 150, 243, 0.2)',
+                      bgcolor: `${anafisColors.spreadsheet}0D`,
+                      border: `1px solid ${anafisColors.spreadsheet}33`,
                       color: anafisColors.spreadsheet,
-                      '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.15)' },
+                      '&:hover': { bgcolor: `${anafisColors.spreadsheet}26` },
                     }}
                   />
                 ))}
@@ -456,17 +456,17 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                   '& .MuiOutlinedInput-root': {
                     bgcolor:
                       focusedInput === 'outputTarget'
-                        ? 'rgba(33, 150, 243, 0.1)'
-                        : 'rgba(33, 150, 243, 0.05)',
+                        ? `${anafisColors.spreadsheet}1A`
+                        : `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
                     '& fieldset': {
                       borderColor:
                         focusedInput === 'outputTarget'
                           ? anafisColors.spreadsheet
-                          : 'rgba(33, 150, 243, 0.2)',
+                          : `${anafisColors.spreadsheet}33`,
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -513,9 +513,9 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                 sx={{
                   mt: 2,
                   p: 1.5,
-                  bgcolor: 'rgba(33, 150, 243, 0.1)',
+                  bgcolor: `${anafisColors.spreadsheet}1A`,
                   borderRadius: 1,
-                  border: '1px solid rgba(33, 150, 243, 0.2)',
+                  border: `1px solid ${anafisColors.spreadsheet}33`,
                 }}
               >
                 <Typography
@@ -554,15 +554,15 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                       height: 28,
                       bgcolor:
                         category === cat
-                          ? 'rgba(33, 150, 243, 0.2)'
-                          : 'rgba(33, 150, 243, 0.05)',
+                          ? `${anafisColors.spreadsheet}33`
+                          : `${anafisColors.spreadsheet}0D`,
                       border: '1px solid',
                       borderColor:
                         category === cat
                           ? anafisColors.spreadsheet
-                          : 'rgba(33, 150, 243, 0.2)',
+                          : `${anafisColors.spreadsheet}33`,
                       color: anafisColors.spreadsheet,
-                      '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.15)' },
+                      '&:hover': { bgcolor: `${anafisColors.spreadsheet}26` },
                     }}
                   />
                 ))}
@@ -590,10 +590,12 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                 sx={{
                   mb: 1,
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
+                    '& fieldset': {
+                      borderColor: `${anafisColors.spreadsheet}33`,
+                    },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -628,9 +630,9 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
                         mb: 0.3,
                         bgcolor:
                           fromUnit === symbol || toUnit === symbol
-                            ? 'rgba(33, 150, 243, 0.1)'
+                            ? `${anafisColors.spreadsheet}1A`
                             : 'transparent',
-                        '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.15)' },
+                        '&:hover': { bgcolor: `${anafisColors.spreadsheet}26` },
                       }}
                     >
                       <ListItemText

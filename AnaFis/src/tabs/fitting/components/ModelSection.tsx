@@ -2,6 +2,7 @@
 
 import { Box, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 
 interface ModelSectionProps {
   formula: string;
@@ -24,11 +25,11 @@ const sectionSx = {
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
     '&.Mui-focused fieldset': {
-      borderColor: '#ffb300',
+      borderColor: anafisTheme.colors.tabs.fitting.main,
     },
   },
   '& .MuiInputLabel-root.Mui-focused': {
-    color: '#ffb300',
+    color: anafisTheme.colors.tabs.fitting.main,
   },
 };
 

@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useState } from 'react';
-
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import type { FitStatus, OdrFitResponse } from '../types/fittingTypes';
 
 function formatScientific(value: number): string {
@@ -81,16 +81,18 @@ export default function ResultsPanel({
             fontSize: '0.9rem',
             letterSpacing: '0.04em',
             background: canRunFit
-              ? 'linear-gradient(135deg, #ffb300 0%, #f57c00 100%)'
+              ? `linear-gradient(135deg, ${anafisTheme.colors.tabs.fitting.main} 0%, ${anafisTheme.colors.tabs.fitting.dark} 100%)`
               : undefined,
             color: canRunFit ? '#111' : undefined,
-            boxShadow: canRunFit ? '0 4px 16px rgba(255, 179, 0, 0.3)' : 'none',
+            boxShadow: canRunFit
+              ? `0 4px 16px ${anafisTheme.colors.tabs.fitting.main}4D`
+              : 'none',
             '&:hover': {
               background: canRunFit
-                ? 'linear-gradient(135deg, #ffca28 0%, #ffb300 100%)'
+                ? `linear-gradient(135deg, ${anafisTheme.colors.tabs.fitting.light} 0%, ${anafisTheme.colors.tabs.fitting.main} 100%)`
                 : undefined,
               boxShadow: canRunFit
-                ? '0 6px 20px rgba(255, 179, 0, 0.45)'
+                ? `0 6px 20px ${anafisTheme.colors.tabs.fitting.main}73`
                 : 'none',
             },
             '&.Mui-disabled': {
@@ -198,7 +200,7 @@ export default function ResultsPanel({
             px: 0.8,
             py: 0.2,
             borderRadius: 1,
-            border: '1px solid rgba(255,179,0,0.35)',
+            border: `1px solid ${anafisTheme.colors.tabs.fitting.main}59`,
             color: 'primary.light',
             fontWeight: 600,
           }}
@@ -219,7 +221,7 @@ export default function ResultsPanel({
           p: 1,
           borderRadius: 1.5,
           border: '1px solid rgba(148, 163, 184, 0.16)',
-          background: 'rgba(255, 255, 255, 0.02)',
+          background: 'rgba(255, 255, 255, 0.015)',
         }}
       >
         <Typography
@@ -346,7 +348,7 @@ export default function ResultsPanel({
               borderRadius: 1,
               '&::-webkit-scrollbar': { width: 8, height: 8 },
               '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(255,179,0,0.30)',
+                background: `${anafisTheme.colors.tabs.fitting.main}40`,
                 borderRadius: 8,
               },
             }}
@@ -409,7 +411,7 @@ export default function ResultsPanel({
                             px: 0.8,
                             py: 0.5,
                             backgroundColor: isDiagonal
-                              ? 'rgba(255,179,0,0.08)'
+                              ? `${anafisTheme.colors.tabs.fitting.main}14`
                               : 'transparent',
                           }}
                         >

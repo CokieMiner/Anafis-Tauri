@@ -7,8 +7,8 @@ import {
 } from '@mui/material';
 import { createRoot } from 'react-dom/client';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { createAnafisTheme } from '@/shared/theme';
 import { notifyWindowReady } from '@/shared/utils/windowReady';
-import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 const theme = createAnafisTheme();
 

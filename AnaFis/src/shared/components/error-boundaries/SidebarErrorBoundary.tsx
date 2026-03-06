@@ -9,7 +9,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
+import { anafisColors } from '@/shared/theme';
 
 interface SidebarErrorBoundaryProps {
   children: ReactNode;

@@ -20,9 +20,10 @@ import {
 } from '@mui/material';
 import React, { useEffect } from 'react';
 import type { ExportService } from '@/core/types/export';
+import { anafisColors } from '@/shared/theme';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { useExport } from '@/tabs/spreadsheet/components/sidebar/logic/useExport';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type {
   ExportFormat,
@@ -225,13 +226,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                     setExportFormat(e.target.value as ExportFormat)
                   }
                   sx={{
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(33, 150, 243, 0.2)',
+                      borderColor: `${anafisColors.spreadsheet}33`,
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                       borderColor: anafisColors.spreadsheet,
@@ -266,14 +267,14 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                   sx={{
                     mt: 3,
                     p: 2,
-                    bgcolor: 'rgba(76, 175, 80, 0.1)',
+                    bgcolor: `${anafisTheme.colors.status.success.main}1A`,
                     borderRadius: '8px',
-                    border: '1px solid rgba(76, 175, 80, 0.3)',
+                    border: `1px solid ${anafisTheme.colors.status.success.main}4D`,
                   }}
                 >
                   <Typography
                     sx={{
-                      color: '#81c784',
+                      color: anafisTheme.colors.status.success.light,
                       fontWeight: 'bold',
                       mb: 1,
                       fontSize: 13,
@@ -376,17 +377,17 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                           '& .MuiOutlinedInput-root': {
                             bgcolor:
                               focusedInput === 'customRange'
-                                ? 'rgba(33, 150, 243, 0.1)'
-                                : 'rgba(33, 150, 243, 0.05)',
+                                ? `${anafisColors.spreadsheet}1A`
+                                : `${anafisColors.spreadsheet}0D`,
                             borderRadius: '6px',
                             '& fieldset': {
                               borderColor:
                                 focusedInput === 'customRange'
                                   ? anafisColors.spreadsheet
-                                  : 'rgba(33, 150, 243, 0.2)',
+                                  : `${anafisColors.spreadsheet}33`,
                             },
                             '&:hover fieldset': {
-                              borderColor: 'rgba(33, 150, 243, 0.4)',
+                              borderColor: `${anafisColors.spreadsheet}66`,
                             },
                             '&.Mui-focused fieldset': {
                               borderColor: anafisColors.spreadsheet,
@@ -426,13 +427,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                         sx={{
                           mt: 1,
                           '& .MuiOutlinedInput-root': {
-                            bgcolor: 'rgba(33, 150, 243, 0.05)',
+                            bgcolor: `${anafisColors.spreadsheet}0D`,
                             borderRadius: '6px',
                             '& fieldset': {
-                              borderColor: 'rgba(33, 150, 243, 0.2)',
+                              borderColor: `${anafisColors.spreadsheet}33`,
                             },
                             '&:hover fieldset': {
-                              borderColor: 'rgba(33, 150, 243, 0.4)',
+                              borderColor: `${anafisColors.spreadsheet}66`,
                             },
                             '&.Mui-focused fieldset': {
                               borderColor: anafisColors.spreadsheet,
@@ -444,7 +445,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                             },
                           },
                           '& .MuiFormHelperText-root': {
-                            color: 'rgba(33, 150, 243, 0.6)',
+                            color: `${anafisColors.spreadsheet}99`,
                             fontSize: 11,
                           },
                         }}
@@ -475,11 +476,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                     '&.Mui-focused': { color: anafisColors.spreadsheet },
                   },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': {
+                      borderColor: `${anafisColors.spreadsheet}33`,
+                    },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -503,11 +506,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                     '&.Mui-focused': { color: anafisColors.spreadsheet },
                   },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': {
+                      borderColor: `${anafisColors.spreadsheet}33`,
+                    },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -530,11 +535,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                     '&.Mui-focused': { color: anafisColors.spreadsheet },
                   },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': {
+                      borderColor: `${anafisColors.spreadsheet}33`,
+                    },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -557,11 +564,13 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                     '&.Mui-focused': { color: anafisColors.spreadsheet },
                   },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': {
+                      borderColor: `${anafisColors.spreadsheet}33`,
+                    },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -589,17 +598,17 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                     '& .MuiOutlinedInput-root': {
                       bgcolor:
                         focusedInput === 'dataRange'
-                          ? 'rgba(33, 150, 243, 0.1)'
-                          : 'rgba(33, 150, 243, 0.05)',
+                          ? `${anafisColors.spreadsheet}1A`
+                          : `${anafisColors.spreadsheet}0D`,
                       borderRadius: '6px',
                       '& fieldset': {
                         borderColor:
                           focusedInput === 'dataRange'
                             ? anafisColors.spreadsheet
-                            : 'rgba(33, 150, 243, 0.2)',
+                            : `${anafisColors.spreadsheet}33`,
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(33, 150, 243, 0.4)',
+                        borderColor: `${anafisColors.spreadsheet}66`,
                       },
                       '&.Mui-focused fieldset': {
                         borderColor: anafisColors.spreadsheet,
@@ -611,7 +620,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                       },
                     },
                     '& .MuiFormHelperText-root': {
-                      color: 'rgba(33, 150, 243, 0.6)',
+                      color: `${anafisColors.spreadsheet}99`,
                       fontSize: 11,
                     },
                   }}
@@ -636,17 +645,17 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                     '& .MuiOutlinedInput-root': {
                       bgcolor:
                         focusedInput === 'uncertaintyRange'
-                          ? 'rgba(33, 150, 243, 0.1)'
-                          : 'rgba(33, 150, 243, 0.05)',
+                          ? `${anafisColors.spreadsheet}1A`
+                          : `${anafisColors.spreadsheet}0D`,
                       borderRadius: '6px',
                       '& fieldset': {
                         borderColor:
                           focusedInput === 'uncertaintyRange'
                             ? anafisColors.spreadsheet
-                            : 'rgba(33, 150, 243, 0.2)',
+                            : `${anafisColors.spreadsheet}33`,
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(33, 150, 243, 0.4)',
+                        borderColor: `${anafisColors.spreadsheet}66`,
                       },
                       '&.Mui-focused fieldset': {
                         borderColor: anafisColors.spreadsheet,
@@ -658,7 +667,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                       },
                     },
                     '& .MuiFormHelperText-root': {
-                      color: 'rgba(33, 150, 243, 0.6)',
+                      color: `${anafisColors.spreadsheet}99`,
                       fontSize: 11,
                     },
                   }}
@@ -671,10 +680,10 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
                   color: anafisColors.spreadsheet,
                   fontSize: 12,
                   mb: 2,
-                  bgcolor: 'rgba(33, 150, 243, 0.1)',
+                  bgcolor: `${anafisColors.spreadsheet}1A`,
                   p: 1.5,
                   borderRadius: 1,
-                  border: '1px solid rgba(33, 150, 243, 0.3)',
+                  border: `1px solid ${anafisColors.spreadsheet}4D`,
                 }}
               >
                 <strong>Range Examples:</strong> A:A (entire column A), 1:1

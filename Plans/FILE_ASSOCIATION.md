@@ -182,7 +182,7 @@ File associations only work in production builds, not in development mode.
 ### After Building
 1. Build the application:
    ```bash
-   npm run tauri build
+   bun run tauri build
    ```
 
 2. Install the package:
@@ -268,6 +268,4 @@ This complete implementation ensures `.anafispread` files are properly recognize
 
 ## Related Documentation
 
-- See `IMPORT_SYSTEM.md` for details on all import formats
-- See `EXPORT_SYSTEM.md` (if exists) for details on all export formats
-- See Plans/sidebars/ for sidebar implementation details
+- See `Plans/sidebars/` for sidebar implementation details

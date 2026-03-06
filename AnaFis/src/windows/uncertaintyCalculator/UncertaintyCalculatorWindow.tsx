@@ -22,9 +22,9 @@ import { createRoot } from 'react-dom/client';
 import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { createNoTransitionTheme } from '@/shared/theme';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { notifyWindowReady } from '@/shared/utils/windowReady';
-import { createNoTransitionTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 import VariableManager from '@/windows/uncertaintyCalculator/components/VariableManager';
 
 const theme = createNoTransitionTheme();

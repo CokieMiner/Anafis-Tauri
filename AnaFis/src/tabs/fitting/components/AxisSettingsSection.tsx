@@ -1,4 +1,5 @@
 import { Box, MenuItem, Select, TextField, Typography } from '@mui/material';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import type {
   AxisConfig,
   AxisScale,
@@ -27,9 +28,13 @@ const DROPDOWN_MAX_HEIGHT = 300;
 
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
-    '&.Mui-focused fieldset': { borderColor: '#ffb300' },
+    '&.Mui-focused fieldset': {
+      borderColor: anafisTheme.colors.tabs.fitting.main,
+    },
   },
-  '& .MuiInputLabel-root.Mui-focused': { color: '#ffb300' },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: anafisTheme.colors.tabs.fitting.main,
+  },
 };
 
 function AxisRow({
@@ -91,7 +96,7 @@ function AxisRow({
         }}
         sx={{
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#ffb300',
+            borderColor: anafisTheme.colors.tabs.fitting.main,
           },
         }}
       >

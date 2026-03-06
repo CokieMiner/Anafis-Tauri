@@ -17,7 +17,7 @@ import {
 import type React from 'react';
 import { useMemo } from 'react';
 
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
+import { anafisColors } from '@/shared/theme';
 
 type SidebarType =
   | 'uncertainty'

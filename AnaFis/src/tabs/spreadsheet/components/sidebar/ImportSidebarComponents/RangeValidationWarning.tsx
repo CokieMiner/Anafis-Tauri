@@ -1,6 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import type React from 'react';
 import type { ImportResult } from '@/core/types/import';
+import { anafisColors } from '@/shared/theme';
 
 interface RangeValidationWarningProps {
   validation: ImportResult['rangeValidation'];
@@ -21,9 +22,9 @@ export const RangeValidationWarning: React.FC<RangeValidationWarningProps> = ({
       sx={{
         mt: 2,
         p: 1.5,
-        bgcolor: 'rgba(33, 150, 243, 0.05)',
+        bgcolor: `${anafisColors.spreadsheet}0D`,
         borderRadius: '6px',
-        border: '1px solid rgba(33, 150, 243, 0.2)',
+        border: `1px solid ${anafisColors.spreadsheet}33`,
       }}
     >
       {/* Show selected range dimensions if range is equal or bigger than file data */}

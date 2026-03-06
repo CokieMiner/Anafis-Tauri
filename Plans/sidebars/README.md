@@ -42,9 +42,7 @@ See **[ECHARTS_MIGRATION.md](./ECHARTS_MIGRATION.md)** for detailed rationale an
 
 #### Sidebars
 
-#### Sidebars
-
-2. **[Statistical Analysis Sidebar](./02_statistical_analysis_sidebar.md)** 📈
+2. **Statistical Analysis Sidebar** 📈
    - **Priority**: High
    - **Complexity**: Medium
    - **Features**: Descriptive statistics, distribution analysis, correlation, confidence intervals
@@ -54,7 +52,7 @@ See **[ECHARTS_MIGRATION.md](./ECHARTS_MIGRATION.md)** for detailed rationale an
    - **Note**: All calculations in Rust, TypeScript UI only
 
 
-3. **[Data Smoothing Sidebar](./03_data_smoothing_sidebar.md)** �
+3. **Data Smoothing Sidebar** 🧹�
    - **Priority**: Medium
    - **Complexity**: Medium
    - **Features**: Noise reduction with moving average, Savitzky-Golay, Gaussian, low-pass filters
@@ -62,7 +60,7 @@ See **[ECHARTS_MIGRATION.md](./ECHARTS_MIGRATION.md)** for detailed rationale an
    - **File**: `03_data_smoothing_sidebar.md`
    - **Note**: All smoothing algorithms (moving average, Savitzky-Golay, Gaussian, FFT) implemented in Rust, TypeScript UI only
 
-4. **[Outlier Detection Sidebar](./04_outlier_detection_sidebar.md)** 🔍
+4. **Outlier Detection Sidebar** 🔍
    - **Priority**: Medium
    - **Complexity**: Medium
    - **Features**: Z-score, modified Z-score, IQR methods; outlier actions (remove, interpolate, mark)
@@ -120,7 +118,7 @@ See **[ECHARTS_MIGRATION.md](./ECHARTS_MIGRATION.md)** for detailed rationale an
    - **Priority**: High
    - **Complexity**: High
    - **Features**: Advanced 2D/3D plotting from Data Library, n-dimensional curve fitting, fit comparison, residuals
-   - **Dependencies**: echarts, ✅ Data Library (DONE!), nalgebra, levenberg-marquardt
+   - **Dependencies**: react-plotly.js, plotly.js, ✅ Data Library (DONE!), nalgebra, levenberg-marquardt
    - **File**: `09_graphs_and_fitting_tab.md`
    - **Status**: � **NOT YET IMPLEMENTED** - Placeholder component exists, full implementation pending
 
@@ -285,8 +283,8 @@ const writeData = async (range: string, values: any[][]) => {
 ### NPM Packages
 ```bash
 # Visualization
-npm install echarts
-npm install @types/echarts -D
+npm install react-plotly.js plotly.js
+npm install @types/plotly.js -D
 
 # Utilities
 npm install file-saver
@@ -305,10 +303,9 @@ levenberg-marquardt = "0.15.0" # Curve fitting algorithm
 rusqlite = "0.37.0"          # SQLite for Data Library
 uuid = "1.6"                 # UUID generation
 chrono = "0.4.42"            # Date/time handling
-arrow = "57.0.0"             # Columnar data import
-parquet = "57.0.0"           # Parquet file support
+arrow = "58.0.0"             # Columnar data import
+parquet = "58.0.0"           # Parquet file support
 encoding_rs = "0.8"          # Character encoding detection
-pyo3 = "0.27.1"              # Python integration
 ```
 
 ---
@@ -321,12 +318,7 @@ Plans/sidebars/
 ├── 01_quick_plot_sidebar.md               # Simple 2D preview sidebar
 ├── 02_statistical_analysis_sidebar.md     # Statistical calculations
 ├── 03_data_smoothing_sidebar.md           # Data filtering
-├── 04_outlier_detection_sidebar.md        # Outlier detection
-├── 05_data_validation_dialog.md           # Validation rules
-├── 06_metadata_manager_sidebar.md         # Experimental metadata
-├── 07_export_system.md                    # Export functionality
-├── 08_data_library_sidebar.md             # Persistent data storage (Core Infrastructure)
-└── 09_graphs_and_fitting_tab.md           # Advanced plotting + curve fitting
+└── 04_outlier_detection_sidebar.md        # Outlier detection
 ```
 
 ---

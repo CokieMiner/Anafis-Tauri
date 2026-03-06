@@ -15,9 +15,9 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
+import { anafisColors } from '@/shared/theme';
 import { useUncertaintyPropagation } from '@/tabs/spreadsheet/components/sidebar/logic/useUncertaintyPropagation';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type { UncertaintyState } from '@/tabs/spreadsheet/managers/SidebarStateManager';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
@@ -260,7 +260,7 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
                         : '1px solid rgba(255, 255, 255, 0.2)',
                     bgcolor:
                       selectedVariable === index
-                        ? 'rgba(33, 150, 243, 0.15)'
+                        ? `${anafisColors.spreadsheet}26`
                         : 'transparent',
                     color:
                       selectedVariable === index
@@ -270,7 +270,7 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
                     '&:hover': {
                       bgcolor:
                         selectedVariable === index
-                          ? 'rgba(33, 150, 243, 0.2)'
+                          ? `${anafisColors.spreadsheet}33`
                           : 'rgba(255, 255, 255, 0.05)',
                       borderColor:
                         selectedVariable === index
@@ -280,15 +280,15 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
                       transform: 'translateY(-1px)',
                       boxShadow:
                         selectedVariable === index
-                          ? `0 2px 8px rgba(33, 150, 243, 0.3)`
+                          ? `0 2px 8px ${anafisColors.spreadsheet}4D`
                           : '0 2px 8px rgba(255, 255, 255, 0.1)',
                     },
                     '&.Mui-selected': {
-                      bgcolor: 'rgba(33, 150, 243, 0.15) !important',
+                      bgcolor: `${anafisColors.spreadsheet}26 !important`,
                       borderColor: `${anafisColors.spreadsheet} !important`,
                       color: '#ffffff !important',
                       '&:hover': {
-                        bgcolor: 'rgba(33, 150, 243, 0.2) !important',
+                        bgcolor: `${anafisColors.spreadsheet}33 !important`,
                       },
                     },
                   }}

@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material';
-import { sidebarTheme } from '@/tabs/spreadsheet/components/sidebar/themes/sidebarTheme';
+import { sidebarTheme } from '@/shared/theme/sidebarTheme';
 
 // Pre-computed style objects for better performance
 const CONTAINER_STYLE: SxProps<Theme> = {

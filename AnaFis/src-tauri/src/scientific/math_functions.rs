@@ -186,8 +186,8 @@ pub fn math_beta(a: f64, b: f64) -> f64 {
 
 /// Riemann zeta function: ζ(s)
 #[tauri::command]
-pub fn math_zeta(s: f64) -> f64 {
-    ZETA_EVAL.evaluate(&[s])
+pub fn math_zeta(x: f64) -> f64 {
+    ZETA_EVAL.evaluate(&[x])
 }
 
 /// Zeta derivative: ζ⁽ⁿ⁾(s)
@@ -200,14 +200,14 @@ pub fn math_zeta_deriv(n: f64, s: f64) -> f64 {
 
 /// Complete elliptic integral of the first kind: K(k)
 #[tauri::command]
-pub fn math_elliptic_k(k: f64) -> f64 {
-    ELLIPTIC_K_EVAL.evaluate(&[k])
+pub fn math_elliptic_k(x: f64) -> f64 {
+    ELLIPTIC_K_EVAL.evaluate(&[x])
 }
 
 /// Complete elliptic integral of the second kind: E(k)
 #[tauri::command]
-pub fn math_elliptic_e(k: f64) -> f64 {
-    ELLIPTIC_E_EVAL.evaluate(&[k])
+pub fn math_elliptic_e(x: f64) -> f64 {
+    ELLIPTIC_E_EVAL.evaluate(&[x])
 }
 
 // ── Orthogonal Polynomials ─────────────────────────────────────────────────

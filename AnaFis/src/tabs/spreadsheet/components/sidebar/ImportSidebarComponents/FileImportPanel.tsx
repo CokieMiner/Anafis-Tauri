@@ -29,10 +29,10 @@ import type {
   ImportService,
   ImportTargetMode,
 } from '@/core/types/import';
+import { anafisColors } from '@/shared/theme';
 import { RangeValidationWarning } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/RangeValidationWarning';
 import { useImportValidation } from '@/tabs/spreadsheet/components/sidebar/logic/useImportValidation';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type { SpreadsheetRef as SpreadsheetInterface } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 
@@ -237,7 +237,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
               color: anafisColors.spreadsheet,
               '&:hover': {
                 borderColor: anafisColors.spreadsheet,
-                bgcolor: 'rgba(33, 150, 243, 0.1)',
+                bgcolor: `${anafisColors.spreadsheet}1A`,
               },
             }}
           >
@@ -323,7 +323,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                 label={`Format: ${detectedFormat?.toUpperCase()}`}
                 size="small"
                 sx={{
-                  bgcolor: 'rgba(33, 150, 243, 0.2)',
+                  bgcolor: `${anafisColors.spreadsheet}33`,
                   color: anafisColors.spreadsheet,
                   fontSize: 10,
                 }}
@@ -335,7 +335,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                       label={`Size: ${(fileMetadata.size / 1024).toFixed(1)}KB`}
                       size="small"
                       sx={{
-                        bgcolor: 'rgba(33, 150, 243, 0.2)',
+                        bgcolor: `${anafisColors.spreadsheet}33`,
                         color: anafisColors.spreadsheet,
                         fontSize: 10,
                       }}
@@ -394,13 +394,13 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                 setImportFormat(e.target.value as ImportFormat)
               }
               sx={{
-                bgcolor: 'rgba(33, 150, 243, 0.05)',
+                bgcolor: `${anafisColors.spreadsheet}0D`,
                 borderRadius: '6px',
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(33, 150, 243, 0.2)',
+                  borderColor: `${anafisColors.spreadsheet}33`,
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(33, 150, 243, 0.4)',
+                  borderColor: `${anafisColors.spreadsheet}66`,
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                   borderColor: anafisColors.spreadsheet,
@@ -503,13 +503,13 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                     '&.Mui-focused': { color: anafisColors.spreadsheet },
                   },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
                     '& fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.2)',
+                      borderColor: `${anafisColors.spreadsheet}33`,
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -517,7 +517,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                     '& input': { color: 'white' },
                   },
                   '& .MuiFormHelperText-root': {
-                    color: 'rgba(33, 150, 243, 0.6)',
+                    color: `${anafisColors.spreadsheet}99`,
                     fontSize: 11,
                   },
                 }}
@@ -547,13 +547,13 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                       '&.Mui-focused': { color: anafisColors.spreadsheet },
                     },
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: 'rgba(33, 150, 243, 0.05)',
+                      bgcolor: `${anafisColors.spreadsheet}0D`,
                       borderRadius: '6px',
                       '& fieldset': {
-                        borderColor: 'rgba(33, 150, 243, 0.2)',
+                        borderColor: `${anafisColors.spreadsheet}33`,
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(33, 150, 243, 0.4)',
+                        borderColor: `${anafisColors.spreadsheet}66`,
                       },
                       '&.Mui-focused fieldset': {
                         borderColor: anafisColors.spreadsheet,
@@ -564,7 +564,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                       },
                     },
                     '& .MuiFormHelperText-root': {
-                      color: 'rgba(33, 150, 243, 0.6)',
+                      color: `${anafisColors.spreadsheet}99`,
                       fontSize: 11,
                     },
                   }}
@@ -636,17 +636,17 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                         '& .MuiOutlinedInput-root': {
                           bgcolor:
                             focusedInput === 'targetRange'
-                              ? 'rgba(33, 150, 243, 0.1)'
-                              : 'rgba(33, 150, 243, 0.05)',
+                              ? `${anafisColors.spreadsheet}1A`
+                              : `${anafisColors.spreadsheet}0D`,
                           borderRadius: '6px',
                           '& fieldset': {
                             borderColor:
                               focusedInput === 'targetRange'
                                 ? anafisColors.spreadsheet
-                                : 'rgba(33, 150, 243, 0.2)',
+                                : `${anafisColors.spreadsheet}33`,
                           },
                           '&:hover fieldset': {
-                            borderColor: 'rgba(33, 150, 243, 0.4)',
+                            borderColor: `${anafisColors.spreadsheet}66`,
                           },
                           '&.Mui-focused fieldset': {
                             borderColor: anafisColors.spreadsheet,
@@ -658,7 +658,7 @@ export const FileImportPanel: React.FC<FileImportPanelProps> = ({
                           },
                         },
                         '& .MuiFormHelperText-root': {
-                          color: 'rgba(33, 150, 243, 0.6)',
+                          color: `${anafisColors.spreadsheet}99`,
                           fontSize: 11,
                         },
                       }}

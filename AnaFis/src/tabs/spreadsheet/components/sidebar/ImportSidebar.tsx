@@ -10,11 +10,11 @@ import {
 } from '@mui/material';
 import React, { useEffect } from 'react';
 import type { ImportService } from '@/core/types/import';
+import { anafisColors } from '@/shared/theme';
 import { FileImportPanel } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/FileImportPanel';
 import { LibraryImportPanel } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/LibraryImportPanel';
 import { useImport } from '@/tabs/spreadsheet/components/sidebar/logic/useImport';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type {
   ImportMode,

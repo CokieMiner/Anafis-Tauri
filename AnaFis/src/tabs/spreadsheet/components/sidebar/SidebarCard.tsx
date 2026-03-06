@@ -6,7 +6,8 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useMemo } from 'react';
-import { sidebarTheme } from '@/tabs/spreadsheet/components/sidebar/themes/sidebarTheme';
+import { anafisColors } from '@/shared/theme';
+import { sidebarTheme } from '@/shared/theme/sidebarTheme';
 
 // Static styles to prevent recreation
 const BASE_PAPER_STYLES = {
@@ -16,7 +17,7 @@ const BASE_PAPER_STYLES = {
   borderRadius: sidebarTheme.radius.card,
   transition: sidebarTheme.transitions.default,
   '&:hover': {
-    borderColor: 'rgba(33, 150, 243, 0.3)',
+    borderColor: `${anafisColors.spreadsheet}4D`,
     boxShadow: sidebarTheme.shadows.cardHover,
     transform: 'translateY(-2px)',
   },

@@ -11,6 +11,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import type {
   DependentBinding,
   ImportedData,
@@ -55,9 +56,13 @@ const AUTOCOMPLETE_MENU_SLOTS = {
 
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
-    '&.Mui-focused fieldset': { borderColor: '#ffb300' },
+    '&.Mui-focused fieldset': {
+      borderColor: anafisTheme.colors.tabs.fitting.main,
+    },
   },
-  '& .MuiInputLabel-root.Mui-focused': { color: '#ffb300' },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: anafisTheme.colors.tabs.fitting.main,
+  },
 };
 
 function SolidPaper(props: PaperProps) {
@@ -68,8 +73,8 @@ function SolidPaper(props: PaperProps) {
         ...((props.sx ?? {}) as object),
         backgroundColor: '#1a1a22 !important',
         backgroundImage: 'none !important',
-        border: '1px solid rgba(255,179,0,0.2)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+        border: `1px solid ${anafisTheme.colors.tabs.fitting.main}33`,
+        boxShadow: anafisTheme.shadows.lg,
       }}
     />
   );
@@ -120,7 +125,9 @@ function BindingRow({
           fontFamily: 'monospace',
           fontWeight: isDependent ? 700 : 500,
           fontSize: '0.75rem',
-          color: isDependent ? '#ffb300' : 'text.secondary',
+          color: isDependent
+            ? anafisTheme.colors.tabs.fitting.main
+            : 'text.secondary',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -200,7 +207,7 @@ function BindingRow({
             height: 32,
             '& .MuiSelect-select': { py: 0.5 },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: '#ffb300',
+              borderColor: anafisTheme.colors.tabs.fitting.main,
             },
           }}
         >
@@ -222,7 +229,7 @@ function BindingRow({
           sx={{
             fontFamily: 'monospace',
             fontSize: '0.7rem',
-            color: '#ffb300',
+            color: anafisTheme.colors.tabs.fitting.main,
             textAlign: 'center',
           }}
         >
@@ -308,7 +315,7 @@ export default function BindingsSection({
             overflow: 'auto',
             '&::-webkit-scrollbar': { width: 4 },
             '&::-webkit-scrollbar-thumb': {
-              background: 'rgba(255,179,0,0.25)',
+              background: `${anafisTheme.colors.tabs.fitting.main}40`,
               borderRadius: 2,
             },
           }}

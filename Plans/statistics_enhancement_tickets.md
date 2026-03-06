@@ -280,7 +280,9 @@ Repeated measures ANOVA alternative missing. For non-parametric repeated measure
 **Impact**: Critical  
 
 **Problem**:  
-AnaFis lacks comprehensive regression capabilities. Current robust_regression only does linear/polynomial fitting with limited methods. Experimental scientists need to fit complex physical models with multiple variables and parameters using various regression approaches. **Physics is distinct from general data science because errors in independent variables (x) are just as common as errors in dependent variables (y)** - making ODR (Orthogonal Distance Regression) the "killer feature" that differentiates AnaFis from basic Excel/Python scripts.
+AnaFis lacks comprehensive regression capabilities. Current robust_regression only does linear/polynomial fitting with limited methods. Experimental scientists need to fit complex physical models with multiple variables and parameters using various regression approaches. **Physics is distinct from general data science because errors in independent variables (x) are just as common as errors in dependent variables (y)**. 
+
+*(Note: The base ODR engine with Levenberg-Marquardt has now been implemented in `src/scientific/curve_fitting`, fulfilling a large part of this requirement. The remaining work is extending this to other methods and integrating it fully with the UI.)*
 
 **CRITICAL DEPENDENCY**: Must be implemented AFTER Tickets 021-022 (Dual Numbers). Building ODR on finite differences will fail catastrophically on experimental data with singularities or flat regions.
 
@@ -717,7 +719,7 @@ Uncertainty propagation currently uses finite differences (h = 1e-8) for numeric
 
 **Dependencies**:
 - Add `num-dual = "0.7"` for dual number computations
-- Add `exmex = "0.2"` or custom AST parser for expression evaluation
+- Add `symb_anafis` (CompiledEvaluator) for expression evaluation
 
 **Files to Modify**:
 - `src/scientific/statistics/uncertainty/propagation.rs` (replace finite differences with dual numbers)
@@ -757,7 +759,7 @@ Distribution fitting uses argmin optimization with numerical gradients, leading 
 
 **Dependencies**:
 - Add `num-dual = "0.7"` for gradient computation
-- Add `exmex = "0.2"` for expression parsing
+- Use `symb_anafis` for expression parsing
 
 **Files to Modify**:
 - `src/scientific/statistics/distributions/fitting.rs` (upgrade CostFunction implementations)

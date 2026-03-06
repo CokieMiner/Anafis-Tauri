@@ -200,16 +200,17 @@ No new backend commands are strictly necessary; the existing ODR engine can alre
   4. Verified backend integration (existing `use_poisson_weighting` field).
 - **Next**: No further action required.
 
-### Phase 2 – Tolerance & Damping Integration
-- **Tasks**:
-  1. Extend `OdrFitRequest` types (frontend and backend) with optional `tolerance` and `initialDamping` fields.
-  2. Wire these fields through `requestBuilder` and pass to backend ODR solver.
-  3. Add UI limits and step sizes in `FitSettingsSection`:
+### Phase 2 – Tolerance & Damping Integration (Completed)
+- **Status**: Implemented.
+- **Tasks completed**:
+  1. Extended `OdrFitRequest` types (frontend and backend) with optional `tolerance` and `initialDamping` fields.
+  2. Wired these fields through `requestBuilder` and passed to backend ODR solver.
+  3. Added UI limits and step sizes in `FitSettingsSection`:
      - Tolerance: range 1e‑12 to 1, step 1e‑9 (allow scientific notation).
      - Initial damping: range 1e‑6 to 1, step 0.01.
      - Max iterations: enforce backend limits (5–5000).
-  4. Update backend `commands.rs` to use provided tolerance/damping (fall back to defaults).
-- **Estimate**: 1–2 days.
+  4. Updated backend `commands.rs` to use provided tolerance/damping (falls back to defaults).
+- **Next**: No further action required.
 
 ### Phase 3 – Histogram Mode (User‑Defined Distribution Fitting)
 - **Tasks**:

@@ -20,6 +20,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DataSequence } from '@/core/types/dataLibrary';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import {
   type CsvImportSettings,
   type DataSourceMode,
@@ -52,7 +53,7 @@ const sectionSx = {
   overflow: 'auto',
   '&::-webkit-scrollbar': { width: 4 },
   '&::-webkit-scrollbar-thumb': {
-    background: 'rgba(255,179,0,0.25)',
+    background: `${anafisTheme.colors.tabs.fitting.main}40`,
     borderRadius: 2,
   },
 };
@@ -61,14 +62,20 @@ const amberInputSx = {
   '& .MuiOutlinedInput-root': {
     backgroundColor: '#0f0f14',
     backgroundImage: 'none',
-    '& fieldset': { borderColor: 'rgba(255,179,0,0.22)' },
-    '&:hover fieldset': { borderColor: 'rgba(255,179,0,0.38)' },
-    '&.Mui-focused fieldset': { borderColor: '#ffb300' },
+    '& fieldset': { borderColor: `${anafisTheme.colors.tabs.fitting.main}38` },
+    '&:hover fieldset': {
+      borderColor: `${anafisTheme.colors.tabs.fitting.main}61`,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: anafisTheme.colors.tabs.fitting.main,
+    },
   },
   '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.68)' },
-  '& .MuiInputLabel-root.Mui-focused': { color: '#ffb300' },
-  '& .MuiInputBase-input': { caretColor: '#ffb300' },
-  '& .MuiSelect-icon': { color: 'rgba(255,179,0,0.8)' },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: anafisTheme.colors.tabs.fitting.main,
+  },
+  '& .MuiInputBase-input': { caretColor: anafisTheme.colors.tabs.fitting.main },
+  '& .MuiSelect-icon': { color: `${anafisTheme.colors.tabs.fitting.main}CC` },
 };
 
 function SolidPaper(props: PaperProps) {
@@ -79,8 +86,8 @@ function SolidPaper(props: PaperProps) {
         ...((props.sx ?? {}) as object),
         backgroundColor: '#0f0f14 !important',
         backgroundImage: 'none !important',
-        border: '1px solid rgba(255,179,0,0.15)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+        border: `1px solid ${anafisTheme.colors.tabs.fitting.main}26`,
+        boxShadow: anafisTheme.shadows.lg,
       }}
     />
   );

@@ -11,7 +11,6 @@ import {
 import {
   Alert,
   Box,
-  Button,
   Chip,
   CssBaseline,
   Dialog,
@@ -39,12 +38,13 @@ import type {
   UpdateSequenceRequest,
 } from '@/core/types/dataLibrary';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { UnifiedButton } from '@/shared/components/UnifiedButton';
 import SequenceDetails from '@/shared/dataLibrary/components/SequenceDetails';
 import SequenceList from '@/shared/dataLibrary/components/SequenceList';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
+import { createAnafisTheme } from '@/shared/theme';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { notifyWindowReady } from '@/shared/utils/windowReady';
-import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 // Toolbar props interface
 interface DataLibraryToolbarProps {
@@ -133,33 +133,82 @@ const DataLibraryToolbar = memo(
           </Select>
         </FormControl>
 
-        <Button
-          variant="contained"
+        <UnifiedButton
+          variant="primary"
           startIcon={<ExportIcon />}
           onClick={onExport}
           disabled={selectedIds.size === 0}
+          sx={{
+            fontSize: '0.85rem',
+            whiteSpace: 'nowrap',
+            padding: '6px 16px',
+            backgroundColor: anafisTheme.colors.primary.main,
+            borderColor: anafisTheme.colors.primary.main,
+            '&:hover': {
+              backgroundColor: anafisTheme.colors.primary.dark,
+              borderColor: anafisTheme.colors.primary.dark,
+            },
+          }}
         >
           Export ({selectedIds.size})
-        </Button>
+        </UnifiedButton>
 
-        <Button
-          variant="contained"
-          color="error"
+        <UnifiedButton
+          variant="primary"
+          sx={{
+            fontSize: '0.85rem',
+            whiteSpace: 'nowrap',
+            padding: '6px 16px',
+            backgroundColor: anafisTheme.colors.status.error.main,
+            borderColor: anafisTheme.colors.status.error.main,
+            '&:hover': {
+              backgroundColor: anafisTheme.colors.status.error.dark,
+              borderColor: anafisTheme.colors.status.error.dark,
+            },
+          }}
           startIcon={<DeleteIcon />}
           onClick={onBulkDelete}
           disabled={selectedIds.size === 0}
         >
           Delete ({selectedIds.size})
-        </Button>
+        </UnifiedButton>
 
         {selectedIds.size > 0 ? (
-          <Button size="small" variant="outlined" onClick={onSelectNone}>
+          <UnifiedButton
+            variant="secondary"
+            onClick={onSelectNone}
+            sx={{
+              fontSize: '0.85rem',
+              whiteSpace: 'nowrap',
+              padding: '6px 16px',
+              color: anafisTheme.colors.primary.main,
+              borderColor: anafisTheme.colors.primary.main,
+              '&:hover': {
+                borderColor: anafisTheme.colors.primary.dark,
+                backgroundColor: `${anafisTheme.colors.primary.main}1A`,
+              },
+            }}
+          >
             Clear Selection
-          </Button>
+          </UnifiedButton>
         ) : sequences.length > 0 ? (
-          <Button size="small" variant="outlined" onClick={onSelectAll}>
+          <UnifiedButton
+            variant="secondary"
+            onClick={onSelectAll}
+            sx={{
+              fontSize: '0.85rem',
+              whiteSpace: 'nowrap',
+              padding: '6px 16px',
+              color: anafisTheme.colors.primary.main,
+              borderColor: anafisTheme.colors.primary.main,
+              '&:hover': {
+                borderColor: anafisTheme.colors.primary.dark,
+                backgroundColor: `${anafisTheme.colors.primary.main}1A`,
+              },
+            }}
+          >
             Select All
-          </Button>
+          </UnifiedButton>
         ) : null}
       </Stack>
     </Box>
@@ -578,15 +627,25 @@ export const DataLibraryWindowContent: React.FC = () => {
                 onChange={(e) => setNewTagInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
               />
-              <Button onClick={handleAddTag}>Add</Button>
+              <UnifiedButton variant="secondary" onClick={handleAddTag}>
+                Add
+              </UnifiedButton>
             </Stack>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={() => void handleSaveEdit()} variant="contained">
+          <UnifiedButton
+            variant="secondary"
+            onClick={() => setEditDialogOpen(false)}
+          >
+            Cancel
+          </UnifiedButton>
+          <UnifiedButton
+            variant="primary"
+            onClick={() => void handleSaveEdit()}
+          >
             Save
-          </Button>
+          </UnifiedButton>
         </DialogActions>
       </Dialog>
 
@@ -603,20 +662,26 @@ export const DataLibraryWindowContent: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button
+          <UnifiedButton
+            variant="secondary"
             onClick={() => setDeleteDialogOpen(false)}
             disabled={isDeleting}
           >
             Cancel
-          </Button>
-          <Button
+          </UnifiedButton>
+          <UnifiedButton
+            variant="primary"
             onClick={() => void handleDelete()}
-            color="error"
-            variant="contained"
+            sx={{
+              backgroundColor: anafisTheme.colors.status.error.main,
+              '&:hover': {
+                backgroundColor: anafisTheme.colors.status.error.dark,
+              },
+            }}
             disabled={isDeleting}
           >
             {isDeleting ? 'Deleting...' : 'Delete'}
-          </Button>
+          </UnifiedButton>
         </DialogActions>
       </Dialog>
 
@@ -633,22 +698,31 @@ export const DataLibraryWindowContent: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button
+          <UnifiedButton
+            variant="secondary"
             onClick={() => setBulkDeleteDialogOpen(false)}
             disabled={isBulkDeleting}
           >
             Cancel
-          </Button>
-          <Button
+          </UnifiedButton>
+          <UnifiedButton
+            variant="primary"
             onClick={() => void handleBulkDeleteConfirm()}
-            color="error"
-            variant="contained"
+            sx={{
+              backgroundColor: anafisTheme.colors.status.error.main,
+              borderColor: anafisTheme.colors.status.error.main,
+              color: anafisTheme.colors.status.error.contrast,
+              '&:hover': {
+                backgroundColor: anafisTheme.colors.status.error.dark,
+                borderColor: anafisTheme.colors.status.error.dark,
+              },
+            }}
             disabled={isBulkDeleting}
           >
             {isBulkDeleting
               ? 'Deleting...'
               : `Delete ${selectedIds.size} Sequence${selectedIds.size > 1 ? 's' : ''}`}
-          </Button>
+          </UnifiedButton>
         </DialogActions>
       </Dialog>
 
@@ -672,14 +746,19 @@ export const DataLibraryWindowContent: React.FC = () => {
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setExportDialogOpen(false)}>Cancel</Button>
-          <Button
+          <UnifiedButton
+            variant="secondary"
+            onClick={() => setExportDialogOpen(false)}
+          >
+            Cancel
+          </UnifiedButton>
+          <UnifiedButton
+            variant="primary"
             onClick={() => void handleExport()}
-            variant="contained"
             startIcon={<ExportIcon />}
           >
             Export
-          </Button>
+          </UnifiedButton>
         </DialogActions>
       </Dialog>
     </Box>

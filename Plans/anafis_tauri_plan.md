@@ -88,7 +88,7 @@ Anafis-Tauri/
 │       ├── Cargo.toml          # Rust project manifest and dependencies
 │       ├── gen/                # Generated code
 │       ├── icons/              # Application icons
-│       ├── python/             # Python integration (SymPy)
+│       ├── python/             # Python integration (legacy, no longer used at runtime)
 │       ├── src/                # Rust source code
 │       │   ├── data_library/   # Data Library (SQLite + FTS5)
 │       │   ├── error.rs        # Error handling types
@@ -97,6 +97,10 @@ Anafis-Tauri/
 │       │   ├── lib.rs          # Library entry point and Tauri commands
 │       │   ├── main.rs         # Main Rust application entry point
 │       │   ├── scientific/     # Scientific computations
+│       │   │   ├── curve_fitting/  # ODR engine, types, tests
+│       │   │   ├── math_functions.rs  # 19 pre-compiled symb_anafis evaluators
+│       │   │   ├── uncertainty_propagation/  # Uncertainty + Excel conversion
+│       │   │   └── mod.rs
 │       │   ├── uncertainty_calculator/ # Uncertainty calculation logic
 │       │   ├── unit_conversion/ # Unit conversion system
 │       │   ├── utils/          # Utility modules
@@ -112,7 +116,9 @@ Anafis-Tauri/
 └── Plans/                      # Project planning documents
     ├── anafis_tauri_plan.md
     ├── FILE_ASSOCIATION.md
-    ├── uncertanty_cell_plan.md
+    ├── curve_fitting_enhancements.md
+    ├── uncertainty_cell_plan.md
+    ├── statistics_enhancement_tickets.md
     └── sidebars/
         ├── 02_statistical_analysis_sidebar.md
         ├── 03_data_smoothing_sidebar.md
@@ -127,16 +133,16 @@ This table outlines the primary libraries and crates intended for use across dif
 | Module | Primary Lib (Rust) | Primary Lib (Frontend) | Why |
 |---|---|---|---|
 | **Shell/Notebook** | `tauri`, `tauri-plugin-window` | React, Material-UI | For building the desktop application shell, managing native windows, and creating a responsive UI with consistent Material Design principles. |
-| **Tabs/Solver Tab** | `sympy` through PyO3, `nalgebra` | React, MathJax/KaTeX, ECharts, Material-UI | To provide symbolic mathematics capabilities, numerical computation for solving equations, live LaTeX rendering, interactive plotting of solutions, and consistent UI. **Uses ECharts** for reliable export and smaller bundle. |
-| **GUI/Plotting** | `plotters` (via WebAssembly/Canvas) | **ECharts** (primary), D3.js (advanced), Material-UI | For generating high-quality, interactive data visualizations and plots within the webview, with consistent UI. **ECharts chosen** for: reliable PNG/SVG export, native timeline animation, 500KB size, and no WebKit issues. **Plotly removed** due to export failures and 3MB bundle size. |
+| **Tabs/Solver Tab** | `symb_anafis`, `nalgebra` | React, KaTeX, Plotly.js, Material-UI | Symbolic evaluation via `symb_anafis` (pre-compiled bytecode), numerical computation, live LaTeX rendering, interactive plotting, consistent UI. **Uses Plotly** for robust scientific plotting. |
+| **GUI/Plotting** | — | **Plotly.js**, Material-UI | Interactive data visualizations within the webview. **Plotly chosen** for: robust scientific plotting capabilities like error bars, 3D surface plots, and LaTeX titles. |
 | **Tabs/Monte Carlo Tab (Deferred)** | `ndarray`, `rand` (via WebAssembly) | React, Web Workers | Deferred from current UI scope; intended for efficient N-dimensional simulations and async processing when reintroduced. |
 | **Core/Data** | `uom` (Units of Measurement) | TypeScript types | For robust handling of physical quantities with units, ensuring type safety and correctness across the application. |
-| **Services/Curve Fitting** | `argmin`, `nalgebra` | React, ECharts | For implementing N-dimensional optimization algorithms for curve fitting and visualizing the fitting results. **Uses ECharts** for consistent plotting. |
-| **Core/Symbolic** | `sympy` through **PyO3 0.27.1** | | For symbolic manipulation and representing expressions as Directed Acyclic Graphs (DAGs) for efficient updates. |
+| **Services/Curve Fitting** | `nalgebra`, custom ODR engine | React, Plotly.js | Multi-layer Orthogonal Distance Regression with Levenberg-Marquardt, Poisson weighting, point correlations, `symb_anafis` expression parsing. **Uses Plotly** for consistent plotting. |
+| **Core/Symbolic** | `symb_anafis` | | Custom symbolic math library with `CompiledEvaluator` (pre-compiled bytecode), 50+ math functions including gamma, zeta, Bessel, elliptic integrals, spherical harmonics. |
 | **Compute** | `wgpu` (GPU - planned), `rayon` (CPU) | WebAssembly, Web Workers | For auto-dispatching computations to available hardware (GPU/CPU) and enabling parallel processing for performance-critical tasks. |
 | **Persistence/State** | `tauri-plugin-store`, `serde`, `rusqlite` | Zustand (frontend state) | For saving and restoring application state (e.g., open tabs, user preferences), managing complex frontend state, and persistent data storage with SQLite. |
-| **Export System** | `rust_xlsxwriter`, `csv`, `arrow`, `parquet`, `serde_json` | TypeScript types | For exporting data in 10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread. All export logic in Rust. Uses Arrow/Parquet (v57.0.0) directly instead of Polars for smaller binary and faster compilation. |
-| **Import System** | `arrow`, `parquet`, `encoding_rs`, `flate2` | TypeScript types | For importing data from CSV, TSV, TXT, Parquet, and AnaFisSpread formats. Custom CSV parser with encoding detection (UTF-8, Windows-1252). Direct Parquet reading with type conversion. |
+| **Export System** | `rust_xlsxwriter`, `csv`, `arrow`, `parquet`, `serde_json` | TypeScript types | For exporting data in 10 formats: CSV, TSV, TXT, JSON, XLSX, Parquet, HTML, Markdown, LaTeX, AnaFisSpread. All export logic in Rust. Uses Arrow/Parquet (v58.x) directly instead of Polars for smaller binary and faster compilation. |
+| **Import System** | `arrow`, `parquet`, `encoding_rs`, `flate2` | TypeScript types | For importing data from CSV, TSV, TXT, Parquet, and AnaFisSpread formats. Custom CSV parser with encoding detection (UTF-8, Windows-1252). Direct Parquet reading with type conversion. Uses Arrow/Parquet v58.x. |
 | **Utils** | `log`, `env_logger`, `config` | `zod` (validation) | For structured logging, environment-aware configuration management, and data validation. |
 
 ## 5. GUI Sketches
@@ -226,6 +232,10 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 -   [x] 19. TypeScript Strict Mode (100% type coverage, no 'any' types, strict null checks)
 -   [x] 20. Rust Backend Optimization (Clippy compliant, modern Rust idioms)
 -   [x] 21. Statistical Approximations Fixes (Kurtosis formula corrected to use sample variance, skewness test expectations fixed, KS statistic calculation corrected, Burr Type XII PDF missing -ln(lambda) term fixed)
+-   [x] 22. Curve Fitting ODR Backend (Multi-layer ODR with Levenberg-Marquardt, Poisson weighting, point correlations, tolerance/damping)
+-   [x] 23. Expression Parser for Custom Functions (`symb_anafis` CompiledEvaluator with pre-compiled bytecode, zero-parsing evaluation)
+-   [x] 24. Custom Math Formulas Integration (19 `symb_anafis` functions registered via Tauri commands + `registerAsyncFunction` in Univer)
+-   [x] 25. Excel Formula Conversion (symb_anafis expressions → Univer/Excel formula names, workarounds replaced with native functions)
 
 ### 📋 **CURRENT STATUS**
 **Core Infrastructure**: ✅ COMPLETE
@@ -235,6 +245,8 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 - Code quality: Biome + TypeScript strict checks in active use
 - Build system: Clean compilation, optimized bundles
 - Tab creation UI currently exposes Spreadsheet, Fitting, and Solver (Monte Carlo deferred from menu/toolbar)
+- Curve fitting ODR backend with multi-layer support, Poisson weighting, tolerance/damping
+- 19 custom math formulas via `symb_anafis` (pre-compiled Rust bytecode → Tauri IPC → Univer async functions)
 
 
 
@@ -244,49 +256,39 @@ This section outlines the phased implementation plan for the Tauri-based ANAFIS 
 - Plugin-based extension architecture to work around Univer constraints
 
 ### 🔄 **PLANNED TASKS**
--   [ ] 22. Statistical Analysis Sidebar Implementation (Contextual interface with 5 analysis types)
--   [ ] 22. Statistical Analysis Backend (Rust functions for all analysis types)
--   [ ] 23. Weighted Statistics Implementation (χ² analysis, uncertainty propagation)
--   [ ] 24. Hypothesis Testing Implementation (t-tests, normality tests)
--   [ ] 25. Weighted Correlation Analysis (uncertainty-weighted correlation coefficients)
--   [ ] 26. Statistical Analysis UI Polish (Clean labels, logical option ordering)
--   [ ] 27. Statistical Analysis Testing (Contextual interface validation - 5/5 tests passing)
--   [ ] 28. Hypothesis Testing Validation (t-test calculations and result display - 5/5 tests passing)
--   [ ] 29. Weighted Statistics Testing (χ² analysis and uncertainty propagation - 5/5 tests passing)
--   [ ] 30. Statistical Tests Enhancement (ANOVA, Chi-square, non-parametric alternatives)
--   [ ] 31. Advanced Visualization Components (QQ plots, scatter plots, box plots, residual plots - moved to Graphs & Fitting tab)
--   [ ] 32. Shapiro-Wilk Test Robust Implementation (replace approximation with well-tested library)
--   [ ] 33. Weighted Correlation Significance Fix (improve approximation accuracy)
--   [ ] 34. F-test Implementation Fix (proper statistical library integration)
+-   [ ] 26. Statistical Analysis Sidebar Implementation (Contextual interface with 5 analysis types)
+-   [ ] 27. Statistical Analysis Backend (Rust functions for all analysis types)
+-   [ ] 28. Weighted Statistics Implementation (χ² analysis, uncertainty propagation)
+-   [ ] 29. Hypothesis Testing Implementation (t-tests, normality tests)
+-   [ ] 30. Weighted Correlation Analysis (uncertainty-weighted correlation coefficients)
+-   [ ] 31. Statistical Analysis UI Polish (Clean labels, logical option ordering)
+-   [ ] 32. Statistical Tests Enhancement (ANOVA, Chi-square, non-parametric alternatives)
+-   [ ] 33. Advanced Visualization Components (QQ plots, scatter plots, box plots, residual plots - moved to Graphs & Fitting tab)
+-   [ ] 34. Shapiro-Wilk Test Robust Implementation (replace approximation with well-tested library)
 -   [ ] 35. **Univer Plugin for Automatic Uncertainty Propagation** (Plugin architecture to replace deprecated cell-based approach)
 -   [ ] 36. **Correlated Uncertainty Support** (Covariance matrix integration for multivariate propagation)
--   [ ] 37. **Basic Plotting Component** (ECharts 2D scatter/line plots with error bars from data library)
--   [ ] 38. **Expression Parser for Custom Functions** (fasteval/meval for user-defined functions like 'a*exp(-x/b) + c')
--   [ ] 39. **Fitting Backend with LM Algorithm** (argmin Levenberg-Marquardt with uncertainty propagation)
--   [ ] 40. **Fitting UI Components** (Data selection, fit functions, initial guesses)
--   [ ] 41. **Plotting-Fitting Integration** (Overlay fit curves, residuals, parameter display)
--   [ ] 42. **Physics-Specific Fit Functions** (Exponential decay, damped oscillation, power laws)
--   [ ] 43. Curve Fitting Tab Foundation (Frontend & Rust integration)
--   [ ] 44. Fitting Algorithms Implementation (levenberg-marquardt, nalgebra)
--   [ ] 45. Advanced Visualization (3D plotting with ECharts-GL) integration
--   [ ] 46. Equation Solver Tab Implementation (Frontend & Rust integration)
--   [ ] 47. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration) **[Deferred from current UI scope]**
--   [ ] 48. Floating Tools Implementation (Uncertainty Calculator, LaTeX Preview)
--   [ ] 49. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
--   [ ] 50. Outlier Detection Sidebar (Z-score, IQR methods)
--   [ ] 51. Data Validation Sidebar (real-time validation rules)
--   [ ] 52. Metadata Manager Sidebar (experimental context tracking)
--   [ ] 53. Tab Detaching Re-implementation (Multi-window state synchronization)
--   [ ] 54. Internationalization System setup
--   [ ] 55. Application Settings and Configuration management
--   [ ] 56. Update System Implementation
--   [ ] 57. State Persistence and File Management
--   [ ] 58. Comprehensive Testing Suite (Unit, Integration, E2E) development
--   [ ] 59. Distribution and Packaging (Tauri Bundler) setup
--   [ ] 60. Documentation and User Guide creation
--   [ ] 61. GPU Acceleration and Performance Optimization (Rust/WebAssembly) fine-tuning
--   [ ] 62. UI Polish and Accessibility improvements
--   [ ] 63. Final Integration and Release Preparation
+-   [ ] 37. Fitting UI Components (Multi-layer UI, histogram mode, formula-with-equals parsing)
+-   [ ] 38. **Plotting-Fitting Integration** (Overlay fit curves, residuals, parameter display)
+-   [ ] 39. **Physics-Specific Fit Functions** (Exponential decay, damped oscillation, power laws)
+-   [ ] 40. Advanced Visualization (3D plotting with Plotly) integration
+-   [ ] 41. Equation Solver Tab Implementation (Frontend & Rust integration)
+-   [ ] 42. Monte Carlo Simulation Tab (Frontend & Rust/WebAssembly integration) **[Deferred from current UI scope]**
+-   [ ] 43. Floating Tools Implementation (Uncertainty Calculator, LaTeX Preview)
+-   [ ] 44. Data Smoothing Sidebar (moving average, Savitzky-Golay, Gaussian filters)
+-   [ ] 45. Outlier Detection Sidebar (Z-score, IQR methods)
+-   [ ] 46. Data Validation Sidebar (real-time validation rules)
+-   [ ] 47. Metadata Manager Sidebar (experimental context tracking)
+-   [ ] 48. Tab Detaching Re-implementation (Multi-window state synchronization)
+-   [ ] 49. Internationalization System setup
+-   [ ] 50. Application Settings and Configuration management
+-   [ ] 51. Update System Implementation
+-   [ ] 52. State Persistence and File Management
+-   [ ] 53. Comprehensive Testing Suite (Unit, Integration, E2E) development
+-   [ ] 54. Distribution and Packaging (Tauri Bundler) setup
+-   [ ] 55. Documentation and User Guide creation
+-   [ ] 56. GPU Acceleration and Performance Optimization (Rust/WebAssembly) fine-tuning
+-   [ ] 57. UI Polish and Accessibility improvements
+-   [ ] 58. Final Integration and Release Preparation
 
 ## 9. Plan for Tabs (Tauri Edition)
 

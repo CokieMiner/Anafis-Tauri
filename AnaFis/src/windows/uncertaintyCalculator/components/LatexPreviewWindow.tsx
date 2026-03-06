@@ -5,8 +5,8 @@ import { Box, Paper, ThemeProvider } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
 import { createRoot } from 'react-dom/client';
 import CustomTitleBar from '@/shared/components/CustomTitleBar';
+import { createAnafisTheme } from '@/shared/theme';
 import { notifyWindowReady } from '@/shared/utils/windowReady';
-import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes';
 
 interface LatexPreviewWindowProps {
   formula: string;

@@ -170,8 +170,8 @@ export const UnifiedButton = forwardRef<HTMLButtonElement, UnifiedButtonProps>(
             backgroundColor: anafisTheme.colors.sidebar.primary,
             color: anafisTheme.colors.sidebar.primaryContrast,
             border: `1px solid ${anafisTheme.colors.sidebar.primary}`,
-            px: 3,
-            py: 1.5,
+            px: 2,
+            py: 1,
             '&:hover': {
               backgroundColor: anafisTheme.colors.sidebar.hover,
               transform: 'translateY(-1px)',
@@ -191,8 +191,8 @@ export const UnifiedButton = forwardRef<HTMLButtonElement, UnifiedButtonProps>(
             backgroundColor: 'transparent',
             color: anafisTheme.colors.sidebar.primary,
             border: `1px solid ${anafisTheme.colors.sidebar.primary}`,
-            px: 3,
-            py: 1.5,
+            px: 2,
+            py: 1,
             '&:hover': {
               borderColor: anafisTheme.colors.sidebar.primary,
               backgroundColor: `${anafisTheme.colors.sidebar.primary}1A`,

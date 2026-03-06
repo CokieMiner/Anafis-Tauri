@@ -23,9 +23,9 @@ import {
 } from '@mui/material';
 import React from 'react';
 import Plot from '@/shared/components/PlotlyChart';
+import { anafisColors } from '@/shared/theme';
 import { useQuickPlot } from '@/tabs/spreadsheet/components/sidebar/logic/useQuickPlot';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type {
   ExportTheme,
@@ -226,17 +226,17 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                   '& .MuiOutlinedInput-root': {
                     bgcolor:
                       focusedInput === 'xRange'
-                        ? 'rgba(33, 150, 243, 0.1)'
-                        : 'rgba(33, 150, 243, 0.05)',
+                        ? `${anafisColors.spreadsheet}1A`
+                        : `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
                     '& fieldset': {
                       borderColor:
                         focusedInput === 'xRange'
                           ? anafisColors.spreadsheet
-                          : 'rgba(33, 150, 243, 0.2)',
+                          : `${anafisColors.spreadsheet}33`,
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -257,11 +257,13 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                 onChange={(e) => setXLabel(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': {
+                      borderColor: `${anafisColors.spreadsheet}33`,
+                    },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -299,17 +301,17 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                   '& .MuiOutlinedInput-root': {
                     bgcolor:
                       focusedInput === 'yRange'
-                        ? 'rgba(33, 150, 243, 0.1)'
-                        : 'rgba(33, 150, 243, 0.05)',
+                        ? `${anafisColors.spreadsheet}1A`
+                        : `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
                     '& fieldset': {
                       borderColor:
                         focusedInput === 'yRange'
                           ? anafisColors.spreadsheet
-                          : 'rgba(33, 150, 243, 0.2)',
+                          : `${anafisColors.spreadsheet}33`,
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -330,11 +332,13 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                 onChange={(e) => setYLabel(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(33, 150, 243, 0.05)',
+                    bgcolor: `${anafisColors.spreadsheet}0D`,
                     borderRadius: '6px',
-                    '& fieldset': { borderColor: 'rgba(33, 150, 243, 0.2)' },
+                    '& fieldset': {
+                      borderColor: `${anafisColors.spreadsheet}33`,
+                    },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(33, 150, 243, 0.4)',
+                      borderColor: `${anafisColors.spreadsheet}66`,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: anafisColors.spreadsheet,
@@ -354,7 +358,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                     onChange={(e) => setShowErrorBars(e.target.checked)}
                     size="small"
                     sx={{
-                      color: 'rgba(33, 150, 243, 0.5)',
+                      color: `${anafisColors.spreadsheet}80`,
                       '&.Mui-checked': { color: anafisColors.spreadsheet },
                     }}
                   />
@@ -395,17 +399,17 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                       '& .MuiOutlinedInput-root': {
                         bgcolor:
                           focusedInput === 'errorRange'
-                            ? 'rgba(33, 150, 243, 0.1)'
-                            : 'rgba(33, 150, 243, 0.05)',
+                            ? `${anafisColors.spreadsheet}1A`
+                            : `${anafisColors.spreadsheet}0D`,
                         borderRadius: '6px',
                         '& fieldset': {
                           borderColor:
                             focusedInput === 'errorRange'
                               ? anafisColors.spreadsheet
-                              : 'rgba(33, 150, 243, 0.2)',
+                              : `${anafisColors.spreadsheet}33`,
                         },
                         '&:hover fieldset': {
-                          borderColor: 'rgba(33, 150, 243, 0.4)',
+                          borderColor: `${anafisColors.spreadsheet}66`,
                         },
                         '&.Mui-focused fieldset': {
                           borderColor: anafisColors.spreadsheet,
@@ -454,7 +458,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                         size="small"
                         sx={{
                           py: 0.5,
-                          color: 'rgba(33, 150, 243, 0.5)',
+                          color: `${anafisColors.spreadsheet}80`,
                           '&.Mui-checked': { color: anafisColors.spreadsheet },
                         }}
                       />
@@ -474,7 +478,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                         size="small"
                         sx={{
                           py: 0.5,
-                          color: 'rgba(33, 150, 243, 0.5)',
+                          color: `${anafisColors.spreadsheet}80`,
                           '&.Mui-checked': { color: anafisColors.spreadsheet },
                         }}
                       />
@@ -494,7 +498,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                         size="small"
                         sx={{
                           py: 0.5,
-                          color: 'rgba(33, 150, 243, 0.5)',
+                          color: `${anafisColors.spreadsheet}80`,
                           '&.Mui-checked': { color: anafisColors.spreadsheet },
                         }}
                       />
@@ -551,7 +555,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                 data-quick-plot
                 sx={{
                   bgcolor: 'rgba(0, 0, 0, 0.3)',
-                  border: '1px solid rgba(33, 150, 243, 0.3)',
+                  border: `1px solid ${anafisColors.spreadsheet}4D`,
                   borderRadius: '6px',
                   overflow: 'hidden',
                 }}
@@ -616,7 +620,7 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                 <DialogTitle
                   sx={{
                     color: anafisColors.spreadsheet,
-                    borderBottom: '1px solid rgba(33, 150, 243, 0.2)',
+                    borderBottom: `1px solid ${anafisColors.spreadsheet}33`,
                   }}
                 >
                   Save to Data Library
@@ -703,10 +707,10 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
                           size="small"
                           onDelete={() => removeTag(tag)}
                           sx={{
-                            bgcolor: 'rgba(33, 150, 243, 0.2)',
+                            bgcolor: `${anafisColors.spreadsheet}33`,
                             color: anafisColors.spreadsheet,
                             '& .MuiChip-deleteIcon': {
-                              color: 'rgba(33, 150, 243, 0.7)',
+                              color: `${anafisColors.spreadsheet}B3`,
                             },
                           }}
                         />

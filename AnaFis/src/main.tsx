@@ -3,8 +3,8 @@ import './index.css';
 import { ThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from '@/App.tsx';
+import { createAnafisTheme } from '@/shared/theme/index.ts';
 import { notifyWindowReady } from '@/shared/utils/windowReady';
-import { createAnafisTheme } from '@/tabs/spreadsheet/components/sidebar/themes/index.ts';
 
 // Prevent pinch-to-zoom on trackpad/touchpad
 document.addEventListener(

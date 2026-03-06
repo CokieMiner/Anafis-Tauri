@@ -37,6 +37,7 @@ import CustomTitleBar from '@/shared/components/CustomTitleBar';
 import { DraggableTabBar } from '@/shared/components/DraggableTabBar';
 import DragOverlayComponent from '@/shared/components/DragOverlayComponent';
 import OptimizedTabRenderer from '@/shared/components/OptimizedTabRenderer';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 
 // Lazy load tab components for code splitting
 const HomeTab = lazy(() => import('@/tabs/home/HomeTab'));
@@ -53,7 +54,7 @@ const MAIN_CONTAINER_STYLES = {
   margin: 0,
   padding: 0,
   overflow: 'hidden',
-  backgroundColor: '#0a0a0a',
+  backgroundColor: anafisTheme.colors.background.primary,
   position: 'relative',
 } as const;
 
@@ -70,7 +71,7 @@ const CONTENT_AREA_STYLES = {
 const TAB_CONTENT_STYLES = {
   flexGrow: 1,
   p: 0,
-  bgcolor: '#0a0a0a',
+  bgcolor: anafisTheme.colors.background.primary,
   overflow: 'auto',
   width: '100%',
   margin: 0,

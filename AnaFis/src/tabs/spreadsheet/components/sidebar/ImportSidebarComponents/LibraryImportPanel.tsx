@@ -23,10 +23,10 @@ import {
   isErrorResponse,
 } from '@/core/types/error';
 import type { ImportResult } from '@/core/types/import';
+import { anafisColors } from '@/shared/theme';
 import { RangeValidationWarning } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/RangeValidationWarning';
 import { useImportValidation } from '@/tabs/spreadsheet/components/sidebar/logic/useImportValidation';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
-import { anafisColors } from '@/tabs/spreadsheet/components/sidebar/themes';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type {
   CellValue,
@@ -288,11 +288,11 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
           sx={{
             mb: 2,
             '& .MuiOutlinedInput-root': {
-              bgcolor: 'rgba(33, 150, 243, 0.05)',
+              bgcolor: `${anafisColors.spreadsheet}0D`,
               borderRadius: '6px',
               '& fieldset': { borderColor: anafisColors.ui.border },
               '&:hover fieldset': {
-                borderColor: 'rgba(33, 150, 243, 0.4)',
+                borderColor: `${anafisColors.spreadsheet}66`,
               },
               '&.Mui-focused fieldset': {
                 borderColor: anafisColors.spreadsheet,
@@ -336,9 +336,9 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                   borderRadius: '3px',
                 },
                 '&::-webkit-scrollbar-thumb': {
-                  bgcolor: 'rgba(33, 150, 243, 0.3)',
+                  bgcolor: `${anafisColors.spreadsheet}4D`,
                   borderRadius: '3px',
-                  '&:hover': { bgcolor: 'rgba(33, 150, 243, 0.5)' },
+                  '&:hover': { bgcolor: `${anafisColors.spreadsheet}80` },
                 },
               }}
             >
@@ -463,7 +463,7 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                       : '1px solid rgba(255, 255, 255, 0.2)',
                   bgcolor:
                     selectedSequence === seq.id
-                      ? 'rgba(33, 150, 243, 0.15)'
+                      ? `${anafisColors.spreadsheet}26`
                       : 'transparent',
                   color:
                     selectedSequence === seq.id
@@ -473,7 +473,7 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                   '&:hover': {
                     bgcolor:
                       selectedSequence === seq.id
-                        ? 'rgba(33, 150, 243, 0.2)'
+                        ? `${anafisColors.spreadsheet}33`
                         : 'rgba(255, 255, 255, 0.05)',
                     borderColor:
                       selectedSequence === seq.id
@@ -483,15 +483,15 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                     transform: 'translateY(-1px)',
                     boxShadow:
                       selectedSequence === seq.id
-                        ? `0 2px 8px rgba(33, 150, 243, 0.3)`
+                        ? `0 2px 8px ${anafisColors.spreadsheet}4D`
                         : '0 2px 8px rgba(255, 255, 255, 0.1)',
                   },
                   '&.Mui-selected': {
-                    bgcolor: 'rgba(33, 150, 243, 0.15) !important',
+                    bgcolor: `${anafisColors.spreadsheet}26 !important`,
                     borderColor: `${anafisColors.spreadsheet} !important`,
                     color: '#ffffff !important',
                     '&:hover': {
-                      bgcolor: 'rgba(33, 150, 243, 0.2) !important',
+                      bgcolor: `${anafisColors.spreadsheet}33 !important`,
                     },
                   },
                 }}
@@ -543,8 +543,8 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                               sx={{
                                 height: 16,
                                 fontSize: 9,
-                                bgcolor: 'rgba(33, 150, 243, 0.2)',
-                                color: 'rgba(33, 150, 243, 0.9)',
+                                bgcolor: `${anafisColors.spreadsheet}33`,
+                                color: `${anafisColors.spreadsheet}E6`,
                                 '& .MuiChip-label': { px: 0.75 },
                               }}
                             />
@@ -590,17 +590,17 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
               '& .MuiOutlinedInput-root': {
                 bgcolor:
                   focusedInput === 'libraryDataRange'
-                    ? 'rgba(33, 150, 243, 0.1)'
-                    : 'rgba(33, 150, 243, 0.05)',
+                    ? `${anafisColors.spreadsheet}1A`
+                    : `${anafisColors.spreadsheet}0D`,
                 borderRadius: '6px',
                 '& fieldset': {
                   borderColor:
                     focusedInput === 'libraryDataRange'
                       ? anafisColors.spreadsheet
-                      : 'rgba(33, 150, 243, 0.2)',
+                      : `${anafisColors.spreadsheet}33`,
                 },
                 '&:hover fieldset': {
-                  borderColor: 'rgba(33, 150, 243, 0.4)',
+                  borderColor: `${anafisColors.spreadsheet}66`,
                 },
                 '&.Mui-focused fieldset': {
                   borderColor: anafisColors.spreadsheet,
@@ -612,7 +612,7 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                 },
               },
               '& .MuiFormHelperText-root': {
-                color: 'rgba(33, 150, 243, 0.6)',
+                color: `${anafisColors.spreadsheet}99`,
                 fontSize: 11,
               },
             }}
@@ -675,17 +675,17 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                 '& .MuiOutlinedInput-root': {
                   bgcolor:
                     focusedInput === 'libraryUncertaintyRange'
-                      ? 'rgba(33, 150, 243, 0.1)'
-                      : 'rgba(33, 150, 243, 0.05)',
+                      ? `${anafisColors.spreadsheet}1A`
+                      : `${anafisColors.spreadsheet}0D`,
                   borderRadius: '6px',
                   '& fieldset': {
                     borderColor:
                       focusedInput === 'libraryUncertaintyRange'
                         ? anafisColors.spreadsheet
-                        : 'rgba(33, 150, 243, 0.2)',
+                        : `${anafisColors.spreadsheet}33`,
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(33, 150, 243, 0.4)',
+                    borderColor: `${anafisColors.spreadsheet}66`,
                   },
                   '&.Mui-focused fieldset': {
                     borderColor: anafisColors.spreadsheet,
@@ -697,7 +697,7 @@ export const LibraryImportPanel: React.FC<LibraryImportPanelProps> = ({
                   },
                 },
                 '& .MuiFormHelperText-root': {
-                  color: 'rgba(33, 150, 243, 0.6)',
+                  color: `${anafisColors.spreadsheet}99`,
                   fontSize: 11,
                 },
               }}

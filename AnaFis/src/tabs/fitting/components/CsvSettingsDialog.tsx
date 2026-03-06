@@ -1,5 +1,4 @@
 import {
-  Button,
   Dialog,
   DialogActions,
   DialogContent,
@@ -10,6 +9,8 @@ import {
   Select,
   TextField,
 } from '@mui/material';
+import { UnifiedButton } from '@/shared/components/UnifiedButton';
+import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import type { CsvImportSettings } from '../types/fittingTypes';
 
 interface CsvSettingsDialogProps {
@@ -27,16 +28,22 @@ const DROPDOWN_MAX_HEIGHT = 300;
 
 const amberInputSx = {
   '& .MuiOutlinedInput-root': {
-    backgroundColor: '#0f0f14',
+    backgroundColor: anafisTheme.colors.background.primary,
     backgroundImage: 'none',
-    '& fieldset': { borderColor: 'rgba(255,179,0,0.22)' },
-    '&:hover fieldset': { borderColor: 'rgba(255,179,0,0.38)' },
-    '&.Mui-focused fieldset': { borderColor: '#ffb300' },
+    '& fieldset': { borderColor: `${anafisTheme.colors.tabs.fitting.main}38` },
+    '&:hover fieldset': {
+      borderColor: `${anafisTheme.colors.tabs.fitting.main}61`,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: anafisTheme.colors.tabs.fitting.main,
+    },
   },
-  '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.68)' },
-  '& .MuiInputLabel-root.Mui-focused': { color: '#ffb300' },
-  '& .MuiInputBase-input': { caretColor: '#ffb300' },
-  '& .MuiSelect-icon': { color: 'rgba(255,179,0,0.8)' },
+  '& .MuiInputLabel-root': { color: anafisTheme.colors.text.tertiary },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: anafisTheme.colors.tabs.fitting.main,
+  },
+  '& .MuiInputBase-input': { caretColor: anafisTheme.colors.tabs.fitting.main },
+  '& .MuiSelect-icon': { color: `${anafisTheme.colors.tabs.fitting.main}CC` },
 };
 
 export default function CsvSettingsDialog({
@@ -54,13 +61,13 @@ export default function CsvSettingsDialog({
       slotProps={{
         paper: {
           sx: {
-            backgroundColor: '#0f0f14 !important',
+            backgroundColor: `${anafisTheme.colors.background.primary} !important`,
             backgroundImage: 'none !important',
             opacity: 1,
             backdropFilter: 'none !important',
             mixBlendMode: 'normal',
-            border: '1px solid rgba(255,179,0,0.15)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            border: `1px solid ${anafisTheme.colors.tabs.fitting.main}26`,
+            boxShadow: anafisTheme.shadows.xl,
           },
         },
       }}
@@ -85,19 +92,19 @@ export default function CsvSettingsDialog({
                 sx: {
                   maxHeight: DROPDOWN_MAX_HEIGHT,
                   overflowY: 'auto',
-                  backgroundColor: '#1a1a22 !important',
+                  backgroundColor: `${anafisTheme.colors.background.elevated} !important`,
                   backgroundImage: 'none !important',
                   opacity: 1,
                   backdropFilter: 'none !important',
                   mixBlendMode: 'normal',
-                  color: 'rgba(255,255,255,0.95)',
+                  color: anafisTheme.colors.text.primary,
                   '& .MuiMenuItem-root': { color: 'inherit' },
                   '& .MuiMenuItem-root:hover': {
-                    backgroundColor: 'rgba(255,179,0,0.06)',
+                    backgroundColor: `${anafisTheme.colors.tabs.fitting.main}0F`,
                   },
                   '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
                     {
-                      backgroundColor: 'rgba(255,179,0,0.12) !important',
+                      backgroundColor: `${anafisTheme.colors.tabs.fitting.main}1F !important`,
                       color: 'inherit',
                     },
                 },
@@ -128,19 +135,19 @@ export default function CsvSettingsDialog({
                 sx: {
                   maxHeight: DROPDOWN_MAX_HEIGHT,
                   overflowY: 'auto',
-                  backgroundColor: '#1a1a22 !important',
+                  backgroundColor: `${anafisTheme.colors.background.elevated} !important`,
                   backgroundImage: 'none !important',
                   opacity: 1,
                   backdropFilter: 'none !important',
                   mixBlendMode: 'normal',
-                  color: 'rgba(255,255,255,0.95)',
+                  color: anafisTheme.colors.text.primary,
                   '& .MuiMenuItem-root': { color: 'inherit' },
                   '& .MuiMenuItem-root:hover': {
-                    backgroundColor: 'rgba(255,179,0,0.06)',
+                    backgroundColor: `${anafisTheme.colors.tabs.fitting.main}0F`,
                   },
                   '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
                     {
-                      backgroundColor: 'rgba(255,179,0,0.12) !important',
+                      backgroundColor: `${anafisTheme.colors.tabs.fitting.main}1F !important`,
                       color: 'inherit',
                     },
                 },
@@ -174,9 +181,20 @@ export default function CsvSettingsDialog({
         />
       </DialogContent>
       <DialogActions>
-        <Button color="warning" onClick={onClose}>
+        <UnifiedButton
+          variant="secondary"
+          onClick={onClose}
+          sx={{
+            color: anafisTheme.colors.tabs.fitting.main,
+            borderColor: anafisTheme.colors.tabs.fitting.main,
+            '&:hover': {
+              borderColor: anafisTheme.colors.tabs.fitting.main,
+              backgroundColor: `${anafisTheme.colors.tabs.fitting.main}1A`,
+            },
+          }}
+        >
           Close
-        </Button>
+        </UnifiedButton>
       </DialogActions>
     </Dialog>
   );
