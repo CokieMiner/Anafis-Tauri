@@ -17,11 +17,11 @@ import {
   Typography,
 } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot, { Plotly } from '@/shared/components/PlotlyChart';
 import { ANAFIS_CHART_CONFIG } from '@/shared/components/plotlyTheme';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
+import { saveWithMemory } from '@/shared/utils/dialogMemory';
 import type {
   AxisSettings,
   DependentBinding,
@@ -44,6 +44,7 @@ interface FitVisualizationProps {
   dependentBinding: DependentBinding;
   fitResult: OdrFitResponse | null;
   axisSettings: AxisSettings;
+  customFormula: string;
 }
 
 function assignCartesianAxes(
@@ -75,6 +76,7 @@ export default function FitVisualization({
   dependentBinding,
   fitResult,
   axisSettings,
+  customFormula,
 }: FitVisualizationProps) {
   const [gridData, setGridData] = useState<GridEvaluationResponse | null>(null);
   const gridRequestRef = useRef(0);
@@ -189,7 +191,8 @@ export default function FitVisualization({
         variableBindings,
         dependentBinding,
         axisSettings,
-        fitResult
+        fitResult,
+        customFormula
       );
     }
 
@@ -200,7 +203,8 @@ export default function FitVisualization({
         dependentBinding,
         axisSettings,
         fitResult,
-        gridData
+        gridData,
+        customFormula
       );
     }
 
@@ -208,7 +212,8 @@ export default function FitVisualization({
       importedData,
       dependentBinding,
       axisSettings,
-      fitResult
+      fitResult,
+      customFormula
     );
   }, [
     mode,
@@ -218,6 +223,7 @@ export default function FitVisualization({
     fitResult,
     gridData,
     axisSettings,
+    customFormula,
   ]);
 
   const modeLabel =
@@ -252,7 +258,7 @@ export default function FitVisualization({
       const extension = exportFormat;
       const filterName = exportFormat === 'svg' ? 'SVG Image' : 'PNG Image';
 
-      const filePath = await save({
+      const filePath = await saveWithMemory({
         defaultPath: `fit_plot_${Date.now()}.${extension}`,
         filters: [{ name: filterName, extensions: [extension] }],
       });
@@ -274,6 +280,7 @@ export default function FitVisualization({
           dependentBinding,
           axisSettings,
           fitResult,
+          customFormula,
           exportTheme
         );
         exportData = result.data;
@@ -286,6 +293,7 @@ export default function FitVisualization({
           axisSettings,
           fitResult,
           gridData,
+          customFormula,
           exportTheme
         );
         exportData = result.data;
@@ -296,6 +304,7 @@ export default function FitVisualization({
           dependentBinding,
           axisSettings,
           fitResult,
+          customFormula,
           exportTheme
         );
         exportData = result.data;
@@ -387,6 +396,10 @@ export default function FitVisualization({
               ...mainX,
               domain: [0, 1],
               anchor: 'y2',
+              title: {
+                ...((mainX.title as Partial<Plotly.Title>) ?? {}),
+                text: '', // Remove title from the top plot
+              },
             },
             yaxis2: {
               ...mainY,
@@ -411,11 +424,18 @@ export default function FitVisualization({
       document.body.appendChild(tempDiv);
 
       try {
-        await Plotly.newPlot(tempDiv, finalData, {
+        const layoutForExport = {
           ...finalLayout,
           width: exportWidth,
           height: exportHeight,
-        });
+        };
+
+        // Enforce solid background for dark exports so they aren't transparent
+        if (exportTheme === 'dark') {
+          layoutForExport.paper_bgcolor = '#0e0e12';
+        }
+
+        await Plotly.newPlot(tempDiv, finalData, layoutForExport);
 
         if (exportFormat === 'svg') {
           const svgDataUrl = await Plotly.toImage(tempDiv, {
@@ -475,6 +495,7 @@ export default function FitVisualization({
     gridData,
     data,
     layout,
+    customFormula,
   ]);
 
   return (

@@ -1,9 +1,9 @@
 // exportService.ts - Simplified export service
 // Supports: CSV, TSV, TXT, Parquet, HTML, Markdown, TeX, AnaFisSpread
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
 import type { ExportOptions } from '@/core/types/export';
 import { err, isErr, ok, type Result } from '@/core/types/result';
+import { saveWithMemory } from '@/shared/utils/dialogMemory';
 import type {
   SpreadsheetRef,
   WorkbookSnapshot,
@@ -75,7 +75,7 @@ export class ExportService implements ExportService {
   ): Promise<Result<ExportResult, ExportError>> {
     try {
       const filter = FILE_FILTERS[options.format];
-      const filePath = await save({
+      const filePath = await saveWithMemory({
         filters: [filter],
         defaultPath: `export.${filter.extensions[0]}`,
       });

@@ -158,7 +158,6 @@ const FittingTab = () => {
             <FitSettingsSection
               parameterConfigs={fit.state.parameterConfigs}
               advancedSettings={fit.state.advancedSettings}
-              dependentVariableName={dependentVariableName}
               onUpdateParameterConfig={fit.updateParameterConfig}
               onUpdateAdvancedSettings={fit.setAdvancedSettings}
             />
@@ -188,6 +187,7 @@ const FittingTab = () => {
               dependentBinding={fit.state.dependentBinding}
               fitResult={fit.state.fitResult}
               axisSettings={fit.state.axisSettings}
+              customFormula={fit.state.customFormula}
             />
           </Box>
 
