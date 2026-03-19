@@ -117,6 +117,21 @@ export function build2DChart(
     marker: { color: CHART_COLORS.primary, size: 10 },
   };
 
+  // Determine legend position to avoid overlap
+  let legendX = 0; // default left
+  const minX = Math.min(...xCol.data);
+  const maxX = Math.max(...xCol.data);
+  const minY = Math.min(...depCol.data);
+  const maxY = Math.max(...depCol.data);
+  const leftThreshold = minX + 0.5 * (maxX - minX);
+  const topThreshold = minY + 0.75 * (maxY - minY);
+  const hasDataTopLeft = xCol.data.some(
+    (x, i) => x < leftThreshold && (depCol.data[i] ?? 0) > topThreshold
+  );
+  if (hasDataTopLeft) {
+    legendX = 1; // move to right
+  }
+
   if (sigDepCol) {
     scatter.error_y = {
       type: 'data',
@@ -140,6 +155,8 @@ export function build2DChart(
   traces.push(scatter);
 
   if (fitResult?.success) {
+    const legendText = buildFitLegendName(fitResult, customFormula);
+
     const indices = xCol.data
       .map((_, idx) => idx)
       .sort((a, b) => (xCol.data[a] ?? 0) - (xCol.data[b] ?? 0));
@@ -149,7 +166,7 @@ export function build2DChart(
       y: indices.map((idx) => fitResult.fittedValues[idx] ?? 0),
       mode: 'lines',
       type: 'scatter',
-      name: buildFitLegendName(fitResult, customFormula),
+      name: legendText,
       line: { color: CHART_COLORS.fit, width: 2.5, shape: 'spline' },
     });
   }
@@ -162,8 +179,10 @@ export function build2DChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         bgcolor: 'transparent',
-        x: 0,
-        y: 1,
+        x: legendX === 0 ? 0.02 : 0.98,
+        xanchor: legendX === 0 ? 'left' : 'right',
+        y: 0.98,
+        yanchor: 'top',
       },
       xaxis: {
         ...baseAxis,
@@ -228,7 +247,27 @@ export function build3DChart(
     },
   ];
 
+  // Determine legend position to avoid overlap
+  let legendX = 0; // default left
+  const minX = Math.min(...xCol.data);
+  const maxX = Math.max(...xCol.data);
+  const minZ = Math.min(...depCol.data);
+  const maxZ = Math.max(...depCol.data);
+  const leftThreshold = minX + 0.5 * (maxX - minX);
+  const topThreshold = minZ + 0.75 * (maxZ - minZ);
+  const hasDataTopLeft = xCol.data.some(
+    (x, i) => x < leftThreshold && (depCol.data[i] ?? 0) > topThreshold
+  );
+  const hasDataTopRight = xCol.data.some(
+    (x, i) => x >= leftThreshold && (depCol.data[i] ?? 0) > topThreshold
+  );
+  if (hasDataTopLeft && !hasDataTopRight) {
+    legendX = 1; // move to right only if data is only on left
+  }
+
   if (fitResult?.success) {
+    const legendText = buildFitLegendName(fitResult, customFormula);
+
     if (gridData && gridData.z.length > 0) {
       const res = Math.round(Math.sqrt(gridData.z.length));
       if (res * res === gridData.z.length) {
@@ -248,7 +287,7 @@ export function build3DChart(
           y: yUnique,
           z: zMatrix,
           type: 'surface',
-          name: buildFitLegendName(fitResult, customFormula),
+          name: legendText,
           opacity: 0.6,
           colorscale: [
             [0, CHART_COLORS.fit],
@@ -302,8 +341,10 @@ export function build3DChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         bgcolor: 'transparent',
-        x: 0,
-        y: 1,
+        x: legendX === 0 ? 0.02 : 0.98,
+        xanchor: legendX === 0 ? 'left' : 'right',
+        y: 0.98,
+        yanchor: 'top',
       },
       scene: {
         xaxis: {
@@ -385,6 +426,9 @@ export function buildPredictedChart(
   const hi = Math.max(...allVals);
   const pad = (hi - lo) * 0.05;
 
+  const legendText = buildFitLegendName(fitResult, customFormula);
+  const legendX = 0; // default left
+
   return {
     data: [
       {
@@ -399,7 +443,7 @@ export function buildPredictedChart(
         y: observed.data,
         mode: 'markers',
         type: 'scatter',
-        name: buildFitLegendName(fitResult, customFormula),
+        name: legendText,
         marker: { color: CHART_COLORS.primary, size: 10 },
       },
     ],
@@ -409,7 +453,7 @@ export function buildPredictedChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         bgcolor: 'transparent',
-        x: 0,
+        x: legendX,
         y: 1,
       },
       xaxis: {
@@ -557,8 +601,10 @@ export function buildResidualsChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         bgcolor: 'transparent',
-        x: 0,
-        y: 1,
+        x: 0.02,
+        xanchor: 'left',
+        y: 0.98,
+        yanchor: 'top',
       },
       margin: { l: 75, r: 24, t: 15, b: 60 },
       xaxis: {
