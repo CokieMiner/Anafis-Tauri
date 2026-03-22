@@ -10,10 +10,8 @@
 //! The module handles parsing and converting various file formats to Univer-compatible workbook data.
 
 use crate::error::{CommandResult, file_not_found, import_error, validation_error};
-use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::env;
 use std::path::{Path, PathBuf};
 
 /// Validate and canonicalize a file path to prevent directory traversal
@@ -24,24 +22,6 @@ fn validate_and_canonicalize_path(file_path: &str) -> Result<PathBuf, String> {
     let canonical_path = path
         .canonicalize()
         .map_err(|e| format!("Failed to canonicalize path '{file_path}': {e}"))?;
-
-    // Verify the canonicalized path is within allowed directories
-    // For security, restrict to user's home directory and system temp directories
-    let home_dir = home_dir().ok_or_else(|| "Could not determine home directory".to_string())?;
-    let temp_dir = env::temp_dir();
-
-    let allowed_paths = [home_dir.as_path(), temp_dir.as_path()];
-
-    let is_allowed = allowed_paths
-        .iter()
-        .any(|allowed| canonical_path.starts_with(allowed));
-
-    if !is_allowed {
-        return Err(format!(
-            "Access denied: path '{}' is outside allowed directories",
-            canonical_path.display()
-        ));
-    }
 
     // Verify file exists
     if !canonical_path.exists() {

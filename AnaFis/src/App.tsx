@@ -175,8 +175,10 @@ function App() {
           );
 
           const fileName =
-            filePath.split('/').pop()?.replace('.anafispread', '') ??
-            'Opened File';
+            filePath
+              .split('/')
+              .pop()
+              ?.replace(/\.anafispread|\.anafis/i, '') ?? 'Opened File';
           const tabId = `spreadsheet-opened-${Date.now()}`;
 
           // Instead of immediate adding via ref which could be missing, schedule it

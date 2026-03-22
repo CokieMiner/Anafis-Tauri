@@ -137,11 +137,13 @@ pub fn run() {
             // Check for file association open (when app is launched with a file)
             let args: Vec<String> = std::env::args().collect();
             let mut pending_file = None;
-            if args.len() > 1 {
-                let file_path = args[1].clone();
-                if file_path.ends_with(".anafispread") {
-                    utils::log_info(&format!("Opening file from association: {file_path}"));
-                    pending_file = Some(file_path);
+            for arg in args.into_iter().skip(1) {
+                let lower_arg = arg.to_lowercase();
+                if lower_arg.ends_with(".anafispread") {
+                    let normalized_path = arg.replace('\\', "/");
+                    utils::log_info(&format!("Opening file from association: {normalized_path}"));
+                    pending_file = Some(normalized_path);
+                    break;
                 }
             }
             app.manage(startup::StartupFileState(std::sync::Mutex::new(pending_file)));
