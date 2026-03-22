@@ -304,6 +304,7 @@ const UniverSpreadsheet = forwardRef<UniverSpreadsheetRef, Props>(
       // UI foundation
       univer.registerPlugin(UniverUIPlugin, {
         container: containerIdRef.current,
+        ribbonType: 'collapsed',
       });
       univer.registerPlugin(UniverDocsPlugin, { hasScroll: false });
       univer.registerPlugin(UniverDocsUIPlugin);

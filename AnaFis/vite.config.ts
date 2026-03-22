@@ -252,14 +252,4 @@ export default defineConfig(() => ({
       ],
     },
   },
-
-  // Performance optimizations
-  esbuild: {
-    // Remove console logs in production
-    drop: (process.env.NODE_ENV === 'production'
-      ? ['console', 'debugger']
-      : []) as ('console' | 'debugger')[],
-    // Target modern browsers
-    target: 'esnext',
-  },
 }));
