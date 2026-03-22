@@ -44,6 +44,7 @@ import SequenceList from '@/shared/dataLibrary/components/SequenceList';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
 import { createAnafisTheme } from '@/shared/theme';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
+import { saveWithMemory } from '@/shared/utils/dialogMemory';
 import { notifyWindowReady } from '@/shared/utils/windowReady';
 
 // Toolbar props interface
@@ -379,8 +380,7 @@ export const DataLibraryWindowContent: React.FC = () => {
     }
 
     try {
-      const { save } = await import('@tauri-apps/plugin-dialog');
-      const filePath = await save({
+      const filePath = await saveWithMemory({
         filters: [
           {
             name: 'CSV',

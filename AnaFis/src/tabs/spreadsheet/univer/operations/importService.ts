@@ -1,13 +1,13 @@
 // importService.ts - Simplified import service
 // Supports: CSV, TSV, TXT, Parquet, AnaFisSpread (no HTML/Markdown)
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
 import type {
   ImportError,
   ImportOptions,
   ImportResult,
 } from '@/core/types/import';
 import { err, isErr, ok, type Result } from '@/core/types/result';
+import { openWithMemory } from '@/shared/utils/dialogMemory';
 import type {
   CellValue,
   SheetSnapshot,
@@ -633,8 +633,7 @@ export class ImportService implements ImportService {
     detectedFormat: ImportFormat;
   } | null> {
     try {
-      const file = await open({
-        multiple: false,
+      const file = await openWithMemory({
         filters: [
           {
             name: 'All Supported',

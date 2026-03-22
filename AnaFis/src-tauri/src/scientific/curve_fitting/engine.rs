@@ -140,9 +140,9 @@ impl ModelCache {
 /// # Errors
 /// Returns `OdrError::Validation` if the identifier is empty or contains invalid characters.
 pub fn validate_identifier(identifier: &str, label: &str) -> OdrResult<()> {
-    if identifier.is_empty() {
+    if identifier.trim().is_empty() {
         return Err(OdrError::Validation(format!(
-            "{label} names cannot be empty"
+            "{label} names cannot be empty or only whitespace"
         )));
     }
 
@@ -150,15 +150,15 @@ pub fn validate_identifier(identifier: &str, label: &str) -> OdrResult<()> {
     let first = chars
         .next()
         .ok_or_else(|| OdrError::Validation(format!("{label} names cannot be empty")))?;
-    if !(first.is_ascii_alphabetic() || first == '_') {
+    if !(first.is_alphabetic() || first == '_') {
         return Err(OdrError::Validation(format!(
             "Invalid {label} '{identifier}': first character must be a letter or '_'"
         )));
     }
 
-    if !chars.all(|c| c.is_ascii_alphanumeric() || c == '_') {
+    if !chars.all(|c| c.is_alphanumeric() || c == '_' || c == ' ' || c == '(' || c == ')') {
         return Err(OdrError::Validation(format!(
-            "Invalid {label} '{identifier}': use only letters, digits, and '_'"
+            "Invalid {label} '{identifier}': use only letters, digits, spaces, parentheses, and '_'"
         )));
     }
 

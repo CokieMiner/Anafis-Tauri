@@ -17,10 +17,10 @@ import {
   Typography,
 } from '@mui/material';
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DataSequence } from '@/core/types/dataLibrary';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
+import { openWithMemory } from '@/shared/utils/dialogMemory';
 import {
   type CsvImportSettings,
   type DataSourceMode,
@@ -228,8 +228,7 @@ export default function DataSourceSection({
 
   const handleCsvImport = useCallback(async () => {
     try {
-      const filePath = await open({
-        multiple: false,
+      const filePath = await openWithMemory({
         filters: [{ name: 'CSV', extensions: ['csv', 'tsv', 'txt', 'dat'] }],
       });
 
@@ -237,11 +236,15 @@ export default function DataSourceSection({
         return;
       }
 
-      const text = await invoke<string>('read_file_text', { path: filePath });
+      const filePathStr = filePath as string;
+
+      const text = await invoke<string>('read_file_text', {
+        path: filePathStr,
+      });
       const parsed = parseCsvText(
         text,
         csvSettings,
-        filePath.split('/').pop() ?? 'CSV'
+        filePathStr.split('/').pop() ?? 'CSV'
       );
 
       setImportError(null);

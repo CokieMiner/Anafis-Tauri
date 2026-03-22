@@ -10,7 +10,6 @@ import type { AdvancedSettings, ParameterConfig } from '../types/fittingTypes';
 interface FitSettingsSectionProps {
   parameterConfigs: ParameterConfig[];
   advancedSettings: AdvancedSettings;
-  dependentVariableName?: string | undefined;
   onUpdateParameterConfig: (
     index: number,
     update: Partial<ParameterConfig>
@@ -40,7 +39,6 @@ const amberInputSx = {
 export default function FitSettingsSection({
   parameterConfigs,
   advancedSettings,
-  dependentVariableName,
   onUpdateParameterConfig,
   onUpdateAdvancedSettings,
 }: FitSettingsSectionProps) {
@@ -177,24 +175,22 @@ export default function FitSettingsSection({
           />
         </Box>
       </Box>
-      {dependentVariableName && (
-        <FormControlLabel
-          control={
-            <Switch
-              size="small"
-              checked={advancedSettings.usePoissonWeighting ?? false}
-              onChange={(e) =>
-                onUpdateAdvancedSettings({
-                  ...advancedSettings,
-                  usePoissonWeighting: e.target.checked,
-                })
-              }
-            />
-          }
-          label="Use Poisson weighting"
-          sx={{ mt: 1, color: 'text.secondary' }}
-        />
-      )}
+      <FormControlLabel
+        control={
+          <Switch
+            size="small"
+            checked={advancedSettings.usePoissonWeighting ?? false}
+            onChange={(e) =>
+              onUpdateAdvancedSettings({
+                ...advancedSettings,
+                usePoissonWeighting: e.target.checked,
+              })
+            }
+          />
+        }
+        label="Use Poisson weighting"
+        sx={{ mt: 1, color: 'text.secondary' }}
+      />
     </Box>
   );
 }

@@ -167,13 +167,13 @@ export const UnifiedButton = forwardRef<HTMLButtonElement, UnifiedButtonProps>(
           return {
             ...baseStyles,
             fontWeight: 600,
-            backgroundColor: anafisTheme.colors.sidebar.primary,
-            color: anafisTheme.colors.sidebar.primaryContrast,
-            border: `1px solid ${anafisTheme.colors.sidebar.primary}`,
+            backgroundColor: anafisTheme.colors.primary.main,
+            color: anafisTheme.colors.primary.contrast,
+            border: `1px solid ${anafisTheme.colors.primary.main}`,
             px: 2,
             py: 1,
             '&:hover': {
-              backgroundColor: anafisTheme.colors.sidebar.hover,
+              backgroundColor: anafisTheme.colors.primary.dark,
               transform: 'translateY(-1px)',
               boxShadow: anafisTheme.shadows.primary,
             },
@@ -189,13 +189,13 @@ export const UnifiedButton = forwardRef<HTMLButtonElement, UnifiedButtonProps>(
             ...baseStyles,
             fontWeight: 500,
             backgroundColor: 'transparent',
-            color: anafisTheme.colors.sidebar.primary,
-            border: `1px solid ${anafisTheme.colors.sidebar.primary}`,
+            color: anafisTheme.colors.primary.main,
+            border: `1px solid ${anafisTheme.colors.primary.main}`,
             px: 2,
             py: 1,
             '&:hover': {
-              borderColor: anafisTheme.colors.sidebar.primary,
-              backgroundColor: `${anafisTheme.colors.sidebar.primary}1A`,
+              borderColor: anafisTheme.colors.primary.main,
+              backgroundColor: `${anafisTheme.colors.primary.main}1A`,
               transform: 'translateY(-1px)',
             },
           };
@@ -265,7 +265,7 @@ export const UnifiedIconButton = forwardRef<
     // Default icon button styles
     const color = tabType
       ? anafisTheme.colors.tabs[tabType].main
-      : anafisTheme.colors.sidebar.primary;
+      : anafisTheme.colors.primary.main;
 
     return {
       color: anafisTheme.colors.text.secondary,

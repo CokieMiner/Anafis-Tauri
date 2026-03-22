@@ -42,39 +42,21 @@ function buildFitValueLines(fitResult: OdrFitResponse): string[] {
   });
 }
 
-function buildFitSummaryAnnotation(
+function buildFitLegendName(
   fitResult: OdrFitResponse,
-  theme: 'dark' | 'light'
-): Partial<Plotly.Annotations> {
+  customFormula: string
+): string {
   const parameterLines = buildFitValueLines(fitResult);
 
-  return {
-    text: [
-      '<b>Fit summary</b>',
-      `χ²red = ${fitResult.chiSquaredReduced.toPrecision(
-        4
-      )}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
-      ...parameterLines,
-    ].join('<br>'),
-    showarrow: false,
-    align: 'left',
-    xref: 'paper',
-    yref: 'paper',
-    x: 0.99,
-    y: 0.99,
-    xanchor: 'right',
-    yanchor: 'top',
-    font: {
-      color: theme === 'dark' ? '#d0d0d0' : '#333',
-      size: 10,
-      family: 'monospace',
-    },
-    bgcolor:
-      theme === 'dark' ? 'rgba(14, 14, 18, 0.65)' : 'rgba(255, 255, 255, 0.9)',
-    bordercolor: theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-    borderwidth: 1,
-    borderpad: 6,
-  };
+  const formulaStr = customFormula.trim() || fitResult.formula;
+
+  return [
+    `<b>Fit : ${formulaStr}</b>`,
+    `χ²red = ${fitResult.chiSquaredReduced.toPrecision(
+      4
+    )}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
+    ...parameterLines,
+  ].join('<br>');
 }
 
 export function buildEmptyChart(theme: 'dark' | 'light' = 'dark') {
@@ -87,7 +69,7 @@ export function buildEmptyChart(theme: 'dark' | 'light' = 'dark') {
         {
           text: 'Import data and run a fit',
           showarrow: false,
-          font: { color: '#666', size: 14 },
+          font: { color: '#666', size: 24 },
           xref: 'paper' as const,
           yref: 'paper' as const,
           x: 0.5,
@@ -106,6 +88,7 @@ export function build2DChart(
   dependentBinding: DependentBinding,
   axisSettings: AxisSettings,
   fitResult: OdrFitResponse | null,
+  customFormula: string,
   theme: 'dark' | 'light' = 'dark'
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
   const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
@@ -131,16 +114,31 @@ export function build2DChart(
     mode: 'markers',
     type: 'scatter',
     name: 'Data',
-    marker: { color: CHART_COLORS.primary, size: 6 },
+    marker: { color: CHART_COLORS.primary, size: 10 },
   };
+
+  // Determine legend position to avoid overlap
+  let legendX = 0; // default left
+  const minX = Math.min(...xCol.data);
+  const maxX = Math.max(...xCol.data);
+  const minY = Math.min(...depCol.data);
+  const maxY = Math.max(...depCol.data);
+  const leftThreshold = minX + 0.5 * (maxX - minX);
+  const topThreshold = minY + 0.75 * (maxY - minY);
+  const hasDataTopLeft = xCol.data.some(
+    (x, i) => x < leftThreshold && (depCol.data[i] ?? 0) > topThreshold
+  );
+  if (hasDataTopLeft) {
+    legendX = 1; // move to right
+  }
 
   if (sigDepCol) {
     scatter.error_y = {
       type: 'data',
       array: sigDepCol.data,
       visible: true,
-      thickness: 1.5,
-      width: 3,
+      thickness: 2.5,
+      width: 5.5,
     };
   }
 
@@ -149,15 +147,16 @@ export function build2DChart(
       type: 'data',
       array: sigXCol.data,
       visible: true,
-      thickness: 1.5,
-      width: 3,
+      thickness: 2.5,
+      width: 5.5,
     };
   }
 
   traces.push(scatter);
 
-  const annotations: Partial<Plotly.Annotations>[] = [];
   if (fitResult?.success) {
+    const legendText = buildFitLegendName(fitResult, customFormula);
+
     const indices = xCol.data
       .map((_, idx) => idx)
       .sort((a, b) => (xCol.data[a] ?? 0) - (xCol.data[b] ?? 0));
@@ -167,11 +166,9 @@ export function build2DChart(
       y: indices.map((idx) => fitResult.fittedValues[idx] ?? 0),
       mode: 'lines',
       type: 'scatter',
-      name: 'Fit',
+      name: legendText,
       line: { color: CHART_COLORS.fit, width: 2.5, shape: 'spline' },
     });
-
-    annotations.push(buildFitSummaryAnnotation(fitResult, theme));
   }
 
   return {
@@ -180,17 +177,19 @@ export function build2DChart(
       ...baseLayout,
       showlegend: Boolean(fitResult?.success),
       legend: {
-        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         bgcolor: 'transparent',
-        x: 0,
-        y: 1,
+        x: legendX === 0 ? 0.02 : 0.98,
+        xanchor: legendX === 0 ? 'left' : 'right',
+        y: 0.98,
+        yanchor: 'top',
       },
       xaxis: {
         ...baseAxis,
         type: axisSettings.x.scale,
         title: {
           text: resolveAxisLabel(axisSettings, 'x', xCol.name),
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 20 },
         },
       },
       yaxis: {
@@ -198,10 +197,10 @@ export function build2DChart(
         type: axisSettings.y.scale,
         title: {
           text: resolveAxisLabel(axisSettings, 'y', depCol.name),
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 20 },
         },
       },
-      annotations,
+      annotations: [],
     },
   };
 }
@@ -213,6 +212,7 @@ export function build3DChart(
   axisSettings: AxisSettings,
   fitResult: OdrFitResponse | null,
   gridData: { x: number[]; y: number[]; z: number[] } | null,
+  customFormula: string,
   theme: 'dark' | 'light' = 'dark'
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
   const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
@@ -243,11 +243,31 @@ export function build3DChart(
       mode: 'markers',
       type: 'scatter3d',
       name: 'Data',
-      marker: { color: CHART_COLORS.primary, size: 4, opacity: 0.9 },
+      marker: { color: CHART_COLORS.primary, size: 7, opacity: 0.9 },
     },
   ];
 
+  // Determine legend position to avoid overlap
+  let legendX = 0; // default left
+  const minX = Math.min(...xCol.data);
+  const maxX = Math.max(...xCol.data);
+  const minZ = Math.min(...depCol.data);
+  const maxZ = Math.max(...depCol.data);
+  const leftThreshold = minX + 0.5 * (maxX - minX);
+  const topThreshold = minZ + 0.75 * (maxZ - minZ);
+  const hasDataTopLeft = xCol.data.some(
+    (x, i) => x < leftThreshold && (depCol.data[i] ?? 0) > topThreshold
+  );
+  const hasDataTopRight = xCol.data.some(
+    (x, i) => x >= leftThreshold && (depCol.data[i] ?? 0) > topThreshold
+  );
+  if (hasDataTopLeft && !hasDataTopRight) {
+    legendX = 1; // move to right only if data is only on left
+  }
+
   if (fitResult?.success) {
+    const legendText = buildFitLegendName(fitResult, customFormula);
+
     if (gridData && gridData.z.length > 0) {
       const res = Math.round(Math.sqrt(gridData.z.length));
       if (res * res === gridData.z.length) {
@@ -267,7 +287,7 @@ export function build3DChart(
           y: yUnique,
           z: zMatrix,
           type: 'surface',
-          name: 'Fitted surface',
+          name: legendText,
           opacity: 0.6,
           colorscale: [
             [0, CHART_COLORS.fit],
@@ -313,21 +333,18 @@ export function build3DChart(
     } as Plotly.Data);
   }
 
-  const annotations: Partial<Plotly.Annotations>[] = [];
-  if (fitResult?.success) {
-    annotations.push(buildFitSummaryAnnotation(fitResult, theme));
-  }
-
   return {
     data: traces,
     layout: {
       ...baseLayout,
       showlegend: true,
       legend: {
-        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+        font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         bgcolor: 'transparent',
-        x: 0,
-        y: 1,
+        x: legendX === 0 ? 0.02 : 0.98,
+        xanchor: legendX === 0 ? 'left' : 'right',
+        y: 0.98,
+        yanchor: 'top',
       },
       scene: {
         xaxis: {
@@ -359,7 +376,7 @@ export function build3DChart(
         },
         bgcolor: 'transparent',
       },
-      annotations,
+      annotations: [],
     },
   };
 }
@@ -369,6 +386,7 @@ export function buildPredictedChart(
   dependentBinding: DependentBinding,
   axisSettings: AxisSettings,
   fitResult: OdrFitResponse | null,
+  customFormula: string,
   theme: 'dark' | 'light' = 'dark'
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
   const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
@@ -382,7 +400,7 @@ export function buildPredictedChart(
           {
             text: 'Run a fit to see Predicted vs Observed',
             showarrow: false,
-            font: { color: '#666', size: 14 },
+            font: { color: '#666', size: 24 },
             xref: 'paper' as const,
             yref: 'paper' as const,
             x: 0.5,
@@ -408,9 +426,8 @@ export function buildPredictedChart(
   const hi = Math.max(...allVals);
   const pad = (hi - lo) * 0.05;
 
-  const annotations: Partial<Plotly.Annotations>[] = [
-    buildFitSummaryAnnotation(fitResult, theme),
-  ];
+  const legendText = buildFitLegendName(fitResult, customFormula);
+  const legendX = 0; // default left
 
   return {
     data: [
@@ -426,8 +443,8 @@ export function buildPredictedChart(
         y: observed.data,
         mode: 'markers',
         type: 'scatter',
-        name: 'Predicted vs Observed',
-        marker: { color: CHART_COLORS.primary, size: 6 },
+        name: legendText,
+        marker: { color: CHART_COLORS.primary, size: 10 },
       },
     ],
     layout: {
@@ -436,7 +453,7 @@ export function buildPredictedChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         bgcolor: 'transparent',
-        x: 0,
+        x: legendX,
         y: 1,
       },
       xaxis: {
@@ -444,7 +461,7 @@ export function buildPredictedChart(
         type: axisSettings.x.scale,
         title: {
           text: resolveAxisLabel(axisSettings, 'x', 'Predicted'),
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 20 },
         },
       },
       yaxis: {
@@ -452,10 +469,10 @@ export function buildPredictedChart(
         type: axisSettings.y.scale,
         title: {
           text: resolveAxisLabel(axisSettings, 'y', 'Observed'),
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 12 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 20 },
         },
       },
-      annotations,
+      annotations: [],
     },
   };
 }
@@ -479,7 +496,7 @@ export function buildResidualsChart(
           {
             text: 'Residuals will appear after fitting',
             showarrow: false,
-            font: { color: theme === 'dark' ? '#555' : '#999', size: 12 },
+            font: { color: theme === 'dark' ? '#555' : '#999', size: 20 },
             xref: 'paper',
             yref: 'paper',
             x: 0.5,
@@ -519,7 +536,7 @@ export function buildResidualsChart(
           {
             text: 'No residual data available',
             showarrow: false,
-            font: { color: theme === 'dark' ? '#555' : '#999', size: 12 },
+            font: { color: theme === 'dark' ? '#555' : '#999', size: 20 },
             xref: 'paper',
             yref: 'paper',
             x: 0.5,
@@ -548,7 +565,7 @@ export function buildResidualsChart(
     mode: 'markers',
     type: 'scatter',
     name: 'Residuals',
-    marker: { color: CHART_COLORS.residual, size: 5 },
+    marker: { color: CHART_COLORS.residual, size: 9 },
   };
 
   if (sigYCol) {
@@ -557,8 +574,8 @@ export function buildResidualsChart(
       array: sigYCol.data,
       visible: true,
       color: 'rgba(239,83,80,0.5)',
-      thickness: 1,
-      width: 2,
+      thickness: 2,
+      width: 4,
     };
   }
 
@@ -584,16 +601,18 @@ export function buildResidualsChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         bgcolor: 'transparent',
-        x: 0,
-        y: 1,
+        x: 0.02,
+        xanchor: 'left',
+        y: 0.98,
+        yanchor: 'top',
       },
-      margin: { l: 50, r: 10, t: 15, b: 40 },
+      margin: { l: 75, r: 24, t: 15, b: 60 },
       xaxis: {
         ...baseAxis,
         type: axisSettings.x.scale,
         title: {
           text: resolveAxisLabel(axisSettings, 'x', xLabel),
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         },
       },
       yaxis: {
@@ -601,7 +620,7 @@ export function buildResidualsChart(
         type: axisSettings.y.scale,
         title: {
           text: resolveAxisLabel(axisSettings, 'y', 'Residual'),
-          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
+          font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         },
       },
     },

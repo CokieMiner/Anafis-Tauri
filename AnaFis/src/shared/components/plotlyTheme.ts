@@ -5,8 +5,9 @@
 export const ANAFIS_DARK_LAYOUT: Partial<Plotly.Layout> = {
   paper_bgcolor: 'transparent',
   plot_bgcolor: 'rgba(14, 14, 18, 0.6)',
-  font: { color: '#aaa', family: 'Inter, sans-serif', size: 11 },
-  margin: { l: 55, r: 16, t: 28, b: 44 },
+  font: { color: '#aaa', family: 'Inter, sans-serif', size: 20 },
+  legend: { font: { size: 20 } },
+  margin: { l: 75, r: 24, t: 40, b: 60 },
   showlegend: false,
   hovermode: 'closest',
 };
@@ -15,8 +16,9 @@ export const ANAFIS_DARK_LAYOUT: Partial<Plotly.Layout> = {
 const ANAFIS_LIGHT_LAYOUT: Partial<Plotly.Layout> = {
   paper_bgcolor: '#ffffff',
   plot_bgcolor: '#ffffff',
-  font: { color: '#222', family: 'Inter, sans-serif', size: 11 },
-  margin: { l: 55, r: 16, t: 28, b: 44 },
+  font: { color: '#222', family: 'Inter, sans-serif', size: 20 },
+  legend: { font: { size: 20 } },
+  margin: { l: 75, r: 24, t: 40, b: 60 },
   showlegend: false,
   hovermode: 'closest',
 };
@@ -26,7 +28,7 @@ export const ANAFIS_DARK_AXIS: Partial<Plotly.LayoutAxis> = {
   gridcolor: 'rgba(255,255,255,0.06)',
   zerolinecolor: 'rgba(255,255,255,0.12)',
   linecolor: '#444',
-  tickfont: { color: '#888', size: 10, family: 'Inter, sans-serif' },
+  tickfont: { color: '#888', size: 18, family: 'Inter, sans-serif' },
 };
 
 /** Standard light axis styling (exports) */
@@ -34,7 +36,7 @@ const ANAFIS_LIGHT_AXIS: Partial<Plotly.LayoutAxis> = {
   gridcolor: 'rgba(0,0,0,0.08)',
   zerolinecolor: 'rgba(0,0,0,0.15)',
   linecolor: 'rgba(0,0,0,0.3)',
-  tickfont: { color: '#444', size: 10, family: 'Inter, sans-serif' },
+  tickfont: { color: '#444', size: 18, family: 'Inter, sans-serif' },
 };
 
 /** Get layout + axes by theme */
