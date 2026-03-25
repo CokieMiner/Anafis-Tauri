@@ -68,4 +68,4 @@ Output is generated under `AnaFis/src-tauri/target/` (and/or configured bundle o
 
 ## License
 
-GPL-3.0-or-later. See `LICENSE`.
+Apache-2.0. See `LICENSE`.
