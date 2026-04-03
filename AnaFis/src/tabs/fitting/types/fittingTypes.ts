@@ -25,11 +25,13 @@ export interface OdrFitRequest {
   maxIterations?: number;
   tolerance?: number;
   initialDamping?: number;
+  confidenceLevel?: number;
   pointCorrelations?: number[][][]; // [point][dim][dim]
 }
 
 export interface OdrFitResponse {
   success: boolean;
+  terminationReason: string;
   message?: string;
   iterations: number;
   formula: string;
@@ -38,6 +40,8 @@ export interface OdrFitResponse {
   parameterNames: string[];
   parameterValues: number[];
   parameterUncertainties: number[];
+  parameterExpandedUncertainties: number[];
+  coverageFactor: number;
   parameterCovariance: number[][]; // Full covariance matrix
   residuals: number[];
   fittedValues: number[];
@@ -45,6 +49,10 @@ export interface OdrFitResponse {
   chiSquaredReduced: number;
   rmse: number;
   rSquared: number;
+  rSquaredPerLayer: number[];
+  effectiveRank: number;
+  conditionNumber: number;
+  assumptions: string[];
 }
 
 export interface GridEvaluationRequest {

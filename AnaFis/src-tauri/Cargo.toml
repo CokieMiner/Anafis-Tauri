@@ -51,18 +51,18 @@ flate2 = "1.1.9"
 encoding_rs = "0.8.35"
 
 # ===== DATA PROCESSING =====
-parquet = { version = "58.0.0", features = ["arrow"] }
-arrow = { version = "58.0.0", features = ["prettyprint"] }
+parquet = { version = "58.1.0", features = ["arrow"] }
+arrow = { version = "58.1.0", features = ["prettyprint"] }
 
 # ===== DATABASE =====
 rusqlite = { version = "0.39.0", features = ["bundled", "serde_json"] }
-uuid = { version = "1.22.0", features = ["v4", "serde"] }
-chrono = { version = "0.4.43", features = ["serde"] }
+uuid = { version = "1.23.0", features = ["v4", "serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 
 # ===== SCIENTIFIC COMPUTING =====
 statrs = "0.18.0"
 symb_anafis = { version = "0.8.1", features = ["parallel"] }
-nalgebra = "0.34.1"
+nalgebra = "0.34.2"
 
 [dev-dependencies]
 approx = "0.5.1"

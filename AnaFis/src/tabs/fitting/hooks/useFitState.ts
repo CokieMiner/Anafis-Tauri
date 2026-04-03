@@ -350,13 +350,15 @@ export function useFitState() {
       const response = await invoke<OdrFitResponse>('fit_custom_odr', {
         request,
       });
+      const hasUsableResult =
+        response.parameterValues.length > 0 && response.fittedValues.length > 0;
       setState((s) => ({
         ...s,
-        fitStatus: response.success
+        fitStatus: hasUsableResult
           ? ('success' as FitStatus)
           : ('error' as FitStatus),
         fitResult: response,
-        fitError: response.success ? null : (response.message ?? 'Fit failed'),
+        fitError: hasUsableResult ? null : (response.message ?? 'Fit failed'),
       }));
     } catch (err) {
       setState((s) => ({

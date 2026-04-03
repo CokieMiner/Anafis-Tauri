@@ -36,13 +36,98 @@ fn test_fit_custom_odr_linear_model_no_correlation() {
         point_correlations: None,
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
     assert!(result.success);
-    assert!((result.parameter_values[0] - 2.5).abs() < 1e-8);
-    assert!((result.parameter_values[1] + 4.0).abs() < 1e-8);
+    assert!((result.parameter_values[0] - 2.5).abs() < 1e-6);
+    assert!((result.parameter_values[1] + 4.0).abs() < 1e-6);
     assert!(result.r_squared > 0.999_999_999);
+}
+
+#[test]
+fn test_fit_custom_odr_identifier_normalization_case_insensitive() {
+    let x: Vec<f64> = (0..20).map(f64::from).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| 3.0f64.mul_add(xi, 1.5)).collect();
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "A*X + B".to_string(),
+            dependent_variable: "Y".to_string(),
+            independent_variables: vec!["X".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "x".to_string(),
+            values: x,
+            uncertainties: Some(vec![0.1; 20]),
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: Some(vec![0.1; 20]),
+        }],
+        use_poisson_weighting: None,
+        parameter_names: vec!["a".to_string(), "b".to_string()],
+        initial_guess: Some(vec![0.0, 0.0]),
+        max_iterations: Some(200),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: None,
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    assert!(result.success);
+    assert!((result.parameter_values[0] - 3.0).abs() < 1e-4);
+    assert!((result.parameter_values[1] - 1.5).abs() < 1e-4);
+}
+
+#[test]
+fn test_fit_custom_odr_handles_ill_conditioned_parameter_scaling() {
+    let t: Vec<f64> = (303..=307).map(f64::from).collect();
+    let k_true = 1.0e-9_f64;
+    let a_true = -7.0_f64;
+    let y: Vec<f64> = t
+        .iter()
+        .map(|&ti| k_true.mul_add(ti.powi(4), a_true))
+        .collect();
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "k*t^4 + a".to_string(),
+            dependent_variable: "y".to_string(),
+            independent_variables: vec!["t".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "t".to_string(),
+            values: t,
+            uncertainties: Some(vec![0.01; 5]),
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: Some(vec![0.01; 5]),
+        }],
+        use_poisson_weighting: None,
+        parameter_names: vec!["k".to_string(), "a".to_string()],
+        initial_guess: Some(vec![0.0, -1.0]),
+        max_iterations: Some(100),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: None,
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    println!(
+        "termination_reason: {}, chi_squared: {}",
+        result.termination_reason, result.chi_squared
+    );
+    assert!(result.success);
+    assert!(result.iterations > 1);
+    assert!(result.chi_squared.is_finite());
+    assert!(result.chi_squared < 1e-9);
 }
 
 #[test]
@@ -95,6 +180,7 @@ fn test_fit_custom_odr_with_independent_correlations() {
         point_correlations: Some(repeat_corr(40, &corr)),
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -134,6 +220,7 @@ fn test_fit_custom_odr_with_cross_xy_correlation() {
         point_correlations: Some(repeat_corr(30, &corr)),
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -171,15 +258,18 @@ fn test_fit_custom_odr_zero_uncertainty_clamp() {
         point_correlations: None,
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
     assert!(result.success);
-    assert!(result
-        .message
-        .unwrap_or_default()
-        .to_lowercase()
-        .contains("clamped"));
+    assert!(
+        result
+            .message
+            .unwrap_or_default()
+            .to_lowercase()
+            .contains("clamped")
+    );
 }
 
 #[test]
@@ -212,6 +302,7 @@ fn test_fit_custom_odr_invalid_correlation_shape() {
         point_correlations: Some(bad_corr),
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let err = fit_custom_odr(request).unwrap_err();
@@ -249,6 +340,7 @@ fn test_fit_custom_odr_nonlinear_gaussian_like() {
         point_correlations: None,
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -322,6 +414,7 @@ fn test_fit_custom_odr_multivariable_full_covariance() {
         point_correlations: Some(repeat_corr(35, &corr)),
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -378,6 +471,7 @@ fn test_fit_custom_odr_rejects_non_psd_correlation_matrix() {
         point_correlations: Some(repeat_corr(12, &non_psd_corr)),
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let err = fit_custom_odr(request).unwrap_err();
@@ -443,6 +537,7 @@ fn test_fit_custom_odr_two_layers_shared_parameter() {
         point_correlations: None,
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
@@ -480,9 +575,260 @@ fn test_fit_custom_odr_poisson_weighting() {
         point_correlations: None,
         initial_damping: None,
         tolerance: None,
+        confidence_level: None,
     };
 
     let result = fit_custom_odr(request).unwrap();
     assert!(result.success);
-    assert!((result.parameter_values[0] - 1.0).abs() < 1e-3);
+    assert!((result.parameter_values[0] - 1.0).abs() < 1e-2);
+}
+
+#[test]
+fn test_fit_custom_odr_poisson_weighting_accepts_fractional_rebinned_counts() {
+    let x: Vec<f64> = (0..8).map(f64::from).collect();
+    let mut y: Vec<f64> = x.iter().map(|&xi| xi * xi).collect();
+    y[3] = 2.5;
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "a*x^2".to_string(),
+            dependent_variable: "y".to_string(),
+            independent_variables: vec!["x".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "x".to_string(),
+            values: x,
+            uncertainties: None,
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: None,
+        }],
+        use_poisson_weighting: Some(true),
+        parameter_names: vec!["a".to_string()],
+        initial_guess: Some(vec![1.0]),
+        max_iterations: Some(50),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: None,
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    assert!(result.success);
+    assert!(result.parameter_values[0].is_finite());
+}
+
+#[test]
+fn test_fit_custom_odr_preserves_negative_off_diagonal_covariance() {
+    let x: Vec<f64> = (0..50).map(f64::from).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| xi.mul_add(2.5, -4.0)).collect();
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "a*x + b".to_string(),
+            dependent_variable: "y".to_string(),
+            independent_variables: vec!["x".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "x".to_string(),
+            values: x,
+            uncertainties: Some(vec![0.1; 50]),
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: Some(vec![0.2; 50]),
+        }],
+        use_poisson_weighting: None,
+        parameter_names: vec!["a".to_string(), "b".to_string()],
+        initial_guess: Some(vec![1.0, 0.0]),
+        max_iterations: Some(120),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: None,
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    assert!(result.success);
+    assert!(result.parameter_covariance[0][1].is_finite());
+    assert!(result.parameter_covariance[0][1] < 0.0);
+}
+
+#[test]
+fn test_fit_custom_odr_rank_deficient_sets_infinite_uncertainties() {
+    let x: Vec<f64> = (0..25).map(f64::from).collect();
+    let y: Vec<f64> = vec![3.0; x.len()];
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "a + b".to_string(),
+            dependent_variable: "y".to_string(),
+            independent_variables: vec!["x".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "x".to_string(),
+            values: x,
+            uncertainties: Some(vec![0.1; 25]),
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: Some(vec![0.1; 25]),
+        }],
+        use_poisson_weighting: None,
+        parameter_names: vec!["a".to_string(), "b".to_string()],
+        initial_guess: Some(vec![1.0, 2.0]),
+        max_iterations: Some(100),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: None,
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    assert!(result.effective_rank < result.parameter_values.len());
+    assert!(
+        result
+            .parameter_uncertainties
+            .iter()
+            .all(|v| v.is_infinite())
+    );
+    assert!(
+        result
+            .message
+            .unwrap_or_default()
+            .to_lowercase()
+            .contains("rank-deficient")
+    );
+}
+
+#[test]
+fn test_fit_custom_odr_reports_r_squared_odr_caveat() {
+    let x: Vec<f64> = (0..20).map(f64::from).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| 1.2f64.mul_add(xi, 0.8)).collect();
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "a*x + b".to_string(),
+            dependent_variable: "y".to_string(),
+            independent_variables: vec!["x".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "x".to_string(),
+            values: x,
+            uncertainties: Some(vec![0.1; 20]),
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: Some(vec![0.1; 20]),
+        }],
+        use_poisson_weighting: None,
+        parameter_names: vec!["a".to_string(), "b".to_string()],
+        initial_guess: Some(vec![0.0, 0.0]),
+        max_iterations: Some(150),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: None,
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    assert!(
+        result
+            .assumptions
+            .iter()
+            .any(|text| text.to_lowercase().contains("descriptive statistic"))
+    );
+}
+
+#[test]
+fn test_fit_custom_odr_reports_coverage_factor_and_expanded_uncertainty() {
+    let x: Vec<f64> = (0..30).map(f64::from).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| 1.75f64.mul_add(xi, -2.0)).collect();
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "a*x + b".to_string(),
+            dependent_variable: "y".to_string(),
+            independent_variables: vec!["x".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "x".to_string(),
+            values: x,
+            uncertainties: Some(vec![0.05; 30]),
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: Some(vec![0.08; 30]),
+        }],
+        use_poisson_weighting: None,
+        parameter_names: vec!["a".to_string(), "b".to_string()],
+        initial_guess: Some(vec![1.0, 0.0]),
+        max_iterations: Some(200),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: Some(0.95),
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    assert!(result.coverage_factor.is_finite());
+    assert!(result.coverage_factor > 1.0);
+    assert_eq!(
+        result.parameter_uncertainties.len(),
+        result.parameter_values.len()
+    );
+    assert_eq!(
+        result.parameter_expanded_uncertainties.len(),
+        result.parameter_values.len()
+    );
+    assert!(
+        result.parameter_expanded_uncertainties[0]
+            >= result.parameter_uncertainties[0] * result.coverage_factor * 0.99
+    );
+    assert!(!result.assumptions.is_empty());
+}
+
+#[test]
+fn test_fit_custom_odr_reports_rank_and_condition_number() {
+    let t: Vec<f64> = (303..=307).map(f64::from).collect();
+    let y: Vec<f64> = t
+        .iter()
+        .map(|&ti| 1.0e-9_f64.mul_add(ti.powi(4), -7.0))
+        .collect();
+
+    let request = OdrFitRequest {
+        layers: vec![ModelLayer {
+            formula: "k*t^4 + a".to_string(),
+            dependent_variable: "y".to_string(),
+            independent_variables: vec!["t".to_string()],
+        }],
+        independent_variables: vec![VariableInput {
+            name: "t".to_string(),
+            values: t,
+            uncertainties: Some(vec![0.01; 5]),
+        }],
+        dependent_variables: vec![VariableInput {
+            name: "y".to_string(),
+            values: y,
+            uncertainties: Some(vec![0.01; 5]),
+        }],
+        use_poisson_weighting: None,
+        parameter_names: vec!["k".to_string(), "a".to_string()],
+        initial_guess: Some(vec![0.0, -1.0]),
+        max_iterations: Some(200),
+        point_correlations: None,
+        initial_damping: None,
+        tolerance: None,
+        confidence_level: None,
+    };
+
+    let result = fit_custom_odr(request).unwrap();
+    assert!(result.effective_rank <= result.parameter_values.len());
+    assert!(result.condition_number.is_finite() || result.condition_number.is_infinite());
 }

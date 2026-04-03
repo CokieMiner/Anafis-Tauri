@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Input data for a variable (independent or dependent) in an ODR fit.
+/// Input data for a variable (independent or dependent) in a profiled ODR fit.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VariableInput {
@@ -13,7 +13,7 @@ pub struct VariableInput {
     pub uncertainties: Option<Vec<f64>>, // Absolute uncertainties
 }
 
-/// A single equation layer in a multilayered ODR fit.
+/// A single equation layer in a multilayered profiled ODR fit.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelLayer {
@@ -25,7 +25,10 @@ pub struct ModelLayer {
     pub independent_variables: Vec<String>,
 }
 
-/// Request structure for performing a custom multi-layer ODR fit.
+/// Request structure for performing a custom multi-layer profiled ODR fit.
+///
+/// Note: This solver uses a nested/profiled strategy where per-point latent x-corrections
+/// are solved in an inner loop and the outer LM uses an approximate profiled gradient.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OdrFitRequest {
@@ -47,16 +50,24 @@ pub struct OdrFitRequest {
     pub initial_damping: Option<f64>,
     /// Optional full correlation matrices between measurements.
     pub point_correlations: Option<Vec<Vec<Vec<f64>>>>,
-    /// If true, applies 1/sqrt(N) weighting for count distributions on dependent variables.
+    /// If true, applies Poisson-based uncertainty σ = √max(y, ε) for dependent variables without explicit uncertainties.
     pub use_poisson_weighting: Option<bool>,
+    /// Optional confidence level for expanded uncertainties (default 0.95).
+    pub confidence_level: Option<f64>,
 }
 
-/// Response containing the results of an ODR fit.
+/// Response containing the results of a profiled ODR fit.
+///
+/// Note: Results use a profiled ODR objective with implicit correction sensitivity in a
+/// Gauss-Newton outer linearization; full structural latent-state coupling across equations
+/// is not yet implemented.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OdrFitResponse {
     /// Whether the fit was successful.
     pub success: bool,
+    /// Why the optimizer stopped (e.g., converged or max iterations reached).
+    pub termination_reason: String,
     /// Optional message (e.g., convergence status or warnings).
     pub message: Option<String>,
     /// Number of iterations performed.
@@ -73,13 +84,17 @@ pub struct OdrFitResponse {
     pub parameter_values: Vec<f64>,
     /// Estimated uncertainties for each parameter.
     pub parameter_uncertainties: Vec<f64>,
+    /// Expanded uncertainties for each parameter at the selected confidence level.
+    pub parameter_expanded_uncertainties: Vec<f64>,
+    /// Coverage factor used to compute expanded uncertainties.
+    pub coverage_factor: f64,
     /// Full parameter covariance matrix.
     pub parameter_covariance: Vec<Vec<f64>>, // Full covariance matrix
     /// Raw residuals at the final state.
     pub residuals: Vec<f64>,
     /// Model predictions at the final state.
     pub fitted_values: Vec<f64>,
-    /// Total weighted chi-squared value.
+    /// Observation-only weighted chi-squared value used for fit reporting.
     pub chi_squared: f64,
     /// Reduced chi-squared value (per degree of freedom).
     pub chi_squared_reduced: f64,
@@ -87,6 +102,14 @@ pub struct OdrFitResponse {
     pub rmse: f64,
     /// Coefficient of determination (R²).
     pub r_squared: f64,
+    /// Per-layer R² values; each entry is the R² for the corresponding model layer.
+    pub r_squared_per_layer: Vec<f64>,
+    /// Effective numerical rank of the final normal matrix.
+    pub effective_rank: usize,
+    /// Condition number estimate of the final normal matrix.
+    pub condition_number: f64,
+    /// Assumptions used for uncertainty interpretation (NIST GUM context).
+    pub assumptions: Vec<String>,
 }
 
 /// Request structure for evaluating a model on a 2D grid.

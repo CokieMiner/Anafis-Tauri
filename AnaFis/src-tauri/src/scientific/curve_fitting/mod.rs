@@ -1,7 +1,9 @@
-//! Curve fitting module for fitting data to various models using ODR.
+//! Curve fitting module using profiled ODR with per-point latent x-corrections.
+// Note(odr-option-2): Profiled latent-variable ODR is implemented; future work is
+// optional and focused on stronger trust-region/Schur-complement step control.
 /// Tauri commands for curve fitting.
 pub mod commands;
-/// Core engine for ODR computation.
+/// Core engine for profiled ODR computation.
 pub mod engine;
 /// Unit tests for curve fitting.
 mod tests;

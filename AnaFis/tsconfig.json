@@ -16,9 +16,8 @@
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
     /* Path mapping for cleaner imports */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     /* Enhanced linting */
     "strict": true,

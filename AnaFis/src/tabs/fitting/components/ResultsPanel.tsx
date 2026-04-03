@@ -1,15 +1,22 @@
 // Results Panel — Parameters with uncertainties, goodness-of-fit metrics, covariance dropdown
 
+import CloseIcon from '@mui/icons-material/Close';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import {
   Alert,
   Box,
   Button,
   Collapse,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useState } from 'react';
@@ -37,6 +44,48 @@ function formatValueWithUncertainty(
   return `${value.toFixed(digits)} ± ${uncertainty.toFixed(digits)}`;
 }
 
+function formatExpandedUncertainty(uncertainty: number): string {
+  if (!Number.isFinite(uncertainty) || uncertainty === 0) {
+    return '';
+  }
+  const digits = Math.max(
+    0,
+    -Math.floor(Math.log10(Math.abs(uncertainty))) + 1
+  );
+  return `± ${uncertainty.toFixed(digits)}`;
+}
+
+function terminationLabel(reason: string): {
+  text: string;
+  color: 'success' | 'warning' | 'error' | 'info';
+} {
+  switch (reason) {
+    case 'scaledGradient':
+      return { text: 'Converged (gradient)', color: 'success' };
+    case 'scaledStep':
+      return { text: 'Converged (step size)', color: 'success' };
+    case 'improvement':
+      return { text: 'Converged (improvement)', color: 'success' };
+    case 'stagnated':
+      return { text: 'Stagnated', color: 'warning' };
+    case 'singular':
+      return { text: 'Singular system', color: 'error' };
+    case 'dampingSaturated':
+      return { text: 'Damping saturated', color: 'warning' };
+    case 'maxIterations':
+      return { text: 'Max iterations', color: 'warning' };
+    default:
+      return { text: reason, color: 'info' };
+  }
+}
+
+const statusColors: Record<string, string> = {
+  success: '#66bb6a',
+  warning: '#ffa726',
+  error: '#ef5350',
+  info: '#42a5f5',
+};
+
 interface ResultsPanelProps {
   fitResult: OdrFitResponse | null;
   canRunFit: boolean;
@@ -53,8 +102,12 @@ export default function ResultsPanel({
   onRunFit,
 }: ResultsPanelProps) {
   const [covExpanded, setCovExpanded] = useState(false);
+  const [assumptionsOpen, setAssumptionsOpen] = useState(false);
 
-  const hasResult = Boolean(fitResult?.success);
+  const hasResult =
+    Boolean(fitResult) &&
+    (fitResult?.parameterValues.length ?? 0) > 0 &&
+    (fitResult?.fittedValues.length ?? 0) > 0;
 
   const panelSx = {
     height: '100%',
@@ -126,18 +179,40 @@ export default function ResultsPanel({
     );
   }
 
+  const resolvedFitResult = fitResult as OdrFitResponse;
+
   const {
     parameterNames,
     parameterValues,
     parameterUncertainties,
+    parameterExpandedUncertainties,
     parameterCovariance,
+    coverageFactor,
     chiSquared,
     chiSquaredReduced,
     rmse,
     rSquared,
+    effectiveRank,
+    conditionNumber,
     iterations,
+    terminationReason,
     message,
-  } = fitResult as OdrFitResponse;
+    assumptions,
+  } = resolvedFitResult;
+
+  const termination = terminationLabel(terminationReason);
+  const termColor = statusColors[termination.color] ?? statusColors.info;
+
+  const hasExpandedUncertainties = parameterExpandedUncertainties.some(
+    (u) => Number.isFinite(u) && u > 0
+  );
+  const confidencePercent = Number.isFinite(coverageFactor)
+    ? Math.round(
+        // Inverse of what the backend did — approximate % from k for display
+        // For dof > ~30, k ≈ 1.96 → 95%. Just show k directly.
+        95
+      )
+    : null;
 
   return (
     <Box sx={panelSx}>
@@ -180,12 +255,13 @@ export default function ResultsPanel({
         </Alert>
       )}
 
+      {/* ── Header: Results + iteration count + termination ── */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          mb: 1,
+          mb: 0.5,
         }}
       >
         <Typography
@@ -209,12 +285,46 @@ export default function ResultsPanel({
         </Typography>
       </Box>
 
+      {/* Termination reason */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.6,
+          mb: 1,
+        }}
+      >
+        <Box
+          sx={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            backgroundColor: termColor,
+            flexShrink: 0,
+          }}
+        />
+        <Typography
+          variant="caption"
+          sx={{
+            color: termColor,
+            fontWeight: 600,
+            fontSize: '0.72rem',
+          }}
+        >
+          {termination.text}
+        </Typography>
+      </Box>
+
       {message && (
-        <Alert severity="info" sx={{ mb: 1, py: 0, fontSize: '0.7rem' }}>
+        <Alert
+          severity={resolvedFitResult.success ? 'info' : 'warning'}
+          sx={{ mb: 1, py: 0, fontSize: '0.7rem' }}
+        >
           {message}
         </Alert>
       )}
 
+      {/* ── Parameters ── */}
       <Box
         sx={{
           mb: 1,
@@ -224,19 +334,40 @@ export default function ResultsPanel({
           background: 'rgba(255, 255, 255, 0.015)',
         }}
       >
-        <Typography
-          variant="caption"
-          sx={{ color: 'text.secondary', display: 'block', mb: 0.6 }}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            mb: 0.6,
+          }}
         >
-          Parameters
-        </Typography>
+          <Typography
+            variant="caption"
+            sx={{ color: 'text.secondary', display: 'block' }}
+          >
+            Parameters
+          </Typography>
+          {hasExpandedUncertainties && confidencePercent && (
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.disabled',
+                fontSize: '0.65rem',
+                fontStyle: 'italic',
+              }}
+            >
+              {confidencePercent}% CI, k = {coverageFactor.toPrecision(3)}
+            </Typography>
+          )}
+        </Box>
         <Table size="small" sx={{ '& td': { borderBottom: 'none' } }}>
           <TableBody>
             {parameterNames.map((name, idx) => (
               <TableRow key={name}>
                 <TableCell
                   sx={{
-                    width: 64,
+                    width: 54,
                     py: 0.15,
                     px: 0.3,
                     fontSize: '0.78rem',
@@ -260,12 +391,39 @@ export default function ResultsPanel({
                     parameterUncertainties[idx] ?? 0
                   )}
                 </TableCell>
+                {hasExpandedUncertainties && (
+                  <TableCell
+                    sx={{
+                      py: 0.15,
+                      px: 0.3,
+                      fontSize: '0.7rem',
+                      fontFamily: 'monospace',
+                      color: 'text.disabled',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Tooltip
+                      title="Expanded uncertainty (U)"
+                      placement="top"
+                      arrow
+                    >
+                      <span>
+                        (
+                        {formatExpandedUncertainty(
+                          parameterExpandedUncertainties[idx] ?? 0
+                        )}
+                        )
+                      </span>
+                    </Tooltip>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </Box>
 
+      {/* ── Fit quality ── */}
       <Box
         sx={{
           mb: 1,
@@ -275,12 +433,33 @@ export default function ResultsPanel({
           background: 'rgba(255, 255, 255, 0.015)',
         }}
       >
-        <Typography
-          variant="caption"
-          sx={{ color: 'text.secondary', display: 'block', mb: 0.6 }}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mb: 0.6,
+          }}
         >
-          Fit quality
-        </Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Fit quality
+          </Typography>
+          {assumptions && assumptions.length > 0 && (
+            <Tooltip title="Assumptions & methodology" placement="top" arrow>
+              <IconButton
+                size="small"
+                onClick={() => setAssumptionsOpen(true)}
+                sx={{
+                  p: 0.2,
+                  color: 'text.disabled',
+                  '&:hover': { color: 'primary.main' },
+                }}
+              >
+                <HelpOutlineIcon sx={{ fontSize: '1rem' }} />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
         <Box
           sx={{
             display: 'grid',
@@ -295,7 +474,7 @@ export default function ResultsPanel({
             χ² = {formatScientific(chiSquared)}
           </Typography>
           <Typography variant="caption" sx={{ fontFamily: 'inherit' }}>
-            χ²red = {formatScientific(chiSquaredReduced)}
+            χ²<sub>red</sub> = {formatScientific(chiSquaredReduced)}
           </Typography>
           <Typography variant="caption" sx={{ fontFamily: 'inherit' }}>
             RMSE = {formatScientific(rmse)}
@@ -303,9 +482,23 @@ export default function ResultsPanel({
           <Typography variant="caption" sx={{ fontFamily: 'inherit' }}>
             R² = {formatScientific(rSquared)}
           </Typography>
+          <Typography
+            variant="caption"
+            sx={{ fontFamily: 'inherit', color: 'text.disabled' }}
+          >
+            rank = {effectiveRank} / {parameterNames.length}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{ fontFamily: 'inherit', color: 'text.disabled' }}
+          >
+            κ ={' '}
+            {conditionNumber < 1e15 ? formatScientific(conditionNumber) : '∞'}
+          </Typography>
         </Box>
       </Box>
 
+      {/* ── Covariance matrix ── */}
       <Box
         sx={{
           p: 1,
@@ -337,7 +530,7 @@ export default function ResultsPanel({
             color="text.secondary"
             sx={{ display: 'block', mt: 0.7 }}
           >
-            Full covariance matrix from ODR fit (scaled by χ²red).
+            Full covariance matrix from ODR fit (scaled by χ²<sub>red</sub>).
           </Typography>
           <Box
             sx={{
@@ -426,6 +619,70 @@ export default function ResultsPanel({
           </Box>
         </Collapse>
       </Box>
+
+      {/* ── Assumptions dialog ── */}
+      <Dialog
+        open={assumptionsOpen}
+        onClose={() => setAssumptionsOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background:
+              'linear-gradient(145deg, rgba(26, 26, 32, 0.98) 0%, rgba(18, 18, 22, 0.98) 100%)',
+            border: '1px solid rgba(148, 163, 184, 0.2)',
+            borderRadius: 2,
+            backdropFilter: 'blur(16px)',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            pb: 0.5,
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            Assumptions & methodology
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={() => setAssumptionsOpen(false)}
+            sx={{ color: 'text.secondary' }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 0.5 }}>
+          <Typography
+            variant="caption"
+            color="text.disabled"
+            sx={{ display: 'block', mb: 1.5, fontSize: '0.72rem' }}
+          >
+            These describe the statistical model, solver strategy, and
+            interpretation caveats for the reported results.
+          </Typography>
+          <Box
+            component="ol"
+            sx={{
+              pl: 2.5,
+              m: 0,
+              '& li': {
+                fontSize: '0.78rem',
+                color: 'text.secondary',
+                lineHeight: 1.6,
+                mb: 0.8,
+              },
+            }}
+          >
+            {(assumptions ?? []).map((text) => (
+              <li key={text}>{text}</li>
+            ))}
+          </Box>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

@@ -9,7 +9,7 @@
 //! log, log10, sqrt, abs, floor, ceil, round, erf, erfc, besselj, bessely, besseli, besselk.
 
 use std::sync::LazyLock;
-use symb_anafis::{symb, CompiledEvaluator, Expr};
+use symb_anafis::{CompiledEvaluator, Expr, symb};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Pre-compiled evaluators (LazyLock — compiled once on first use)

@@ -22,10 +22,11 @@ pub(crate) mod startup {
     pub struct StartupFileState(pub Mutex<Option<String>>);
 
     #[tauri::command]
-    #[allow(clippy::needless_pass_by_value, reason = "Tauri commands require owned State")]
-    pub fn get_startup_file(
-        state: State<'_, StartupFileState>,
-    ) -> Result<Option<String>, String> {
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "Tauri commands require owned State"
+    )]
+    pub fn get_startup_file(state: State<'_, StartupFileState>) -> Result<Option<String>, String> {
         let mut file_guard = state.0.lock().map_err(|e| e.to_string())?;
         // Take the value so it is only returned once.
         Ok(file_guard.take())
@@ -146,7 +147,9 @@ pub fn run() {
                     break;
                 }
             }
-            app.manage(startup::StartupFileState(std::sync::Mutex::new(pending_file)));
+            app.manage(startup::StartupFileState(std::sync::Mutex::new(
+                pending_file,
+            )));
 
             // Initialize Data Library
             match data_library::commands::init_data_library(app.handle()) {
@@ -166,9 +169,9 @@ pub fn run() {
             if let Some(main_window) = app.get_webview_window("main") {
                 // Force a dark native background so startup never flashes white
                 // before the frontend stylesheet and React tree are ready.
-                drop(main_window.set_background_color(Some(tauri::webview::Color(
-                    10, 10, 10, 255,
-                ))));
+                drop(
+                    main_window.set_background_color(Some(tauri::webview::Color(10, 10, 10, 255))),
+                );
 
                 // Keep hidden until frontend emits a ready event.
                 drop(main_window.hide());

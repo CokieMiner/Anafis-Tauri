@@ -80,6 +80,10 @@ export default function FitVisualization({
 }: FitVisualizationProps) {
   const [gridData, setGridData] = useState<GridEvaluationResponse | null>(null);
   const gridRequestRef = useRef(0);
+  const hasUsableFitResult =
+    Boolean(fitResult) &&
+    (fitResult?.parameterValues.length ?? 0) > 0 &&
+    (fitResult?.fittedValues.length ?? 0) > 0;
 
   const colByName = useCallback(
     (name: string | null) => {
@@ -108,8 +112,9 @@ export default function FitVisualization({
   useEffect(() => {
     const requestId = gridRequestRef.current + 1;
     gridRequestRef.current = requestId;
+    const resolvedFitResult = fitResult;
 
-    if (mode !== '3d' || !fitResult?.success) {
+    if (mode !== '3d' || !hasUsableFitResult || !resolvedFitResult) {
       queueMicrotask(() => {
         if (gridRequestRef.current === requestId) {
           setGridData(null);
@@ -155,10 +160,10 @@ export default function FitVisualization({
 
     void invoke<GridEvaluationResponse>('evaluate_model_grid', {
       request: {
-        modelFormula: fitResult.formula,
+        modelFormula: resolvedFitResult.formula,
         independentNames: [xBinding.variableName, yBinding.variableName],
-        parameterNames: fitResult.parameterNames,
-        parameterValues: fitResult.parameterValues,
+        parameterNames: resolvedFitResult.parameterNames,
+        parameterValues: resolvedFitResult.parameterValues,
         xRange: [xMin - padX, xMax + padX],
         yRange: [yMin - padY, yMax + padY],
         resolution: 30,
@@ -175,7 +180,7 @@ export default function FitVisualization({
           setGridData(null);
         }
       });
-  }, [mode, fitResult, variableBindings, colByName]);
+  }, [mode, fitResult, variableBindings, colByName, hasUsableFitResult]);
 
   const { data, layout } = useMemo((): {
     data: Plotly.Data[];
@@ -240,7 +245,7 @@ export default function FitVisualization({
     useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const canIncludeResiduals = Boolean(
-    fitResult?.success && importedData && mode !== 'empty'
+    hasUsableFitResult && importedData && mode !== 'empty'
   );
 
   useEffect(() => {

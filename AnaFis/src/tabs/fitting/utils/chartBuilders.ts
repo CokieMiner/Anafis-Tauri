@@ -59,6 +59,16 @@ function buildFitLegendName(
   ].join('<br>');
 }
 
+function hasUsableFitResult(
+  fitResult: OdrFitResponse | null
+): fitResult is OdrFitResponse {
+  return Boolean(
+    fitResult &&
+      fitResult.parameterValues.length > 0 &&
+      fitResult.fittedValues.length > 0
+  );
+}
+
 export function buildEmptyChart(theme: 'dark' | 'light' = 'dark') {
   const { layout: baseLayout } = getThemeLayout(theme);
   return {
@@ -154,7 +164,7 @@ export function build2DChart(
 
   traces.push(scatter);
 
-  if (fitResult?.success) {
+  if (hasUsableFitResult(fitResult)) {
     const legendText = buildFitLegendName(fitResult, customFormula);
 
     const indices = xCol.data
@@ -175,7 +185,7 @@ export function build2DChart(
     data: traces,
     layout: {
       ...baseLayout,
-      showlegend: Boolean(fitResult?.success),
+      showlegend: hasUsableFitResult(fitResult),
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         bgcolor: 'transparent',
@@ -265,7 +275,7 @@ export function build3DChart(
     legendX = 1; // move to right only if data is only on left
   }
 
-  if (fitResult?.success) {
+  if (hasUsableFitResult(fitResult)) {
     const legendText = buildFitLegendName(fitResult, customFormula);
 
     if (gridData && gridData.z.length > 0) {
@@ -391,7 +401,7 @@ export function buildPredictedChart(
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
   const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
 
-  if (!fitResult?.success) {
+  if (!hasUsableFitResult(fitResult)) {
     return {
       data: [],
       layout: {
@@ -487,7 +497,7 @@ export function buildResidualsChart(
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
   const { layout: baseLayout, axis: baseAxis } = getThemeLayout(theme);
 
-  if (!fitResult?.success) {
+  if (!hasUsableFitResult(fitResult)) {
     return {
       data: [],
       layout: {

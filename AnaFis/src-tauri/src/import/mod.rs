@@ -82,20 +82,10 @@ pub async fn import_spreadsheet_file(
     tokio::task::spawn_blocking(move || {
         let path_str = canonical_path.to_string_lossy();
         match options.format.as_str() {
-            "csv" => csv::import_csv(
-                &path_str,
-                options.skip_rows,
-                false,
-                Some(&options.encoding),
-            )
-            .map_err(|e| import_error(format!("CSV import failed: {e}"))),
-            "tsv" => csv::import_tsv(
-                &path_str,
-                options.skip_rows,
-                false,
-                Some(&options.encoding),
-            )
-            .map_err(|e| import_error(format!("TSV import failed: {e}"))),
+            "csv" => csv::import_csv(&path_str, options.skip_rows, false, Some(&options.encoding))
+                .map_err(|e| import_error(format!("CSV import failed: {e}"))),
+            "tsv" => csv::import_tsv(&path_str, options.skip_rows, false, Some(&options.encoding))
+                .map_err(|e| import_error(format!("TSV import failed: {e}"))),
             "txt" => csv::import_txt(
                 &path_str,
                 &options.delimiter,
@@ -133,7 +123,8 @@ pub async fn import_anafis_spread_direct(file_path: String) -> CommandResult<ser
             .map_err(|e| import_error(format!("AnaFis spread import failed: {e}")))
     })
     .await
-    .map_err(|e| import_error(format!("Import task panicked: {e}")))?}
+    .map_err(|e| import_error(format!("Import task panicked: {e}")))?
+}
 
 /// Get file metadata - called before import to show file info
 /// For TXT files, pass delimiter parameter to use correct column detection
