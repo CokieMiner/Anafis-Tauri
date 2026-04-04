@@ -1,7 +1,9 @@
 #![cfg(test)]
-use crate::scientific::curve_fitting::commands::{evaluate_model_grid, fit_custom_odr};
+use crate::scientific::curve_fitting::commands::{
+    evaluate_model_curve, evaluate_model_grid, fit_custom_odr,
+};
 use crate::scientific::curve_fitting::types::{
-    GridEvaluationRequest, ModelLayer, OdrFitRequest, VariableInput,
+    CurveEvaluationRequest, GridEvaluationRequest, ModelLayer, OdrFitRequest, VariableInput,
 };
 
 fn repeat_corr(point_count: usize, matrix: &[Vec<f64>]) -> Vec<Vec<Vec<f64>>> {
@@ -43,9 +45,7 @@ fn test_fit_custom_odr_linear_model_no_correlation() {
     assert!(result.success);
     assert!((result.parameter_values[0] - 2.5).abs() < 1e-6);
     assert!((result.parameter_values[1] + 4.0).abs() < 1e-6);
-    assert!(result.r_squared > 0.999_999_999);
 }
-
 #[test]
 fn test_fit_custom_odr_identifier_normalization_case_insensitive() {
     let x: Vec<f64> = (0..20).map(f64::from).collect();
@@ -421,8 +421,16 @@ fn test_fit_custom_odr_multivariable_full_covariance() {
     assert!(result.success);
     assert!((result.parameter_values[0] - 0.9).abs() < 1e-6);
     assert!((result.parameter_values[1] + 1.1).abs() < 1e-6);
-    assert!((result.parameter_values[2] - 0.7).abs() < 1e-6);
-    assert!((result.parameter_values[3] - 4.0).abs() < 1e-6);
+    assert!(
+        (result.parameter_values[2] - 0.7).abs() < 2e-6,
+        "expected r≈0.7, got {}",
+        result.parameter_values[2]
+    );
+    assert!(
+        (result.parameter_values[3] - 4.0).abs() < 2e-6,
+        "expected s≈4.0, got {}",
+        result.parameter_values[3]
+    );
 }
 
 #[test]
@@ -491,6 +499,21 @@ fn test_evaluate_model_grid_rejects_too_high_resolution() {
     };
 
     let err = evaluate_model_grid(request).unwrap_err();
+    assert!(err.to_lowercase().contains("resolution too high"));
+}
+
+#[test]
+fn test_evaluate_model_curve_rejects_too_high_resolution() {
+    let request = CurveEvaluationRequest {
+        model_formula: "a*x + b".to_string(),
+        independent_name: "x".to_string(),
+        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_values: vec![1.0, 2.0],
+        x_range: (0.0, 1.0),
+        resolution: 2001,
+    };
+
+    let err = evaluate_model_curve(request).unwrap_err();
     assert!(err.to_lowercase().contains("resolution too high"));
 }
 

@@ -40,18 +40,25 @@ export interface OdrFitResponse {
   parameterNames: string[];
   parameterValues: number[];
   parameterUncertainties: number[];
+  parameterUncertaintiesRaw: number[];
   parameterExpandedUncertainties: number[];
   coverageFactor: number;
   parameterCovariance: number[][]; // Full covariance matrix
+  parameterCovarianceRaw: number[][]; // Full covariance matrix (raw)
   residuals: number[];
   fittedValues: number[];
   chiSquared: number;
+  chiSquaredObservation: number;
+  chiSquaredObservationReduced: number;
   chiSquaredReduced: number;
   rmse: number;
+  residualStandardError: number;
   rSquared: number;
   rSquaredPerLayer: number[];
   effectiveRank: number;
   conditionNumber: number;
+  innerStationarityNormMax: number;
+  innerStationarityNormMean: number;
   assumptions: string[];
 }
 
@@ -69,6 +76,20 @@ export interface GridEvaluationResponse {
   x: number[];
   y: number[];
   z: number[];
+}
+
+export interface CurveEvaluationRequest {
+  modelFormula: string;
+  independentName: string;
+  parameterNames: string[];
+  parameterValues: number[];
+  xRange: [number, number];
+  resolution: number;
+}
+
+export interface CurveEvaluationResponse {
+  x: number[];
+  y: number[];
 }
 
 // ─── Frontend UI types ──────────────────────────────────────────────

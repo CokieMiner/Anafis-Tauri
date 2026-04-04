@@ -1,6 +1,7 @@
 import { CHART_COLORS, getThemeLayout } from '@/shared/components/plotlyTheme';
 import type {
   AxisSettings,
+  CurveEvaluationResponse,
   DependentBinding,
   ImportedData,
   OdrFitResponse,
@@ -24,6 +25,16 @@ function formatFitNumber(value: number, digits: number) {
     return '0';
   }
   return value.toPrecision(digits);
+}
+
+function formatRSquared(value: number): string {
+  if (!Number.isFinite(value)) {
+    return 'NaN';
+  }
+  if (value < 1 && value >= 0.9995) {
+    return value.toFixed(6);
+  }
+  return value.toPrecision(6);
 }
 
 function buildFitValueLines(fitResult: OdrFitResponse): string[] {
@@ -54,7 +65,7 @@ function buildFitLegendName(
     `<b>Fit : ${formulaStr}</b>`,
     `χ²red = ${fitResult.chiSquaredReduced.toPrecision(
       4
-    )}  |  R² = ${fitResult.rSquared.toPrecision(4)}`,
+    )}  |  R² = ${formatRSquared(fitResult.rSquared)}`,
     ...parameterLines,
   ].join('<br>');
 }
@@ -98,6 +109,7 @@ export function build2DChart(
   dependentBinding: DependentBinding,
   axisSettings: AxisSettings,
   fitResult: OdrFitResponse | null,
+  curveData: CurveEvaluationResponse | null,
   customFormula: string,
   theme: 'dark' | 'light' = 'dark'
 ): { data: Plotly.Data[]; layout: Partial<Plotly.Layout> } {
@@ -167,17 +179,27 @@ export function build2DChart(
   if (hasUsableFitResult(fitResult)) {
     const legendText = buildFitLegendName(fitResult, customFormula);
 
-    const indices = xCol.data
-      .map((_, idx) => idx)
-      .sort((a, b) => (xCol.data[a] ?? 0) - (xCol.data[b] ?? 0));
+    const curveFromFormula =
+      curveData && curveData.x.length > 1 && curveData.x.length === curveData.y.length;
+
+    const indices = curveFromFormula
+      ? []
+      : xCol.data
+          .map((_, idx) => idx)
+          .sort((a, b) => (xCol.data[a] ?? 0) - (xCol.data[b] ?? 0));
 
     traces.push({
-      x: indices.map((idx) => xCol.data[idx] ?? 0),
-      y: indices.map((idx) => fitResult.fittedValues[idx] ?? 0),
+      x: curveFromFormula
+        ? curveData.x
+        : indices.map((idx) => xCol.data[idx] ?? 0),
+      y: curveFromFormula
+        ? curveData.y
+        : indices.map((idx) => fitResult.fittedValues[idx] ?? 0),
       mode: 'lines',
       type: 'scatter',
       name: legendText,
-      line: { color: CHART_COLORS.fit, width: 2.5, shape: 'spline' },
+      // Keep rendering geometric, without smoothing artifacts.
+      line: { color: CHART_COLORS.fit, width: 2.5, shape: 'linear' },
     });
   }
 

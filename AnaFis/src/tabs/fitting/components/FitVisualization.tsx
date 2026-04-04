@@ -24,6 +24,7 @@ import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { saveWithMemory } from '@/shared/utils/dialogMemory';
 import type {
   AxisSettings,
+  CurveEvaluationResponse,
   DependentBinding,
   GridEvaluationResponse,
   ImportedData,
@@ -79,7 +80,11 @@ export default function FitVisualization({
   customFormula,
 }: FitVisualizationProps) {
   const [gridData, setGridData] = useState<GridEvaluationResponse | null>(null);
+  const [curveData, setCurveData] = useState<CurveEvaluationResponse | null>(
+    null
+  );
   const gridRequestRef = useRef(0);
+  const curveRequestRef = useRef(0);
   const hasUsableFitResult =
     Boolean(fitResult) &&
     (fitResult?.parameterValues.length ?? 0) > 0 &&
@@ -108,6 +113,68 @@ export default function FitVisualization({
     }
     return 'predicted';
   }, [varCount]);
+
+  useEffect(() => {
+    const requestId = curveRequestRef.current + 1;
+    curveRequestRef.current = requestId;
+
+    if (mode !== '2d' || !hasUsableFitResult || !fitResult) {
+      queueMicrotask(() => {
+        if (curveRequestRef.current === requestId) {
+          setCurveData(null);
+        }
+      });
+      return;
+    }
+
+    const xBinding =
+      variableBindings.find((binding) => binding.axis === 'x') ??
+      variableBindings[0];
+    if (!xBinding) {
+      queueMicrotask(() => {
+        if (curveRequestRef.current === requestId) {
+          setCurveData(null);
+        }
+      });
+      return;
+    }
+
+    const xCol = colByName(xBinding.dataColumn);
+    if (!xCol || xCol.data.length < 2) {
+      queueMicrotask(() => {
+        if (curveRequestRef.current === requestId) {
+          setCurveData(null);
+        }
+      });
+      return;
+    }
+
+    const xMin = Math.min(...xCol.data);
+    const xMax = Math.max(...xCol.data);
+    const padX = (xMax - xMin) * 0.1 || 1.0;
+
+    void invoke<CurveEvaluationResponse>('evaluate_model_curve', {
+      request: {
+        modelFormula: fitResult.formula,
+        independentName: xBinding.variableName,
+        parameterNames: fitResult.parameterNames,
+        parameterValues: fitResult.parameterValues,
+        xRange: [xMin - padX, xMax + padX],
+        resolution: 300,
+      },
+    })
+      .then((response) => {
+        if (curveRequestRef.current === requestId) {
+          setCurveData(response);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to evaluate 2D curve:', error);
+        if (curveRequestRef.current === requestId) {
+          setCurveData(null);
+        }
+      });
+  }, [mode, fitResult, variableBindings, colByName, hasUsableFitResult]);
 
   useEffect(() => {
     const requestId = gridRequestRef.current + 1;
@@ -197,6 +264,7 @@ export default function FitVisualization({
         dependentBinding,
         axisSettings,
         fitResult,
+        curveData,
         customFormula
       );
     }
@@ -226,6 +294,7 @@ export default function FitVisualization({
     variableBindings,
     dependentBinding,
     fitResult,
+    curveData,
     gridData,
     axisSettings,
     customFormula,
@@ -285,6 +354,7 @@ export default function FitVisualization({
           dependentBinding,
           axisSettings,
           fitResult,
+          curveData,
           customFormula,
           exportTheme
         );
@@ -497,6 +567,7 @@ export default function FitVisualization({
     dependentBinding,
     axisSettings,
     fitResult,
+    curveData,
     gridData,
     data,
     layout,

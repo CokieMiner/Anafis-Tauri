@@ -28,7 +28,8 @@ pub struct ModelLayer {
 /// Request structure for performing a custom multi-layer profiled ODR fit.
 ///
 /// Note: This solver uses a nested/profiled strategy where per-point latent x-corrections
-/// are solved in an inner loop and the outer LM uses an approximate profiled gradient.
+/// are solved in an inner loop; the outer LM uses the profiled gradient via implicit
+/// differentiation and a Gauss-Newton approximation for reduced Hessian curvature.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OdrFitRequest {
@@ -59,7 +60,7 @@ pub struct OdrFitRequest {
 /// Response containing the results of a profiled ODR fit.
 ///
 /// Note: Results use a profiled ODR objective with implicit correction sensitivity in a
-/// Gauss-Newton outer linearization; full structural latent-state coupling across equations
+/// Gauss-Newton outer curvature model; full structural latent-state coupling across equations
 /// is not yet implemented.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,24 +83,34 @@ pub struct OdrFitResponse {
     pub parameter_names: Vec<String>,
     /// Optimized parameter values.
     pub parameter_values: Vec<f64>,
-    /// Estimated uncertainties for each parameter.
+    /// Estimated uncertainties for each parameter (scaled by reduced chi-squared when DOF > 0).
     pub parameter_uncertainties: Vec<f64>,
+    /// Estimated uncertainties from the unscaled inverse normal matrix.
+    pub parameter_uncertainties_raw: Vec<f64>,
     /// Expanded uncertainties for each parameter at the selected confidence level.
     pub parameter_expanded_uncertainties: Vec<f64>,
     /// Coverage factor used to compute expanded uncertainties.
     pub coverage_factor: f64,
-    /// Full parameter covariance matrix.
+    /// Full parameter covariance matrix (scaled by reduced chi-squared when DOF > 0).
     pub parameter_covariance: Vec<Vec<f64>>, // Full covariance matrix
+    /// Full unscaled parameter covariance matrix from the inverse normal matrix.
+    pub parameter_covariance_raw: Vec<Vec<f64>>, // Full covariance matrix (raw)
     /// Raw residuals at the final state.
     pub residuals: Vec<f64>,
     /// Model predictions at the final state.
     pub fitted_values: Vec<f64>,
-    /// Observation-only weighted chi-squared value used for fit reporting.
+    /// Profiled weighted chi-squared value (including latent x-correction penalties).
     pub chi_squared: f64,
-    /// Reduced chi-squared value (per degree of freedom).
+    /// Observation-only weighted chi-squared value (excluding latent x-correction penalties).
+    pub chi_squared_observation: f64,
+    /// Reduced observation-only chi-squared value (per degree of freedom).
+    pub chi_squared_observation_reduced: f64,
+    /// Reduced profiled chi-squared value (per profiled degree of freedom).
     pub chi_squared_reduced: f64,
-    /// Root Mean Square Error of residuals.
+    /// Root Mean Square Error of residuals (dividing by residual count, not DOF).
     pub rmse: f64,
+    /// Residual standard error (dividing residual sum of squares by observation DOF).
+    pub residual_standard_error: f64,
     /// Coefficient of determination (R²).
     pub r_squared: f64,
     /// Per-layer R² values; each entry is the R² for the corresponding model layer.
@@ -108,6 +119,10 @@ pub struct OdrFitResponse {
     pub effective_rank: usize,
     /// Condition number estimate of the final normal matrix.
     pub condition_number: f64,
+    /// Maximum L2 norm of inner profiled-correction stationarity residuals across points.
+    pub inner_stationarity_norm_max: f64,
+    /// Mean L2 norm of inner profiled-correction stationarity residuals across points.
+    pub inner_stationarity_norm_mean: f64,
     /// Assumptions used for uncertainty interpretation (NIST GUM context).
     pub assumptions: Vec<String>,
 }
@@ -142,6 +157,34 @@ pub struct GridEvaluationResponse {
     pub y: Vec<f64>,
     /// Z (evaluated) values for the model at grid points.
     pub z: Vec<f64>,
+}
+
+/// Request structure for evaluating a model on a 1D curve.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurveEvaluationRequest {
+    /// The model formula to evaluate.
+    pub model_formula: String,
+    /// Name of the independent variable.
+    pub independent_name: String,
+    /// Names of the model parameters.
+    pub parameter_names: Vec<String>,
+    /// Constant values for the parameters.
+    pub parameter_values: Vec<f64>,
+    /// Range (min, max) for the independent variable.
+    pub x_range: (f64, f64),
+    /// Number of points in the curve.
+    pub resolution: usize,
+}
+
+/// Response containing the results of a 1D curve evaluation.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurveEvaluationResponse {
+    /// X coordinates of sampled points.
+    pub x: Vec<f64>,
+    /// Evaluated model values at sampled points.
+    pub y: Vec<f64>,
 }
 
 /// Errors that can occur during ODR fitting.

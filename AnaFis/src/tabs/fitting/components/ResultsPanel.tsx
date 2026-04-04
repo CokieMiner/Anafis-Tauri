@@ -30,6 +30,16 @@ function formatScientific(value: number): string {
   return value.toPrecision(4);
 }
 
+function formatRSquared(value: number): string {
+  if (!Number.isFinite(value)) {
+    return 'NaN';
+  }
+  if (value < 1 && value >= 0.9995) {
+    return value.toFixed(6);
+  }
+  return value.toPrecision(6);
+}
+
 function formatValueWithUncertainty(
   value: number,
   uncertainty: number
@@ -103,6 +113,9 @@ export default function ResultsPanel({
 }: ResultsPanelProps) {
   const [covExpanded, setCovExpanded] = useState(false);
   const [assumptionsOpen, setAssumptionsOpen] = useState(false);
+  const [uncertaintyBasis, setUncertaintyBasis] = useState<'scaled' | 'raw'>(
+    'scaled'
+  );
 
   const hasResult =
     Boolean(fitResult) &&
@@ -111,7 +124,7 @@ export default function ResultsPanel({
 
   const panelSx = {
     height: '100%',
-    p: 1.5,
+    p: 2,
     borderRadius: 2,
     border: '1px solid rgba(148, 163, 184, 0.18)',
     background:
@@ -128,10 +141,10 @@ export default function ResultsPanel({
           disabled={!canRunFit || fitStatus === 'running'}
           onClick={onRunFit}
           sx={{
-            mb: 1,
-            py: 1,
+            mb: 1.2,
+            py: 1.15,
             fontWeight: 700,
-            fontSize: '0.9rem',
+            fontSize: '1rem',
             letterSpacing: '0.04em',
             background: canRunFit
               ? `linear-gradient(135deg, ${anafisTheme.colors.tabs.fitting.main} 0%, ${anafisTheme.colors.tabs.fitting.dark} 100%)`
@@ -165,13 +178,13 @@ export default function ResultsPanel({
 
         <Box
           sx={{
-            minHeight: 120,
+            minHeight: 140,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body1" color="text.secondary">
             Run a fit to see results
           </Typography>
         </Box>
@@ -185,12 +198,17 @@ export default function ResultsPanel({
     parameterNames,
     parameterValues,
     parameterUncertainties,
+    parameterUncertaintiesRaw,
     parameterExpandedUncertainties,
     parameterCovariance,
+    parameterCovarianceRaw,
     coverageFactor,
     chiSquared,
+    chiSquaredObservation,
+    chiSquaredObservationReduced,
     chiSquaredReduced,
     rmse,
+    residualStandardError,
     rSquared,
     effectiveRank,
     conditionNumber,
@@ -206,6 +224,14 @@ export default function ResultsPanel({
   const hasExpandedUncertainties = parameterExpandedUncertainties.some(
     (u) => Number.isFinite(u) && u > 0
   );
+  const displayedUncertainties =
+    uncertaintyBasis === 'raw'
+      ? parameterUncertaintiesRaw ?? parameterUncertainties
+      : parameterUncertainties;
+  const displayedCovariance =
+    uncertaintyBasis === 'raw'
+      ? parameterCovarianceRaw ?? parameterCovariance
+      : parameterCovariance;
   const confidencePercent = Number.isFinite(coverageFactor)
     ? Math.round(
         // Inverse of what the backend did — approximate % from k for display
@@ -222,10 +248,10 @@ export default function ResultsPanel({
         disabled={!canRunFit || fitStatus === 'running'}
         onClick={onRunFit}
         sx={{
-          mb: 1,
-          py: 1,
+          mb: 1.2,
+          py: 1.15,
           fontWeight: 700,
-          fontSize: '0.9rem',
+          fontSize: '1rem',
           letterSpacing: '0.04em',
           background: canRunFit
             ? 'linear-gradient(135deg, #ffb300 0%, #f57c00 100%)'
@@ -265,20 +291,21 @@ export default function ResultsPanel({
         }}
       >
         <Typography
-          variant="subtitle2"
-          sx={{ fontWeight: 700, color: 'text.secondary' }}
+          variant="subtitle1"
+          sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: '0.01em' }}
         >
           Results
         </Typography>
         <Typography
-          variant="caption"
+          variant="body2"
           sx={{
-            px: 0.8,
-            py: 0.2,
+            px: 1,
+            py: 0.25,
             borderRadius: 1,
             border: `1px solid ${anafisTheme.colors.tabs.fitting.main}59`,
             color: 'primary.light',
             fontWeight: 600,
+            fontSize: '0.82rem',
           }}
         >
           {iterations} iterations
@@ -291,7 +318,7 @@ export default function ResultsPanel({
           display: 'flex',
           alignItems: 'center',
           gap: 0.6,
-          mb: 1,
+          mb: 1.2,
         }}
       >
         <Box
@@ -304,11 +331,11 @@ export default function ResultsPanel({
           }}
         />
         <Typography
-          variant="caption"
+          variant="body2"
           sx={{
             color: termColor,
             fontWeight: 600,
-            fontSize: '0.72rem',
+            fontSize: '0.86rem',
           }}
         >
           {termination.text}
@@ -318,7 +345,7 @@ export default function ResultsPanel({
       {message && (
         <Alert
           severity={resolvedFitResult.success ? 'info' : 'warning'}
-          sx={{ mb: 1, py: 0, fontSize: '0.7rem' }}
+          sx={{ mb: 1.2, py: 0.2, fontSize: '0.82rem' }}
         >
           {message}
         </Alert>
@@ -327,8 +354,8 @@ export default function ResultsPanel({
       {/* ── Parameters ── */}
       <Box
         sx={{
-          mb: 1,
-          p: 1,
+          mb: 1.2,
+          p: 1.25,
           borderRadius: 1.5,
           border: '1px solid rgba(148, 163, 184, 0.16)',
           background: 'rgba(255, 255, 255, 0.015)',
@@ -337,29 +364,82 @@ export default function ResultsPanel({
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'baseline',
+            alignItems: 'center',
             justifyContent: 'space-between',
             mb: 0.6,
+            gap: 0.8,
           }}
         >
-          <Typography
-            variant="caption"
-            sx={{ color: 'text.secondary', display: 'block' }}
-          >
-            Parameters
-          </Typography>
-          {hasExpandedUncertainties && confidencePercent && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
             <Typography
-              variant="caption"
+              variant="body2"
+              sx={{ color: 'text.secondary', display: 'block' }}
+            >
+              Parameters
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setUncertaintyBasis('scaled')}
               sx={{
-                color: 'text.disabled',
-                fontSize: '0.65rem',
-                fontStyle: 'italic',
+                minWidth: 0,
+                px: 0.8,
+                py: 0,
+                lineHeight: 1.3,
+                fontSize: '0.78rem',
+                textTransform: 'none',
+                color:
+                  uncertaintyBasis === 'scaled' ? 'primary.main' : 'text.disabled',
               }}
             >
-              {confidencePercent}% CI, k = {coverageFactor.toPrecision(3)}
+              scaled
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setUncertaintyBasis('raw')}
+              sx={{
+                minWidth: 0,
+                px: 0.8,
+                py: 0,
+                lineHeight: 1.3,
+                fontSize: '0.78rem',
+                textTransform: 'none',
+                color:
+                  uncertaintyBasis === 'raw' ? 'primary.main' : 'text.disabled',
+              }}
+            >
+              raw
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: 'text.disabled', fontSize: '0.78rem' }}
+            >
+              σ source:{' '}
+              {uncertaintyBasis === 'raw' ? (
+                <>
+                  N<sup>-1</sup>
+                </>
+              ) : (
+                <>
+                  χ<sup>2</sup>
+                  <sub>red</sub> · N<sup>-1</sup>
+                </>
+              )}
             </Typography>
-          )}
+            {hasExpandedUncertainties && confidencePercent && (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.disabled',
+                  fontSize: '0.78rem',
+                  fontStyle: 'italic',
+                }}
+              >
+                {confidencePercent}% CI, k = {coverageFactor.toPrecision(3)}
+              </Typography>
+            )}
+          </Box>
         </Box>
         <Table size="small" sx={{ '& td': { borderBottom: 'none' } }}>
           <TableBody>
@@ -368,9 +448,9 @@ export default function ResultsPanel({
                 <TableCell
                   sx={{
                     width: 54,
-                    py: 0.15,
-                    px: 0.3,
-                    fontSize: '0.78rem',
+                    py: 0.25,
+                    px: 0.45,
+                    fontSize: '0.92rem',
                     fontFamily: 'monospace',
                     color: 'primary.main',
                     fontWeight: 700,
@@ -380,23 +460,23 @@ export default function ResultsPanel({
                 </TableCell>
                 <TableCell
                   sx={{
-                    py: 0.15,
-                    px: 0.3,
-                    fontSize: '0.78rem',
+                    py: 0.25,
+                    px: 0.45,
+                    fontSize: '0.92rem',
                     fontFamily: 'monospace',
                   }}
                 >
                   {formatValueWithUncertainty(
                     parameterValues[idx] ?? 0,
-                    parameterUncertainties[idx] ?? 0
+                    displayedUncertainties[idx] ?? 0
                   )}
                 </TableCell>
                 {hasExpandedUncertainties && (
                   <TableCell
                     sx={{
-                      py: 0.15,
-                      px: 0.3,
-                      fontSize: '0.7rem',
+                      py: 0.25,
+                      px: 0.45,
+                      fontSize: '0.82rem',
                       fontFamily: 'monospace',
                       color: 'text.disabled',
                       whiteSpace: 'nowrap',
@@ -426,8 +506,8 @@ export default function ResultsPanel({
       {/* ── Fit quality ── */}
       <Box
         sx={{
-          mb: 1,
-          p: 1,
+          mb: 1.2,
+          p: 1.25,
           borderRadius: 1.5,
           border: '1px solid rgba(148, 163, 184, 0.16)',
           background: 'rgba(255, 255, 255, 0.015)',
@@ -441,7 +521,7 @@ export default function ResultsPanel({
             mb: 0.6,
           }}
         >
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Fit quality
           </Typography>
           {assumptions && assumptions.length > 0 && (
@@ -464,32 +544,43 @@ export default function ResultsPanel({
           sx={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: 0.6,
-            fontSize: '0.75rem',
+            gap: 0.75,
+            fontSize: '0.9rem',
             fontFamily: 'monospace',
             color: 'text.secondary',
           }}
         >
-          <Typography variant="caption" sx={{ fontFamily: 'inherit' }}>
+          <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
             χ² = {formatScientific(chiSquared)}
           </Typography>
-          <Typography variant="caption" sx={{ fontFamily: 'inherit' }}>
+          <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
             χ²<sub>red</sub> = {formatScientific(chiSquaredReduced)}
           </Typography>
-          <Typography variant="caption" sx={{ fontFamily: 'inherit' }}>
+          <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
+            χ²<sub>obs</sub> = {formatScientific(chiSquaredObservation)}
+          </Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
+            χ²<sub>obs,red</sub> =
+            {' '}
+            {formatScientific(chiSquaredObservationReduced)}
+          </Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
             RMSE = {formatScientific(rmse)}
           </Typography>
-          <Typography variant="caption" sx={{ fontFamily: 'inherit' }}>
-            R² = {formatScientific(rSquared)}
+          <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
+            RSE = {formatScientific(residualStandardError)}
+          </Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
+            R² = {formatRSquared(rSquared)}
           </Typography>
           <Typography
-            variant="caption"
+            variant="body2"
             sx={{ fontFamily: 'inherit', color: 'text.disabled' }}
           >
             rank = {effectiveRank} / {parameterNames.length}
           </Typography>
           <Typography
-            variant="caption"
+            variant="body2"
             sx={{ fontFamily: 'inherit', color: 'text.disabled' }}
           >
             κ ={' '}
@@ -501,7 +592,7 @@ export default function ResultsPanel({
       {/* ── Covariance matrix ── */}
       <Box
         sx={{
-          p: 1,
+          p: 1.25,
           borderRadius: 1.5,
           border: '1px solid rgba(148, 163, 184, 0.16)',
           background: 'rgba(255, 255, 255, 0.015)',
@@ -512,7 +603,7 @@ export default function ResultsPanel({
           onClick={() => setCovExpanded((value) => !value)}
           sx={{
             textTransform: 'none',
-            fontSize: '0.75rem',
+            fontSize: '0.88rem',
             fontWeight: 600,
             color: 'primary.main',
             px: 0,
@@ -526,11 +617,13 @@ export default function ResultsPanel({
 
         <Collapse in={covExpanded} timeout={180} unmountOnExit>
           <Typography
-            variant="caption"
+            variant="body2"
             color="text.secondary"
-            sx={{ display: 'block', mt: 0.7 }}
+            sx={{ display: 'block', mt: 0.8 }}
           >
-            Full covariance matrix from ODR fit (scaled by χ²<sub>red</sub>).
+            Full covariance matrix from ODR fit ({uncertaintyBasis === 'raw'
+              ? 'raw inv(N)'
+              : 'scaled by χ²red'}).
           </Typography>
           <Box
             sx={{
@@ -559,7 +652,7 @@ export default function ResultsPanel({
                       align="center"
                       sx={{
                         fontWeight: 700,
-                        fontSize: '0.74rem',
+                        fontSize: '0.86rem',
                         fontFamily: 'monospace',
                         whiteSpace: 'nowrap',
                         px: 0.8,
@@ -577,7 +670,7 @@ export default function ResultsPanel({
                     <TableCell
                       sx={{
                         fontWeight: 700,
-                        fontSize: '0.74rem',
+                        fontSize: '0.86rem',
                         fontFamily: 'monospace',
                         whiteSpace: 'nowrap',
                         px: 0.8,
@@ -587,7 +680,7 @@ export default function ResultsPanel({
                       {rowName}
                     </TableCell>
                     {parameterNames.map((_, colIdx) => {
-                      const covValue = parameterCovariance?.[rowIdx]?.[colIdx];
+                      const covValue = displayedCovariance?.[rowIdx]?.[colIdx];
                       const isDiagonal = rowIdx === colIdx;
                       const isValid =
                         covValue !== undefined && Number.isFinite(covValue);
@@ -598,7 +691,7 @@ export default function ResultsPanel({
                           key={`matrix-cov-${rowName}-${colIdx}`}
                           align="center"
                           sx={{
-                            fontSize: '0.72rem',
+                            fontSize: '0.82rem',
                             fontFamily: 'monospace',
                             whiteSpace: 'nowrap',
                             px: 0.8,
@@ -624,15 +717,16 @@ export default function ResultsPanel({
       <Dialog
         open={assumptionsOpen}
         onClose={() => setAssumptionsOpen(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: {
             background:
               'linear-gradient(145deg, rgba(26, 26, 32, 0.98) 0%, rgba(18, 18, 22, 0.98) 100%)',
             border: '1px solid rgba(148, 163, 184, 0.2)',
-            borderRadius: 2,
+            borderRadius: 2.5,
             backdropFilter: 'blur(16px)',
+            maxWidth: 760,
           },
         }}
       >
@@ -659,7 +753,7 @@ export default function ResultsPanel({
           <Typography
             variant="caption"
             color="text.disabled"
-            sx={{ display: 'block', mb: 1.5, fontSize: '0.72rem' }}
+            sx={{ display: 'block', mb: 1.8, fontSize: '0.86rem', lineHeight: 1.45 }}
           >
             These describe the statistical model, solver strategy, and
             interpretation caveats for the reported results.
@@ -670,10 +764,10 @@ export default function ResultsPanel({
               pl: 2.5,
               m: 0,
               '& li': {
-                fontSize: '0.78rem',
+                fontSize: '0.96rem',
                 color: 'text.secondary',
-                lineHeight: 1.6,
-                mb: 0.8,
+                lineHeight: 1.7,
+                mb: 1.05,
               },
             }}
           >
