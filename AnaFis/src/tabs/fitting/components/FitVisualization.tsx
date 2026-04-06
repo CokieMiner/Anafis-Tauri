@@ -19,7 +19,10 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot, { Plotly } from '@/shared/components/PlotlyChart';
-import { ANAFIS_CHART_CONFIG } from '@/shared/components/plotlyTheme';
+import {
+  ANAFIS_CHART_CONFIG,
+  CHART_COLORS,
+} from '@/shared/components/plotlyTheme';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { saveWithMemory } from '@/shared/utils/dialogMemory';
 import type {
@@ -48,6 +51,8 @@ interface FitVisualizationProps {
   customFormula: string;
 }
 
+const INCLUDE_RESIDUALS_EXPORT_KEY = 'anafis_fitting_export_include_residuals';
+
 function assignCartesianAxes(
   traces: Plotly.Data[],
   xaxis: 'x' | 'x2',
@@ -63,12 +68,41 @@ function assignCartesianAxes(
   );
 }
 
+function hideLegendEntries(traces: Plotly.Data[]): Plotly.Data[] {
+  return traces.map(
+    (trace) =>
+      ({
+        ...(trace as Record<string, unknown>),
+        showlegend: false,
+      }) as Plotly.Data
+  );
+}
+
 function getAnnotations(
   annotations: Plotly.Layout['annotations'] | undefined
 ): Partial<Plotly.Annotations>[] {
   return Array.isArray(annotations)
     ? (annotations as Partial<Plotly.Annotations>[])
     : [];
+}
+
+function residualLegendAnnotation(
+  theme: 'dark' | 'light',
+  residualDomain: [number, number]
+): Partial<Plotly.Annotations> {
+  const textColor = theme === 'dark' ? '#b7b7b7' : '#555555';
+  return {
+    xref: 'paper' as const,
+    yref: 'paper' as const,
+    x: 0.02,
+    y: residualDomain[1] - 0.01,
+    xanchor: 'left',
+    yanchor: 'top',
+    align: 'left',
+    showarrow: false,
+    font: { size: 12, color: textColor },
+    text: `<span style="color:${CHART_COLORS.residual}">●</span> Residuals&nbsp;&nbsp;&nbsp;<span style="color:#7f7f7f">— —</span> Zero`,
+  };
 }
 
 export default function FitVisualization({
@@ -307,21 +341,42 @@ export default function FitVisualization({
         ? 'Predicted vs Observed'
         : 'Visualization';
 
+  const modeBadge =
+    mode === '3d'
+      ? '3D'
+      : mode === 'predicted'
+        ? 'N-D'
+        : mode === '2d'
+          ? '2D'
+          : 'Empty';
+
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'svg'>('png');
   const [exportTheme, setExportTheme] = useState<'dark' | 'light'>('dark');
-  const [includeResidualsInExport, setIncludeResidualsInExport] =
-    useState(false);
+  const [includeResidualsInExport, setIncludeResidualsInExport] = useState(
+    () => {
+      try {
+        return localStorage.getItem(INCLUDE_RESIDUALS_EXPORT_KEY) === '1';
+      } catch {
+        return false;
+      }
+    }
+  );
   const [isExporting, setIsExporting] = useState(false);
   const canIncludeResiduals = Boolean(
     hasUsableFitResult && importedData && mode !== 'empty'
   );
 
   useEffect(() => {
-    if (!canIncludeResiduals) {
-      setIncludeResidualsInExport(false);
+    try {
+      localStorage.setItem(
+        INCLUDE_RESIDUALS_EXPORT_KEY,
+        includeResidualsInExport ? '1' : '0'
+      );
+    } catch {
+      // Ignore storage errors and keep runtime state.
     }
-  }, [canIncludeResiduals]);
+  }, [includeResidualsInExport]);
 
   const handleExport = useCallback(async () => {
     if (mode === 'empty' || !importedData) {
@@ -397,8 +452,8 @@ export default function FitVisualization({
       let finalLayout = exportLayout;
 
       if (shouldIncludeResiduals) {
-        const residualDomain: [number, number] = [0, 0.2];
-        const mainDomain: [number, number] = [0.22, 1];
+        const residualDomain: [number, number] = [0, 0.18];
+        const mainDomain: [number, number] = [0.24, 1];
 
         const residualResult = buildResidualsChart(
           importedData,
@@ -408,10 +463,16 @@ export default function FitVisualization({
           fitResult,
           exportTheme
         );
-        const residualData = assignCartesianAxes(residualResult.data, 'x', 'y');
+        const residualData = hideLegendEntries(
+          assignCartesianAxes(residualResult.data, 'x', 'y')
+        );
         const mainAnnotations = getAnnotations(exportLayout.annotations);
         const residualAnnotations = getAnnotations(
           residualResult.layout.annotations
+        );
+        const bottomLegend = residualLegendAnnotation(
+          exportTheme,
+          residualDomain
         );
 
         exportHeight = 1000;
@@ -436,7 +497,11 @@ export default function FitVisualization({
               domain: residualDomain,
               anchor: 'x',
             },
-            annotations: [...mainAnnotations, ...residualAnnotations],
+            annotations: [
+              ...mainAnnotations,
+              ...residualAnnotations,
+              bottomLegend,
+            ],
             margin: {
               ...(exportLayout.margin ?? {}),
               t: 40,
@@ -481,7 +546,11 @@ export default function FitVisualization({
               domain: mainDomain,
               anchor: 'x2',
             },
-            annotations: [...mainAnnotations, ...residualAnnotations],
+            annotations: [
+              ...mainAnnotations,
+              ...residualAnnotations,
+              bottomLegend,
+            ],
             margin: {
               ...(exportLayout.margin ?? {}),
               t: 40,
@@ -594,6 +663,28 @@ export default function FitVisualization({
         >
           {modeLabel}
         </Typography>
+        <Box
+          sx={{
+            px: 0.7,
+            py: 0.12,
+            borderRadius: 999,
+            border: `1px solid ${anafisTheme.colors.tabs.fitting.main}55`,
+            background: `${anafisTheme.colors.tabs.fitting.main}14`,
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{
+              fontSize: '0.62rem',
+              lineHeight: 1.1,
+              letterSpacing: '0.06em',
+              fontWeight: 700,
+              color: anafisTheme.colors.tabs.fitting.main,
+            }}
+          >
+            {modeBadge}
+          </Typography>
+        </Box>
         <Tooltip title="Export Plot">
           <span>
             <IconButton

@@ -5,7 +5,23 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useEffect, useState } from 'react';
 import type { AdvancedSettings, ParameterConfig } from '../types/fittingTypes';
+
+const DEFAULT_PARAMETER_INITIAL_VALUE = 1;
+const DEFAULT_MAX_ITERATIONS = 200;
+const DEFAULT_TOLERANCE = 1e-9;
+const DEFAULT_INITIAL_DAMPING = 1e-3;
+
+function parseMaybeNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  const normalized = trimmed.replace(',', '.');
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : null;
+}
 
 interface FitSettingsSectionProps {
   parameterConfigs: ParameterConfig[];
@@ -42,6 +58,87 @@ export default function FitSettingsSection({
   onUpdateParameterConfig,
   onUpdateAdvancedSettings,
 }: FitSettingsSectionProps) {
+  const [parameterInputs, setParameterInputs] = useState<
+    Record<string, string>
+  >({});
+  const [maxIterationsInput, setMaxIterationsInput] = useState(
+    String(advancedSettings.maxIterations)
+  );
+  const [toleranceInput, setToleranceInput] = useState(
+    String(advancedSettings.tolerance)
+  );
+  const [initialDampingInput, setInitialDampingInput] = useState(
+    String(advancedSettings.initialDamping)
+  );
+
+  useEffect(() => {
+    setParameterInputs((prev) => {
+      const next: Record<string, string> = {};
+      for (const parameter of parameterConfigs) {
+        const previousDraft = prev[parameter.name];
+        next[parameter.name] = previousDraft ?? String(parameter.initialValue);
+      }
+      return next;
+    });
+  }, [parameterConfigs]);
+
+  useEffect(() => {
+    setMaxIterationsInput(String(advancedSettings.maxIterations));
+  }, [advancedSettings.maxIterations]);
+
+  useEffect(() => {
+    setToleranceInput(String(advancedSettings.tolerance));
+  }, [advancedSettings.tolerance]);
+
+  useEffect(() => {
+    setInitialDampingInput(String(advancedSettings.initialDamping));
+  }, [advancedSettings.initialDamping]);
+
+  const commitParameterInitialValue = (idx: number, raw: string) => {
+    const fallback = DEFAULT_PARAMETER_INITIAL_VALUE;
+    const parsed = parseMaybeNumber(raw);
+    const nextValue = parsed === null ? fallback : parsed;
+    onUpdateParameterConfig(idx, { initialValue: nextValue });
+    const name = parameterConfigs[idx]?.name;
+    if (name) {
+      setParameterInputs((prev) => ({ ...prev, [name]: String(nextValue) }));
+    }
+  };
+
+  const commitMaxIterations = (raw: string) => {
+    const fallback = DEFAULT_MAX_ITERATIONS;
+    const parsed = parseMaybeNumber(raw);
+    const nextValue =
+      parsed === null ? fallback : Math.max(1, Math.round(parsed));
+    onUpdateAdvancedSettings({
+      ...advancedSettings,
+      maxIterations: nextValue,
+    });
+    setMaxIterationsInput(String(nextValue));
+  };
+
+  const commitTolerance = (raw: string) => {
+    const fallback = DEFAULT_TOLERANCE;
+    const parsed = parseMaybeNumber(raw);
+    const nextValue = parsed === null || parsed <= 0 ? fallback : parsed;
+    onUpdateAdvancedSettings({
+      ...advancedSettings,
+      tolerance: nextValue,
+    });
+    setToleranceInput(String(nextValue));
+  };
+
+  const commitInitialDamping = (raw: string) => {
+    const fallback = DEFAULT_INITIAL_DAMPING;
+    const parsed = parseMaybeNumber(raw);
+    const nextValue = parsed === null || parsed <= 0 ? fallback : parsed;
+    onUpdateAdvancedSettings({
+      ...advancedSettings,
+      initialDamping: nextValue,
+    });
+    setInitialDampingInput(String(nextValue));
+  };
+
   return (
     <Box sx={sectionSx}>
       <Typography
@@ -74,17 +171,31 @@ export default function FitSettingsSection({
                   size="small"
                   fullWidth
                   label={param.name}
-                  type="number"
-                  value={param.initialValue}
-                  onChange={(e) =>
-                    onUpdateParameterConfig(idx, {
-                      initialValue: Number(e.target.value),
-                    })
+                  type="text"
+                  value={parameterInputs[param.name] ?? ''}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setParameterInputs((prev) => ({
+                      ...prev,
+                      [param.name]: next,
+                    }));
+                  }}
+                  onBlur={(e) =>
+                    commitParameterInitialValue(idx, e.target.value)
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      commitParameterInitialValue(
+                        idx,
+                        parameterInputs[param.name] ?? ''
+                      );
+                    }
+                  }}
                   sx={amberInputSx}
                   slotProps={{
                     input: {
                       sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
+                      inputProps: { inputMode: 'decimal' },
                     },
                   }}
                 />
@@ -113,19 +224,20 @@ export default function FitSettingsSection({
             size="small"
             fullWidth
             label="Max Iterations"
-            type="number"
-            value={advancedSettings.maxIterations}
-            onChange={(e) =>
-              onUpdateAdvancedSettings({
-                ...advancedSettings,
-                maxIterations: Math.max(1, Number(e.target.value)),
-              })
-            }
+            type="text"
+            value={maxIterationsInput}
+            onChange={(e) => setMaxIterationsInput(e.target.value)}
+            onBlur={(e) => commitMaxIterations(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitMaxIterations(maxIterationsInput);
+              }
+            }}
             sx={amberInputSx}
             slotProps={{
               input: {
                 sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
-                inputProps: { step: '1' },
+                inputProps: { step: '1', inputMode: 'numeric' },
               },
             }}
           />
@@ -135,19 +247,20 @@ export default function FitSettingsSection({
             size="small"
             fullWidth
             label="Tolerance"
-            type="number"
-            value={advancedSettings.tolerance}
-            onChange={(e) =>
-              onUpdateAdvancedSettings({
-                ...advancedSettings,
-                tolerance: Number(e.target.value),
-              })
-            }
+            type="text"
+            value={toleranceInput}
+            onChange={(e) => setToleranceInput(e.target.value)}
+            onBlur={(e) => commitTolerance(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitTolerance(toleranceInput);
+              }
+            }}
             sx={amberInputSx}
             slotProps={{
               input: {
                 sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
-                inputProps: { step: '1e-6' },
+                inputProps: { step: '1e-6', inputMode: 'decimal' },
               },
             }}
           />
@@ -157,19 +270,20 @@ export default function FitSettingsSection({
             size="small"
             fullWidth
             label="Initial Damping"
-            type="number"
-            value={advancedSettings.initialDamping}
-            onChange={(e) =>
-              onUpdateAdvancedSettings({
-                ...advancedSettings,
-                initialDamping: Number(e.target.value),
-              })
-            }
+            type="text"
+            value={initialDampingInput}
+            onChange={(e) => setInitialDampingInput(e.target.value)}
+            onBlur={(e) => commitInitialDamping(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitInitialDamping(initialDampingInput);
+              }
+            }}
             sx={amberInputSx}
             slotProps={{
               input: {
                 sx: { fontFamily: 'monospace', fontSize: '0.85rem' },
-                inputProps: { step: '0.001' },
+                inputProps: { step: '0.001', inputMode: 'decimal' },
               },
             }}
           />

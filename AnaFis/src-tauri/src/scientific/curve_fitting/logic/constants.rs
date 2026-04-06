@@ -1,5 +1,5 @@
-/// Minimum variance allowed for a data point to avoid division by zero.
-pub const MIN_VARIANCE: f64 = 1e-24;
+/// Minimum variance allowed for a data point to avoid division by zero and extreme conditioning.
+pub const MIN_VARIANCE: f64 = 1e-16;
 /// Threshold for considering a matrix singular during inversion.
 pub const MATRIX_SINGULAR_EPS: f64 = 1e-14;
 /// Tolerance for identical independent values to be considered correlated.

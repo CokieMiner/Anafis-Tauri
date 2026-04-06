@@ -7,7 +7,7 @@ use crate::scientific::curve_fitting::logic::constants::MATRIX_SINGULAR_EPS;
 /// Constructs the normal equations (`AtA` and `Atb`) from the Jacobian and residuals.
 pub fn build_normal_equations(state: &EvaluationState) -> (DMatrix<f64>, DVector<f64>) {
     let j_t = state.global_weighted_jacobian.transpose();
-    let normal = &j_t * &state.global_weighted_jacobian;
+    let normal = &j_t * &state.global_weighted_jacobian + &state.outer_second_order_normal;
     let gradient = &j_t * &state.flat_weighted_residuals;
     (normal, gradient)
 }

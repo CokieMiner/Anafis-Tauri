@@ -1,6 +1,16 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+/// Uncertainty evaluation mode for an input variable (GUM Type A / Type B).
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum UncertaintyType {
+    /// Statistical evaluation from repeated observations.
+    TypeA,
+    /// Non-statistical evaluation (certificate/specification/prior knowledge).
+    TypeB,
+}
+
 /// Input data for a variable (independent or dependent) in a profiled ODR fit.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -11,6 +21,12 @@ pub struct VariableInput {
     pub values: Vec<f64>,
     /// Optional absolute uncertainties for each measurement value.
     pub uncertainties: Option<Vec<f64>>, // Absolute uncertainties
+    /// Optional uncertainty classification for this variable (GUM Type A / Type B).
+    #[serde(default)]
+    pub uncertainty_type: Option<UncertaintyType>,
+    /// Optional finite degrees of freedom associated with the provided uncertainties.
+    #[serde(default)]
+    pub uncertainty_degrees_of_freedom: Option<f64>,
 }
 
 /// A single equation layer in a multilayered profiled ODR fit.
@@ -59,9 +75,10 @@ pub struct OdrFitRequest {
 
 /// Response containing the results of a profiled ODR fit.
 ///
-/// Note: Results use a profiled ODR objective with implicit correction sensitivity in a
-/// Gauss-Newton outer curvature model; full structural latent-state coupling across equations
-/// is not yet implemented.
+/// Note: Results use a profiled ODR objective with implicit correction sensitivity and
+/// second-order outer curvature corrections. The covariance pipeline also applies
+/// numerical safeguards (minimum-variance clamping, PSD regularization for covariance blocks,
+/// and bounded correlation reporting) to keep inference stable on near-singular data.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OdrFitResponse {
@@ -83,7 +100,7 @@ pub struct OdrFitResponse {
     pub parameter_names: Vec<String>,
     /// Optimized parameter values.
     pub parameter_values: Vec<f64>,
-    /// Estimated uncertainties for each parameter (scaled by reduced chi-squared when DOF > 0).
+    /// Estimated uncertainties for each parameter (scaled by observation-only reduced chi-squared when DOF > 0).
     pub parameter_uncertainties: Vec<f64>,
     /// Estimated uncertainties from the unscaled inverse normal matrix.
     pub parameter_uncertainties_raw: Vec<f64>,
@@ -91,10 +108,14 @@ pub struct OdrFitResponse {
     pub parameter_expanded_uncertainties: Vec<f64>,
     /// Coverage factor used to compute expanded uncertainties.
     pub coverage_factor: f64,
-    /// Full parameter covariance matrix (scaled by reduced chi-squared when DOF > 0).
+    /// Full parameter covariance matrix (scaled by observation-only reduced chi-squared when DOF > 0).
     pub parameter_covariance: Vec<Vec<f64>>, // Full covariance matrix
     /// Full unscaled parameter covariance matrix from the inverse normal matrix.
     pub parameter_covariance_raw: Vec<Vec<f64>>, // Full covariance matrix (raw)
+    /// Full parameter correlation matrix derived from the scaled covariance matrix.
+    pub parameter_correlations: Vec<Vec<f64>>,
+    /// Full parameter correlation matrix derived from the unscaled covariance matrix.
+    pub parameter_correlations_raw: Vec<Vec<f64>>,
     /// Raw residuals at the final state.
     pub residuals: Vec<f64>,
     /// Model predictions at the final state.
@@ -123,6 +144,10 @@ pub struct OdrFitResponse {
     pub inner_stationarity_norm_max: f64,
     /// Mean L2 norm of inner profiled-correction stationarity residuals across points.
     pub inner_stationarity_norm_mean: f64,
+    /// Effective input degrees of freedom estimated via Welch-Satterthwaite (if finite data supports it).
+    pub welch_satterthwaite_dof: Option<f64>,
+    /// Degrees of freedom used for Student-t coverage factor selection.
+    pub coverage_degrees_of_freedom: Option<f64>,
     /// Assumptions used for uncertainty interpretation (NIST GUM context).
     pub assumptions: Vec<String>,
 }

@@ -1,4 +1,4 @@
-use symb_anafis::{Expr, eval_f64};
+use symb_anafis::{eval_f64, Expr};
 
 use super::state::BatchEvaluationResult;
 use crate::scientific::curve_fitting::types::{OdrError, OdrResult};
@@ -45,24 +45,34 @@ pub fn evaluate_model_and_gradients_batch(
     }
 
     // Each expression uses the same variable order
-    let var_names: Vec<&[&str]> = exprs.iter().map(|_| &all_var_names[..]).collect();
+    let var_names: Vec<&[&str]> = std::iter::repeat_n(&all_var_names[..], total_exprs).collect();
 
     // Build data: each expression gets the same columnar data
     // data[expr_idx][var_idx][point_idx]
-    let data: Vec<&[&[f64]]> = exprs.iter().map(|_| columns).collect();
+    let data: Vec<&[&[f64]]> = std::iter::repeat_n(columns, total_exprs).collect();
+
+    let expected_points = expected_point_count(columns, &format!("layer {layer_idx}"))?;
 
     // Call eval_f64 for SIMD+parallel batch evaluation
-    let results = eval_f64(&exprs, &var_names, &data).map_err(|error| {
+    let mut results = eval_f64(&exprs, &var_names, &data).map_err(|error| {
         OdrError::Numerical(format!("eval_f64 failed for layer {layer_idx}: {error:?}"))
     })?;
+
+    if results.len() != total_exprs {
+        return Err(OdrError::Numerical(format!(
+            "eval_f64 returned {} outputs for layer {layer_idx}, expected {total_exprs}",
+            results.len()
+        )));
+    }
 
     // Validate and split results
     let mut offset = 0;
 
     // Model values
     let fitted_values = validate_evaluation_output(
-        results[offset].clone(),
+        std::mem::take(&mut results[offset]),
         &format!("model evaluator layer {layer_idx}"),
+        expected_points,
     )?;
     offset += 1;
 
@@ -70,8 +80,9 @@ pub fn evaluate_model_and_gradients_batch(
     let mut independent_derivatives = Vec::with_capacity(independent_gradient_exprs.len());
     for (idx, _) in independent_gradient_exprs.iter().enumerate() {
         let deriv = validate_evaluation_output(
-            results[offset].clone(),
+            std::mem::take(&mut results[offset]),
             &format!("independent gradient evaluator {idx} layer {layer_idx}"),
+            expected_points,
         )?;
         independent_derivatives.push(deriv);
         offset += 1;
@@ -81,8 +92,9 @@ pub fn evaluate_model_and_gradients_batch(
     let mut parameter_derivatives = Vec::with_capacity(parameter_gradient_exprs.len());
     for (idx, _) in parameter_gradient_exprs.iter().enumerate() {
         let deriv = validate_evaluation_output(
-            results[offset].clone(),
+            std::mem::take(&mut results[offset]),
             &format!("parameter gradient evaluator {idx} layer {layer_idx}"),
+            expected_points,
         )?;
         parameter_derivatives.push(deriv);
         offset += 1;
@@ -121,14 +133,58 @@ pub fn evaluate_model_expr_batch(
 
     let data: Vec<&[&[f64]]> = vec![columns];
 
+    let expected_points = expected_point_count(columns, evaluator_label)?;
+
     let results = eval_f64(&exprs, &var_names, &data).map_err(|error| {
         OdrError::Numerical(format!("eval_f64 failed for {evaluator_label}: {error:?}"))
     })?;
 
-    validate_evaluation_output(results[0].clone(), evaluator_label)
+    if results.len() != 1 {
+        return Err(OdrError::Numerical(format!(
+            "evaluation returned {} outputs for {evaluator_label}, expected 1",
+            results.len()
+        )));
+    }
+
+    let output = results.into_iter().next().ok_or_else(|| {
+        OdrError::Numerical(format!(
+            "evaluation returned no outputs for {evaluator_label}"
+        ))
+    })?;
+
+    validate_evaluation_output(output, evaluator_label, expected_points)
 }
 
-fn validate_evaluation_output(output: Vec<f64>, evaluator_label: &str) -> OdrResult<Vec<f64>> {
+fn expected_point_count(columns: &[&[f64]], evaluator_label: &str) -> OdrResult<usize> {
+    let Some(first) = columns.first() else {
+        return Err(OdrError::Numerical(format!(
+            "no input columns provided for {evaluator_label}"
+        )));
+    };
+    let expected = first.len();
+    for (idx, column) in columns.iter().enumerate() {
+        if column.len() != expected {
+            return Err(OdrError::Numerical(format!(
+                "column length mismatch for {evaluator_label}: column {idx} has {}, expected {expected}",
+                column.len()
+            )));
+        }
+    }
+    Ok(expected)
+}
+
+fn validate_evaluation_output(
+    output: Vec<f64>,
+    evaluator_label: &str,
+    expected_len: usize,
+) -> OdrResult<Vec<f64>> {
+    if output.len() != expected_len {
+        return Err(OdrError::Numerical(format!(
+            "{evaluator_label} produced {} outputs, expected {expected_len}",
+            output.len()
+        )));
+    }
+
     for (idx, value) in output.iter().enumerate() {
         if !value.is_finite() {
             return Err(OdrError::Numerical(format!(

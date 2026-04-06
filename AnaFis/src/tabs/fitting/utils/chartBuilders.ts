@@ -17,16 +17,6 @@ function resolveAxisLabel(
   return custom.length > 0 ? custom : fallback;
 }
 
-function formatFitNumber(value: number, digits: number) {
-  if (!Number.isFinite(value)) {
-    return 'NaN';
-  }
-  if (value === 0) {
-    return '0';
-  }
-  return value.toPrecision(digits);
-}
-
 function formatRSquared(value: number): string {
   if (!Number.isFinite(value)) {
     return 'NaN';
@@ -37,36 +27,27 @@ function formatRSquared(value: number): string {
   return value.toPrecision(6);
 }
 
-function buildFitValueLines(fitResult: OdrFitResponse): string[] {
-  return fitResult.parameterNames.map((name, idx) => {
-    const value = fitResult.parameterValues[idx] ?? 0;
-    const uncertainty = fitResult.parameterUncertainties[idx] ?? 0;
-
-    if (Number.isFinite(uncertainty) && Math.abs(uncertainty) > 0) {
-      return `${name} = ${formatFitNumber(value, 5)} ± ${formatFitNumber(
-        uncertainty,
-        2
-      )}`;
-    }
-
-    return `${name} = ${formatFitNumber(value, 5)}`;
-  });
+function compactFormulaLabel(formula: string): string {
+  const compact = formula.replace(/\s+/g, ' ').trim();
+  if (compact.length <= 40) {
+    return compact;
+  }
+  return `${compact.slice(0, 37)}...`;
 }
 
 function buildFitLegendName(
   fitResult: OdrFitResponse,
   customFormula: string
 ): string {
-  const parameterLines = buildFitValueLines(fitResult);
-
-  const formulaStr = customFormula.trim() || fitResult.formula;
+  const formulaStr = compactFormulaLabel(
+    customFormula.trim() || fitResult.formula
+  );
 
   return [
-    `<b>Fit : ${formulaStr}</b>`,
-    `χ²red = ${fitResult.chiSquaredReduced.toPrecision(
-      4
-    )}  |  R² = ${formatRSquared(fitResult.rSquared)}`,
-    ...parameterLines,
+    `<b>Fit (${formulaStr})</b>`,
+    `χ²red = ${fitResult.chiSquaredReduced.toPrecision(4)}  |  R² = ${formatRSquared(
+      fitResult.rSquared
+    )}`,
   ].join('<br>');
 }
 
@@ -78,6 +59,71 @@ function hasUsableFitResult(
       fitResult.parameterValues.length > 0 &&
       fitResult.fittedValues.length > 0
   );
+}
+
+function resolveLegendAnchor(
+  xValues: number[],
+  yValues: number[]
+): 'left' | 'right' {
+  const pairs: Array<{ x: number; y: number }> = [];
+  for (let idx = 0; idx < xValues.length; idx++) {
+    const x = xValues[idx] ?? Number.NaN;
+    const y = yValues[idx] ?? Number.NaN;
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      pairs.push({ x, y });
+    }
+  }
+
+  if (pairs.length < 4) {
+    return 'left';
+  }
+
+  const xs = pairs.map((point) => point.x);
+  const ys = pairs.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  const xMid = minX + 0.5 * (maxX - minX);
+  const topBandStart = minY + 0.7 * (maxY - minY);
+
+  let topLeftCount = 0;
+  let topRightCount = 0;
+  for (const point of pairs) {
+    if (point.y >= topBandStart) {
+      if (point.x < xMid) {
+        topLeftCount += 1;
+      } else {
+        topRightCount += 1;
+      }
+    }
+  }
+
+  // Put the legend on the least crowded top side.
+  return topLeftCount <= topRightCount ? 'left' : 'right';
+}
+
+function legendPosition(
+  xValues: number[],
+  yValues: number[]
+): {
+  x: number;
+  xanchor: 'left' | 'right';
+  y: number;
+  yanchor: 'top';
+} {
+  const anchor = resolveLegendAnchor(xValues, yValues);
+  return {
+    x: anchor === 'left' ? 0.02 : 0.98,
+    xanchor: anchor,
+    y: 0.98,
+    yanchor: 'top',
+  };
+}
+
+function uncertaintyBarColor(theme: 'dark' | 'light'): string {
+  return theme === 'dark' ? '#3f8fd6' : '#2b6ea9';
 }
 
 export function buildEmptyChart(theme: 'dark' | 'light' = 'dark') {
@@ -136,29 +182,16 @@ export function build2DChart(
     mode: 'markers',
     type: 'scatter',
     name: 'Data',
-    marker: { color: CHART_COLORS.primary, size: 10 },
+    marker: { color: CHART_COLORS.primary, size: 11 },
   };
-
-  // Determine legend position to avoid overlap
-  let legendX = 0; // default left
-  const minX = Math.min(...xCol.data);
-  const maxX = Math.max(...xCol.data);
-  const minY = Math.min(...depCol.data);
-  const maxY = Math.max(...depCol.data);
-  const leftThreshold = minX + 0.5 * (maxX - minX);
-  const topThreshold = minY + 0.75 * (maxY - minY);
-  const hasDataTopLeft = xCol.data.some(
-    (x, i) => x < leftThreshold && (depCol.data[i] ?? 0) > topThreshold
-  );
-  if (hasDataTopLeft) {
-    legendX = 1; // move to right
-  }
+  const legend = legendPosition(xCol.data, depCol.data);
 
   if (sigDepCol) {
     scatter.error_y = {
       type: 'data',
       array: sigDepCol.data,
       visible: true,
+      color: uncertaintyBarColor(theme),
       thickness: 2.5,
       width: 5.5,
     };
@@ -169,6 +202,7 @@ export function build2DChart(
       type: 'data',
       array: sigXCol.data,
       visible: true,
+      color: uncertaintyBarColor(theme),
       thickness: 2.5,
       width: 5.5,
     };
@@ -180,7 +214,9 @@ export function build2DChart(
     const legendText = buildFitLegendName(fitResult, customFormula);
 
     const curveFromFormula =
-      curveData && curveData.x.length > 1 && curveData.x.length === curveData.y.length;
+      curveData &&
+      curveData.x.length > 1 &&
+      curveData.x.length === curveData.y.length;
 
     const indices = curveFromFormula
       ? []
@@ -211,10 +247,7 @@ export function build2DChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         bgcolor: 'transparent',
-        x: legendX === 0 ? 0.02 : 0.98,
-        xanchor: legendX === 0 ? 'left' : 'right',
-        y: 0.98,
-        yanchor: 'top',
+        ...legend,
       },
       xaxis: {
         ...baseAxis,
@@ -275,27 +308,14 @@ export function build3DChart(
       mode: 'markers',
       type: 'scatter3d',
       name: 'Data',
-      marker: { color: CHART_COLORS.primary, size: 7, opacity: 0.9 },
+      marker: {
+        color: CHART_COLORS.primary,
+        size: 8,
+        opacity: 0.95,
+      },
     },
   ];
-
-  // Determine legend position to avoid overlap
-  let legendX = 0; // default left
-  const minX = Math.min(...xCol.data);
-  const maxX = Math.max(...xCol.data);
-  const minZ = Math.min(...depCol.data);
-  const maxZ = Math.max(...depCol.data);
-  const leftThreshold = minX + 0.5 * (maxX - minX);
-  const topThreshold = minZ + 0.75 * (maxZ - minZ);
-  const hasDataTopLeft = xCol.data.some(
-    (x, i) => x < leftThreshold && (depCol.data[i] ?? 0) > topThreshold
-  );
-  const hasDataTopRight = xCol.data.some(
-    (x, i) => x >= leftThreshold && (depCol.data[i] ?? 0) > topThreshold
-  );
-  if (hasDataTopLeft && !hasDataTopRight) {
-    legendX = 1; // move to right only if data is only on left
-  }
+  const legend = legendPosition(xCol.data, depCol.data);
 
   if (hasUsableFitResult(fitResult)) {
     const legendText = buildFitLegendName(fitResult, customFormula);
@@ -373,10 +393,7 @@ export function build3DChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 18 },
         bgcolor: 'transparent',
-        x: legendX === 0 ? 0.02 : 0.98,
-        xanchor: legendX === 0 ? 'left' : 'right',
-        y: 0.98,
-        yanchor: 'top',
+        ...legend,
       },
       scene: {
         xaxis: {
@@ -459,7 +476,7 @@ export function buildPredictedChart(
   const pad = (hi - lo) * 0.05;
 
   const legendText = buildFitLegendName(fitResult, customFormula);
-  const legendX = 0; // default left
+  const legend = legendPosition(fitResult.fittedValues, observed.data);
 
   return {
     data: [
@@ -476,7 +493,7 @@ export function buildPredictedChart(
         mode: 'markers',
         type: 'scatter',
         name: legendText,
-        marker: { color: CHART_COLORS.primary, size: 10 },
+        marker: { color: CHART_COLORS.primary, size: 11 },
       },
     ],
     layout: {
@@ -485,8 +502,7 @@ export function buildPredictedChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         bgcolor: 'transparent',
-        x: legendX,
-        y: 1,
+        ...legend,
       },
       xaxis: {
         ...baseAxis,
@@ -613,6 +629,7 @@ export function buildResidualsChart(
 
   const minX = Math.min(...xValues);
   const maxX = Math.max(...xValues);
+  const legend = legendPosition(xValues, residuals);
 
   return {
     data: [
@@ -633,10 +650,7 @@ export function buildResidualsChart(
       legend: {
         font: { color: theme === 'dark' ? '#aaa' : '#444', size: 10 },
         bgcolor: 'transparent',
-        x: 0.02,
-        xanchor: 'left',
-        y: 0.98,
-        yanchor: 'top',
+        ...legend,
       },
       margin: { l: 75, r: 24, t: 15, b: 60 },
       xaxis: {

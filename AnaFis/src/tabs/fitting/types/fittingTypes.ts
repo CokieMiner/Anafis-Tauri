@@ -9,10 +9,14 @@ export interface ModelLayer {
   independentVariables: string[];
 }
 
+export type UncertaintyType = 'typeA' | 'typeB';
+
 export interface VariableInput {
   name: string;
   values: number[];
   uncertainties?: number[];
+  uncertaintyType?: UncertaintyType;
+  uncertaintyDegreesOfFreedom?: number;
 }
 
 export interface OdrFitRequest {
@@ -45,6 +49,8 @@ export interface OdrFitResponse {
   coverageFactor: number;
   parameterCovariance: number[][]; // Full covariance matrix
   parameterCovarianceRaw: number[][]; // Full covariance matrix (raw)
+  parameterCorrelations: number[][];
+  parameterCorrelationsRaw: number[][];
   residuals: number[];
   fittedValues: number[];
   chiSquared: number;
@@ -59,6 +65,8 @@ export interface OdrFitResponse {
   conditionNumber: number;
   innerStationarityNormMax: number;
   innerStationarityNormMean: number;
+  welchSatterthwaiteDof?: number;
+  coverageDegreesOfFreedom?: number;
   assumptions: string[];
 }
 
@@ -99,6 +107,8 @@ export interface VariableBinding {
   variableName: string; // from formula parser: "x", "y", "z", etc.
   dataColumn: string | null; // column name from imported data
   uncColumn: string | null; // uncertainty column name (auto or manual)
+  uncertaintyType: UncertaintyType | null;
+  uncertaintyDegreesOfFreedom: number | null;
   axis?: 'x' | 'y' | 'z'; // chart axis assignment (auto for 1 var, user-chosen for >1)
 }
 
@@ -106,6 +116,8 @@ export interface VariableBinding {
 export interface DependentBinding {
   dataColumn: string | null; // column of observed values
   uncColumn: string | null; // column of uncertainties on observed values
+  uncertaintyType: UncertaintyType | null;
+  uncertaintyDegreesOfFreedom: number | null;
 }
 
 export type DataSourceMode = 'library' | 'csv';

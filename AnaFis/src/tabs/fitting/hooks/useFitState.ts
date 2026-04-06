@@ -26,6 +26,8 @@ const AXES: Array<'x' | 'y' | 'z'> = ['x', 'y', 'z'];
 const DEFAULT_DEPENDENT: DependentBinding = {
   dataColumn: null,
   uncColumn: null,
+  uncertaintyType: 'typeB',
+  uncertaintyDegreesOfFreedom: null,
 };
 
 const INITIAL_STATE: FitState = {
@@ -138,6 +140,8 @@ export function useFitState() {
           variableName: name,
           dataColumn: null,
           uncColumn: null,
+          uncertaintyType: 'typeB',
+          uncertaintyDegreesOfFreedom: null,
         };
 
         if (AXES[idx]) {

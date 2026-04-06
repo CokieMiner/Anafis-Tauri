@@ -167,7 +167,7 @@ const FittingTab = () => {
               variableNames={fit.state.variableNames}
               variableBindings={fit.state.variableBindings}
               dependentBinding={fit.state.dependentBinding}
-              dependentVariableName={dependentVariableName}
+              dependentVariableName={dependentVariableName ?? 'Dependent'}
               onUpdateVariableBinding={fit.updateVariableBinding}
               onUpdateDependentBinding={fit.updateDependentBinding}
             />

@@ -9,6 +9,15 @@ pub fn solve_linear_system(matrix: DMatrix<f64>, rhs: &DVector<f64>) -> OdrResul
         .map_err(|error| OdrError::Numerical(format!("SVD solve failed: {error}")))
 }
 
+pub fn solve_linear_system_matrix(
+    matrix: DMatrix<f64>,
+    rhs: &DMatrix<f64>,
+) -> OdrResult<DMatrix<f64>> {
+    let svd = matrix.svd(true, true);
+    svd.solve(rhs, MATRIX_SINGULAR_EPS)
+        .map_err(|error| OdrError::Numerical(format!("SVD solve failed: {error}")))
+}
+
 /// Inverts the information matrix to compute covariance.
 ///
 /// # Errors

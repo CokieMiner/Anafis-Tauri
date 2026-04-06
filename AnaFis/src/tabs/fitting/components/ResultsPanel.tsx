@@ -116,6 +116,9 @@ export default function ResultsPanel({
   const [uncertaintyBasis, setUncertaintyBasis] = useState<'scaled' | 'raw'>(
     'scaled'
   );
+  const [matrixKind, setMatrixKind] = useState<'covariance' | 'correlation'>(
+    'covariance'
+  );
 
   const hasResult =
     Boolean(fitResult) &&
@@ -202,7 +205,11 @@ export default function ResultsPanel({
     parameterExpandedUncertainties,
     parameterCovariance,
     parameterCovarianceRaw,
+    parameterCorrelations,
+    parameterCorrelationsRaw,
     coverageFactor,
+    coverageDegreesOfFreedom,
+    welchSatterthwaiteDof,
     chiSquared,
     chiSquaredObservation,
     chiSquaredObservationReduced,
@@ -226,12 +233,18 @@ export default function ResultsPanel({
   );
   const displayedUncertainties =
     uncertaintyBasis === 'raw'
-      ? parameterUncertaintiesRaw ?? parameterUncertainties
+      ? (parameterUncertaintiesRaw ?? parameterUncertainties)
       : parameterUncertainties;
   const displayedCovariance =
     uncertaintyBasis === 'raw'
-      ? parameterCovarianceRaw ?? parameterCovariance
+      ? (parameterCovarianceRaw ?? parameterCovariance)
       : parameterCovariance;
+  const displayedCorrelation =
+    uncertaintyBasis === 'raw'
+      ? (parameterCorrelationsRaw ?? parameterCorrelations)
+      : parameterCorrelations;
+  const displayedMatrix =
+    matrixKind === 'correlation' ? displayedCorrelation : displayedCovariance;
   const confidencePercent = Number.isFinite(coverageFactor)
     ? Math.round(
         // Inverse of what the backend did — approximate % from k for display
@@ -292,7 +305,11 @@ export default function ResultsPanel({
       >
         <Typography
           variant="subtitle1"
-          sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: '0.01em' }}
+          sx={{
+            fontWeight: 700,
+            color: 'text.secondary',
+            letterSpacing: '0.01em',
+          }}
         >
           Results
         </Typography>
@@ -388,7 +405,9 @@ export default function ResultsPanel({
                 fontSize: '0.78rem',
                 textTransform: 'none',
                 color:
-                  uncertaintyBasis === 'scaled' ? 'primary.main' : 'text.disabled',
+                  uncertaintyBasis === 'scaled'
+                    ? 'primary.main'
+                    : 'text.disabled',
               }}
             >
               scaled
@@ -560,8 +579,7 @@ export default function ResultsPanel({
             χ²<sub>obs</sub> = {formatScientific(chiSquaredObservation)}
           </Typography>
           <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
-            χ²<sub>obs,red</sub> =
-            {' '}
+            χ²<sub>obs,red</sub> ={' '}
             {formatScientific(chiSquaredObservationReduced)}
           </Typography>
           <Typography variant="body2" sx={{ fontFamily: 'inherit' }}>
@@ -586,6 +604,25 @@ export default function ResultsPanel({
             κ ={' '}
             {conditionNumber < 1e15 ? formatScientific(conditionNumber) : '∞'}
           </Typography>
+          {typeof coverageDegreesOfFreedom === 'number' &&
+            Number.isFinite(coverageDegreesOfFreedom) && (
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: 'inherit', color: 'text.disabled' }}
+              >
+                ν<sub>coverage</sub> ={' '}
+                {formatScientific(coverageDegreesOfFreedom)}
+              </Typography>
+            )}
+          {typeof welchSatterthwaiteDof === 'number' &&
+            Number.isFinite(welchSatterthwaiteDof) && (
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: 'inherit', color: 'text.disabled' }}
+              >
+                ν<sub>WS</sub> = {formatScientific(welchSatterthwaiteDof)}
+              </Typography>
+            )}
         </Box>
       </Box>
 
@@ -616,14 +653,54 @@ export default function ResultsPanel({
         </Button>
 
         <Collapse in={covExpanded} timeout={180} unmountOnExit>
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.6 }}
+          >
+            <Button
+              size="small"
+              onClick={() => setMatrixKind('covariance')}
+              sx={{
+                minWidth: 0,
+                px: 0.8,
+                py: 0,
+                lineHeight: 1.3,
+                fontSize: '0.78rem',
+                textTransform: 'none',
+                color:
+                  matrixKind === 'covariance'
+                    ? 'primary.main'
+                    : 'text.disabled',
+              }}
+            >
+              covariance
+            </Button>
+            <Button
+              size="small"
+              onClick={() => setMatrixKind('correlation')}
+              sx={{
+                minWidth: 0,
+                px: 0.8,
+                py: 0,
+                lineHeight: 1.3,
+                fontSize: '0.78rem',
+                textTransform: 'none',
+                color:
+                  matrixKind === 'correlation'
+                    ? 'primary.main'
+                    : 'text.disabled',
+              }}
+            >
+              correlation
+            </Button>
+          </Box>
           <Typography
             variant="body2"
             color="text.secondary"
             sx={{ display: 'block', mt: 0.8 }}
           >
-            Full covariance matrix from ODR fit ({uncertaintyBasis === 'raw'
-              ? 'raw inv(N)'
-              : 'scaled by χ²red'}).
+            {matrixKind === 'covariance'
+              ? `Full covariance matrix from ODR fit (${uncertaintyBasis === 'raw' ? 'raw inv(N)' : 'scaled by χ²red'}).`
+              : `Full correlation matrix from ODR fit (${uncertaintyBasis === 'raw' ? 'raw covariance' : 'scaled covariance'} basis).`}
           </Typography>
           <Box
             sx={{
@@ -680,7 +757,7 @@ export default function ResultsPanel({
                       {rowName}
                     </TableCell>
                     {parameterNames.map((_, colIdx) => {
-                      const covValue = displayedCovariance?.[rowIdx]?.[colIdx];
+                      const covValue = displayedMatrix?.[rowIdx]?.[colIdx];
                       const isDiagonal = rowIdx === colIdx;
                       const isValid =
                         covValue !== undefined && Number.isFinite(covValue);
@@ -753,7 +830,12 @@ export default function ResultsPanel({
           <Typography
             variant="caption"
             color="text.disabled"
-            sx={{ display: 'block', mb: 1.8, fontSize: '0.86rem', lineHeight: 1.45 }}
+            sx={{
+              display: 'block',
+              mb: 1.8,
+              fontSize: '0.86rem',
+              lineHeight: 1.45,
+            }}
           >
             These describe the statistical model, solver strategy, and
             interpretation caveats for the reported results.

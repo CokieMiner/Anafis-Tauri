@@ -36,11 +36,15 @@ export function buildFitRequest(
     return null;
   }
 
+  const columnsByName = new Map(
+    importedData.columns.map((column) => [column.name, column] as const)
+  );
+
   const colByName = (name: string | null) => {
     if (!name) {
       return undefined;
     }
-    return importedData.columns.find((col) => col.name === name);
+    return columnsByName.get(name);
   };
 
   const yCol = colByName(dependentBinding.dataColumn);
@@ -68,6 +72,16 @@ export function buildFitRequest(
       input.uncertainties = uncCol.data;
     }
 
+    if (binding.uncertaintyType !== null) {
+      input.uncertaintyType = binding.uncertaintyType;
+    }
+    if (
+      binding.uncertaintyDegreesOfFreedom !== null &&
+      Number.isFinite(binding.uncertaintyDegreesOfFreedom)
+    ) {
+      input.uncertaintyDegreesOfFreedom = binding.uncertaintyDegreesOfFreedom;
+    }
+
     independentVariables.push(input);
     layerIndependentNames.push(binding.variableName);
   }
@@ -90,6 +104,17 @@ export function buildFitRequest(
 
   if (sigmaYCol) {
     dependentInput.uncertainties = sigmaYCol.data;
+  }
+
+  if (dependentBinding.uncertaintyType !== null) {
+    dependentInput.uncertaintyType = dependentBinding.uncertaintyType;
+  }
+  if (
+    dependentBinding.uncertaintyDegreesOfFreedom !== null &&
+    Number.isFinite(dependentBinding.uncertaintyDegreesOfFreedom)
+  ) {
+    dependentInput.uncertaintyDegreesOfFreedom =
+      dependentBinding.uncertaintyDegreesOfFreedom;
   }
 
   const request: OdrFitRequest = {

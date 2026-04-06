@@ -1,6 +1,6 @@
 use super::engine::{
-    DEFAULT_DAMPING, DEFAULT_MAX_ITERATIONS, DEFAULT_TOLERANCE, get_or_compile_model,
-    normalize_identifiers, prepare_data, solve_odr, validate_identifier, validate_symbol_sets,
+    get_or_compile_model, normalize_identifiers, prepare_data, solve_odr, validate_identifier,
+    validate_symbol_sets, DEFAULT_DAMPING, DEFAULT_MAX_ITERATIONS, DEFAULT_TOLERANCE,
 };
 use super::response_builder::build_response;
 use crate::scientific::curve_fitting::types::{OdrError, OdrFitRequest, OdrFitResponse, OdrResult};

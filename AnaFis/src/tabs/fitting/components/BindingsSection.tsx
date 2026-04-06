@@ -23,7 +23,7 @@ interface BindingsSectionProps {
   variableNames: string[];
   variableBindings: VariableBinding[];
   dependentBinding: DependentBinding;
-  dependentVariableName?: string | undefined;
+  dependentVariableName?: string;
   onUpdateVariableBinding: (
     variableName: string,
     update: Partial<VariableBinding>
@@ -82,32 +82,44 @@ function SolidPaper(props: PaperProps) {
 
 const AXIS_OPTIONS: Array<'x' | 'y' | 'z'> = ['x', 'y', 'z'];
 
+function mappingsGridTemplate(showAxis: boolean): string {
+  return showAxis
+    ? 'minmax(50px, 0.6fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(48px, 0.5fr)'
+    : 'minmax(50px, 0.6fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr)';
+}
+
 function BindingRow({
   label,
   isDependent,
   dataColumn,
   uncColumn,
+  uncertaintyType,
+  uncertaintyDegreesOfFreedom,
   axis,
   showAxis,
   columnNames,
   onDataChange,
   onUncChange,
+  onUncertaintyTypeChange,
+  onUncertaintyDofChange,
   onAxisChange,
 }: {
   label: string;
   isDependent?: boolean;
   dataColumn: string | null;
   uncColumn: string | null;
+  uncertaintyType: 'typeA' | 'typeB' | null;
+  uncertaintyDegreesOfFreedom: number | null;
   axis: 'x' | 'y' | 'z' | undefined;
   showAxis: boolean;
   columnNames: string[];
   onDataChange: (col: string | null) => void;
   onUncChange: (col: string | null) => void;
+  onUncertaintyTypeChange: (value: 'typeA' | 'typeB') => void;
+  onUncertaintyDofChange: (value: number | null) => void;
   onAxisChange?: (axis: 'x' | 'y' | 'z') => void;
 }) {
-  const gridCols = showAxis
-    ? 'minmax(50px, 0.6fr) minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(48px, 0.5fr)'
-    : 'minmax(50px, 0.6fr) minmax(0, 1.5fr) minmax(0, 1.5fr)';
+  const gridCols = mappingsGridTemplate(showAxis);
 
   return (
     <Box
@@ -183,6 +195,64 @@ function BindingRow({
         sx={{ position: 'relative', width: '100%', minWidth: 0 }}
       />
 
+      <Select
+        fullWidth
+        size="small"
+        value={uncertaintyType ?? 'typeB'}
+        onChange={(event) => {
+          onUncertaintyTypeChange(event.target.value as 'typeA' | 'typeB');
+        }}
+        MenuProps={{
+          PaperProps: {
+            sx: {
+              maxHeight: DROPDOWN_MAX_HEIGHT,
+              overflowY: 'auto',
+            },
+          },
+        }}
+        sx={{
+          width: '100%',
+          minWidth: 0,
+          fontSize: '0.75rem',
+          height: 32,
+          '& .MuiSelect-select': { py: 0.5 },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: anafisTheme.colors.tabs.fitting.main,
+          },
+        }}
+      >
+        <MenuItem value="typeA" sx={{ fontSize: '0.75rem' }}>
+          Type A
+        </MenuItem>
+        <MenuItem value="typeB" sx={{ fontSize: '0.75rem' }}>
+          Type B
+        </MenuItem>
+      </Select>
+
+      <TextField
+        fullWidth
+        size="small"
+        placeholder="DOF"
+        type="number"
+        value={uncertaintyDegreesOfFreedom ?? ''}
+        onChange={(event) => {
+          const raw = event.target.value.trim();
+          if (raw.length === 0) {
+            onUncertaintyDofChange(null);
+            return;
+          }
+          const parsed = Number(raw);
+          onUncertaintyDofChange(Number.isFinite(parsed) ? parsed : null);
+        }}
+        slotProps={{
+          input: {
+            inputProps: { min: 1, step: '1' },
+            sx: { fontFamily: 'monospace', fontSize: '0.75rem' },
+          },
+        }}
+        sx={amberInputSx}
+      />
+
       {showAxis && !isDependent && (
         <Select
           fullWidth
@@ -255,9 +325,7 @@ export default function BindingsSection({
     variableBindings.length > 1 &&
     variableBindings.length <= AXIS_OPTIONS.length;
 
-  const headerCols = showAxis
-    ? 'minmax(50px, 0.6fr) minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(48px, 0.5fr)'
-    : 'minmax(50px, 0.6fr) minmax(0, 1.5fr) minmax(0, 1.5fr)';
+  const headerCols = mappingsGridTemplate(showAxis);
 
   return (
     <Box sx={sectionSx}>
@@ -297,6 +365,20 @@ export default function BindingsSection({
         >
           Uncertainty
         </Typography>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontSize: '0.65rem' }}
+        >
+          Unc. type
+        </Typography>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontSize: '0.65rem' }}
+        >
+          Unc. DOF
+        </Typography>
         {showAxis && (
           <Typography
             variant="caption"
@@ -325,6 +407,10 @@ export default function BindingsSection({
             isDependent
             dataColumn={dependentBinding.dataColumn}
             uncColumn={dependentBinding.uncColumn}
+            uncertaintyType={dependentBinding.uncertaintyType}
+            uncertaintyDegreesOfFreedom={
+              dependentBinding.uncertaintyDegreesOfFreedom
+            }
             axis={undefined}
             showAxis={showAxis}
             columnNames={columnNames}
@@ -332,6 +418,12 @@ export default function BindingsSection({
               onUpdateDependentBinding({ dataColumn: col })
             }
             onUncChange={(col) => onUpdateDependentBinding({ uncColumn: col })}
+            onUncertaintyTypeChange={(value) =>
+              onUpdateDependentBinding({ uncertaintyType: value })
+            }
+            onUncertaintyDofChange={(value) =>
+              onUpdateDependentBinding({ uncertaintyDegreesOfFreedom: value })
+            }
           />
 
           <Box
@@ -345,6 +437,10 @@ export default function BindingsSection({
                 label={binding.variableName}
                 dataColumn={binding.dataColumn}
                 uncColumn={binding.uncColumn}
+                uncertaintyType={binding.uncertaintyType}
+                uncertaintyDegreesOfFreedom={
+                  binding.uncertaintyDegreesOfFreedom
+                }
                 axis={binding.axis}
                 showAxis={showAxis}
                 columnNames={columnNames}
@@ -356,6 +452,16 @@ export default function BindingsSection({
                 onUncChange={(col) => {
                   onUpdateVariableBinding(binding.variableName, {
                     uncColumn: col,
+                  });
+                }}
+                onUncertaintyTypeChange={(value) => {
+                  onUpdateVariableBinding(binding.variableName, {
+                    uncertaintyType: value,
+                  });
+                }}
+                onUncertaintyDofChange={(value) => {
+                  onUpdateVariableBinding(binding.variableName, {
+                    uncertaintyDegreesOfFreedom: value,
                   });
                 }}
                 onAxisChange={(axis) => {

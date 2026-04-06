@@ -1,12 +1,12 @@
-use super::engine::{
+use super::logic::engine::{
     evaluate_model_expr_batch, get_or_compile_model, normalize_identifiers,
 };
 use super::logic::orchestrator::run_fit_request;
 use super::types::{
-    CurveEvaluationRequest, CurveEvaluationResponse, GridEvaluationRequest,
-    GridEvaluationResponse, OdrError, OdrFitRequest, OdrFitResponse, OdrResult,
+    CurveEvaluationRequest, CurveEvaluationResponse, GridEvaluationRequest, GridEvaluationResponse,
+    OdrError, OdrFitRequest, OdrFitResponse, OdrResult,
 };
-use tauri::command;
+use tauri;
 
 const MAX_GRID_RESOLUTION: usize = 2_000;
 
@@ -15,7 +15,7 @@ const MAX_GRID_RESOLUTION: usize = 2_000;
 /// # Errors
 /// Returns an error if the data preparation fails, the model cannot be compiled,
 /// or the ODR solver fails to converge.
-#[command]
+#[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn fit_custom_odr(request: OdrFitRequest) -> Result<OdrFitResponse, String> {
     run_fit_request(&request).map_err(|error| error.to_string())
@@ -26,7 +26,7 @@ pub fn fit_custom_odr(request: OdrFitRequest) -> Result<OdrFitResponse, String> 
 /// # Errors
 /// Returns an error if the model cannot be compiled, the resolution is invalid,
 /// or numerical overflow occurs during grid generation.
-#[command]
+#[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn evaluate_model_grid(
     request: GridEvaluationRequest,
@@ -39,7 +39,7 @@ pub fn evaluate_model_grid(
 /// # Errors
 /// Returns an error if the model cannot be compiled, the resolution is invalid,
 /// or numerical overflow occurs during curve generation.
-#[command]
+#[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn evaluate_model_curve(
     request: CurveEvaluationRequest,
@@ -52,7 +52,7 @@ fn evaluate_model_curve_inner(
 ) -> OdrResult<CurveEvaluationResponse> {
     let normalized_parameter_names = normalize_identifiers(&request.parameter_names, "parameter")?;
     let normalized_independent_names = normalize_identifiers(
-        &[request.independent_name.clone()],
+        std::slice::from_ref(&request.independent_name),
         "independent variable",
     )?;
 
@@ -105,22 +105,29 @@ fn evaluate_model_curve_inner(
     let x_step = (x_max - x_min) / (point_count - 1) as f64;
 
     for i in 0..point_count {
-        #[allow(
-            clippy::cast_precision_loss,
-            reason = "Precision loss in index cast is acceptable for visualization"
-        )]
-        let x = (i as f64).mul_add(x_step, x_min);
+        let x = if i == 0 {
+            x_min
+        } else if i == point_count - 1 {
+            x_max
+        } else {
+            #[allow(
+                clippy::cast_precision_loss,
+                reason = "Precision loss in index cast is acceptable for visualization"
+            )]
+            {
+                (i as f64).mul_add(x_step, x_min)
+            }
+        };
         curve_x.push(x);
     }
 
-    let mut columns: Vec<&[f64]> =
-        Vec::with_capacity(1 + normalized_parameter_names.len());
+    let mut columns: Vec<&[f64]> = Vec::with_capacity(1 + normalized_parameter_names.len());
     columns.push(&curve_x);
 
     let parameter_columns: Vec<Vec<f64>> = request
         .parameter_values
         .iter()
-        .map(|value| vec![*value; point_count])
+        .map(|&value| vec![value; point_count])
         .collect();
     for values in &parameter_columns {
         columns.push(values);
@@ -218,17 +225,33 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
     let y_step = (y_max - y_min) / (res - 1) as f64;
 
     for j in 0..res {
-        #[allow(
-            clippy::cast_precision_loss,
-            reason = "Precision loss in grid index is acceptable for visualization"
-        )]
-        let y = (j as f64).mul_add(y_step, y_min);
-        for i in 0..res {
+        let y = if j == 0 {
+            y_min
+        } else if j == res - 1 {
+            y_max
+        } else {
             #[allow(
                 clippy::cast_precision_loss,
                 reason = "Precision loss in grid index is acceptable for visualization"
             )]
-            let x = (i as f64).mul_add(x_step, x_min);
+            {
+                (j as f64).mul_add(y_step, y_min)
+            }
+        };
+        for i in 0..res {
+            let x = if i == 0 {
+                x_min
+            } else if i == res - 1 {
+                x_max
+            } else {
+                #[allow(
+                    clippy::cast_precision_loss,
+                    reason = "Precision loss in grid index is acceptable for visualization"
+                )]
+                {
+                    (i as f64).mul_add(x_step, x_min)
+                }
+            };
             grid_x.push(x);
             grid_y.push(y);
         }
@@ -264,4 +287,3 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
         z,
     })
 }
-
