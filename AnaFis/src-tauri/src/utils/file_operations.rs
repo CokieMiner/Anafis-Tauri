@@ -1,18 +1,17 @@
 // File operations utilities
 
-use base64::{Engine as _, engine::general_purpose};
+use base64::{Engine as Base64Engine, engine::general_purpose::STANDARD};
 use serde::Serialize;
-use std::fs;
+use std::fs::{create_dir_all, read_to_string, write};
 use std::path::Path;
 use std::process::Command;
 
 fn ensure_parent_and_write(path: &str, content: impl AsRef<[u8]>) -> Result<(), String> {
     if let Some(parent) = Path::new(path).parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create parent directory: {e}"))?;
+        create_dir_all(parent).map_err(|e| format!("Failed to create parent directory: {e}"))?;
     }
 
-    fs::write(path, content).map_err(|e| format!("Failed to write file: {e}"))?;
+    write(path, content).map_err(|e| format!("Failed to write file: {e}"))?;
     Ok(())
 }
 
@@ -48,14 +47,14 @@ fn find_ffmpeg_path() -> Option<String> {
         .lines()
         .map(str::trim)
         .find(|line| !line.is_empty())
-        .map(str::to_string)
+        .map(str::to_owned)
 }
 
 /// Read a text file and return its contents as a String.
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn read_file_text(path: String) -> Result<String, String> {
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read file '{path}': {e}"))
+    read_to_string(&path).map_err(|e| format!("Failed to read file '{path}': {e}"))
 }
 
 /// Save a PNG file from base64-encoded data
@@ -63,7 +62,7 @@ pub fn read_file_text(path: String) -> Result<String, String> {
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn save_png_file(path: String, data: String) -> Result<(), String> {
     // Decode base64 data
-    let bytes = general_purpose::STANDARD
+    let bytes = STANDARD
         .decode(&data)
         .map_err(|e| format!("Failed to decode base64 data: {e}"))?;
 
@@ -78,14 +77,14 @@ pub fn save_image_from_data_url(data_url: String, path: String) -> Result<(), St
     let parts: Vec<&str> = data_url.split(',').collect();
     if parts.len() != 2 {
         return Err(
-            "Invalid data URL format. Expected 'data:image/[type];base64,[data]'".to_string(),
+            "Invalid data URL format. Expected 'data:image/[type];base64,[data]'".to_owned(),
         );
     }
 
     let base64_data = parts[1];
 
     // Decode base64 data
-    let bytes = general_purpose::STANDARD
+    let bytes = STANDARD
         .decode(base64_data)
         .map_err(|e| format!("Failed to decode base64 data: {e}"))?;
 
@@ -103,7 +102,7 @@ pub fn save_svg_file(svg_content: String, path: String) -> Result<(), String> {
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn save_binary_file(path: String, data_base64: String) -> Result<(), String> {
-    let bytes = general_purpose::STANDARD
+    let bytes = STANDARD
         .decode(&data_base64)
         .map_err(|e| format!("Failed to decode base64 data: {e}"))?;
 
@@ -123,7 +122,7 @@ pub fn check_ffmpeg_available() -> FfmpegAvailability {
                 .lines()
                 .next()
                 .unwrap_or("ffmpeg")
-                .to_string();
+                .to_owned();
 
             FfmpegAvailability {
                 available: true,
@@ -138,7 +137,7 @@ pub fn check_ffmpeg_available() -> FfmpegAvailability {
             path: None,
             message: Some(
                 "FFmpeg not found. MP4 export is unavailable; WebM export remains available."
-                    .to_string(),
+                    .to_owned(),
             ),
         },
     }
@@ -160,13 +159,13 @@ pub fn transcode_webm_to_mp4(
     if !ffmpeg_status.available {
         return Ok(VideoExportResult {
             output_path: input_webm_path,
-            output_format: "webm".to_string(),
+            output_format: "webm".to_owned(),
             warning: ffmpeg_status.message,
         });
     }
 
     if let Some(parent) = Path::new(&output_mp4_path).parent() {
-        fs::create_dir_all(parent)
+        create_dir_all(parent)
             .map_err(|e| format!("Failed to create output directory for MP4 export: {e}"))?;
     }
 
@@ -189,14 +188,14 @@ pub fn transcode_webm_to_mp4(
     match output {
         Ok(output) if output.status.success() => Ok(VideoExportResult {
             output_path: output_mp4_path,
-            output_format: "mp4".to_string(),
+            output_format: "mp4".to_owned(),
             warning: None,
         }),
         Ok(output) => {
             let stderr = String::from_utf8_lossy(&output.stderr);
             Ok(VideoExportResult {
                 output_path: input_webm_path,
-                output_format: "webm".to_string(),
+                output_format: "webm".to_owned(),
                 warning: Some(format!(
                     "MP4 transcoding failed. Falling back to WebM. FFmpeg output: {}",
                     stderr.trim()
@@ -205,7 +204,7 @@ pub fn transcode_webm_to_mp4(
         }
         Err(error) => Ok(VideoExportResult {
             output_path: input_webm_path,
-            output_format: "webm".to_string(),
+            output_format: "webm".to_owned(),
             warning: Some(format!(
                 "Failed to launch FFmpeg. Falling back to WebM: {error}"
             )),

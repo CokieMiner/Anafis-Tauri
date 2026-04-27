@@ -57,7 +57,10 @@ pub fn compute_global_r_squared(
         reason = "Point count casting to f64 for mean calculation"
     )]
     let mean_y = flat_targets.iter().sum::<f64>() / flat_targets.len() as f64;
-    let total_sum_of_squares: f64 = flat_targets.iter().map(|value| (value - mean_y).powi(2)).sum();
+    let total_sum_of_squares: f64 = flat_targets
+        .iter()
+        .map(|value| (value - mean_y).powi(2))
+        .sum();
     let residual_sum_of_squares: f64 = residuals.iter().map(|value| value * value).sum();
 
     if total_sum_of_squares > 0.0 {
@@ -76,7 +79,9 @@ pub fn compute_per_layer_r_squared(
     (0..models.len())
         .map(|layer_idx| {
             let model = &models[layer_idx];
-            let dep_idx = variable_names.iter().position(|name| name == &model.dependent_name);
+            let dep_idx = variable_names
+                .iter()
+                .position(|name| name == &model.dependent_name);
             dep_idx.map_or(f64::NAN, |dep_idx| {
                 let targets = &variable_values[dep_idx];
                 let residuals = &layer_residuals[layer_idx];

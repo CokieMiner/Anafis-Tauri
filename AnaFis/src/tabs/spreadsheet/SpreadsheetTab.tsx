@@ -15,7 +15,11 @@ import QuickPlotSidebar from '@/tabs/spreadsheet/components/sidebar/QuickPlotSid
 import UncertaintySidebar from '@/tabs/spreadsheet/components/sidebar/UncertaintySidebar';
 import UnitConversionSidebar from '@/tabs/spreadsheet/components/sidebar/UnitConversionSidebar';
 import { SelectionProvider } from '@/tabs/spreadsheet/managers/SelectionContext';
-import { useSidebarState } from '@/tabs/spreadsheet/managers/SidebarStateManager';
+import {
+  type SidebarType,
+  useSidebarState,
+} from '@/tabs/spreadsheet/managers/SidebarStateManager';
+import { SpreadsheetManager } from '@/tabs/spreadsheet/managers/SpreadsheetManager';
 import { useSelectionContext } from '@/tabs/spreadsheet/managers/useSelectionContext';
 import type {
   CellValue,
@@ -51,8 +55,20 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
 
   // Initialize services after mount (can't access refs during render)
   const handleSpreadsheetReady = useCallback(() => {
-    sidebarActions.initializeServices(spreadsheetRef);
+    if (spreadsheetRef.current) {
+      SpreadsheetManager.register(spreadsheetRef.current);
+    }
+    sidebarActions.initializeServices();
   }, [sidebarActions]);
+
+  // Clean up global registration on unmount
+  useEffect(() => {
+    return () => {
+      if (spreadsheetRef.current) {
+        SpreadsheetManager.deregister(spreadsheetRef.current);
+      }
+    };
+  }, []);
 
   // NOTE: Window event listener for load-workbook-data removed - App.tsx now handles file opening directly
   // File association is handled by creating tabs with workbook data in App.tsx
@@ -124,9 +140,7 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
 
   // Handle sidebar toggle from toolbar
   const handleSidebarToggle = useCallback(
-    (
-      sidebar: import('@/tabs/spreadsheet/managers/SidebarStateManager').SidebarType
-    ) => {
+    (sidebar: SidebarType) => {
       sidebarActions.setActiveSidebar(sidebar);
     },
     [sidebarActions]

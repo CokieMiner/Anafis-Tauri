@@ -19,7 +19,7 @@ use std::sync::Arc;
     reason = "Tauri commands require owned types for arguments"
 )]
 pub fn export_to_parquet(
-    data: Vec<serde_json::Value>,
+    data: Vec<Value>,
     file_path: String,
     _config: ExportConfig,
 ) -> Result<(), String> {
@@ -27,12 +27,12 @@ pub fn export_to_parquet(
     let max_cols = data
         .iter()
         .filter_map(|row| row.as_array())
-        .map(std::vec::Vec::len)
+        .map(Vec::len)
         .max()
         .unwrap_or(0);
 
     if max_cols == 0 {
-        return Err("No data to export".to_string());
+        return Err("No data to export".to_owned());
     }
 
     let num_rows = data.len();
@@ -77,7 +77,7 @@ pub fn export_to_parquet(
     }
 
     // Create RecordBatch
-    let batch = RecordBatch::try_new(schema.clone(), columns)
+    let batch = RecordBatch::try_new(Arc::clone(&schema), columns)
         .map_err(|e| format!("Failed to create RecordBatch: {e}"))?;
 
     // Write to Parquet file

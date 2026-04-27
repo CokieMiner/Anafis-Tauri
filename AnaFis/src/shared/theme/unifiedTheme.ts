@@ -277,42 +277,7 @@ export const anafisTheme = {
 } as const;
 
 // =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Get tab-specific colors by tab type
- */
-export function getTabColor(tabType: keyof typeof anafisTheme.colors.tabs) {
-  return anafisTheme.colors.tabs[tabType] ?? anafisTheme.colors.primary;
-}
-
-/**
- * Get background gradient for a specific context
- */
-export function getBackgroundGradient(
-  context: 'default' | 'fitting' = 'default'
-) {
-  return context === 'fitting'
-    ? anafisTheme.gradients.backgroundRadialFitting
-    : anafisTheme.gradients.backgroundRadial;
-}
-
-/**
- * Create a colored shadow
- */
-export function createColoredShadow(
-  color: string,
-  opacity: number = 0.4
-): string {
-  return `0 4px 15px ${color}${Math.round(opacity * 255)
-    .toString(16)
-    .padStart(2, '0')}`;
-}
-
-// =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 
-export type AnaFisTheme = typeof anafisTheme;
 export type TabType = keyof typeof anafisTheme.colors.tabs;

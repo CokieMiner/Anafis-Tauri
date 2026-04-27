@@ -28,7 +28,7 @@ pub fn diagnose_matrix(matrix: &DMatrix<f64>) -> MatrixDiagnostics {
     let sigma_max = singular_values.iter().copied().fold(0.0, f64::max);
     let threshold = MATRIX_SINGULAR_EPS * sigma_max;
 
-    let mut effective_rank = 0usize;
+    let mut effective_rank = 0_usize;
     let mut sigma_min_nonzero = f64::INFINITY;
     for sigma in singular_values.iter().copied() {
         if sigma > threshold {

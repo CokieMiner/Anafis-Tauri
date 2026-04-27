@@ -9,7 +9,7 @@
 // - Bytes 12+:   Gzip-compressed JSON data
 
 use flate2::read::GzDecoder;
-use serde_json::Value;
+use serde_json::{Value, from_reader};
 use std::fs::File;
 use std::io::{BufReader, Read};
 
@@ -38,6 +38,10 @@ pub fn import_anafis_spread(file_path: String) -> Result<Value, String> {
         .map_err(|e| format!("Failed to read file metadata: {e}"))?;
 
     if metadata.len() > MAX_FILE_SIZE {
+        #[allow(
+            clippy::integer_division,
+            reason = "Integer division is acceptable for approximate MB display"
+        )]
         return Err(format!(
             "File too large: {} MB (maximum: {} MB)",
             metadata.len() / (1024 * 1024),
@@ -46,19 +50,19 @@ pub fn import_anafis_spread(file_path: String) -> Result<Value, String> {
     }
 
     // Read and verify magic number
-    let mut magic_buf = [0u8; 8];
+    let mut magic_buf = [0_u8; 8];
     file.read_exact(&mut magic_buf)
         .map_err(|e| format!("Failed to read file header: {e}"))?;
 
     if &magic_buf != MAGIC_NUMBER {
         return Err(
             "Invalid file format: Not an AnaFis Spreadsheet file (magic number mismatch)"
-                .to_string(),
+                .to_owned(),
         );
     }
 
     // Read and verify format version
-    let mut version_buf = [0u8; 4];
+    let mut version_buf = [0_u8; 4];
     file.read_exact(&mut version_buf)
         .map_err(|e| format!("Failed to read version: {e}"))?;
 
@@ -74,8 +78,8 @@ pub fn import_anafis_spread(file_path: String) -> Result<Value, String> {
     let reader = BufReader::new(decoder);
 
     // Parse JSON
-    let data: Value = serde_json::from_reader(reader)
-        .map_err(|e| format!("Failed to parse AnaFis Spreadsheet file: {e}"))?;
+    let data: Value =
+        from_reader(reader).map_err(|e| format!("Failed to parse AnaFis Spreadsheet file: {e}"))?;
 
     // Validate format in JSON metadata
     if let Some(format) = data.get("format").and_then(|f| f.as_str()) {
@@ -83,7 +87,7 @@ pub fn import_anafis_spread(file_path: String) -> Result<Value, String> {
             return Err(format!("Invalid AnaFis Spreadsheet format: {format}"));
         }
     } else {
-        return Err("Missing format identifier in AnaFis Spreadsheet file".to_string());
+        return Err("Missing format identifier in AnaFis Spreadsheet file".to_owned());
     }
 
     // Extract the workbook data

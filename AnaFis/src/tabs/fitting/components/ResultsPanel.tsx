@@ -1,7 +1,7 @@
 // Results Panel — Parameters with uncertainties, goodness-of-fit metrics, covariance dropdown
 
+import { HelpOutlined as HelpOutlineIcon } from '@mui/icons-material';
 import CloseIcon from '@mui/icons-material/Close';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import {
   Alert,
   Box,
@@ -21,7 +21,10 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
-import type { FitStatus, OdrFitResponse } from '../types/fittingTypes';
+import type {
+  FitStatus,
+  OdrFitResponse,
+} from '@/tabs/fitting/types/fittingTypes';
 
 function formatScientific(value: number): string {
   if (value === 0) {
@@ -796,14 +799,16 @@ export default function ResultsPanel({
         onClose={() => setAssumptionsOpen(false)}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: {
-            background:
-              'linear-gradient(145deg, rgba(26, 26, 32, 0.98) 0%, rgba(18, 18, 22, 0.98) 100%)',
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-            borderRadius: 2.5,
-            backdropFilter: 'blur(16px)',
-            maxWidth: 760,
+        slotProps={{
+          paper: {
+            sx: {
+              background:
+                'linear-gradient(145deg, rgba(26, 26, 32, 0.98) 0%, rgba(18, 18, 22, 0.98) 100%)',
+              border: '1px solid rgba(148, 163, 184, 0.2)',
+              borderRadius: 2.5,
+              backdropFilter: 'blur(16px)',
+              maxWidth: 760,
+            },
           },
         }}
       >

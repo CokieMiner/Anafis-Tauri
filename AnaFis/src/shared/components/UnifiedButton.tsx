@@ -26,16 +26,10 @@ import { anafisTheme, type TabType } from '@/shared/theme/unifiedTheme';
 // TYPES
 // =============================================================================
 
-export type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'tab'
-  | 'windowControl'
-  | 'icon';
-export type WindowControlType = 'minimize' | 'maximize' | 'close';
+type ButtonVariant = 'primary' | 'secondary' | 'tab' | 'windowControl' | 'icon';
+type WindowControlType = 'minimize' | 'maximize' | 'close';
 
-export interface UnifiedButtonProps
-  extends Omit<ButtonProps, 'variant' | 'color'> {
+interface UnifiedButtonProps extends Omit<ButtonProps, 'variant' | 'color'> {
   variant?: ButtonVariant;
   /** Tab type for 'tab' variant */
   tabType?: TabType;
@@ -51,7 +45,7 @@ export interface UnifiedButtonProps
   hoverBoxShadowColor?: string;
 }
 
-export interface UnifiedIconButtonProps extends Omit<IconButtonProps, 'color'> {
+interface UnifiedIconButtonProps extends Omit<IconButtonProps, 'color'> {
   control?: WindowControlType;
   tabType?: TabType;
 }
@@ -253,36 +247,35 @@ UnifiedButton.displayName = 'UnifiedButton';
 // UNIFIED ICON BUTTON COMPONENT
 // =============================================================================
 
-export const UnifiedIconButton = forwardRef<
-  HTMLButtonElement,
-  UnifiedIconButtonProps
->(({ control, tabType, sx, ...props }, ref) => {
-  const iconButtonStyles = useMemo(() => {
-    if (control) {
-      return getWindowControlStyles(control);
-    }
+const UnifiedIconButton = forwardRef<HTMLButtonElement, UnifiedIconButtonProps>(
+  ({ control, tabType, sx, ...props }, ref) => {
+    const iconButtonStyles = useMemo(() => {
+      if (control) {
+        return getWindowControlStyles(control);
+      }
 
-    // Default icon button styles
-    const color = tabType
-      ? anafisTheme.colors.tabs[tabType].main
-      : anafisTheme.colors.primary.main;
+      // Default icon button styles
+      const color = tabType
+        ? anafisTheme.colors.tabs[tabType].main
+        : anafisTheme.colors.primary.main;
 
-    return {
-      color: anafisTheme.colors.text.secondary,
-      borderRadius: anafisTheme.radius.button,
-      transition: anafisTheme.transitions.hover,
-      '&:hover': {
-        backgroundColor: `${color}1A`,
-        color: anafisTheme.colors.text.primary,
-        transform: 'scale(1.05)',
-      },
-    };
-  }, [control, tabType]);
+      return {
+        color: anafisTheme.colors.text.secondary,
+        borderRadius: anafisTheme.radius.button,
+        transition: anafisTheme.transitions.hover,
+        '&:hover': {
+          backgroundColor: `${color}1A`,
+          color: anafisTheme.colors.text.primary,
+          transform: 'scale(1.05)',
+        },
+      };
+    }, [control, tabType]);
 
-  return (
-    <IconButton ref={ref} sx={{ ...iconButtonStyles, ...sx }} {...props} />
-  );
-});
+    return (
+      <IconButton ref={ref} sx={{ ...iconButtonStyles, ...sx }} {...props} />
+    );
+  }
+);
 
 UnifiedIconButton.displayName = 'UnifiedIconButton';
 
@@ -291,7 +284,7 @@ UnifiedIconButton.displayName = 'UnifiedIconButton';
 // =============================================================================
 
 /** Pre-configured minimize button for window controls */
-export const MinimizeButton = forwardRef<
+const MinimizeButton = forwardRef<
   HTMLButtonElement,
   Omit<UnifiedIconButtonProps, 'control'>
 >((props, ref) => (
@@ -299,7 +292,7 @@ export const MinimizeButton = forwardRef<
 ));
 
 /** Pre-configured maximize button for window controls */
-export const MaximizeButton = forwardRef<
+const MaximizeButton = forwardRef<
   HTMLButtonElement,
   Omit<UnifiedIconButtonProps, 'control'>
 >((props, ref) => (
@@ -307,7 +300,7 @@ export const MaximizeButton = forwardRef<
 ));
 
 /** Pre-configured close button for window controls */
-export const CloseButton = forwardRef<
+const CloseButton = forwardRef<
   HTMLButtonElement,
   Omit<UnifiedIconButtonProps, 'control'>
 >((props, ref) => <UnifiedIconButton ref={ref} control="close" {...props} />);
@@ -321,7 +314,7 @@ CloseButton.displayName = 'CloseButton';
 // =============================================================================
 
 /** Pre-configured spreadsheet tab button */
-export const SpreadsheetTabButton = forwardRef<
+const SpreadsheetTabButton = forwardRef<
   HTMLButtonElement,
   Omit<UnifiedButtonProps, 'variant' | 'tabType'>
 >((props, ref) => (
@@ -329,7 +322,7 @@ export const SpreadsheetTabButton = forwardRef<
 ));
 
 /** Pre-configured fitting tab button */
-export const FittingTabButton = forwardRef<
+const FittingTabButton = forwardRef<
   HTMLButtonElement,
   Omit<UnifiedButtonProps, 'variant' | 'tabType'>
 >((props, ref) => (
@@ -337,7 +330,7 @@ export const FittingTabButton = forwardRef<
 ));
 
 /** Pre-configured solver tab button */
-export const SolverTabButton = forwardRef<
+const SolverTabButton = forwardRef<
   HTMLButtonElement,
   Omit<UnifiedButtonProps, 'variant' | 'tabType'>
 >((props, ref) => (
@@ -345,7 +338,7 @@ export const SolverTabButton = forwardRef<
 ));
 
 /** Pre-configured monte carlo tab button */
-export const MonteCarloTabButton = forwardRef<
+const MonteCarloTabButton = forwardRef<
   HTMLButtonElement,
   Omit<UnifiedButtonProps, 'variant' | 'tabType'>
 >((props, ref) => (

@@ -6,7 +6,7 @@ import type {
   ParameterConfig,
   VariableBinding,
   VariableInput,
-} from '../types/fittingTypes';
+} from '@/tabs/fitting/types/fittingTypes';
 
 export function parseFormula(formula: string): {
   dependentVariable?: string;

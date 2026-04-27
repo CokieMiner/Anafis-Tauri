@@ -8,11 +8,21 @@ use super::models::{
     BatchImportError, BatchImportRequest, BatchImportResponse, DataSequence, SaveSequenceRequest,
     SearchRequest, SequenceListResponse, SortBy, SortOrder, UpdateSequenceRequest,
 };
-use chrono::Utc;
-use rusqlite::{Connection, OptionalExtension, Result as SqliteResult, Row, params};
+use chrono::{DateTime, Utc};
+use rusqlite::types::Type;
+use rusqlite::{
+    Connection, Error as SqliteError, OptionalExtension, Result as SqliteResult, Row, ToSql,
+    params, params_from_iter,
+};
+use serde_json::{from_str, to_string};
+use std::collections::HashSet;
 use std::fmt::Write;
+use std::fs::File;
+use std::io::Write as IoWrite;
 use std::sync::Mutex;
 use uuid::Uuid;
+
+use crate::error::API_VERSION;
 
 pub struct DataLibraryDatabase {
     conn: Mutex<Connection>,
@@ -116,23 +126,22 @@ impl DataLibraryDatabase {
         let count: i64 = if params.is_empty() {
             self.conn
                 .lock()
-                .unwrap()
+                .expect("Database connection should not be poisoned")
                 .prepare(&sql)?
                 .query_row([], |row| row.get(0))?
         } else {
-            let param_refs: Vec<&dyn rusqlite::ToSql> =
-                params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+            let param_refs: Vec<&dyn ToSql> = params.iter().map(|p| p as &dyn ToSql).collect();
             self.conn
                 .lock()
-                .unwrap()
+                .expect("Database connection should not be poisoned")
                 .prepare(&sql)?
                 .query_row(&param_refs[..], |row| row.get(0))?
         };
 
-        usize::try_from(count).map_err(|_| {
-            rusqlite::Error::FromSqlConversionFailure(
+        usize::try_from(count).map_err(|_err| {
+            SqliteError::FromSqlConversionFailure(
                 0,
-                rusqlite::types::Type::Integer,
+                Type::Integer,
                 "Count value out of range for usize".into(),
             )
         })
@@ -145,34 +154,33 @@ impl DataLibraryDatabase {
         offset: Option<usize>,
     ) -> SqliteResult<Vec<DataSequence>> {
         let (where_sql, mut params) = Self::build_where_clause(search);
-        let mut query = "SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at FROM sequences".to_string();
+        let mut query = "SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at FROM sequences".to_owned();
         query.push_str(&where_sql);
         query.push_str(&Self::order_by_clause(search));
 
         if let Some(limit) = limit {
             params.push(limit.to_string());
             let limit_idx = params.len();
-            let _ = write!(query, " LIMIT ?{limit_idx}");
+            write!(query, " LIMIT ?{limit_idx}").expect("String writing never fails");
         }
         if let Some(offset) = offset {
             params.push(offset.to_string());
             let offset_idx = params.len();
-            let _ = write!(query, " OFFSET ?{offset_idx}");
+            write!(query, " OFFSET ?{offset_idx}").expect("String writing never fails");
         }
 
         let sequences = if params.is_empty() {
             self.conn
                 .lock()
-                .unwrap()
+                .expect("Database connection should not be poisoned")
                 .prepare(&query)?
                 .query_map([], Self::row_to_sequence)?
                 .collect::<SqliteResult<Vec<_>>>()?
         } else {
-            let param_refs: Vec<&dyn rusqlite::ToSql> =
-                params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+            let param_refs: Vec<&dyn ToSql> = params.iter().map(|p| p as &dyn ToSql).collect();
             self.conn
                 .lock()
-                .unwrap()
+                .expect("Database connection should not be poisoned")
                 .prepare(&query)?
                 .query_map(&param_refs[..], Self::row_to_sequence)?
                 .collect::<SqliteResult<Vec<_>>>()?
@@ -194,40 +202,20 @@ impl DataLibraryDatabase {
         let created_at_str: String = row.get(9)?;
         let modified_at_str: String = row.get(10)?;
 
-        let tags: Vec<String> = serde_json::from_str(&tags_json).map_err(|e| {
-            rusqlite::Error::FromSqlConversionFailure(3, rusqlite::types::Type::Text, Box::new(e))
-        })?;
-        let data: Vec<f64> = serde_json::from_str(&data_json).map_err(|e| {
-            rusqlite::Error::FromSqlConversionFailure(6, rusqlite::types::Type::Text, Box::new(e))
-        })?;
+        let tags: Vec<String> = from_str(&tags_json)
+            .map_err(|e| SqliteError::FromSqlConversionFailure(3, Type::Text, Box::new(e)))?;
+        let data: Vec<f64> = from_str(&data_json)
+            .map_err(|e| SqliteError::FromSqlConversionFailure(6, Type::Text, Box::new(e)))?;
         let uncertainties: Option<Vec<f64>> = uncertainties_json
-            .map(|s| serde_json::from_str(&s))
+            .map(|s| from_str(&s))
             .transpose()
-            .map_err(|e| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    7,
-                    rusqlite::types::Type::Text,
-                    Box::new(e),
-                )
-            })?;
+            .map_err(|e| SqliteError::FromSqlConversionFailure(7, Type::Text, Box::new(e)))?;
 
-        let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|e| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    9,
-                    rusqlite::types::Type::Text,
-                    Box::new(e),
-                )
-            })?
+        let created_at = DateTime::parse_from_rfc3339(&created_at_str)
+            .map_err(|e| SqliteError::FromSqlConversionFailure(9, Type::Text, Box::new(e)))?
             .with_timezone(&Utc);
-        let modified_at = chrono::DateTime::parse_from_rfc3339(&modified_at_str)
-            .map_err(|e| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    10,
-                    rusqlite::types::Type::Text,
-                    Box::new(e),
-                )
-            })?
+        let modified_at = DateTime::parse_from_rfc3339(&modified_at_str)
+            .map_err(|e| SqliteError::FromSqlConversionFailure(10, Type::Text, Box::new(e)))?
             .with_timezone(&Utc);
 
         Ok(DataSequence {
@@ -308,19 +296,22 @@ impl DataLibraryDatabase {
         let now = Utc::now();
 
         // Serialize data and uncertainties to JSON
-        let data_json = serde_json::to_string(&request.data)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+        let data_json = to_string(&request.data)
+            .map_err(|e| SqliteError::ToSqlConversionFailure(Box::new(e)))?;
         let uncertainties_json = request
             .uncertainties
             .as_ref()
-            .map(serde_json::to_string)
+            .map(to_string)
             .transpose()
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-        let tags_json = serde_json::to_string(&request.tags)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+            .map_err(|e| SqliteError::ToSqlConversionFailure(Box::new(e)))?;
+        let tags_json = to_string(&request.tags)
+            .map_err(|e| SqliteError::ToSqlConversionFailure(Box::new(e)))?;
 
         {
-            let conn = self.conn.lock().unwrap();
+            let conn = self
+                .conn
+                .lock()
+                .expect("Database connection should not be poisoned");
 
             // Insert into main table
             conn.execute(
@@ -378,7 +369,7 @@ impl DataLibraryDatabase {
         let offset = page.saturating_mul(page_size);
 
         let pinned_where_sql = if where_sql.is_empty() {
-            " WHERE is_pinned = 1".to_string()
+            " WHERE is_pinned = 1".to_owned()
         } else {
             where_sql.replacen(" WHERE ", " WHERE is_pinned = 1 AND ", 1)
         };
@@ -391,7 +382,7 @@ impl DataLibraryDatabase {
         let sequences = self.query_sequences_with_limit(search, Some(page_size), Some(offset))?;
 
         Ok(SequenceListResponse {
-            version: crate::error::API_VERSION.to_string(),
+            version: API_VERSION.to_owned(),
             sequences,
             total_count,
             pinned_count,
@@ -405,8 +396,7 @@ impl DataLibraryDatabase {
 
     pub fn get_sequence(&self, id: &str) -> SqliteResult<Option<DataSequence>> {
         self.conn
-            .lock()
-            .unwrap()
+            .lock().expect("Database connection should not be poisoned")
             .prepare(
                 "SELECT id, name, description, tags, unit, source, data, uncertainties, is_pinned, created_at, modified_at
                  FROM sequences
@@ -420,7 +410,7 @@ impl DataLibraryDatabase {
         let now = Utc::now();
 
         let mut updates = Vec::new();
-        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        let mut params: Vec<Box<dyn ToSql>> = Vec::new();
 
         if let Some(name) = &request.name {
             updates.push("name = ?");
@@ -432,8 +422,8 @@ impl DataLibraryDatabase {
         }
         if let Some(tags) = &request.tags {
             updates.push("tags = ?");
-            let tags_json = serde_json::to_string(tags)
-                .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+            let tags_json =
+                to_string(tags).map_err(|e| SqliteError::ToSqlConversionFailure(Box::new(e)))?;
             params.push(Box::new(tags_json));
         }
         if let Some(unit) = &request.unit {
@@ -453,8 +443,11 @@ impl DataLibraryDatabase {
         let query = format!("UPDATE sequences SET {} WHERE id = ?", updates.join(", "));
 
         {
-            let conn = self.conn.lock().unwrap();
-            conn.execute(&query, rusqlite::params_from_iter(params.iter()))?;
+            let conn = self
+                .conn
+                .lock()
+                .expect("Database connection should not be poisoned");
+            conn.execute(&query, params_from_iter(params.iter()))?;
 
             // Update FTS table if name, description, or tags changed
             if request.name.is_some() || request.description.is_some() || request.tags.is_some() {
@@ -469,12 +462,8 @@ impl DataLibraryDatabase {
                     let description: String = row.get(1)?;
                     let tags_json: String = row.get(2)?;
                     let source: String = row.get(3)?;
-                    let tags: Vec<String> = serde_json::from_str(&tags_json).map_err(|e| {
-                        rusqlite::Error::FromSqlConversionFailure(
-                            2,
-                            rusqlite::types::Type::Text,
-                            Box::new(e),
-                        )
+                    let tags: Vec<String> = from_str(&tags_json).map_err(|e| {
+                        SqliteError::FromSqlConversionFailure(2, Type::Text, Box::new(e))
                     })?;
 
                     conn.execute(
@@ -490,7 +479,10 @@ impl DataLibraryDatabase {
 
     /// Delete a sequence
     pub fn delete_sequence(&self, id: &str) -> SqliteResult<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self
+            .conn
+            .lock()
+            .expect("Database connection should not be poisoned");
         conn.execute("DELETE FROM sequences WHERE id = ?", params![id])?;
         conn.execute("DELETE FROM sequences_fts WHERE id = ?", params![id])?;
         drop(conn);
@@ -499,23 +491,18 @@ impl DataLibraryDatabase {
 
     /// Get all unique tags
     pub fn get_all_tags(&self) -> SqliteResult<Vec<String>> {
-        let mut all_tags = std::collections::HashSet::new();
+        let mut all_tags = HashSet::new();
         let tags_json_list: Vec<String> = self
             .conn
             .lock()
-            .unwrap()
+            .expect("Database connection should not be poisoned")
             .prepare("SELECT DISTINCT tags FROM sequences")?
             .query_map([], |row| row.get(0))?
             .collect::<SqliteResult<Vec<String>>>()?;
 
         for tags_json in tags_json_list {
-            let tags: Vec<String> = serde_json::from_str(&tags_json).map_err(|e| {
-                rusqlite::Error::FromSqlConversionFailure(
-                    0,
-                    rusqlite::types::Type::Text,
-                    Box::new(e),
-                )
-            })?;
+            let tags: Vec<String> = from_str(&tags_json)
+                .map_err(|e| SqliteError::FromSqlConversionFailure(0, Type::Text, Box::new(e)))?;
             all_tags.extend(tags);
         }
 
@@ -528,10 +515,10 @@ impl DataLibraryDatabase {
     pub fn duplicate_sequence(&self, id: &str, new_name: &str) -> SqliteResult<String> {
         let sequence = self
             .get_sequence(id)?
-            .ok_or_else(|| rusqlite::Error::QueryReturnedNoRows)?;
+            .ok_or_else(|| SqliteError::QueryReturnedNoRows)?;
 
         let request = SaveSequenceRequest {
-            name: new_name.to_string(),
+            name: new_name.to_owned(),
             description: format!("{} (copy)", sequence.description),
             tags: sequence.tags,
             unit: sequence.unit,
@@ -549,9 +536,6 @@ impl DataLibraryDatabase {
     /// First row: column headers
     /// Subsequent rows: data values
     pub fn export_to_csv(&self, sequence_ids: &[String], file_path: &str) -> SqliteResult<()> {
-        use std::fs::File;
-        use std::io::Write;
-
         // Fetch all sequences
         let mut sequences = Vec::new();
         for id in sequence_ids {
@@ -561,14 +545,14 @@ impl DataLibraryDatabase {
         }
 
         if sequences.is_empty() {
-            return Err(rusqlite::Error::QueryReturnedNoRows);
+            return Err(SqliteError::QueryReturnedNoRows);
         }
 
         // Find the maximum length
         let max_len = sequences.iter().map(|s| s.data.len()).max().unwrap_or(0);
 
         let mut file = File::create(file_path)
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+            .map_err(|e| SqliteError::ToSqlConversionFailure(Box::new(e)))?;
 
         // Write header row with embedded metadata
         // Format: [name,unit,description,tags]
@@ -591,7 +575,7 @@ impl DataLibraryDatabase {
             }
         }
         writeln!(file, "{}", header.join(","))
-            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+            .map_err(|e| SqliteError::ToSqlConversionFailure(Box::new(e)))?;
 
         // Write data rows
         for i in 0..max_len {
@@ -614,7 +598,7 @@ impl DataLibraryDatabase {
                 }
             }
             writeln!(file, "{}", row.join(","))
-                .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+                .map_err(|e| SqliteError::ToSqlConversionFailure(Box::new(e)))?;
         }
 
         Ok(())
@@ -646,7 +630,7 @@ impl DataLibraryDatabase {
         }
 
         BatchImportResponse {
-            version: crate::error::API_VERSION.to_string(),
+            version: API_VERSION.to_owned(),
             successful_imports,
             failed_imports,
             errors,

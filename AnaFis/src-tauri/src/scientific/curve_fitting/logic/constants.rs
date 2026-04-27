@@ -24,3 +24,10 @@ pub const INNER_CORRECTION_MAX_ITERS: usize = 30;
 pub const INNER_CORRECTION_TOLERANCE: f64 = 1e-12;
 /// Damping used in the per-point inner correction solve.
 pub const INNER_CORRECTION_DAMPING: f64 = 1e-6;
+/// Variance threshold for deciding whether a variable has real (user-provided)
+/// uncertainty vs. clamped-to-minimum uncertainty. Set to 2 × `MIN_VARIANCE` to
+/// absorb the floating-point round-trip error `sqrt(MIN_VARIANCE)² ≠ MIN_VARIANCE`
+/// (about 1 ULP at 1e-16). Variables with covariance diagonal ≤ this threshold
+/// are treated as having no measurable uncertainty and are excluded from latent
+/// variable corrections.
+pub const CORRECTION_VARIANCE_THRESHOLD: f64 = MIN_VARIANCE * 2.0;

@@ -6,7 +6,10 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import type { AdvancedSettings, ParameterConfig } from '../types/fittingTypes';
+import type {
+  AdvancedSettings,
+  ParameterConfig,
+} from '@/tabs/fitting/types/fittingTypes';
 
 const DEFAULT_PARAMETER_INITIAL_VALUE = 1;
 const DEFAULT_MAX_ITERATIONS = 200;

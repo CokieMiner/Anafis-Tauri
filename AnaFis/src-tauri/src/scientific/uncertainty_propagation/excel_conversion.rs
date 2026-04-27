@@ -1,7 +1,12 @@
 use super::types::ExcelRange;
-use regex::{NoExpand, Regex};
+use regex::{NoExpand, Regex, escape};
 use std::collections::HashMap;
+use std::hash::BuildHasher;
+use std::sync::LazyLock;
 use thiserror::Error;
+
+static EULER_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b[eE]\b").expect("Valid static regex for Euler constant"));
 
 /// Error type for Excel conversion operations
 #[derive(Debug, Error)]
@@ -57,14 +62,14 @@ pub enum RangeError {
 ///
 /// # Panics
 /// Panics if internal regex compilation fails.
-pub fn symb_anafis_to_excel<S: ::std::hash::BuildHasher>(
+pub fn symb_anafis_to_excel<S: BuildHasher>(
     symb_anafis_expr: &str,
     var_map: &HashMap<String, String, S>,
 ) -> Result<String, ConversionError> {
     // All symb_anafis functions are now available as custom formulas in AnaFis
     // (see math_functions.rs), so no unsupported function check is needed.
 
-    let mut excel_formula = symb_anafis_expr.to_string();
+    let mut excel_formula = symb_anafis_expr.to_owned();
 
     // Replace variable names with cell references using identifier boundaries.
     // This prevents replacing `a` inside `sigma_a` and similar partial matches.
@@ -161,18 +166,17 @@ pub fn symb_anafis_to_excel<S: ::std::hash::BuildHasher>(
     excel_formula = excel_formula.replace("pi", "PI()");
     // Use word boundaries to only match standalone 'e' or 'E' (Euler's constant),
     // not when they appear as part of function names like ERF or CEILING
-    let euler_regex = Regex::new(r"\b[eE]\b").unwrap();
-    excel_formula = euler_regex
+    excel_formula = EULER_REGEX
         .replace_all(&excel_formula, "EXP(1)")
         .to_string();
     Ok(excel_formula)
 }
 
-fn replace_identifiers<S: ::std::hash::BuildHasher>(
+fn replace_identifiers<S: BuildHasher>(
     formula: &str,
     var_map: &HashMap<String, String, S>,
 ) -> String {
-    let mut output = formula.to_string();
+    let mut output = formula.to_owned();
 
     // Replace longer identifiers first to keep behavior deterministic with overlapping names.
     let mut pairs: Vec<_> = var_map.iter().collect();
@@ -181,7 +185,7 @@ fn replace_identifiers<S: ::std::hash::BuildHasher>(
     });
 
     for (name, replacement) in pairs {
-        let pattern = format!(r"\b{}\b", regex::escape(name));
+        let pattern = format!(r"\b{}\b", escape(name));
         let re = Regex::new(&pattern).expect("escaped identifier pattern must compile");
         output = re
             .replace_all(&output, NoExpand(replacement.as_str()))
@@ -217,10 +221,10 @@ pub fn parse_excel_range(range: &str) -> Result<ExcelRange, RangeError> {
             .skip_while(|c| c.is_alphabetic())
             .collect::<String>()
             .parse()
-            .map_err(|_| RangeError::InvalidRow(range.to_string()))?;
+            .map_err(|_err| RangeError::InvalidRow(range.to_owned()))?;
 
         if col.is_empty() {
-            return Err(RangeError::InvalidCell(range.to_string()));
+            return Err(RangeError::InvalidCell(range.to_owned()));
         }
 
         Ok(ExcelRange::new(col, row, row))
@@ -235,18 +239,18 @@ pub fn parse_excel_range(range: &str) -> Result<ExcelRange, RangeError> {
             .skip_while(|c| c.is_alphabetic())
             .collect::<String>()
             .parse()
-            .map_err(|_| RangeError::InvalidRow(format!("start: {range}")))?;
+            .map_err(|_err| RangeError::InvalidRow(format!("start: {range}")))?;
 
         let end_row: usize = parts[1]
             .chars()
             .skip_while(|c| c.is_alphabetic())
             .collect::<String>()
             .parse()
-            .map_err(|_| RangeError::InvalidRow(format!("end: {range}")))?;
+            .map_err(|_err| RangeError::InvalidRow(format!("end: {range}")))?;
 
         Ok(ExcelRange::new(start_col, start_row, end_row))
     } else {
-        Err(RangeError::InvalidFormat(range.to_string()))
+        Err(RangeError::InvalidFormat(range.to_owned()))
     }
 }
 
@@ -264,13 +268,18 @@ pub fn create_cell_ref(col: &str, row: usize) -> String {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::shadow_unrelated,
+    reason = "Tests use unwrap for brevity and sequential shadowing for state progression"
+)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_symb_anafis_to_excel_power() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
 
         let result = symb_anafis_to_excel("x**2", &var_map).unwrap();
         assert_eq!(result, "A1^2");
@@ -279,7 +288,7 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_trig() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
 
         let result = symb_anafis_to_excel("sin(x)", &var_map).unwrap();
         assert_eq!(result, "SIN(A1)");
@@ -288,10 +297,10 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_sigma_identifiers_do_not_get_partial_replacements() {
         let mut var_map = HashMap::new();
-        var_map.insert("a".to_string(), "A1".to_string());
-        var_map.insert("b".to_string(), "C1".to_string());
-        var_map.insert("sigma_a".to_string(), "B1".to_string());
-        var_map.insert("sigma_b".to_string(), "D1".to_string());
+        var_map.insert("a".to_owned(), "A1".to_owned());
+        var_map.insert("b".to_owned(), "C1".to_owned());
+        var_map.insert("sigma_a".to_owned(), "B1".to_owned());
+        var_map.insert("sigma_b".to_owned(), "D1".to_owned());
 
         let result =
             symb_anafis_to_excel("sqrt(sigma_b**2 + (sigma_a*b*cos(a))**2)", &var_map).unwrap();
@@ -301,8 +310,8 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_atan2() {
         let mut var_map = HashMap::new();
-        var_map.insert("y".to_string(), "A1".to_string());
-        var_map.insert("x".to_string(), "B1".to_string());
+        var_map.insert("y".to_owned(), "A1".to_owned());
+        var_map.insert("x".to_owned(), "B1".to_owned());
 
         let result = symb_anafis_to_excel("atan2(y, x)", &var_map).unwrap();
         assert_eq!(result, "ATAN2(A1, B1)");
@@ -311,7 +320,7 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_log() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
 
         let result = symb_anafis_to_excel("log10(x)", &var_map).unwrap();
         assert_eq!(result, "LOG10(A1)");
@@ -320,8 +329,8 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_special_functions() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
-        var_map.insert("y".to_string(), "B1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
+        var_map.insert("y".to_owned(), "B1".to_owned());
 
         // Test error functions
         let result = symb_anafis_to_excel("erf(x)", &var_map).unwrap();
@@ -339,7 +348,7 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_rounding() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
 
         let result = symb_anafis_to_excel("floor(x)", &var_map).unwrap();
         assert_eq!(result, "FLOOR(A1)");
@@ -354,7 +363,7 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_cbrt() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
 
         let result = symb_anafis_to_excel("cbrt(x)", &var_map).unwrap();
         assert_eq!(result, "CBRT(A1)");
@@ -367,7 +376,7 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_signum() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
 
         let result = symb_anafis_to_excel("signum(x)", &var_map).unwrap();
         assert_eq!(result, "SIGN(A1)");
@@ -376,8 +385,8 @@ mod tests {
     #[test]
     fn test_symb_anafis_to_excel_custom_functions() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
-        var_map.insert("y".to_string(), "B1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
+        var_map.insert("y".to_owned(), "B1".to_owned());
 
         // Functions now available as custom formulas via symb_anafis
         let result = symb_anafis_to_excel("digamma(x)", &var_map).unwrap();
@@ -449,8 +458,8 @@ mod tests {
     #[test]
     fn test_complex_formula() {
         let mut var_map = HashMap::new();
-        var_map.insert("x".to_string(), "A1".to_string());
-        var_map.insert("y".to_string(), "B1".to_string());
+        var_map.insert("x".to_owned(), "A1".to_owned());
+        var_map.insert("y".to_owned(), "B1".to_owned());
 
         let result = symb_anafis_to_excel("sqrt(x**2 + y**2)", &var_map).unwrap();
         assert_eq!(result, "SQRT(A1^2 + B1^2)");

@@ -20,6 +20,8 @@ pub use types::{ExcelRange, UncertaintyFormulas, Variable};
 // Note: generate_uncertainty_formulas is defined in this module (mod.rs)
 // and is already a #[tauri::command] function exported directly
 
+use self::confidence::ConfidenceError;
+use self::excel_conversion::{ConversionError, RangeError};
 use std::collections::{HashMap, HashSet};
 use symb_anafis::{parse, uncertainty_propagation};
 use thiserror::Error;
@@ -33,15 +35,15 @@ pub enum UncertaintyError {
 
     /// Errors during conversion to Excel formula.
     #[error("Excel conversion failed: {0}")]
-    Conversion(#[from] excel_conversion::ConversionError),
+    Conversion(#[from] ConversionError),
 
     /// Errors during confidence level conversions.
     #[error("Confidence calculation failed: {0}")]
-    Confidence(#[from] confidence::ConfidenceError),
+    Confidence(#[from] ConfidenceError),
 
     /// Errors during Excel range parsing.
     #[error("Range parsing failed: {0}")]
-    Range(#[from] excel_conversion::RangeError),
+    Range(#[from] RangeError),
 
     /// Numerical failure during uncertainty propagation.
     #[error("Uncertainty propagation failed: {0}")]
@@ -132,10 +134,7 @@ fn generate_uncertainty_formulas_inner(
     let output_sigma = confidence_to_sigma(output_confidence)?;
 
     // Get uncertainty expression from symb_anafis
-    let all_vars: Vec<&str> = normalized_var_names
-        .iter()
-        .map(std::string::String::as_str)
-        .collect();
+    let all_vars: Vec<&str> = normalized_var_names.iter().map(String::as_str).collect();
     let sigma_expr = uncertainty_propagation(&expr, &all_vars, None)
         .map_err(|e| UncertaintyError::UncertaintyPropagation(e.to_string()))?;
 
@@ -180,7 +179,7 @@ fn generate_uncertainty_formulas_inner(
                 symb_anafis_to_excel(&sigma_formula_str, &sigma_var_map)?
             )
         } else {
-            "=0".to_string()
+            "=0".to_owned()
         };
         uncertainty_formulas.push(unc_formula);
     }
@@ -194,6 +193,7 @@ fn generate_uncertainty_formulas_inner(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, reason = "Tests use unwrap for brevity")]
 mod tests {
     use super::*;
 
@@ -201,15 +201,15 @@ mod tests {
     fn test_generate_uncertainty_formulas_does_not_corrupt_sigma_identifiers() {
         let variables = vec![
             Variable {
-                name: "a".to_string(),
-                value_range: "A1:A2".to_string(),
-                uncertainty_range: "B1:B2".to_string(),
+                name: "a".to_owned(),
+                value_range: "A1:A2".to_owned(),
+                uncertainty_range: "B1:B2".to_owned(),
                 confidence: 95.0,
             },
             Variable {
-                name: "b".to_string(),
-                value_range: "C1:C2".to_string(),
-                uncertainty_range: "D1:D2".to_string(),
+                name: "b".to_owned(),
+                value_range: "C1:C2".to_owned(),
+                uncertainty_range: "D1:D2".to_owned(),
                 confidence: 95.0,
             },
         ];
@@ -226,15 +226,15 @@ mod tests {
     #[test]
     fn test_generate_uncertainty_formulas_mixed_case_variable_name() {
         let variables = vec![Variable {
-            name: "AlotA".to_string(),
-            value_range: "A1:A1".to_string(),
-            uncertainty_range: "B1:B1".to_string(),
+            name: "AlotA".to_owned(),
+            value_range: "A1:A1".to_owned(),
+            uncertainty_range: "B1:B1".to_owned(),
             confidence: 95.0,
         }];
 
         let result = generate_uncertainty_formulas_inner(&variables, "AlotA^2", 95.0).unwrap();
         assert!(result.success);
-        assert_eq!(result.value_formulas, vec!["=A1^2".to_string()]);
+        assert_eq!(result.value_formulas, vec!["=A1^2".to_owned()]);
         assert!(!result.uncertainty_formulas[0].contains("sigma_alota"));
     }
 }

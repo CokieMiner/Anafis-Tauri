@@ -6,7 +6,7 @@ import type {
   ImportedData,
   OdrFitResponse,
   VariableBinding,
-} from '../types/fittingTypes';
+} from '@/tabs/fitting/types/fittingTypes';
 
 function resolveAxisLabel(
   axisSettings: AxisSettings,

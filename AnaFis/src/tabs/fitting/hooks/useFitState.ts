@@ -1,62 +1,25 @@
 // Central state management hook for the Fit tab
 
-import { invoke } from '@tauri-apps/api/core';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  type AdvancedSettings,
-  type AxisConfig,
-  type AxisSettings,
-  type ColumnMapping,
-  type DataSourceMode,
-  DEFAULT_ADVANCED_SETTINGS,
-  DEFAULT_AXIS_SETTINGS,
-  type DependentBinding,
-  type FitState,
-  type FitStatus,
-  type ImportedData,
-  type OdrFitRequest,
-  type OdrFitResponse,
-  type ParameterConfig,
-  type VariableBinding,
-} from '../types/fittingTypes';
-import { buildFitRequest } from '../utils/requestBuilder';
-
-const AXES: Array<'x' | 'y' | 'z'> = ['x', 'y', 'z'];
-
-const DEFAULT_DEPENDENT: DependentBinding = {
-  dataColumn: null,
-  uncColumn: null,
-  uncertaintyType: 'typeB',
-  uncertaintyDegreesOfFreedom: null,
-};
-
-const INITIAL_STATE: FitState = {
-  dataSourceMode: 'library',
-  importedData: null,
-  columnMappings: [],
-  independentVarCount: 1,
-
-  customFormula: '',
-  variableNames: [],
-  parameterNames: [],
-
-  variableBindings: [],
-  dependentBinding: { ...DEFAULT_DEPENDENT },
-
-  parameterConfigs: [],
-  advancedSettings: { ...DEFAULT_ADVANCED_SETTINGS },
-  axisSettings: {
-    x: { ...DEFAULT_AXIS_SETTINGS.x },
-    y: { ...DEFAULT_AXIS_SETTINGS.y },
-    z: { ...DEFAULT_AXIS_SETTINGS.z },
-  },
-
-  correlationMatrices: null,
-
-  fitStatus: 'idle',
-  fitError: null,
-  fitResult: null,
-};
+  AXES,
+  INITIAL_FIT_STATE,
+} from '@/tabs/fitting/constants/fittingConstants';
+import { FittingService } from '@/tabs/fitting/services/FittingService';
+import type {
+  AdvancedSettings,
+  AxisConfig,
+  AxisSettings,
+  ColumnMapping,
+  DataSourceMode,
+  DependentBinding,
+  FitStatus,
+  ImportedData,
+  OdrFitRequest,
+  ParameterConfig,
+  VariableBinding,
+} from '@/tabs/fitting/types/fittingTypes';
+import { buildFitRequest } from '@/tabs/fitting/utils/requestBuilder';
 
 /** Try to find a matching uncertainty column name for a given data column */
 function findAutoUncColumn(
@@ -93,7 +56,7 @@ function withAxis(
 }
 
 export function useFitState() {
-  const [state, setState] = useState<FitState>(INITIAL_STATE);
+  const [state, setState] = useState(INITIAL_FIT_STATE);
 
   const setDataSourceMode = useCallback((mode: DataSourceMode) => {
     setState((s) => ({ ...s, dataSourceMode: mode }));
@@ -351,18 +314,16 @@ export function useFitState() {
     }));
 
     try {
-      const response = await invoke<OdrFitResponse>('fit_custom_odr', {
-        request,
-      });
-      const hasUsableResult =
-        response.parameterValues.length > 0 && response.fittedValues.length > 0;
+      const response = await FittingService.runCustomOdr(request);
+      const isSuccess = FittingService.isValidResult(response);
+
       setState((s) => ({
         ...s,
-        fitStatus: hasUsableResult
+        fitStatus: isSuccess
           ? ('success' as FitStatus)
           : ('error' as FitStatus),
         fitResult: response,
-        fitError: hasUsableResult ? null : (response.message ?? 'Fit failed'),
+        fitError: isSuccess ? null : (response.message ?? 'Fit failed'),
       }));
     } catch (err) {
       setState((s) => ({

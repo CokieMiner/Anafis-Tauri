@@ -14,12 +14,12 @@ use std::io::{BufWriter, Write};
     reason = "Tauri commands require owned types for arguments"
 )]
 pub fn export_to_latex(
-    data: Vec<serde_json::Value>,
+    data: Vec<Value>,
     file_path: String,
     _config: ExportConfig,
 ) -> Result<(), String> {
     if data.is_empty() {
-        return Err("No data to export".to_string());
+        return Err("No data to export".to_owned());
     }
 
     // Create file with buffered writer
@@ -33,11 +33,11 @@ pub fn export_to_latex(
     // Determine number of columns
     let num_cols = data
         .iter()
-        .filter_map(|row| row.as_array().map(std::vec::Vec::len))
+        .filter_map(|row| row.as_array().map(Vec::len))
         .max()
         .unwrap_or(0);
     if num_cols == 0 {
-        return Err("No columns found in data".to_string());
+        return Err("No columns found in data".to_owned());
     }
 
     // Default column alignment (left-aligned)

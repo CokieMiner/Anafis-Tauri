@@ -31,9 +31,10 @@ import {
 } from '@/tabs/spreadsheet/univer/utils/errors';
 import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
 import { extractStartCell } from '@/tabs/spreadsheet/utils/rangeUtils';
-export type ImportFormat = 'csv' | 'tsv' | 'txt' | 'parquet' | 'anafispread';
 
-export interface FileMetadata {
+type ImportFormat = 'csv' | 'tsv' | 'txt' | 'parquet' | 'anafispread';
+
+interface FileMetadata {
   path: string;
   size: number;
   extension: string;
@@ -41,13 +42,12 @@ export interface FileMetadata {
   columnCount?: number;
 }
 
-export interface TransactionLogEntry {
+interface TransactionLogEntry {
   timestamp: number;
   operation: string;
   phase?: string | undefined;
   details?: Record<string, unknown> | undefined;
   error?: string | undefined;
-  duration?: number | undefined;
 }
 
 const FORMAT_FILTERS = {
@@ -127,7 +127,6 @@ class TransactionalImportManager {
     snapshot: WorkbookSnapshot,
     spreadsheetAPI: SpreadsheetRef
   ): Promise<Result<void, string>> {
-    const startTime = Date.now();
     this.logOperation('START', 'importSheetsAtomic', {
       sheetCount: Object.keys(snapshot.sheets).length,
     });
@@ -171,17 +170,13 @@ class TransactionalImportManager {
         // Don't fail the import for protection issues
       }
 
-      const duration = Date.now() - startTime;
       this.logOperation('SUCCESS', 'importSheetsAtomic', {
-        duration,
         createdSheets: this.createdSheets.length,
       });
       return ok(undefined);
     } catch (error) {
-      const duration = Date.now() - startTime;
       this.logOperation('UNEXPECTED_ERROR', 'importSheetsAtomic', {
         error: error instanceof Error ? error.message : String(error),
-        duration,
       });
 
       // If anything unexpected happens, attempt rollback
@@ -253,7 +248,6 @@ class TransactionalImportManager {
     });
 
     for (const sheetId of sheetOrder) {
-      const sheetStartTime = Date.now();
       try {
         const sheetData = snapshot.sheets[sheetId] as SheetSnapshot;
         const sheetIndex = sheetOrder.indexOf(sheetId);
@@ -291,20 +285,15 @@ class TransactionalImportManager {
         // Update existing names set
         existingNames.add(uniqueName);
 
-        const sheetDuration = Date.now() - sheetStartTime;
         this.logOperation('SHEET_SUCCESS', sheetId, {
           newSheetId,
           uniqueName,
-          duration: sheetDuration,
         });
       } catch (error) {
-        const sheetDuration = Date.now() - sheetStartTime;
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-
         this.logOperation('SHEET_FAILED', sheetId, {
           error: errorMessage,
-          duration: sheetDuration,
           sheetsProcessed: this.createdSheets.length,
         });
 
@@ -340,7 +329,6 @@ class TransactionalImportManager {
       sheetIds: this.createdSheets,
     });
 
-    const rollbackStartTime = Date.now();
     let deletedCount = 0;
     const failedDeletions: Array<{ sheetId: string; error: string }> = [];
 
@@ -360,20 +348,17 @@ class TransactionalImportManager {
       }
     }
 
-    const rollbackDuration = Date.now() - rollbackStartTime;
     this.createdSheets = [];
 
     if (failedDeletions.length === 0) {
       this.logOperation('ROLLBACK_SUCCESS', undefined, {
         deletedCount,
-        duration: rollbackDuration,
       });
     } else {
       this.logOperation('ROLLBACK_PARTIAL', undefined, {
         deletedCount,
         failedCount: failedDeletions.length,
         failedDeletions,
-        duration: rollbackDuration,
       });
     }
   }

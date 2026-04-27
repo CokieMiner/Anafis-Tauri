@@ -1,10 +1,9 @@
 // univer/index.ts - Organized exports with clear structure
 
-export { UniverAdapter } from './core/UniverAdapter';
-export { UniverErrorBoundary } from './core/UniverErrorBoundary';
-export { registerCustomFunctions } from './formulas/customFormulas';
-// Import/Export Services
-export { ExportService } from './operations/exportService';
+export { UniverAdapter } from '@/tabs/spreadsheet/univer/core/UniverAdapter';
+export { UniverErrorBoundary } from '@/tabs/spreadsheet/univer/core/UniverErrorBoundary';
+export { registerCustomFunctions } from '@/tabs/spreadsheet/univer/formulas/customFormulas';
+
 // Facade Operations (Univer API wrappers)
 export {
   getCellValue,
@@ -12,31 +11,30 @@ export {
   getRangeFull,
   getSelection,
   updateCell,
-} from './operations/facadeOperations';
-export { ImportService } from './operations/importService';
+} from '@/tabs/spreadsheet/univer/operations/facadeOperations';
+
 // Cell reference utilities
 export {
-  columnToLetter,
   letterToColumn,
   parseCellRef,
   parseRange,
-} from './utils/cellUtils';
+} from '@/tabs/spreadsheet/univer/utils/cellUtils';
+
 // Data Conversion (Abstract ↔ Univer formats)
 export {
   convertFromUniverCellData,
   convertSimpleArrayToCellValues,
-  convertToUniverCellValue,
   convertToUniverData,
-  convertToUniverDataMultiSheet,
-} from './utils/dataConversion';
+} from '@/tabs/spreadsheet/univer/utils/dataConversion';
 
 export {
   SpreadsheetValidationError,
   safeSpreadsheetOperation,
   safeSpreadsheetOperationSync,
-} from './utils/errors';
+} from '@/tabs/spreadsheet/univer/utils/errors';
+
 // A1 Notation & Column Conversion
 export {
   determineUsedRange,
   rangeToA1,
-} from './utils/univerUtils';
+} from '@/tabs/spreadsheet/univer/utils/univerUtils';

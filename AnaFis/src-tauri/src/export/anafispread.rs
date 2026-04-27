@@ -12,9 +12,10 @@
 // - Bytes 8-11:  Format version (u32, little-endian, currently 1)
 // - Bytes 12+:   Gzip-compressed JSON data
 
+use chrono::Utc;
 use flate2::Compression;
 use flate2::write::GzEncoder;
-use serde_json::Value;
+use serde_json::{Value, json, to_writer};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -36,12 +37,12 @@ pub fn export_anafispread(data: Value, file_path: String) -> Result<(), String> 
     let workbook_data = &data;
 
     // Create comprehensive export structure with metadata
-    let export_data = serde_json::json!({
+    let export_data = json!({
         "version": "1.0",
         "format": "anafis_spreadsheet",
         "compressed": true,
         "metadata": {
-            "created": chrono::Utc::now().to_rfc3339(),
+            "created": Utc::now().to_rfc3339(),
             "creator": "AnaFis",
             "description": "Complete Univer workbook snapshot with full fidelity"
         },
@@ -62,7 +63,7 @@ pub fn export_anafispread(data: Value, file_path: String) -> Result<(), String> 
     // Now write the compressed JSON data
     let encoder = GzEncoder::new(file, Compression::default());
     let writer = BufWriter::new(encoder);
-    serde_json::to_writer(writer, &export_data)
+    to_writer(writer, &export_data)
         .map_err(|e| format!("Failed to write AnaFis Spreadsheet file: {e}"))?;
 
     Ok(())

@@ -14,12 +14,12 @@ use std::io::{BufWriter, Write};
     reason = "Tauri commands require owned types for arguments"
 )]
 pub fn export_to_markdown(
-    data: Vec<serde_json::Value>,
+    data: Vec<Value>,
     file_path: String,
     _config: ExportConfig,
 ) -> Result<(), String> {
     if data.is_empty() {
-        return Err("No data to export".to_string());
+        return Err("No data to export".to_owned());
     }
 
     // Create file with buffered writer

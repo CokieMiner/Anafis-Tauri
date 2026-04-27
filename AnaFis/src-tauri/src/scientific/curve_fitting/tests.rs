@@ -1,4 +1,11 @@
 #![cfg(test)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::print_stdout,
+    clippy::shadow_unrelated,
+    reason = "Test code uses unwrap/panic/print for diagnostics and sequential shadowing for state progression"
+)]
 use crate::scientific::curve_fitting::commands::{
     evaluate_model_curve, evaluate_model_grid, fit_custom_odr,
 };
@@ -17,26 +24,26 @@ fn test_fit_custom_odr_linear_model_no_correlation() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x + b".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x + b".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.1; 50]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.2; 50]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(120),
         point_correlations: None,
@@ -53,30 +60,30 @@ fn test_fit_custom_odr_linear_model_no_correlation() {
 #[test]
 fn test_fit_custom_odr_identifier_normalization_case_insensitive() {
     let x: Vec<f64> = (0..20).map(f64::from).collect();
-    let y: Vec<f64> = x.iter().map(|&xi| 3.0f64.mul_add(xi, 1.5)).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| 3.0_f64.mul_add(xi, 1.5)).collect();
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "A*X + B".to_string(),
-            dependent_variable: "Y".to_string(),
-            independent_variables: vec!["X".to_string()],
+            formula: "A*X + B".to_owned(),
+            dependent_variable: "Y".to_owned(),
+            independent_variables: vec!["X".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.1; 20]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.1; 20]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![0.0, 0.0]),
         max_iterations: Some(200),
         point_correlations: None,
@@ -103,26 +110,26 @@ fn test_fit_custom_odr_handles_ill_conditioned_parameter_scaling() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "k*t^4 + a".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["t".to_string()],
+            formula: "k*t^4 + a".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["t".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "t".to_string(),
+            name: "t".to_owned(),
             values: t,
             uncertainties: Some(vec![0.01; 5]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.01; 5]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["k".to_string(), "a".to_string()],
+        parameter_names: vec!["k".to_owned(), "a".to_owned()],
         initial_guess: Some(vec![0.0, -1.0]),
         max_iterations: Some(100),
         point_correlations: None,
@@ -153,7 +160,7 @@ fn test_fit_custom_odr_with_independent_correlations() {
         let b = (f64::from(i) * 0.2).sin();
         x1.push(a);
         x2.push(b);
-        y.push(1.2f64.mul_add(a, -(0.8 * b)) + 3.0);
+        y.push(1.2_f64.mul_add(a, -(0.8 * b)) + 3.0);
     }
 
     let corr = vec![
@@ -164,35 +171,35 @@ fn test_fit_custom_odr_with_independent_correlations() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "p*x1 + q*x2 + r".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x1".to_string(), "x2".to_string()],
+            formula: "p*x1 + q*x2 + r".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x1".to_owned(), "x2".to_owned()],
         }],
         independent_variables: vec![
             VariableInput {
-                name: "x1".to_string(),
+                name: "x1".to_owned(),
                 values: x1,
                 uncertainties: Some(vec![0.05; 40]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
             VariableInput {
-                name: "x2".to_string(),
+                name: "x2".to_owned(),
                 values: x2,
                 uncertainties: Some(vec![0.04; 40]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
         ],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.08; 40]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["p".to_string(), "q".to_string(), "r".to_string()],
+        parameter_names: vec!["p".to_owned(), "q".to_owned(), "r".to_owned()],
         initial_guess: Some(vec![0.0, 0.0, 0.0]),
         max_iterations: Some(200),
         point_correlations: Some(repeat_corr(40, &corr)),
@@ -217,26 +224,26 @@ fn test_fit_custom_odr_with_cross_xy_correlation() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x + b".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x + b".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.03; 30]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.05; 30]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(160),
         point_correlations: Some(repeat_corr(30, &corr)),
@@ -259,26 +266,26 @@ fn test_fit_custom_odr_zero_uncertainty_clamp() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "m*x + c".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "m*x + c".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.0; 25]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.0; 25]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["m".to_string(), "c".to_string()],
+        parameter_names: vec!["m".to_owned(), "c".to_owned()],
         initial_guess: Some(vec![0.0, 0.0]),
         max_iterations: Some(200),
         point_correlations: None,
@@ -307,26 +314,26 @@ fn test_fit_custom_odr_invalid_correlation_shape() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x + b".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x + b".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.1; 10]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.1; 10]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(100),
         point_correlations: Some(bad_corr),
@@ -344,31 +351,31 @@ fn test_fit_custom_odr_nonlinear_gaussian_like() {
     let x: Vec<f64> = (-40..=40).map(|i| f64::from(i) * 0.05).collect();
     let y: Vec<f64> = x
         .iter()
-        .map(|&xi| 2.0f64.mul_add((-0.7 * xi * xi).exp(), 0.5))
+        .map(|&xi| 2.0_f64.mul_add((-0.7 * xi * xi).exp(), 0.5))
         .collect();
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*exp(-b*x^2)+c".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*exp(-b*x^2)+c".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.02; 81]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.03; 81]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned(), "c".to_owned()],
         initial_guess: Some(vec![1.0, 0.2, 0.0]),
         max_iterations: Some(600),
         point_correlations: None,
@@ -398,7 +405,7 @@ fn test_fit_custom_odr_multivariable_full_covariance() {
         x1.push(a);
         x2.push(b);
         x3.push(c);
-        y.push(0.7f64.mul_add(c, 0.9f64.mul_add(a, -(1.1 * b))) + 4.0);
+        y.push(0.7_f64.mul_add(c, 0.9_f64.mul_add(a, -(1.1 * b))) + 4.0);
     }
 
     let corr = vec![
@@ -410,35 +417,35 @@ fn test_fit_custom_odr_multivariable_full_covariance() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "p*x1 + q*x2 + r*x3 + s".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x1".to_string(), "x2".to_string(), "x3".to_string()],
+            formula: "p*x1 + q*x2 + r*x3 + s".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x1".to_owned(), "x2".to_owned(), "x3".to_owned()],
         }],
         independent_variables: vec![
             VariableInput {
-                name: "x1".to_string(),
+                name: "x1".to_owned(),
                 values: x1,
                 uncertainties: Some(vec![0.05; 35]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
             VariableInput {
-                name: "x2".to_string(),
+                name: "x2".to_owned(),
                 values: x2,
                 uncertainties: Some(vec![0.04; 35]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
             VariableInput {
-                name: "x3".to_string(),
+                name: "x3".to_owned(),
                 values: x3,
                 uncertainties: Some(vec![0.03; 35]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
         ],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.06; 35]),
             uncertainty_type: None,
@@ -446,10 +453,10 @@ fn test_fit_custom_odr_multivariable_full_covariance() {
         }],
         use_poisson_weighting: None,
         parameter_names: vec![
-            "p".to_string(),
-            "q".to_string(),
-            "r".to_string(),
-            "s".to_string(),
+            "p".to_owned(),
+            "q".to_owned(),
+            "r".to_owned(),
+            "s".to_owned(),
         ],
         initial_guess: Some(vec![0.0, 0.0, 0.0, 0.0]),
         max_iterations: Some(300),
@@ -482,7 +489,7 @@ fn test_fit_custom_odr_rejects_non_psd_correlation_matrix() {
     let y: Vec<f64> = x1
         .iter()
         .zip(x2.iter())
-        .map(|(&a, &b)| 1.5f64.mul_add(a, -(0.4 * b)) + 2.0)
+        .map(|(&a, &b)| 1.5_f64.mul_add(a, -(0.4 * b)) + 2.0)
         .collect();
 
     let non_psd_corr = vec![
@@ -493,35 +500,35 @@ fn test_fit_custom_odr_rejects_non_psd_correlation_matrix() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x1 + b*x2 + c".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x1".to_string(), "x2".to_string()],
+            formula: "a*x1 + b*x2 + c".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x1".to_owned(), "x2".to_owned()],
         }],
         independent_variables: vec![
             VariableInput {
-                name: "x1".to_string(),
+                name: "x1".to_owned(),
                 values: x1,
                 uncertainties: Some(vec![0.05; 12]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
             VariableInput {
-                name: "x2".to_string(),
+                name: "x2".to_owned(),
                 values: x2,
                 uncertainties: Some(vec![0.05; 12]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
         ],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.05; 12]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned(), "c".to_owned()],
         initial_guess: Some(vec![1.0, 1.0, 1.0]),
         max_iterations: Some(120),
         point_correlations: Some(repeat_corr(12, &non_psd_corr)),
@@ -537,9 +544,9 @@ fn test_fit_custom_odr_rejects_non_psd_correlation_matrix() {
 #[test]
 fn test_evaluate_model_grid_rejects_too_high_resolution() {
     let request = GridEvaluationRequest {
-        model_formula: "a*x + b*y + c".to_string(),
-        independent_names: vec!["x".to_string(), "y".to_string()],
-        parameter_names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        model_formula: "a*x + b*y + c".to_owned(),
+        independent_names: vec!["x".to_owned(), "y".to_owned()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned(), "c".to_owned()],
         parameter_values: vec![1.0, 2.0, 3.0],
         x_range: (0.0, 1.0),
         y_range: (0.0, 1.0),
@@ -553,9 +560,9 @@ fn test_evaluate_model_grid_rejects_too_high_resolution() {
 #[test]
 fn test_evaluate_model_curve_rejects_too_high_resolution() {
     let request = CurveEvaluationRequest {
-        model_formula: "a*x + b".to_string(),
-        independent_name: "x".to_string(),
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        model_formula: "a*x + b".to_owned(),
+        independent_name: "x".to_owned(),
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         parameter_values: vec![1.0, 2.0],
         x_range: (0.0, 1.0),
         resolution: 2001,
@@ -574,18 +581,18 @@ fn test_fit_custom_odr_two_layers_shared_parameter() {
     let request = OdrFitRequest {
         layers: vec![
             ModelLayer {
-                formula: "a*t + b".to_string(),
-                dependent_variable: "x1".to_string(),
-                independent_variables: vec!["t".to_string()],
+                formula: "a*t + b".to_owned(),
+                dependent_variable: "x1".to_owned(),
+                independent_variables: vec!["t".to_owned()],
             },
             ModelLayer {
-                formula: "a*x1 + c".to_string(),
-                dependent_variable: "y".to_string(),
-                independent_variables: vec!["x1".to_string()],
+                formula: "a*x1 + c".to_owned(),
+                dependent_variable: "y".to_owned(),
+                independent_variables: vec!["x1".to_owned()],
             },
         ],
         independent_variables: vec![VariableInput {
-            name: "t".to_string(),
+            name: "t".to_owned(),
             values: t,
             uncertainties: Some(vec![0.01; 20]),
             uncertainty_type: None,
@@ -593,22 +600,22 @@ fn test_fit_custom_odr_two_layers_shared_parameter() {
         }],
         dependent_variables: vec![
             VariableInput {
-                name: "x1".to_string(),
+                name: "x1".to_owned(),
                 values: x1,
                 uncertainties: Some(vec![0.05; 20]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
             VariableInput {
-                name: "y".to_string(),
+                name: "y".to_owned(),
                 values: y,
                 uncertainties: Some(vec![0.05; 20]),
-            uncertainty_type: None,
-            uncertainty_degrees_of_freedom: None,
+                uncertainty_type: None,
+                uncertainty_degrees_of_freedom: None,
             },
         ],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned(), "c".to_owned()],
         initial_guess: Some(vec![1.0, 0.0, 0.0]),
         max_iterations: Some(150),
         point_correlations: None,
@@ -631,26 +638,26 @@ fn test_fit_custom_odr_poisson_weighting() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x^2".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x^2".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: None,
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: None,
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: Some(true),
-        parameter_names: vec!["a".to_string()],
+        parameter_names: vec!["a".to_owned()],
         initial_guess: Some(vec![0.5]),
         max_iterations: Some(100),
         point_correlations: None,
@@ -672,26 +679,26 @@ fn test_fit_custom_odr_poisson_weighting_accepts_fractional_rebinned_counts() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x^2".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x^2".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: None,
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: None,
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: Some(true),
-        parameter_names: vec!["a".to_string()],
+        parameter_names: vec!["a".to_owned()],
         initial_guess: Some(vec![1.0]),
         max_iterations: Some(50),
         point_correlations: None,
@@ -712,26 +719,26 @@ fn test_fit_custom_odr_preserves_negative_off_diagonal_covariance() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x + b".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x + b".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.1; 50]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.2; 50]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(120),
         point_correlations: None,
@@ -753,26 +760,26 @@ fn test_fit_custom_odr_rank_deficient_sets_infinite_uncertainties() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a + b".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a + b".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.1; 25]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.1; 25]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![1.0, 2.0]),
         max_iterations: Some(100),
         point_correlations: None,
@@ -801,30 +808,30 @@ fn test_fit_custom_odr_rank_deficient_sets_infinite_uncertainties() {
 #[test]
 fn test_fit_custom_odr_reports_r_squared_odr_caveat() {
     let x: Vec<f64> = (0..20).map(f64::from).collect();
-    let y: Vec<f64> = x.iter().map(|&xi| 1.2f64.mul_add(xi, 0.8)).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| 1.2_f64.mul_add(xi, 0.8)).collect();
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x + b".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x + b".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.1; 20]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.1; 20]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![0.0, 0.0]),
         max_iterations: Some(150),
         point_correlations: None,
@@ -845,30 +852,30 @@ fn test_fit_custom_odr_reports_r_squared_odr_caveat() {
 #[test]
 fn test_fit_custom_odr_reports_coverage_factor_and_expanded_uncertainty() {
     let x: Vec<f64> = (0..30).map(f64::from).collect();
-    let y: Vec<f64> = x.iter().map(|&xi| 1.75f64.mul_add(xi, -2.0)).collect();
+    let y: Vec<f64> = x.iter().map(|&xi| 1.75_f64.mul_add(xi, -2.0)).collect();
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "a*x + b".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["x".to_string()],
+            formula: "a*x + b".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["x".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "x".to_string(),
+            name: "x".to_owned(),
             values: x,
             uncertainties: Some(vec![0.05; 30]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.08; 30]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["a".to_string(), "b".to_string()],
+        parameter_names: vec!["a".to_owned(), "b".to_owned()],
         initial_guess: Some(vec![1.0, 0.0]),
         max_iterations: Some(200),
         point_correlations: None,
@@ -905,26 +912,26 @@ fn test_fit_custom_odr_reports_rank_and_condition_number() {
 
     let request = OdrFitRequest {
         layers: vec![ModelLayer {
-            formula: "k*t^4 + a".to_string(),
-            dependent_variable: "y".to_string(),
-            independent_variables: vec!["t".to_string()],
+            formula: "k*t^4 + a".to_owned(),
+            dependent_variable: "y".to_owned(),
+            independent_variables: vec!["t".to_owned()],
         }],
         independent_variables: vec![VariableInput {
-            name: "t".to_string(),
+            name: "t".to_owned(),
             values: t,
             uncertainties: Some(vec![0.01; 5]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         dependent_variables: vec![VariableInput {
-            name: "y".to_string(),
+            name: "y".to_owned(),
             values: y,
             uncertainties: Some(vec![0.01; 5]),
             uncertainty_type: None,
             uncertainty_degrees_of_freedom: None,
         }],
         use_poisson_weighting: None,
-        parameter_names: vec!["k".to_string(), "a".to_string()],
+        parameter_names: vec!["k".to_owned(), "a".to_owned()],
         initial_guess: Some(vec![0.0, -1.0]),
         max_iterations: Some(200),
         point_correlations: None,

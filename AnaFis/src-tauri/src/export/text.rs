@@ -3,7 +3,7 @@
 // Exports data to delimited text formats (2D array)
 
 use super::{ExportConfig, ExportFormat};
-use serde_json::Value;
+use serde_json::{Value, to_string};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -14,7 +14,7 @@ use std::io::{BufWriter, Write};
     reason = "Tauri commands require owned types for arguments"
 )]
 pub fn export_to_text(
-    data: Vec<serde_json::Value>,
+    data: Vec<Value>,
     file_path: String,
     config: ExportConfig,
 ) -> Result<(), String> {
@@ -23,7 +23,7 @@ pub fn export_to_text(
         ExportFormat::Csv => config.options.delimiter.as_deref().unwrap_or(","),
         ExportFormat::Tsv => "\t",
         ExportFormat::Txt => config.options.delimiter.as_deref().unwrap_or("|"),
-        _ => return Err("Invalid format for text export".to_string()),
+        _ => return Err("Invalid format for text export".to_owned()),
     };
 
     let quote_char = '"';
@@ -79,7 +79,7 @@ fn format_cell_value(value: &Value, delimiter: &str, quote_char: char) -> String
         }
         Value::Array(_) | Value::Object(_) => {
             // For complex types, serialize to JSON string
-            serde_json::to_string(value).unwrap_or_default()
+            to_string(value).unwrap_or_default()
         }
     }
 }

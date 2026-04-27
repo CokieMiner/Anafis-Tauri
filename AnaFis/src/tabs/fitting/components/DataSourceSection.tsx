@@ -4,7 +4,6 @@ import { FolderOpen, LibraryBooks, Settings } from '@mui/icons-material';
 import {
   Alert,
   Autocomplete,
-  type AutocompleteRenderInputParams,
   Box,
   Button,
   Chip,
@@ -21,15 +20,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DataSequence } from '@/core/types/dataLibrary';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
 import { openWithMemory } from '@/shared/utils/dialogMemory';
+import CsvSettingsDialog from '@/tabs/fitting/components/CsvSettingsDialog';
+import DataPreviewTable from '@/tabs/fitting/components/DataPreviewTable';
 import {
   type CsvImportSettings,
   type DataSourceMode,
   DEFAULT_CSV_SETTINGS,
   type ImportedData,
-} from '../types/fittingTypes';
-import { parseCsvText } from '../utils/csvParser';
-import CsvSettingsDialog from './CsvSettingsDialog';
-import DataPreviewTable from './DataPreviewTable';
+} from '@/tabs/fitting/types/fittingTypes';
+import { parseCsvText } from '@/tabs/fitting/utils/csvParser';
 
 interface DataSourceSectionProps {
   mode: DataSourceMode;
@@ -297,15 +296,13 @@ export default function DataSourceSection({
           isOptionEqualToValue={(option, value) => option.id === value.id}
           onOpen={() => onRefreshLibrarySequences?.()}
           onChange={handleLibrarySelect}
-          renderInput={(params: AutocompleteRenderInputParams) => (
+          renderInput={(params) => (
             <TextField
+              {...params}
               fullWidth
               size="small"
               placeholder="Search sequences..."
               variant="outlined"
-              inputRef={params.InputProps.ref}
-              InputProps={params.InputProps}
-              inputProps={params.inputProps}
               sx={amberInputSx}
             />
           )}

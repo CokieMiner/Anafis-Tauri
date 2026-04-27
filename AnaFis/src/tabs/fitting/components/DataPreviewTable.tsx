@@ -1,5 +1,8 @@
 import { Box, Typography } from '@mui/material';
-import type { ImportedColumn, ImportedData } from '../types/fittingTypes';
+import type {
+  ImportedColumn,
+  ImportedData,
+} from '@/tabs/fitting/types/fittingTypes';
 
 interface DataPreviewTableProps {
   importedData: ImportedData;

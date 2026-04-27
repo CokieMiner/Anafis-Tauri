@@ -12,13 +12,16 @@ import type {
   SpreadsheetStyle,
   WorkbookData,
 } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { parseCellRef } from '@/tabs/spreadsheet/univer';
+import { parseCellRef } from '@/tabs/spreadsheet/univer/utils/cellUtils';
 import {
   DEFAULT_WORKBOOK_COLS,
   DEFAULT_WORKBOOK_ROWS,
   ERROR_MESSAGES,
-} from './constants';
-import { logError, SpreadsheetOperationError } from './errors';
+} from '@/tabs/spreadsheet/univer/utils/constants';
+import {
+  logError,
+  SpreadsheetOperationError,
+} from '@/tabs/spreadsheet/univer/utils/errors';
 
 /**
  * Type guard to check if a value is a valid cell style

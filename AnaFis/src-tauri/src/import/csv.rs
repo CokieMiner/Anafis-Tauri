@@ -11,17 +11,18 @@
 
 use super::ImportResponse;
 use encoding_rs::{Encoding, UTF_8, WINDOWS_1252};
-use serde_json::Value;
+use serde_json::{Number, Value};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::str::from_utf8;
 
 /// Detect file encoding by reading the first few bytes
 fn detect_encoding(file_path: &str) -> Result<&'static Encoding, String> {
     let file = File::open(file_path).map_err(|e| format!("Failed to open file: {e}"))?;
 
     let mut reader = BufReader::new(file);
-    let mut buffer = vec![0u8; 1024];
+    let mut buffer = vec![0_u8; 1024];
     let bytes_read = reader
         .read_until(b'\n', &mut buffer)
         .map_err(|e| format!("Failed to read file: {e}"))?;
@@ -32,7 +33,7 @@ fn detect_encoding(file_path: &str) -> Result<&'static Encoding, String> {
     }
 
     // Check if it's valid UTF-8
-    if std::str::from_utf8(&buffer[..bytes_read]).is_ok() {
+    if from_utf8(&buffer[..bytes_read]).is_ok() {
         return Ok(UTF_8);
     }
 
@@ -73,7 +74,7 @@ pub fn parse_delimited_file(
     {
         let (decoded, _, had_errors) = encoding.decode(&buffer);
         if had_errors {
-            return Err("Encoding error: file contains invalid characters".to_string());
+            return Err("Encoding error: file contains invalid characters".to_owned());
         }
         lines.push(decoded.into_owned());
         buffer.clear();
@@ -83,7 +84,7 @@ pub fn parse_delimited_file(
     let lines: Vec<String> = lines.into_iter().skip(skip_rows).collect();
 
     if lines.is_empty() {
-        return Err("File is empty or all rows were skipped".to_string());
+        return Err("File is empty or all rows were skipped".to_owned());
     }
 
     // Parse CSV rows
@@ -143,8 +144,7 @@ pub fn parse_delimited_file(
             // Try to parse as number
             if let Ok(num) = field.parse::<f64>() {
                 json_row.push(Value::Number(
-                    serde_json::Number::from_f64(num)
-                        .unwrap_or_else(|| serde_json::Number::from(0)),
+                    Number::from_f64(num).unwrap_or_else(|| Number::from(0)),
                 ));
             } else {
                 json_row.push(Value::String(field.clone()));
@@ -159,7 +159,7 @@ pub fn parse_delimited_file(
 
     // Create response
     let mut sheets = HashMap::new();
-    sheets.insert("Sheet1".to_string(), sheet_data);
+    sheets.insert("Sheet1".to_owned(), sheet_data);
 
     Ok(ImportResponse { sheets })
 }

@@ -74,8 +74,7 @@ const SequenceDetails: React.FC<SequenceDetailsProps> = memo(
         <Box sx={{ mb: 3 }}>
           <Stack
             direction="row"
-            justifyContent="space-between"
-            alignItems="flex-start"
+            sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}
           >
             <Box>
               <Typography variant="h5" gutterBottom>

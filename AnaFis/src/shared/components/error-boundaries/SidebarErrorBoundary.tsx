@@ -1,4 +1,4 @@
-import { Close, ErrorOutline, Refresh } from '@mui/icons-material';
+import { Close, ErrorOutlined, Refresh } from '@mui/icons-material';
 import {
   Alert,
   AlertTitle,
@@ -115,7 +115,7 @@ export class SidebarErrorBoundary extends Component<
           {/* Error Content */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <ErrorOutline
+              <ErrorOutlined
                 sx={{
                   fontSize: 48,
                   color: anafisColors.buttons.close,

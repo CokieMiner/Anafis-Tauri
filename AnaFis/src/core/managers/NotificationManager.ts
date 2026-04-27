@@ -5,8 +5,6 @@ import {
   type NotificationContextType,
 } from '@/core/contexts/NotificationContext';
 
-export type { NotificationData } from '@/core/contexts/NotificationContext';
-
 export const useNotification = (): NotificationContextType => {
   const context = useContext(NotificationContext);
   if (!context) {

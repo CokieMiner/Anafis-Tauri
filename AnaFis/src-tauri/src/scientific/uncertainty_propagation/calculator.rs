@@ -4,7 +4,9 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use symb_anafis::{CovEntry, CovarianceMatrix, parse, uncertainty_propagation};
+use symb_anafis::{
+    CovEntry, CovarianceMatrix, Symbol, gradient, parse, symb, uncertainty_propagation,
+};
 
 /// Represents a variable input for the uncertainty calculator.
 #[derive(Deserialize, Clone)]
@@ -98,7 +100,7 @@ pub fn calculate_uncertainty(
         .map_err(|e| format!("Failed to parse result '{value_str}': {e}"))?;
 
     if !value.is_finite() {
-        return Err("Expression evaluated to non-finite value".to_string());
+        return Err("Expression evaluated to non-finite value".to_owned());
     }
 
     // Build covariance matrix
@@ -111,7 +113,7 @@ pub fn calculate_uncertainty(
     // Calculate uncertainty
     let var_refs: Vec<&str> = normalized_variable_names
         .iter()
-        .map(std::string::String::as_str)
+        .map(String::as_str)
         .collect();
     let sigma_expr = uncertainty_propagation(&expr, &var_refs, Some(&cov))
         .map_err(|e| format!("Uncertainty propagation failed: {e:?}"))?;
@@ -124,13 +126,9 @@ pub fn calculate_uncertainty(
         .map_err(|e| format!("Failed to parse uncertainty '{sigma_str}': {e}"))?;
 
     // Calculate derivatives for display
-    let symbols: Vec<symb_anafis::Symbol> = normalized_variable_names
-        .iter()
-        .map(|s| symb_anafis::symb(s))
-        .collect();
-    let sym_refs: Vec<&symb_anafis::Symbol> = symbols.iter().collect();
-    let gradient =
-        symb_anafis::gradient(&expr, &sym_refs).map_err(|e| format!("Gradient failed: {e:?}"))?;
+    let symbols: Vec<Symbol> = normalized_variable_names.iter().map(|s| symb(s)).collect();
+    let sym_refs: Vec<&Symbol> = symbols.iter().collect();
+    let gradient = gradient(&expr, &sym_refs).map_err(|e| format!("Gradient failed: {e:?}"))?;
 
     let mut derivatives = HashMap::new();
     for (i, name) in variable_names.iter().enumerate() {
@@ -176,10 +174,7 @@ pub fn generate_latex(formula: String, variables: Vec<String>) -> Result<LatexRe
     let expr = parse(&formula_normalized, &known_symbols, &HashSet::new(), None)
         .map_err(|e| format!("Failed to parse formula: {e}"))?;
 
-    let var_refs: Vec<&str> = normalized_variables
-        .iter()
-        .map(std::string::String::as_str)
-        .collect();
+    let var_refs: Vec<&str> = normalized_variables.iter().map(String::as_str).collect();
     let sigma_expr = uncertainty_propagation(&expr, &var_refs, None)
         .map_err(|e| format!("Uncertainty propagation failed: {e:?}"))?;
 
@@ -190,15 +185,20 @@ pub fn generate_latex(formula: String, variables: Vec<String>) -> Result<LatexRe
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    reason = "Tests use unwrap and panic for brevity and signaling failure"
+)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_calculate_uncertainty_simple() {
         let result = calculate_uncertainty(
-            "x^2".to_string(),
+            "x^2".to_owned(),
             vec![CalculatorVariable {
-                name: "x".to_string(),
+                name: "x".to_owned(),
                 value: 3.0,
                 uncertainty: 0.1,
             }],
@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn test_generate_latex_simple() {
         let result =
-            generate_latex("x + y".to_string(), vec!["x".to_string(), "y".to_string()]).unwrap();
+            generate_latex("x + y".to_owned(), vec!["x".to_owned(), "y".to_owned()]).unwrap();
 
         assert!(result.string.contains("sigma_x"));
         assert!(result.string.contains("sigma_y"));
@@ -222,9 +222,9 @@ mod tests {
     #[test]
     fn test_calculate_uncertainty_mixed_case_variable_name() {
         let result = calculate_uncertainty(
-            "AlotA^2".to_string(),
+            "AlotA^2".to_owned(),
             vec![CalculatorVariable {
-                name: "AlotA".to_string(),
+                name: "AlotA".to_owned(),
                 value: 3.0,
                 uncertainty: 0.1,
             }],
@@ -238,15 +238,15 @@ mod tests {
     #[test]
     fn test_calculate_uncertainty_rejects_case_collisions() {
         let result = calculate_uncertainty(
-            "a + A".to_string(),
+            "a + A".to_owned(),
             vec![
                 CalculatorVariable {
-                    name: "a".to_string(),
+                    name: "a".to_owned(),
                     value: 1.0,
                     uncertainty: 0.1,
                 },
                 CalculatorVariable {
-                    name: "A".to_string(),
+                    name: "A".to_owned(),
                     value: 2.0,
                     uncertainty: 0.1,
                 },

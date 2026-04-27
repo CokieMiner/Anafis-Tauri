@@ -3,13 +3,13 @@
 
 // ─── Backend mirror types ────────────────────────────────────────────
 
-export interface ModelLayer {
+interface ModelLayer {
   formula: string;
   dependentVariable: string;
   independentVariables: string[];
 }
 
-export type UncertaintyType = 'typeA' | 'typeB';
+type UncertaintyType = 'typeA' | 'typeB';
 
 export interface VariableInput {
   name: string;
@@ -70,29 +70,10 @@ export interface OdrFitResponse {
   assumptions: string[];
 }
 
-export interface GridEvaluationRequest {
-  modelFormula: string;
-  independentNames: string[];
-  parameterNames: string[];
-  parameterValues: number[];
-  xRange: [number, number];
-  yRange: [number, number];
-  resolution: number;
-}
-
 export interface GridEvaluationResponse {
   x: number[];
   y: number[];
   z: number[];
-}
-
-export interface CurveEvaluationRequest {
-  modelFormula: string;
-  independentName: string;
-  parameterNames: string[];
-  parameterValues: number[];
-  xRange: [number, number];
-  resolution: number;
 }
 
 export interface CurveEvaluationResponse {
@@ -205,19 +186,6 @@ export interface FitState {
   // Results
   fitResult: OdrFitResponse | null;
 }
-
-export const DEFAULT_ADVANCED_SETTINGS: AdvancedSettings = {
-  maxIterations: 200,
-  tolerance: 1e-9,
-  initialDamping: 1e-3,
-  usePoissonWeighting: false,
-};
-
-export const DEFAULT_AXIS_SETTINGS: AxisSettings = {
-  x: { label: '', scale: 'linear' },
-  y: { label: '', scale: 'linear' },
-  z: { label: '', scale: 'linear' },
-};
 
 export const DEFAULT_CSV_SETTINGS: CsvImportSettings = {
   separator: 'auto',

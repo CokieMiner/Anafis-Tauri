@@ -9,13 +9,12 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import type { FormulaFunctionValueType } from '@univerjs/engine-formula';
 import type { IRegisterFunctionService } from '@univerjs/sheets-formula';
 
 // ─── Argument parsing helpers ────────────────────────────────────────────────
 
 /** Parse arg at index as number. */
-function num(args: FormulaFunctionValueType[], i: number): number {
+function num(args: unknown[], i: number): number {
   const v = args[i];
   return typeof v === 'number' ? v : parseFloat(v as string) || 0;
 }
@@ -31,7 +30,7 @@ function reg1(
 ) {
   svc.registerAsyncFunction({
     name,
-    func: async (...args: FormulaFunctionValueType[]) =>
+    func: async (...args: unknown[]) =>
       invoke<number>(cmd, { x: num(args, 0) }),
     description: desc,
   });
@@ -47,7 +46,7 @@ function reg2(
 ) {
   svc.registerAsyncFunction({
     name,
-    func: async (...args: FormulaFunctionValueType[]) =>
+    func: async (...args: unknown[]) =>
       invoke<number>(cmd, { [p[0]]: num(args, 0), [p[1]]: num(args, 1) }),
     description: desc,
   });
@@ -138,7 +137,7 @@ export function registerCustomFunctions(svc: IRegisterFunctionService) {
   // Associated Legendre — 3 args
   svc.registerAsyncFunction({
     name: 'ASSOC_LEGENDRE',
-    func: async (...args: FormulaFunctionValueType[]) =>
+    func: async (...args: unknown[]) =>
       invoke<number>('math_assoc_legendre', {
         l: num(args, 0),
         m: num(args, 1),
@@ -150,7 +149,7 @@ export function registerCustomFunctions(svc: IRegisterFunctionService) {
   // ── Spherical Harmonics ────────────────────────────────────────────────
   svc.registerAsyncFunction({
     name: 'SPHERICAL_HARMONIC',
-    func: async (...args: FormulaFunctionValueType[]) =>
+    func: async (...args: unknown[]) =>
       invoke<number>('math_spherical_harmonic', {
         l: num(args, 0),
         m: num(args, 1),

@@ -165,8 +165,3 @@ export const sidebarTheme = {
     },
   },
 } as const;
-
-// Type exports for TypeScript
-export type SidebarTheme = typeof sidebarTheme;
-export type SidebarColors = typeof sidebarTheme.colors;
-export type SidebarTypography = typeof sidebarTheme.typography;

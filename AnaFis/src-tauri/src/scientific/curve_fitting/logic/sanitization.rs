@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::super::types::{OdrError, OdrResult};
+use super::{OdrError, OdrResult};
 
 /// Validates if an identifier is a valid symbol name.
 ///

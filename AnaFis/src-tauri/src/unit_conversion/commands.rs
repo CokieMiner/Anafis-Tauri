@@ -7,6 +7,7 @@ use crate::unit_conversion::core::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::string::ToString;
 use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -76,7 +77,7 @@ pub async fn check_unit_compatibility(from_unit: String, to_unit: String) -> Com
 
 #[command]
 pub async fn get_available_units() -> CommandResult<HashMap<String, UnitInfo>> {
-    with_converter(super::core::UnitConverter::get_available_units)
+    with_converter(UnitConverter::get_available_units)
 }
 
 // ===== QUICK CONVERSION FOR MENU BUTTONS =====
@@ -138,11 +139,7 @@ pub async fn analyze_dimensional_compatibility(
     match (result1, result2) {
         (Ok(parsed1), Ok(parsed2)) => {
             let compatible = parsed1.dimension.is_compatible(&parsed2.dimension);
-            let conversion_factor = if compatible {
-                Some(parsed1.si_factor / parsed2.si_factor)
-            } else {
-                None
-            };
+            let conversion_factor = compatible.then(|| parsed1.si_factor / parsed2.si_factor);
 
             let analysis_details = if compatible {
                 format!(
@@ -151,7 +148,8 @@ pub async fn analyze_dimensional_compatibility(
                     format_dimension(&parsed1.dimension),
                     unit2,
                     format_dimension(&parsed2.dimension),
-                    conversion_factor.unwrap()
+                    conversion_factor
+                        .expect("Dimensionally compatible units must have a conversion factor")
                 )
             } else {
                 format!(
@@ -202,7 +200,7 @@ pub async fn get_unit_dimensional_formula(unit: String) -> CommandResult<String>
 
     match converter.parse_unit(&unit) {
         Ok(parsed) => Ok(format_dimension(&parsed.dimension)),
-        Err(e) => Err(validation_error(e, Some("unit".to_string()))),
+        Err(e) => Err(validation_error(e, Some("unit".to_owned()))),
     }
 }
 
@@ -238,7 +236,7 @@ pub async fn get_supported_categories() -> CommandResult<Vec<String>> {
     ];
     Ok(SUPPORTED_CATEGORIES
         .iter()
-        .map(std::string::ToString::to_string)
+        .map(ToString::to_string)
         .collect())
 }
 
@@ -249,57 +247,57 @@ fn format_dimension(dim: &Dimension) -> String {
 
     if dim.mass != 0 {
         parts.push(if dim.mass == 1 {
-            "M".to_string()
+            "M".to_owned()
         } else {
             format!("M^{}", dim.mass)
         });
     }
     if dim.length != 0 {
         parts.push(if dim.length == 1 {
-            "L".to_string()
+            "L".to_owned()
         } else {
             format!("L^{}", dim.length)
         });
     }
     if dim.time != 0 {
         parts.push(if dim.time == 1 {
-            "T".to_string()
+            "T".to_owned()
         } else {
             format!("T^{}", dim.time)
         });
     }
     if dim.current != 0 {
         parts.push(if dim.current == 1 {
-            "I".to_string()
+            "I".to_owned()
         } else {
             format!("I^{}", dim.current)
         });
     }
     if dim.temperature != 0 {
         parts.push(if dim.temperature == 1 {
-            "Θ".to_string()
+            "\u{398}".to_owned()
         } else {
             format!("Θ^{}", dim.temperature)
         });
     }
     if dim.amount != 0 {
         parts.push(if dim.amount == 1 {
-            "N".to_string()
+            "N".to_owned()
         } else {
             format!("N^{}", dim.amount)
         });
     }
     if dim.luminosity != 0 {
         parts.push(if dim.luminosity == 1 {
-            "J".to_string()
+            "J".to_owned()
         } else {
             format!("J^{}", dim.luminosity)
         });
     }
 
     if parts.is_empty() {
-        "[dimensionless]".to_string()
+        "[dimensionless]".to_owned()
     } else {
-        format!("[{}]", parts.join("·"))
+        format!("[{}]", parts.join("\u{b7}"))
     }
 }

@@ -1,4 +1,5 @@
 use nalgebra::{DMatrix, DVector};
+use std::ops::Index;
 
 /// SVD-based numerical diagnostics for a matrix.
 #[derive(Debug, Clone, Copy)]
@@ -36,7 +37,8 @@ pub struct PreparedData {
     pub(crate) variable_values: Vec<Vec<f64>>,
     /// Full covariance matrices for each data point across the combined variable space.
     /// Format: `[point_index][dim][dim]`, where `dim = variable_names.len()`.
-    pub(crate) point_covariances: Vec<Vec<Vec<f64>>>,
+    /// When all points share the same covariance, only one matrix is stored.
+    pub(crate) point_covariances: PointCovariances,
     /// Total number of data points.
     pub(crate) point_count: usize,
     /// Whether any near-zero uncertainties were clamped to a minimum value.
@@ -49,6 +51,33 @@ pub struct PreparedData {
     pub(crate) variable_uncertainty_dofs: Vec<Option<f64>>,
     /// Approximate effective input DOF via Welch-Satterthwaite when finite DOF metadata is available.
     pub(crate) welch_satterthwaite_dof: Option<f64>,
+    /// Whether Poisson weighting was applied to a variable with exactly zero counts.
+    pub(crate) had_zero_count_poisson: bool,
+    /// Total number of individual variance entries clamped to `MIN_VARIANCE`.
+    pub(crate) clamped_variance_count: usize,
+}
+
+/// Covariance storage that supports both per-point and shared (homogeneous) modes.
+///
+/// When all data points share identical uncertainties and no per-point correlations
+/// are given, `Shared` stores a single matrix — reducing memory from `O(N×D²)` to `O(D²)`.
+/// Indexing with `[point]` transparently returns the correct matrix in both cases.
+pub enum PointCovariances {
+    /// Each point has its own covariance matrix.
+    PerPoint(Vec<Vec<Vec<f64>>>),
+    /// All points share the same covariance matrix.
+    Shared(Vec<Vec<f64>>),
+}
+
+impl Index<usize> for PointCovariances {
+    type Output = Vec<Vec<f64>>;
+
+    fn index(&self, point: usize) -> &Self::Output {
+        match self {
+            Self::PerPoint(covariances) => &covariances[point],
+            Self::Shared(covariance) => covariance,
+        }
+    }
 }
 
 /// The current state of an ODR evaluation across all layers.
@@ -75,16 +104,23 @@ pub struct EvaluationState {
     pub(crate) inner_stationarity_norm_max: f64,
     /// Mean L2 norm of the inner first-order stationarity residual across point solves.
     pub(crate) inner_stationarity_norm_mean: f64,
+    /// Number of independent variable corrections suppressed because variance < `CORRECTION_VARIANCE_THRESHOLD`.
+    pub(crate) suppressed_correction_count: usize,
     /// Sensitivity-weighted Welch-Satterthwaite effective DOF from current model sensitivities.
     pub(crate) welch_satterthwaite_dof: Option<f64>,
+    /// Number of finite-difference perturbation inner solves that did not converge when
+    /// computing the implicit correction tensor d²c*/dβ². Non-zero values indicate the
+    /// outer curvature correction may contain noise from unreliable FD quotients.
+    pub(crate) fd_tensor_unconverged_perturbations: usize,
 }
 
 /// Result of batch evaluation containing model values and derivatives.
+#[derive(Debug, Clone)]
 pub struct BatchEvaluationResult {
     /// Model fitted values.
-    pub(crate) fitted_values: Vec<f64>,
-    /// Derivatives with respect to independent variables.
-    pub(crate) independent_derivatives: Vec<Vec<f64>>,
-    /// Derivatives with respect to parameters.
-    pub(crate) parameter_derivatives: Vec<Vec<f64>>,
+    pub fitted_values: Vec<f64>,
+    /// Derivatives with respect to independent variables: [`var_idx`][point_idx].
+    pub independent_derivatives: Vec<Vec<f64>>,
+    /// Derivatives with respect to parameters: [`param_idx`][point_idx].
+    pub parameter_derivatives: Vec<Vec<f64>>,
 }

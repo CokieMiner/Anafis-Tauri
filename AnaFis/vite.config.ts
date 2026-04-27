@@ -103,18 +103,33 @@ export default defineConfig(() => ({
 
   // Path resolution for cleaner imports
   resolve: {
-    alias: {
+    alias: [
       // Main src alias
-      '@': path.resolve(__dirname, './src'),
-    },
+      { find: /^@\//, replacement: `${path.resolve(__dirname, './src')}/` },
+    ],
     // Deduplicate shared dependencies to prevent multiple instances
     dedupe: [
       '@wendellhu/redi',
       '@univerjs/core',
       '@univerjs/design',
+      '@univerjs/docs',
+      '@univerjs/docs-ui',
       '@univerjs/engine-render',
       '@univerjs/engine-formula',
+      '@univerjs/find-replace',
       '@univerjs/network',
+      '@univerjs/rpc',
+      '@univerjs/sheets',
+      '@univerjs/sheets-ui',
+      '@univerjs/sheets-formula',
+      '@univerjs/sheets-formula-ui',
+      '@univerjs/sheets-numfmt',
+      '@univerjs/sheets-numfmt-ui',
+      '@univerjs/sheets-filter',
+      '@univerjs/sheets-filter-ui',
+      '@univerjs/sheets-find-replace',
+      '@univerjs/telemetry',
+      '@univerjs/ui',
       'react',
       'react-dom',
     ],
@@ -212,18 +227,11 @@ export default defineConfig(() => ({
       '@dnd-kit/core',
       '@dnd-kit/sortable',
       '@dnd-kit/utilities',
-      // Force pre-bundling of critical Univer dependencies
-      '@wendellhu/redi',
-      '@univerjs/core',
-      '@univerjs/design',
-      '@univerjs/engine-render',
-      '@univerjs/engine-formula',
-      '@univerjs/network',
     ],
-    exclude: [
-      // Exclude large plugin packages that should be chunked separately
-      '@univerjs/presets',
-    ],
+    // Note: Univer packages are no longer excluded from pre-bundling.
+    // In Univer 0.20.0+, @univerjs/core depends on CJS-only packages like dayjs
+    // that must be transformed to ESM by Vite. The resolve.dedupe config above
+    // prevents duplicate runtime instances instead.
   },
 
   // Enhanced development server configuration

@@ -17,7 +17,7 @@ import {
 /**
  * Cell data structure for import
  */
-export interface ImportCellData {
+interface ImportCellData {
   v?: string | number | boolean | null;
   f?: string;
   s?: unknown;
@@ -28,7 +28,7 @@ export interface ImportCellData {
 /**
  * Merge data structure for import
  */
-export interface ImportMergeData {
+interface ImportMergeData {
   startRow: number;
   startColumn: number;
   endRow: number;
@@ -38,7 +38,7 @@ export interface ImportMergeData {
 /**
  * Sheet data structure for import
  */
-export interface ImportSheetData {
+interface ImportSheetData {
   id: string;
   name: string;
   cellData?: Record<string, ImportCellData>;
@@ -50,7 +50,7 @@ export interface ImportSheetData {
 /**
  * Options for bulk import operations
  */
-export interface BulkImportOptions {
+interface BulkImportOptions {
   includeFormulas?: boolean;
   includeFormatting?: boolean;
 }

@@ -1,11 +1,15 @@
 // src-tauri/src/secondary_windows.rs
 
 use crate::windows::window_manager::{WindowConfig, create_or_focus_window};
-use tauri::{AppHandle, Listener, Manager, WindowEvent};
+use std::sync::Arc;
+use std::thread::{sleep, spawn};
+use std::time::Duration;
+use tauri::webview::Color;
+use tauri::{AppHandle, Listener, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tokio::sync::Notify;
-use tokio::time::{Duration, timeout};
+use tokio::time::timeout;
 use tracing::{error, info};
-use urlencoding;
+use urlencoding::encode;
 
 #[tauri::command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
@@ -31,8 +35,8 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
     // NOTE: window creation in sync commands can deadlock on Windows (WebView2 issue).
     // Keeping this command async avoids that platform-specific lockup.
     let config = WindowConfig {
-        title: "Uncertainty Calculator".to_string(),
-        url: "uncertainty-calculator.html".to_string(),
+        title: "Uncertainty Calculator".to_owned(),
+        url: "uncertainty-calculator.html".to_owned(),
         width: 600.0,  // Wider default to accommodate two-column layout properly
         height: 670.0, // Increased default height for more content
         resizable: true,
@@ -40,7 +44,7 @@ pub async fn open_uncertainty_calculator_window(app: AppHandle) -> Result<(), St
         transparent: false,
         always_on_top: true,
         skip_taskbar: true,
-        parent: Some("main".to_string()),
+        parent: Some("main".to_owned()),
         min_width: Some(600.0), // More reasonable minimum width for two columns
         min_height: Some(670.0), // Increased minimum height to ensure rendered formula section is always visible
         focus_on_create: true,
@@ -61,8 +65,8 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
     // NOTE: window creation in sync commands can deadlock on Windows (WebView2 issue).
     // Keeping this command async avoids that platform-specific lockup.
     let config = WindowConfig {
-        title: "AnaFis Settings".to_string(),
-        url: "settings.html".to_string(),
+        title: "AnaFis Settings".to_owned(),
+        url: "settings.html".to_owned(),
         width: 650.0,
         height: 700.0,
         resizable: true,
@@ -70,7 +74,7 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
         transparent: true,
         always_on_top: true,
         skip_taskbar: true,
-        parent: Some("main".to_string()),
+        parent: Some("main".to_owned()),
         min_width: Some(500.0),
         min_height: Some(500.0),
         focus_on_create: true,
@@ -91,8 +95,8 @@ pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
     // NOTE: window creation in sync commands can deadlock on Windows (WebView2 issue).
     // Keeping this command async avoids that platform-specific lockup.
     let config = WindowConfig {
-        title: "Data Library".to_string(),
-        url: "data-library.html".to_string(),
+        title: "Data Library".to_owned(),
+        url: "data-library.html".to_owned(),
         width: 1000.0,
         height: 700.0,
         resizable: true,
@@ -100,7 +104,7 @@ pub async fn open_data_library_window(app: AppHandle) -> Result<(), String> {
         transparent: true,
         always_on_top: true,
         skip_taskbar: true,
-        parent: Some("main".to_string()),
+        parent: Some("main".to_owned()),
         min_width: Some(700.0),
         min_height: Some(500.0),
         focus_on_create: false,
@@ -124,8 +128,8 @@ pub async fn open_latex_preview_window(
     );
 
     // Encode the parameters for URL
-    let encoded_formula = urlencoding::encode(&latex_formula);
-    let encoded_title = urlencoding::encode(&title);
+    let encoded_formula = encode(&latex_formula);
+    let encoded_title = encode(&title);
     let new_url = format!("latex-preview.html?formula={encoded_formula}&title={encoded_title}");
 
     // Check if window already exists and destroy it
@@ -133,8 +137,8 @@ pub async fn open_latex_preview_window(
         info!("Destroying existing LaTeX preview window");
 
         // Create a notify to wait for window destruction
-        let notify = std::sync::Arc::new(Notify::new());
-        let notify_clone = notify.clone();
+        let notify = Arc::new(Notify::new());
+        let notify_clone = Arc::clone(&notify);
 
         // Register the destruction listener BEFORE calling destroy()
         // This ensures the listener is active when destroy() is called
@@ -168,36 +172,32 @@ pub async fn open_latex_preview_window(
             error!("Timeout waiting for window destruction - window may not be fully destroyed");
             return Err(
                 "Failed to destroy existing window: timeout waiting for destruction confirmation"
-                    .to_string(),
+                    .to_owned(),
             );
         }
     }
 
     info!("Creating new LaTeX preview window");
-    let window = tauri::WebviewWindowBuilder::new(
-        &app,
-        "latex-preview",
-        tauri::WebviewUrl::App(new_url.into()),
-    )
-    .title(&title)
-    .decorations(false)
-    .resizable(true)
-    .inner_size(500.0_f64, 225.0_f64)
-    .min_inner_size(400.0_f64, 225.0_f64)
-    .max_inner_size(1600.0_f64, 225.0_f64)
-    .transparent(false)
-    .always_on_top(true)
-    .skip_taskbar(true)
-    .closable(true)
-    .visible(false)
-    .build()
-    .map_err(|e| {
-        error!("Failed to create window: {}", e);
-        format!("Failed to create window: {e}")
-    })?;
+    let window = WebviewWindowBuilder::new(&app, "latex-preview", WebviewUrl::App(new_url.into()))
+        .title(&title)
+        .decorations(false)
+        .resizable(true)
+        .inner_size(500.0_f64, 225.0_f64)
+        .min_inner_size(400.0_f64, 225.0_f64)
+        .max_inner_size(1600.0_f64, 225.0_f64)
+        .transparent(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .closable(true)
+        .visible(false)
+        .build()
+        .map_err(|e| {
+            error!("Failed to create window: {}", e);
+            format!("Failed to create window: {e}")
+        })?;
 
     // Ensure initial background is dark/transparent while hidden.
-    drop(window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0))));
+    drop(window.set_background_color(Some(Color(0, 0, 0, 0))));
 
     // Show only after frontend emits readiness event.
     let ready_window = window.clone();
@@ -208,8 +208,8 @@ pub async fn open_latex_preview_window(
 
     // Fallback in case frontend ready signal is not emitted.
     let app_handle = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(2200));
+    spawn(move || {
+        sleep(Duration::from_millis(2200));
         if let Some(fallback_window) = app_handle.get_webview_window("latex-preview")
             && matches!(fallback_window.is_visible(), Ok(false))
         {

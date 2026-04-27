@@ -22,7 +22,7 @@ import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
 type CellValue = string | number | null;
 type DataTable = CellValue[][];
 
-export type ExportFormat =
+type ExportFormat =
   | 'csv'
   | 'tsv'
   | 'txt'
@@ -32,12 +32,12 @@ export type ExportFormat =
   | 'tex'
   | 'anafispread';
 
-export interface ExportResult {
+interface ExportResult {
   message?: string;
   filePath?: string;
 }
 
-export interface ExportError {
+interface ExportError {
   message: string;
   code?: string;
 }

@@ -4,8 +4,8 @@ import {
   parseRange,
   type RangeBounds,
 } from '@/tabs/spreadsheet/univer/utils/cellUtils';
+import { SpreadsheetValidationError } from '@/tabs/spreadsheet/univer/utils/errors';
 import { normalizeRangeRef } from '@/tabs/spreadsheet/univer/utils/validation';
-import { SpreadsheetValidationError } from './errors';
 
 /**
  * Centralized range validation utilities

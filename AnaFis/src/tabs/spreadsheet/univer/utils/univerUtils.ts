@@ -1,8 +1,10 @@
 // univerUtils.ts - Consolidated utility functions for Facade API
 import type { IRange } from '@univerjs/core';
-import { columnToLetter } from './cellUtils';
-import { ERROR_MESSAGES } from './constants';
-import { SpreadsheetValidationError } from './errors';
+// Side-effect import for type augmentation: adds getActiveWorkbook() etc. to FUniver
+import '@univerjs/sheets/facade';
+import { columnToLetter } from '@/tabs/spreadsheet/univer/utils/cellUtils';
+import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
+import { SpreadsheetValidationError } from '@/tabs/spreadsheet/univer/utils/errors';
 
 // Type for the facade API instance
 type FacadeAPI = ReturnType<

@@ -11,8 +11,19 @@
 
 use crate::error::{CommandResult, file_not_found, import_error, validation_error};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
+use std::error::Error;
 use std::path::{Path, PathBuf};
+use tokio::fs::metadata;
+use tokio::task::spawn_blocking;
+
+use self::anafispread::import_anafis_spread;
+use self::csv::{import_csv, import_tsv, import_txt};
+use self::parquet::import_parquet;
+
+use tokio::fs::File;
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 /// Validate and canonicalize a file path to prevent directory traversal
 /// Returns the canonicalized path if valid, or an error if invalid
@@ -65,7 +76,7 @@ pub struct FileMetadata {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportResponse {
-    pub sheets: HashMap<String, Vec<Vec<serde_json::Value>>>,
+    pub sheets: HashMap<String, Vec<Vec<Value>>>,
 }
 
 /// Main import command - called from frontend
@@ -76,17 +87,17 @@ pub async fn import_spreadsheet_file(
 ) -> CommandResult<ImportResponse> {
     // Validate and canonicalize path to prevent directory traversal
     let canonical_path = validate_and_canonicalize_path(&file_path)
-        .map_err(|e| validation_error(e, Some("file_path".to_string())))?;
+        .map_err(|e| validation_error(e, Some("file_path".to_owned())))?;
 
     // All parsers use blocking std::fs I/O; move them off the async executor
-    tokio::task::spawn_blocking(move || {
+    spawn_blocking(move || {
         let path_str = canonical_path.to_string_lossy();
         match options.format.as_str() {
-            "csv" => csv::import_csv(&path_str, options.skip_rows, false, Some(&options.encoding))
+            "csv" => import_csv(&path_str, options.skip_rows, false, Some(&options.encoding))
                 .map_err(|e| import_error(format!("CSV import failed: {e}"))),
-            "tsv" => csv::import_tsv(&path_str, options.skip_rows, false, Some(&options.encoding))
+            "tsv" => import_tsv(&path_str, options.skip_rows, false, Some(&options.encoding))
                 .map_err(|e| import_error(format!("TSV import failed: {e}"))),
-            "txt" => csv::import_txt(
+            "txt" => import_txt(
                 &path_str,
                 &options.delimiter,
                 options.skip_rows,
@@ -95,13 +106,13 @@ pub async fn import_spreadsheet_file(
             )
             .map_err(|e| import_error(format!("TXT import failed: {e}"))),
             "anafispread" => Err(import_error(
-                "Use import_anafis_spread_direct for .anafispread files".to_string(),
+                "Use import_anafis_spread_direct for .anafispread files".to_owned(),
             )),
-            "parquet" => parquet::import_parquet(&path_str)
+            "parquet" => import_parquet(&path_str)
                 .map_err(|e| import_error(format!("Parquet import failed: {e}"))),
             _ => Err(validation_error(
                 format!("Unsupported format: {}", options.format),
-                Some("format".to_string()),
+                Some("format".to_owned()),
             )),
         }
     })
@@ -111,15 +122,15 @@ pub async fn import_spreadsheet_file(
 /// Direct import command for .anafispread format
 /// Returns raw `IWorkbookData` without conversion for lossless snapshot loading
 #[tauri::command]
-pub async fn import_anafis_spread_direct(file_path: String) -> CommandResult<serde_json::Value> {
+pub async fn import_anafis_spread_direct(file_path: String) -> CommandResult<Value> {
     // Validate and canonicalize path to prevent directory traversal
     let canonical_path = validate_and_canonicalize_path(&file_path)
-        .map_err(|e| validation_error(e, Some("file_path".to_string())))?;
+        .map_err(|e| validation_error(e, Some("file_path".to_owned())))?;
 
     let path_str = canonical_path.to_string_lossy().to_string();
     // anafispread uses blocking std::fs + GzDecoder; move off the async executor
-    tokio::task::spawn_blocking(move || {
-        anafispread::import_anafis_spread(path_str)
+    spawn_blocking(move || {
+        import_anafis_spread(path_str)
             .map_err(|e| import_error(format!("AnaFis spread import failed: {e}")))
     })
     .await
@@ -135,10 +146,10 @@ pub async fn get_file_metadata(
 ) -> CommandResult<FileMetadata> {
     // Validate and canonicalize path to prevent directory traversal
     let canonical_path = validate_and_canonicalize_path(&file_path)
-        .map_err(|e| validation_error(e, Some("file_path".to_string())))?;
+        .map_err(|e| validation_error(e, Some("file_path".to_owned())))?;
 
     // Get file size (use tokio::fs to avoid blocking the async executor)
-    let metadata = tokio::fs::metadata(&canonical_path)
+    let metadata = metadata(&canonical_path)
         .await
         .map_err(|e| file_not_found(format!("Failed to read file metadata: {e}")))?;
     let size = metadata.len();
@@ -189,10 +200,7 @@ async fn get_text_file_dimensions(
     file_path: &Path,
     extension: &str,
     txt_delimiter: Option<&str>,
-) -> Result<(usize, usize), Box<dyn std::error::Error>> {
-    use tokio::fs::File;
-    use tokio::io::{AsyncBufReadExt, BufReader};
-
+) -> Result<(usize, usize), Box<dyn Error>> {
     let file = File::open(file_path).await?;
     let reader = BufReader::new(file);
     let mut lines = reader.lines();

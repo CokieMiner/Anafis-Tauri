@@ -1,10 +1,10 @@
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
-use symb_anafis::{gradient, parse, symb, CompiledEvaluator, Expr, Symbol};
+use symb_anafis::{CompiledEvaluator, Expr, Symbol, gradient, parse, symb};
 
-use super::super::types::{OdrError, OdrResult};
 use super::constants::MODEL_CACHE_MAX_ENTRIES;
+use super::{OdrError, OdrResult};
 
 /// A model that has been compiled into executable bytecode for a specific layer.
 #[derive(Debug)]
@@ -25,10 +25,12 @@ pub struct CompiledModel {
     pub independent_gradient_exprs: Vec<Expr>, // d f / d x_k
     /// Compiled evaluators for second derivatives with respect to independent variables (row-major Hessian).
     pub independent_hessian_evaluators: Vec<CompiledEvaluator>, // d2 f / d x_row d x_col
-    /// Compiled evaluators for mixed second derivatives with respect to independent variables and parameters.
-    pub independent_parameter_mixed_hessian_evaluators: Vec<CompiledEvaluator>, // d2 f / d x_row d p_col
-    /// Compiled evaluators for second derivatives with respect to parameters (row-major Hessian).
-    pub parameter_hessian_evaluators: Vec<CompiledEvaluator>, // d2 f / d p_row d p_col
+    /// Expressions for second derivatives with respect to independent variables (for batch eval).
+    pub independent_hessian_exprs: Vec<Expr>,
+    /// Expressions for mixed second derivatives (for batch eval).
+    pub independent_parameter_mixed_hessian_exprs: Vec<Expr>,
+    /// Expressions for second derivatives with respect to parameters (for batch eval).
+    pub parameter_hessian_exprs: Vec<Expr>,
 }
 
 /// LRU cache for compiled models to avoid redundant recompilation.
@@ -41,8 +43,8 @@ pub struct ModelCache {
 }
 
 /// Global singleton for model caching.
-pub static MODEL_CACHE: std::sync::LazyLock<Mutex<ModelCache>> =
-    std::sync::LazyLock::new(|| Mutex::new(ModelCache::default()));
+pub static MODEL_CACHE: LazyLock<Mutex<ModelCache>> =
+    LazyLock::new(|| Mutex::new(ModelCache::default()));
 
 impl ModelCache {
     /// Returns a compiled model from the cache if it exists.
@@ -66,7 +68,7 @@ impl ModelCache {
             self.evict_one();
         }
 
-        self.entries.insert(key.to_string(), model);
+        self.entries.insert(key.to_owned(), model);
         self.touch(key);
     }
 
@@ -82,7 +84,7 @@ impl ModelCache {
         if let Some(position) = self.access_order.iter().position(|stored| stored == key) {
             self.access_order.remove(position);
         }
-        self.access_order.push_back(key.to_string());
+        self.access_order.push_back(key.to_owned());
     }
 }
 
@@ -114,7 +116,7 @@ pub fn get_or_compile_model(
     );
 
     {
-        let mut cache = MODEL_CACHE.lock().map_err(|_| OdrError::CachePoisoned)?;
+        let mut cache = MODEL_CACHE.lock().map_err(|_err| OdrError::CachePoisoned)?;
         if let Some(model) = cache.get(&key) {
             return Ok(model);
         }
@@ -127,7 +129,7 @@ pub fn get_or_compile_model(
         &normalized_parameters,
     )?);
 
-    let mut cache = MODEL_CACHE.lock().map_err(|_| OdrError::CachePoisoned)?;
+    let mut cache = MODEL_CACHE.lock().map_err(|_err| OdrError::CachePoisoned)?;
     if let Some(model) = cache.get(&key) {
         return Ok(model);
     }
@@ -189,7 +191,7 @@ fn compile_model_inner(
     let formula = model_formula.trim().to_lowercase();
     if formula.is_empty() {
         return Err(OdrError::Validation(
-            "Model formula cannot be empty".to_string(),
+            "Model formula cannot be empty".to_owned(),
         ));
     }
 
@@ -230,6 +232,7 @@ fn compile_model_inner(
 
     let hessian_capacity = independent_gradient_exprs.len() * independent_gradient_exprs.len();
     let mut independent_hessian_evaluators = Vec::with_capacity(hessian_capacity);
+    let mut independent_hessian_exprs = Vec::with_capacity(hessian_capacity);
     for row_gradient in &independent_gradient_exprs {
         let row_second_derivatives =
             gradient(row_gradient, &independent_symbol_refs).map_err(|error| {
@@ -243,12 +246,12 @@ fn compile_model_inner(
                         OdrError::Compile(format!("independent Hessian evaluator: {error:?}"))
                     })?,
             );
+            independent_hessian_exprs.push(second_derivative_expr);
         }
     }
 
     let mixed_hessian_capacity = independent_gradient_exprs.len() * parameter_names.len();
-    let mut independent_parameter_mixed_hessian_evaluators =
-        Vec::with_capacity(mixed_hessian_capacity);
+    let mut independent_parameter_mixed_hessian_exprs = Vec::with_capacity(mixed_hessian_capacity);
     for row_gradient in &independent_gradient_exprs {
         let row_mixed_derivatives =
             gradient(row_gradient, &parameter_symbol_refs).map_err(|error| {
@@ -258,45 +261,35 @@ fn compile_model_inner(
             })?;
 
         for mixed_derivative_expr in row_mixed_derivatives {
-            independent_parameter_mixed_hessian_evaluators.push(
-                CompiledEvaluator::compile(&mixed_derivative_expr, &evaluator_order, None)
-                    .map_err(|error| {
-                        OdrError::Compile(format!(
-                            "independent-parameter mixed Hessian evaluator: {error:?}"
-                        ))
-                    })?,
-            );
+            independent_parameter_mixed_hessian_exprs.push(mixed_derivative_expr);
         }
     }
 
-    let parameter_hessian_capacity = parameter_gradient_exprs.len() * parameter_gradient_exprs.len();
-    let mut parameter_hessian_evaluators = Vec::with_capacity(parameter_hessian_capacity);
+    let parameter_hessian_capacity =
+        parameter_gradient_exprs.len() * parameter_gradient_exprs.len();
+    let mut parameter_hessian_exprs = Vec::with_capacity(parameter_hessian_capacity);
     for row_gradient in &parameter_gradient_exprs {
-        let row_second_derivatives = gradient(row_gradient, &parameter_symbol_refs)
-            .map_err(|error| {
+        let row_second_derivatives =
+            gradient(row_gradient, &parameter_symbol_refs).map_err(|error| {
                 OdrError::Compile(format!("parameter Hessian gradients: {error:?}"))
             })?;
 
         for second_derivative_expr in row_second_derivatives {
-            parameter_hessian_evaluators.push(
-                CompiledEvaluator::compile(&second_derivative_expr, &evaluator_order, None)
-                    .map_err(|error| {
-                        OdrError::Compile(format!("parameter Hessian evaluator: {error:?}"))
-                    })?,
-            );
+            parameter_hessian_exprs.push(second_derivative_expr);
         }
     }
 
     Ok(CompiledModel {
         formula,
-        dependent_name: dependent_name.to_string(),
+        dependent_name: dependent_name.to_owned(),
         parameter_names: parameter_names.to_vec(),
         independent_names: independent_names.to_vec(),
         model_expr: expr,
         parameter_gradient_exprs,
         independent_gradient_exprs,
         independent_hessian_evaluators,
-        independent_parameter_mixed_hessian_evaluators,
-        parameter_hessian_evaluators,
+        independent_hessian_exprs,
+        independent_parameter_mixed_hessian_exprs,
+        parameter_hessian_exprs,
     })
 }

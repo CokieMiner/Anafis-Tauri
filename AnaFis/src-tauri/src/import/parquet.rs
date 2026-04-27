@@ -5,8 +5,8 @@
 
 use super::ImportResponse;
 use parquet::file::reader::{FileReader, SerializedFileReader};
-use parquet::record::Row;
-use serde_json::Value;
+use parquet::record::{Field, Row};
+use serde_json::{Number, Value};
 use std::collections::HashMap;
 use std::fs::File;
 
@@ -29,7 +29,7 @@ pub fn import_parquet(file_path: &str) -> Result<ImportResponse, String> {
     let column_names: Vec<String> = schema
         .get_fields()
         .iter()
-        .map(|f| f.name().to_string())
+        .map(|f| f.name().to_owned())
         .collect();
 
     // Read all rows
@@ -51,7 +51,7 @@ pub fn import_parquet(file_path: &str) -> Result<ImportResponse, String> {
 
     // Create response
     let mut sheets = HashMap::new();
-    sheets.insert("Sheet1".to_string(), sheet_data);
+    sheets.insert("Sheet1".to_owned(), sheet_data);
 
     Ok(ImportResponse { sheets })
 }
@@ -67,56 +67,53 @@ fn convert_parquet_row_to_json(row: &Row, num_columns: usize) -> Result<Vec<Valu
             .ok_or_else(|| format!("Column {i} not found"))?;
 
         let value = match field.1 {
-            parquet::record::Field::Null => Value::Null,
-            parquet::record::Field::Bool(b) => Value::Bool(*b),
-            parquet::record::Field::Byte(b) => Value::Number(i64::from(*b).into()),
-            parquet::record::Field::Short(s) => Value::Number(i64::from(*s).into()),
-            parquet::record::Field::Int(i) => Value::Number(i64::from(*i).into()),
-            parquet::record::Field::Long(l) => Value::Number((*l).into()),
-            parquet::record::Field::UByte(b) => Value::Number(u64::from(*b).into()),
-            parquet::record::Field::UShort(s) => Value::Number(u64::from(*s).into()),
-            parquet::record::Field::UInt(i) => Value::Number(u64::from(*i).into()),
-            parquet::record::Field::ULong(l) => Value::Number((*l).into()),
-            parquet::record::Field::Float16(f) => Value::Number(
-                serde_json::Number::from_f64(f.to_f64())
-                    .unwrap_or_else(|| serde_json::Number::from(0)),
-            ),
-            parquet::record::Field::Float(f) => Value::Number(
-                serde_json::Number::from_f64(f64::from(*f))
-                    .unwrap_or_else(|| serde_json::Number::from(0)),
-            ),
-            parquet::record::Field::Double(d) => Value::Number(
-                serde_json::Number::from_f64(*d).unwrap_or_else(|| serde_json::Number::from(0)),
-            ),
-            parquet::record::Field::Str(s) => Value::String(s.clone()),
-            parquet::record::Field::Bytes(b) => {
+            Field::Null => Value::Null,
+            Field::Bool(b) => Value::Bool(*b),
+            Field::Byte(b) => Value::Number(i64::from(*b).into()),
+            Field::Short(s) => Value::Number(i64::from(*s).into()),
+            Field::Int(val) => Value::Number(i64::from(*val).into()),
+            Field::Long(l) => Value::Number((*l).into()),
+            Field::UByte(b) => Value::Number(u64::from(*b).into()),
+            Field::UShort(s) => Value::Number(u64::from(*s).into()),
+            Field::UInt(val) => Value::Number(u64::from(*val).into()),
+            Field::ULong(l) => Value::Number((*l).into()),
+            Field::Float16(f) => {
+                Value::Number(Number::from_f64(f.to_f64()).unwrap_or_else(|| Number::from(0)))
+            }
+            Field::Float(f) => {
+                Value::Number(Number::from_f64(f64::from(*f)).unwrap_or_else(|| Number::from(0)))
+            }
+            Field::Double(d) => {
+                Value::Number(Number::from_f64(*d).unwrap_or_else(|| Number::from(0)))
+            }
+            Field::Str(s) => Value::String(s.clone()),
+            Field::Bytes(b) => {
                 // Convert bytes to hex string more efficiently
                 use std::fmt::Write;
                 let data = b.data();
                 let mut hex_str = String::with_capacity(data.len() * 2);
                 for byte in data {
-                    let _ = write!(hex_str, "{byte:02x}");
+                    write!(hex_str, "{byte:02x}").expect("Writing to String should not fail");
                 }
                 Value::String(format!("0x{hex_str}"))
             }
-            parquet::record::Field::Decimal(d) => {
+            Field::Decimal(d) => {
                 // Decimal doesn't implement Display, so format it manually
                 Value::String(format!("{d:?}"))
             }
-            parquet::record::Field::TimestampMillis(ts)
-            | parquet::record::Field::TimestampMicros(ts) => Value::Number((*ts).into()),
-            parquet::record::Field::TimeMillis(t) => Value::Number(i64::from(*t).into()),
-            parquet::record::Field::TimeMicros(t) => Value::Number((*t).into()),
-            parquet::record::Field::Date(d) => Value::Number(i64::from(*d).into()),
-            parquet::record::Field::Group(g) => {
+            Field::TimestampMillis(ts) | Field::TimestampMicros(ts) => Value::Number((*ts).into()),
+            Field::TimeMillis(t) => Value::Number(i64::from(*t).into()),
+            Field::TimeMicros(t) => Value::Number((*t).into()),
+            Field::Date(d) => Value::Number(i64::from(*d).into()),
+            Field::Group(g) => {
                 // Complex nested type - convert to JSON string representation
                 Value::String(format!("{g:?}"))
             }
-            parquet::record::Field::ListInternal(l) => {
+            Field::ListInternal(l) => {
                 // List type - convert to JSON string representation
                 Value::String(format!("{l:?}"))
             }
-            parquet::record::Field::MapInternal(m) => {
+            Field::MapInternal(m) => {
                 // Map type - convert to JSON string representation
                 Value::String(format!("{m:?}"))
             }

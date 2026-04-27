@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { SelectionContext } from './SelectionContext';
+import { SelectionContext } from '@/tabs/spreadsheet/managers/SelectionContext';
 
 type SelectionHandler = (cellRef: string) => void;
 

@@ -4,7 +4,7 @@ import type {
   CsvImportSettings,
   ImportedColumn,
   ImportedData,
-} from '../types/fittingTypes';
+} from '@/tabs/fitting/types/fittingTypes';
 
 function detectSeparator(line: string): ',' | ';' | '\t' {
   const counts = {

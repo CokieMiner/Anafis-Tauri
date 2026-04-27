@@ -1,6 +1,8 @@
 // facadeOperations.ts - Core spreadsheet operations using Facade API exclusively
 
 import type { FUniver } from '@univerjs/core/facade';
+// Side-effect import for type augmentation: adds getActiveWorkbook() etc. to FUniver
+import '@univerjs/sheets/facade';
 import type { CellValue } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import {
   safeSpreadsheetOperation,
@@ -16,7 +18,7 @@ import {
 } from '@/tabs/spreadsheet/univer/utils/errors';
 
 // Type for the univer API reference
-export type UniverRef = { current: ReturnType<typeof FUniver.newAPI> | null };
+type UniverRef = { current: ReturnType<typeof FUniver.newAPI> | null };
 
 /**
  * Update a single cell using Facade API.

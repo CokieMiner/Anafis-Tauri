@@ -18,16 +18,6 @@ pub fn solve_linear_system_matrix(
         .map_err(|error| OdrError::Numerical(format!("SVD solve failed: {error}")))
 }
 
-/// Inverts the information matrix to compute covariance.
-///
-/// # Errors
-/// Returns `OdrError::Numerical` if the matrix is singular or inversion fails.
-pub fn invert_information_matrix(matrix: DMatrix<f64>) -> OdrResult<DMatrix<f64>> {
-    let svd = matrix.svd(true, true);
-    svd.pseudo_inverse(MATRIX_SINGULAR_EPS)
-        .map_err(|error| OdrError::Numerical(format!("Pseudo-inverse failed: {error}")))
-}
-
 pub fn invert_small_psd(covariance: &[Vec<f64>]) -> OdrResult<DMatrix<f64>> {
     let dim = covariance.len();
     let mut flat = Vec::with_capacity(dim * dim);
@@ -48,10 +38,11 @@ pub fn sqrt_psd_matrix(matrix: &DMatrix<f64>) -> OdrResult<DMatrix<f64>> {
         let lambda = eigen.eigenvalues[idx];
         if !lambda.is_finite() {
             return Err(OdrError::Numerical(
-                "Non-finite eigenvalue found while building weighted residual blocks".to_string(),
+                "Non-finite eigenvalue found while building weighted residual blocks".to_owned(),
             ));
         }
         sqrt_diag[(idx, idx)] = lambda.max(0.0).sqrt();
     }
-    Ok(&eigen.eigenvectors * sqrt_diag * eigen.eigenvectors.transpose())
+    let result = &eigen.eigenvectors * sqrt_diag * eigen.eigenvectors.transpose();
+    Ok((&result + result.transpose()) * 0.5)
 }

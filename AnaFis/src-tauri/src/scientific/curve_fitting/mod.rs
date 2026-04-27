@@ -6,9 +6,10 @@ mod logic;
 mod tests;
 mod types;
 
+pub use logic::run_fit_request;
+
 pub use commands::{evaluate_model_curve, evaluate_model_grid, fit_custom_odr};
 pub use types::{
-    CurveEvaluationRequest, CurveEvaluationResponse, GridEvaluationRequest,
-    GridEvaluationResponse, ModelLayer, OdrError, OdrFitRequest, OdrFitResponse, OdrResult,
-    VariableInput,
+    CurveEvaluationRequest, CurveEvaluationResponse, GridEvaluationRequest, GridEvaluationResponse,
+    ModelLayer, OdrError, OdrFitRequest, OdrFitResponse, OdrResult, VariableInput,
 };

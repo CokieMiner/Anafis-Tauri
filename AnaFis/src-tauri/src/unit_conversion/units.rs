@@ -2,6 +2,7 @@
 
 use super::core::{BaseUnit, Dimension};
 use std::collections::HashMap;
+use std::f64::consts::PI;
 
 /// Register all base units organized by category
 #[allow(
@@ -57,387 +58,391 @@ pub fn get_unit_categories() -> HashMap<String, Vec<String>> {
     let mut categories = HashMap::new();
 
     categories.insert(
-        "length".to_string(),
+        "length".to_owned(),
         vec![
-            "m".to_string(),
-            "mm".to_string(),
-            "cm".to_string(),
-            "km".to_string(),
-            "in".to_string(),
-            "ft".to_string(),
-            "yd".to_string(),
-            "mi".to_string(),
-            "mil".to_string(),
-            "μm".to_string(),
-            "nm".to_string(),
-            "Å".to_string(),
-            "nmi".to_string(),
-            "fathom".to_string(),
-            "au".to_string(),
-            "ly".to_string(),
-            "pc".to_string(),
-            "cubit".to_string(),
-            "furlong".to_string(),
-            "league".to_string(),
-            "chain".to_string(),
-            "rod".to_string(),
-            "link".to_string(),
-            "point".to_string(),
-            "pica".to_string(),
+            "m".to_owned(),
+            "mm".to_owned(),
+            "cm".to_owned(),
+            "km".to_owned(),
+            "in".to_owned(),
+            "ft".to_owned(),
+            "yd".to_owned(),
+            "mi".to_owned(),
+            "mil".to_owned(),
+            "\u{3bc}m".to_owned(),
+            "nm".to_owned(),
+            "\u{c5}".to_owned(),
+            "nmi".to_owned(),
+            "fathom".to_owned(),
+            "au".to_owned(),
+            "ly".to_owned(),
+            "pc".to_owned(),
+            "cubit".to_owned(),
+            "furlong".to_owned(),
+            "league".to_owned(),
+            "chain".to_owned(),
+            "rod".to_owned(),
+            "link".to_owned(),
+            "point".to_owned(),
+            "pica".to_owned(),
         ],
     );
 
     categories.insert(
-        "mass".to_string(),
+        "mass".to_owned(),
         vec![
-            "kg".to_string(),
-            "g".to_string(),
-            "mg".to_string(),
-            "μg".to_string(),
-            "lb".to_string(),
-            "oz".to_string(),
-            "u".to_string(),
-            "stone".to_string(),
-            "ton".to_string(),
-            "metric_ton".to_string(),
-            "grain".to_string(),
+            "kg".to_owned(),
+            "g".to_owned(),
+            "mg".to_owned(),
+            "\u{3bc}g".to_owned(),
+            "lb".to_owned(),
+            "oz".to_owned(),
+            "u".to_owned(),
+            "stone".to_owned(),
+            "ton".to_owned(),
+            "metric_ton".to_owned(),
+            "grain".to_owned(),
         ],
     );
 
     categories.insert(
-        "time".to_string(),
+        "time".to_owned(),
         vec![
-            "s".to_string(),
-            "min".to_string(),
-            "h".to_string(),
-            "day".to_string(),
-            "week".to_string(),
-            "year".to_string(),
-            "ns".to_string(),
-            "μs".to_string(),
-            "ms".to_string(),
+            "s".to_owned(),
+            "min".to_owned(),
+            "h".to_owned(),
+            "day".to_owned(),
+            "week".to_owned(),
+            "year".to_owned(),
+            "ns".to_owned(),
+            "\u{3bc}s".to_owned(),
+            "ms".to_owned(),
         ],
     );
 
     categories.insert(
-        "temperature".to_string(),
+        "temperature".to_owned(),
         vec![
-            "K".to_string(),
-            "°C".to_string(),
-            "°F".to_string(),
-            "°R".to_string(),
-            "°Ré".to_string(),
+            "K".to_owned(),
+            "\u{b0}C".to_owned(),
+            "\u{b0}F".to_owned(),
+            "\u{b0}R".to_owned(),
+            "\u{b0}R\u{e9}".to_owned(),
         ],
     );
 
     categories.insert(
-        "current".to_string(),
+        "current".to_owned(),
         vec![
-            "A".to_string(),
-            "mA".to_string(),
-            "μA".to_string(),
-            "kA".to_string(),
+            "A".to_owned(),
+            "mA".to_owned(),
+            "\u{3bc}A".to_owned(),
+            "kA".to_owned(),
         ],
     );
 
     categories.insert(
-        "amount".to_string(),
+        "amount".to_owned(),
         vec![
-            "mol".to_string(),
-            "mmol".to_string(),
-            "μmol".to_string(),
-            "kmol".to_string(),
+            "mol".to_owned(),
+            "mmol".to_owned(),
+            "\u{3bc}mol".to_owned(),
+            "kmol".to_owned(),
         ],
     );
 
     categories.insert(
-        "luminous_intensity".to_string(),
+        "luminous_intensity".to_owned(),
         vec![
-            "cd".to_string(),
-            "mcd".to_string(),
-            "kcd".to_string(),
-            "Mcd".to_string(),
-            "cp".to_string(),
-            "hk".to_string(),
+            "cd".to_owned(),
+            "mcd".to_owned(),
+            "kcd".to_owned(),
+            "Mcd".to_owned(),
+            "cp".to_owned(),
+            "hk".to_owned(),
         ],
     );
 
     categories.insert(
-        "angle".to_string(),
+        "angle".to_owned(),
         vec![
-            "rad".to_string(),
-            "deg".to_string(),
-            "°".to_string(),
-            "arcmin".to_string(),
-            "arcsec".to_string(),
-            "grad".to_string(),
-            "turn".to_string(),
+            "rad".to_owned(),
+            "deg".to_owned(),
+            "\u{b0}".to_owned(),
+            "arcmin".to_owned(),
+            "arcsec".to_owned(),
+            "grad".to_owned(),
+            "turn".to_owned(),
         ],
     );
 
     categories.insert(
-        "area".to_string(),
+        "area".to_owned(),
         vec![
-            "m²".to_string(),
-            "km²".to_string(),
-            "cm²".to_string(),
-            "mm²".to_string(),
-            "in²".to_string(),
-            "ft²".to_string(),
-            "yd²".to_string(),
-            "mi²".to_string(),
-            "ha".to_string(),
-            "acre".to_string(),
-            "perch".to_string(),
+            "m\u{b2}".to_owned(),
+            "km\u{b2}".to_owned(),
+            "cm\u{b2}".to_owned(),
+            "mm\u{b2}".to_owned(),
+            "in\u{b2}".to_owned(),
+            "ft\u{b2}".to_owned(),
+            "yd\u{b2}".to_owned(),
+            "mi\u{b2}".to_owned(),
+            "ha".to_owned(),
+            "acre".to_owned(),
+            "perch".to_owned(),
         ],
     );
 
     categories.insert(
-        "volume".to_string(),
+        "volume".to_owned(),
         vec![
-            "m³".to_string(),
-            "L".to_string(),
-            "mL".to_string(),
-            "cm³".to_string(),
-            "in³".to_string(),
-            "ft³".to_string(),
-            "yd³".to_string(),
-            "gal".to_string(),
-            "qt".to_string(),
-            "pt".to_string(),
-            "cup".to_string(),
-            "fl_oz".to_string(),
-            "tbsp".to_string(),
-            "tsp".to_string(),
-            "bbl".to_string(),
-            "bushel".to_string(),
-            "imp_gal".to_string(),
-            "imp_qt".to_string(),
-            "imp_pt".to_string(),
-            "imp_fl_oz".to_string(),
+            "m\u{b3}".to_owned(),
+            "L".to_owned(),
+            "mL".to_owned(),
+            "cm\u{b3}".to_owned(),
+            "in\u{b3}".to_owned(),
+            "ft\u{b3}".to_owned(),
+            "yd\u{b3}".to_owned(),
+            "gal".to_owned(),
+            "qt".to_owned(),
+            "pt".to_owned(),
+            "cup".to_owned(),
+            "fl_oz".to_owned(),
+            "tbsp".to_owned(),
+            "tsp".to_owned(),
+            "bbl".to_owned(),
+            "bushel".to_owned(),
+            "imp_gal".to_owned(),
+            "imp_qt".to_owned(),
+            "imp_pt".to_owned(),
+            "imp_fl_oz".to_owned(),
         ],
     );
 
     categories.insert(
-        "velocity".to_string(),
+        "velocity".to_owned(),
         vec![
-            "m/s".to_string(),
-            "km/h".to_string(),
-            "mph".to_string(),
-            "fps".to_string(),
-            "c".to_string(),
-            "kn".to_string(),
+            "m/s".to_owned(),
+            "km/h".to_owned(),
+            "mph".to_owned(),
+            "fps".to_owned(),
+            "c".to_owned(),
+            "kn".to_owned(),
         ],
     );
 
     categories.insert(
-        "acceleration".to_string(),
-        vec!["m/s²".to_string(), "ft/s²".to_string(), "g".to_string()],
-    );
-
-    categories.insert(
-        "force".to_string(),
+        "acceleration".to_owned(),
         vec![
-            "N".to_string(),
-            "lbf".to_string(),
-            "kgf".to_string(),
-            "dyn".to_string(),
+            "m/s\u{b2}".to_owned(),
+            "ft/s\u{b2}".to_owned(),
+            "g".to_owned(),
         ],
     );
 
     categories.insert(
-        "pressure".to_string(),
+        "force".to_owned(),
         vec![
-            "Pa".to_string(),
-            "kPa".to_string(),
-            "MPa".to_string(),
-            "GPa".to_string(),
-            "bar".to_string(),
-            "atm".to_string(),
-            "psi".to_string(),
-            "mmHg".to_string(),
-            "torr".to_string(),
-            "hPa".to_string(),
-            "mbar".to_string(),
-            "inHg".to_string(),
-            "bar_abs".to_string(),
+            "N".to_owned(),
+            "lbf".to_owned(),
+            "kgf".to_owned(),
+            "dyn".to_owned(),
         ],
     );
 
     categories.insert(
-        "energy".to_string(),
+        "pressure".to_owned(),
         vec![
-            "J".to_string(),
-            "kJ".to_string(),
-            "MJ".to_string(),
-            "GJ".to_string(),
-            "cal".to_string(),
-            "kcal".to_string(),
-            "BTU".to_string(),
-            "kWh".to_string(),
-            "Wh".to_string(),
-            "eV".to_string(),
-            "keV".to_string(),
-            "MeV".to_string(),
-            "GeV".to_string(),
-            "erg".to_string(),
-            "dyne_cm".to_string(),
+            "Pa".to_owned(),
+            "kPa".to_owned(),
+            "MPa".to_owned(),
+            "GPa".to_owned(),
+            "bar".to_owned(),
+            "atm".to_owned(),
+            "psi".to_owned(),
+            "mmHg".to_owned(),
+            "torr".to_owned(),
+            "hPa".to_owned(),
+            "mbar".to_owned(),
+            "inHg".to_owned(),
+            "bar_abs".to_owned(),
         ],
     );
 
     categories.insert(
-        "power".to_string(),
+        "energy".to_owned(),
         vec![
-            "W".to_string(),
-            "kW".to_string(),
-            "MW".to_string(),
-            "GW".to_string(),
-            "mW".to_string(),
-            "hp".to_string(),
-            "PS".to_string(),
-            "erg/s".to_string(),
-            "ft.lbf/min".to_string(),
-            "BTU/h".to_string(),
+            "J".to_owned(),
+            "kJ".to_owned(),
+            "MJ".to_owned(),
+            "GJ".to_owned(),
+            "cal".to_owned(),
+            "kcal".to_owned(),
+            "BTU".to_owned(),
+            "kWh".to_owned(),
+            "Wh".to_owned(),
+            "eV".to_owned(),
+            "keV".to_owned(),
+            "MeV".to_owned(),
+            "GeV".to_owned(),
+            "erg".to_owned(),
+            "dyne_cm".to_owned(),
         ],
     );
 
     categories.insert(
-        "frequency".to_string(),
+        "power".to_owned(),
         vec![
-            "Hz".to_string(),
-            "kHz".to_string(),
-            "MHz".to_string(),
-            "GHz".to_string(),
+            "W".to_owned(),
+            "kW".to_owned(),
+            "MW".to_owned(),
+            "GW".to_owned(),
+            "mW".to_owned(),
+            "hp".to_owned(),
+            "PS".to_owned(),
+            "erg/s".to_owned(),
+            "ft.lbf/min".to_owned(),
+            "BTU/h".to_owned(),
         ],
     );
 
     categories.insert(
-        "voltage".to_string(),
+        "frequency".to_owned(),
         vec![
-            "V".to_string(),
-            "mV".to_string(),
-            "kV".to_string(),
-            "MV".to_string(),
+            "Hz".to_owned(),
+            "kHz".to_owned(),
+            "MHz".to_owned(),
+            "GHz".to_owned(),
         ],
     );
 
     categories.insert(
-        "resistance".to_string(),
+        "voltage".to_owned(),
         vec![
-            "Ω".to_string(),
-            "mΩ".to_string(),
-            "kΩ".to_string(),
-            "MΩ".to_string(),
+            "V".to_owned(),
+            "mV".to_owned(),
+            "kV".to_owned(),
+            "MV".to_owned(),
         ],
     );
 
     categories.insert(
-        "capacitance".to_string(),
+        "resistance".to_owned(),
         vec![
-            "F".to_string(),
-            "μF".to_string(),
-            "nF".to_string(),
-            "pF".to_string(),
+            "\u{3a9}".to_owned(),
+            "m\u{3a9}".to_owned(),
+            "k\u{3a9}".to_owned(),
+            "M\u{3a9}".to_owned(),
         ],
     );
 
     categories.insert(
-        "inductance".to_string(),
+        "capacitance".to_owned(),
         vec![
-            "H".to_string(),
-            "mH".to_string(),
-            "μH".to_string(),
-            "nH".to_string(),
+            "F".to_owned(),
+            "\u{3bc}F".to_owned(),
+            "nF".to_owned(),
+            "pF".to_owned(),
         ],
     );
 
     categories.insert(
-        "conductance".to_string(),
-        vec!["S".to_string(), "mS".to_string(), "μS".to_string()],
-    );
-
-    categories.insert(
-        "magnetic_flux_density".to_string(),
+        "inductance".to_owned(),
         vec![
-            "T".to_string(),
-            "mT".to_string(),
-            "μT".to_string(),
-            "G".to_string(),
-            "gamma".to_string(),
+            "H".to_owned(),
+            "mH".to_owned(),
+            "\u{3bc}H".to_owned(),
+            "nH".to_owned(),
         ],
     );
 
     categories.insert(
-        "magnetic_flux".to_string(),
+        "conductance".to_owned(),
+        vec!["S".to_owned(), "mS".to_owned(), "\u{3bc}S".to_owned()],
+    );
+
+    categories.insert(
+        "magnetic_flux_density".to_owned(),
         vec![
-            "Wb".to_string(),
-            "mWb".to_string(),
-            "Mx".to_string(),
-            "unit_pole".to_string(),
-            "statWb".to_string(),
+            "T".to_owned(),
+            "mT".to_owned(),
+            "\u{3bc}T".to_owned(),
+            "G".to_owned(),
+            "gamma".to_owned(),
         ],
     );
 
     categories.insert(
-        "electric_charge".to_string(),
+        "magnetic_flux".to_owned(),
         vec![
-            "C".to_string(),
-            "mC".to_string(),
-            "μC".to_string(),
-            "nC".to_string(),
-            "pC".to_string(),
-            "kC".to_string(),
-            "MC".to_string(),
+            "Wb".to_owned(),
+            "mWb".to_owned(),
+            "Mx".to_owned(),
+            "unit_pole".to_owned(),
+            "statWb".to_owned(),
         ],
     );
 
     categories.insert(
-        "radiation_activity".to_string(),
-        vec!["Bq".to_string(), "Ci".to_string()],
-    );
-
-    categories.insert(
-        "radiation_dose".to_string(),
+        "electric_charge".to_owned(),
         vec![
-            "Gy".to_string(),
-            "Sv".to_string(),
-            "rem".to_string(),
-            "rd".to_string(),
+            "C".to_owned(),
+            "mC".to_owned(),
+            "\u{3bc}C".to_owned(),
+            "nC".to_owned(),
+            "pC".to_owned(),
+            "kC".to_owned(),
+            "MC".to_owned(),
         ],
     );
 
     categories.insert(
-        "illuminance".to_string(),
-        vec!["lx".to_string(), "fc".to_string(), "ph".to_string()],
+        "radiation_activity".to_owned(),
+        vec!["Bq".to_owned(), "Ci".to_owned()],
     );
 
     categories.insert(
-        "data_storage".to_string(),
+        "radiation_dose".to_owned(),
         vec![
-            "byte".to_string(),
-            "kB".to_string(),
-            "MB".to_string(),
-            "GB".to_string(),
-            "TB".to_string(),
-            "PB".to_string(),
-            "bit".to_string(),
-            "Kibit".to_string(),
-            "Mibit".to_string(),
-            "Gibit".to_string(),
-            "KiB".to_string(),
-            "MiB".to_string(),
-            "GiB".to_string(),
+            "Gy".to_owned(),
+            "Sv".to_owned(),
+            "rem".to_owned(),
+            "rd".to_owned(),
         ],
     );
 
     categories.insert(
-        "computing".to_string(),
-        vec!["FLOPS".to_string(), "MIPS".to_string()],
+        "illuminance".to_owned(),
+        vec!["lx".to_owned(), "fc".to_owned(), "ph".to_owned()],
     );
 
     categories.insert(
-        "textile".to_string(),
-        vec!["tex".to_string(), "denier".to_string()],
+        "data_storage".to_owned(),
+        vec![
+            "byte".to_owned(),
+            "kB".to_owned(),
+            "MB".to_owned(),
+            "GB".to_owned(),
+            "TB".to_owned(),
+            "PB".to_owned(),
+            "bit".to_owned(),
+            "Kibit".to_owned(),
+            "Mibit".to_owned(),
+            "Gibit".to_owned(),
+            "KiB".to_owned(),
+            "MiB".to_owned(),
+            "GiB".to_owned(),
+        ],
+    );
+
+    categories.insert(
+        "computing".to_owned(),
+        vec!["FLOPS".to_owned(), "MIPS".to_owned()],
+    );
+
+    categories.insert(
+        "textile".to_owned(),
+        vec!["tex".to_owned(), "denier".to_owned()],
     );
 
     categories
@@ -446,10 +451,10 @@ pub fn get_unit_categories() -> HashMap<String, Vec<String>> {
 // === SI BASE UNITS ===
 fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "m".to_string(),
+        "m".to_owned(),
         BaseUnit {
-            symbol: "m".to_string(),
-            name: "meter".to_string(),
+            symbol: "m".to_owned(),
+            name: "meter".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -459,10 +464,10 @@ fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kg".to_string(),
+        "kg".to_owned(),
         BaseUnit {
-            symbol: "kg".to_string(),
-            name: "kilogram".to_string(),
+            symbol: "kg".to_owned(),
+            name: "kilogram".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -472,10 +477,10 @@ fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "s".to_string(),
+        "s".to_owned(),
         BaseUnit {
-            symbol: "s".to_string(),
-            name: "second".to_string(),
+            symbol: "s".to_owned(),
+            name: "second".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -485,10 +490,10 @@ fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "A".to_string(),
+        "A".to_owned(),
         BaseUnit {
-            symbol: "A".to_string(),
-            name: "ampere".to_string(),
+            symbol: "A".to_owned(),
+            name: "ampere".to_owned(),
             dimension: Dimension {
                 current: 1,
                 ..Dimension::new()
@@ -498,10 +503,10 @@ fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "K".to_string(),
+        "K".to_owned(),
         BaseUnit {
-            symbol: "K".to_string(),
-            name: "kelvin".to_string(),
+            symbol: "K".to_owned(),
+            name: "kelvin".to_owned(),
             dimension: Dimension {
                 temperature: 1,
                 ..Dimension::new()
@@ -511,10 +516,10 @@ fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mol".to_string(),
+        "mol".to_owned(),
         BaseUnit {
-            symbol: "mol".to_string(),
-            name: "mole".to_string(),
+            symbol: "mol".to_owned(),
+            name: "mole".to_owned(),
             dimension: Dimension {
                 amount: 1,
                 ..Dimension::new()
@@ -532,10 +537,10 @@ fn register_si_base_units(units: &mut HashMap<String, BaseUnit>) {
 fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     // Metric length units
     units.insert(
-        "mm".to_string(),
+        "mm".to_owned(),
         BaseUnit {
-            symbol: "mm".to_string(),
-            name: "millimeter".to_string(),
+            symbol: "mm".to_owned(),
+            name: "millimeter".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -545,10 +550,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "cm".to_string(),
+        "cm".to_owned(),
         BaseUnit {
-            symbol: "cm".to_string(),
-            name: "centimeter".to_string(),
+            symbol: "cm".to_owned(),
+            name: "centimeter".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -558,10 +563,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "km".to_string(),
+        "km".to_owned(),
         BaseUnit {
-            symbol: "km".to_string(),
-            name: "kilometer".to_string(),
+            symbol: "km".to_owned(),
+            name: "kilometer".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -571,10 +576,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μm".to_string(),
+        "\u{3bc}m".to_owned(),
         BaseUnit {
-            symbol: "μm".to_string(),
-            name: "micrometer".to_string(),
+            symbol: "\u{3bc}m".to_owned(),
+            name: "micrometer".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -584,10 +589,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "nm".to_string(),
+        "nm".to_owned(),
         BaseUnit {
-            symbol: "nm".to_string(),
-            name: "nanometer".to_string(),
+            symbol: "nm".to_owned(),
+            name: "nanometer".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -597,10 +602,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "Å".to_string(),
+        "\u{c5}".to_owned(),
         BaseUnit {
-            symbol: "Å".to_string(),
-            name: "angstrom".to_string(),
+            symbol: "\u{c5}".to_owned(),
+            name: "angstrom".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -611,10 +616,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Imperial/US length units
     units.insert(
-        "in".to_string(),
+        "in".to_owned(),
         BaseUnit {
-            symbol: "in".to_string(),
-            name: "inch".to_string(),
+            symbol: "in".to_owned(),
+            name: "inch".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -624,10 +629,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ft".to_string(),
+        "ft".to_owned(),
         BaseUnit {
-            symbol: "ft".to_string(),
-            name: "foot".to_string(),
+            symbol: "ft".to_owned(),
+            name: "foot".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -637,10 +642,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "yd".to_string(),
+        "yd".to_owned(),
         BaseUnit {
-            symbol: "yd".to_string(),
-            name: "yard".to_string(),
+            symbol: "yd".to_owned(),
+            name: "yard".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -650,10 +655,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mi".to_string(),
+        "mi".to_owned(),
         BaseUnit {
-            symbol: "mi".to_string(),
-            name: "mile".to_string(),
+            symbol: "mi".to_owned(),
+            name: "mile".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -663,10 +668,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mil".to_string(),
+        "mil".to_owned(),
         BaseUnit {
-            symbol: "mil".to_string(),
-            name: "mil".to_string(),
+            symbol: "mil".to_owned(),
+            name: "mil".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -677,10 +682,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Maritime units
     units.insert(
-        "nmi".to_string(),
+        "nmi".to_owned(),
         BaseUnit {
-            symbol: "nmi".to_string(),
-            name: "nautical mile".to_string(),
+            symbol: "nmi".to_owned(),
+            name: "nautical mile".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -690,10 +695,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "fathom".to_string(),
+        "fathom".to_owned(),
         BaseUnit {
-            symbol: "fathom".to_string(),
-            name: "fathom".to_string(),
+            symbol: "fathom".to_owned(),
+            name: "fathom".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -704,10 +709,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Astronomical units
     units.insert(
-        "au".to_string(),
+        "au".to_owned(),
         BaseUnit {
-            symbol: "au".to_string(),
-            name: "astronomical unit".to_string(),
+            symbol: "au".to_owned(),
+            name: "astronomical unit".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -717,10 +722,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ly".to_string(),
+        "ly".to_owned(),
         BaseUnit {
-            symbol: "ly".to_string(),
-            name: "light year".to_string(),
+            symbol: "ly".to_owned(),
+            name: "light year".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -730,10 +735,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "pc".to_string(),
+        "pc".to_owned(),
         BaseUnit {
-            symbol: "pc".to_string(),
-            name: "parsec".to_string(),
+            symbol: "pc".to_owned(),
+            name: "parsec".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -744,10 +749,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Historical units
     units.insert(
-        "cubit".to_string(),
+        "cubit".to_owned(),
         BaseUnit {
-            symbol: "cubit".to_string(),
-            name: "cubit".to_string(),
+            symbol: "cubit".to_owned(),
+            name: "cubit".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -757,10 +762,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "furlong".to_string(),
+        "furlong".to_owned(),
         BaseUnit {
-            symbol: "furlong".to_string(),
-            name: "furlong".to_string(),
+            symbol: "furlong".to_owned(),
+            name: "furlong".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -770,10 +775,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "league".to_string(),
+        "league".to_owned(),
         BaseUnit {
-            symbol: "league".to_string(),
-            name: "league".to_string(),
+            symbol: "league".to_owned(),
+            name: "league".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -783,10 +788,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "chain".to_string(),
+        "chain".to_owned(),
         BaseUnit {
-            symbol: "chain".to_string(),
-            name: "chain".to_string(),
+            symbol: "chain".to_owned(),
+            name: "chain".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -796,10 +801,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "rod".to_string(),
+        "rod".to_owned(),
         BaseUnit {
-            symbol: "rod".to_string(),
-            name: "rod".to_string(),
+            symbol: "rod".to_owned(),
+            name: "rod".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -809,10 +814,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "link".to_string(),
+        "link".to_owned(),
         BaseUnit {
-            symbol: "link".to_string(),
-            name: "surveyor's link".to_string(),
+            symbol: "link".to_owned(),
+            name: "surveyor's link".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -823,10 +828,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Printing units
     units.insert(
-        "point".to_string(),
+        "point".to_owned(),
         BaseUnit {
-            symbol: "point".to_string(),
-            name: "point".to_string(),
+            symbol: "point".to_owned(),
+            name: "point".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -836,10 +841,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "pica".to_string(),
+        "pica".to_owned(),
         BaseUnit {
-            symbol: "pica".to_string(),
-            name: "pica".to_string(),
+            symbol: "pica".to_owned(),
+            name: "pica".to_owned(),
             dimension: Dimension {
                 length: 1,
                 ..Dimension::new()
@@ -857,10 +862,10 @@ fn register_length_units(units: &mut HashMap<String, BaseUnit>) {
 fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     // Metric mass units
     units.insert(
-        "g".to_string(),
+        "g".to_owned(),
         BaseUnit {
-            symbol: "g".to_string(),
-            name: "gram".to_string(),
+            symbol: "g".to_owned(),
+            name: "gram".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -870,10 +875,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mg".to_string(),
+        "mg".to_owned(),
         BaseUnit {
-            symbol: "mg".to_string(),
-            name: "milligram".to_string(),
+            symbol: "mg".to_owned(),
+            name: "milligram".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -883,10 +888,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μg".to_string(),
+        "\u{3bc}g".to_owned(),
         BaseUnit {
-            symbol: "μg".to_string(),
-            name: "microgram".to_string(),
+            symbol: "\u{3bc}g".to_owned(),
+            name: "microgram".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -897,10 +902,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Imperial/US mass units
     units.insert(
-        "lb".to_string(),
+        "lb".to_owned(),
         BaseUnit {
-            symbol: "lb".to_string(),
-            name: "pound".to_string(),
+            symbol: "lb".to_owned(),
+            name: "pound".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -910,10 +915,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "oz".to_string(),
+        "oz".to_owned(),
         BaseUnit {
-            symbol: "oz".to_string(),
-            name: "ounce".to_string(),
+            symbol: "oz".to_owned(),
+            name: "ounce".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -923,10 +928,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "stone".to_string(),
+        "stone".to_owned(),
         BaseUnit {
-            symbol: "stone".to_string(),
-            name: "stone".to_string(),
+            symbol: "stone".to_owned(),
+            name: "stone".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -936,10 +941,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ton".to_string(),
+        "ton".to_owned(),
         BaseUnit {
-            symbol: "ton".to_string(),
-            name: "short ton".to_string(),
+            symbol: "ton".to_owned(),
+            name: "short ton".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -949,10 +954,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "metric_ton".to_string(),
+        "metric_ton".to_owned(),
         BaseUnit {
-            symbol: "metric_ton".to_string(),
-            name: "metric ton".to_string(),
+            symbol: "metric_ton".to_owned(),
+            name: "metric ton".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -962,10 +967,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "grain".to_string(),
+        "grain".to_owned(),
         BaseUnit {
-            symbol: "grain".to_string(),
-            name: "grain".to_string(),
+            symbol: "grain".to_owned(),
+            name: "grain".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -976,10 +981,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Atomic mass unit
     units.insert(
-        "u".to_string(),
+        "u".to_owned(),
         BaseUnit {
-            symbol: "u".to_string(),
-            name: "atomic mass unit".to_string(),
+            symbol: "u".to_owned(),
+            name: "atomic mass unit".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 ..Dimension::new()
@@ -992,10 +997,10 @@ fn register_mass_units(units: &mut HashMap<String, BaseUnit>) {
 // === TIME UNITS ===
 fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "ns".to_string(),
+        "ns".to_owned(),
         BaseUnit {
-            symbol: "ns".to_string(),
-            name: "nanosecond".to_string(),
+            symbol: "ns".to_owned(),
+            name: "nanosecond".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1005,10 +1010,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μs".to_string(),
+        "\u{3bc}s".to_owned(),
         BaseUnit {
-            symbol: "μs".to_string(),
-            name: "microsecond".to_string(),
+            symbol: "\u{3bc}s".to_owned(),
+            name: "microsecond".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1018,10 +1023,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ms".to_string(),
+        "ms".to_owned(),
         BaseUnit {
-            symbol: "ms".to_string(),
-            name: "millisecond".to_string(),
+            symbol: "ms".to_owned(),
+            name: "millisecond".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1031,10 +1036,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "min".to_string(),
+        "min".to_owned(),
         BaseUnit {
-            symbol: "min".to_string(),
-            name: "minute".to_string(),
+            symbol: "min".to_owned(),
+            name: "minute".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1044,10 +1049,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "h".to_string(),
+        "h".to_owned(),
         BaseUnit {
-            symbol: "h".to_string(),
-            name: "hour".to_string(),
+            symbol: "h".to_owned(),
+            name: "hour".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1057,10 +1062,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "day".to_string(),
+        "day".to_owned(),
         BaseUnit {
-            symbol: "day".to_string(),
-            name: "day".to_string(),
+            symbol: "day".to_owned(),
+            name: "day".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1070,10 +1075,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "week".to_string(),
+        "week".to_owned(),
         BaseUnit {
-            symbol: "week".to_string(),
-            name: "week".to_string(),
+            symbol: "week".to_owned(),
+            name: "week".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1083,10 +1088,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "year".to_string(),
+        "year".to_owned(),
         BaseUnit {
-            symbol: "year".to_string(),
-            name: "year".to_string(),
+            symbol: "year".to_owned(),
+            name: "year".to_owned(),
             dimension: Dimension {
                 time: 1,
                 ..Dimension::new()
@@ -1099,10 +1104,10 @@ fn register_time_units(units: &mut HashMap<String, BaseUnit>) {
 // === TEMPERATURE UNITS ===
 fn register_temperature_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "°C".to_string(),
+        "\u{b0}C".to_owned(),
         BaseUnit {
-            symbol: "°C".to_string(),
-            name: "celsius".to_string(),
+            symbol: "\u{b0}C".to_owned(),
+            name: "celsius".to_owned(),
             dimension: Dimension {
                 temperature: 1,
                 ..Dimension::new()
@@ -1112,10 +1117,10 @@ fn register_temperature_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "°F".to_string(),
+        "\u{b0}F".to_owned(),
         BaseUnit {
-            symbol: "°F".to_string(),
-            name: "fahrenheit".to_string(),
+            symbol: "\u{b0}F".to_owned(),
+            name: "fahrenheit".to_owned(),
             dimension: Dimension {
                 temperature: 1,
                 ..Dimension::new()
@@ -1125,10 +1130,10 @@ fn register_temperature_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "°R".to_string(),
+        "\u{b0}R".to_owned(),
         BaseUnit {
-            symbol: "°R".to_string(),
-            name: "rankine".to_string(),
+            symbol: "\u{b0}R".to_owned(),
+            name: "rankine".to_owned(),
             dimension: Dimension {
                 temperature: 1,
                 ..Dimension::new()
@@ -1138,10 +1143,10 @@ fn register_temperature_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "°Ré".to_string(),
+        "\u{b0}R\u{e9}".to_owned(),
         BaseUnit {
-            symbol: "°Ré".to_string(),
-            name: "réaumur".to_string(),
+            symbol: "\u{b0}R\u{e9}".to_owned(),
+            name: "r\u{e9}aumur".to_owned(),
             dimension: Dimension {
                 temperature: 1,
                 ..Dimension::new()
@@ -1154,72 +1159,72 @@ fn register_temperature_units(units: &mut HashMap<String, BaseUnit>) {
 // === ANGLE UNITS ===
 fn register_angle_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "rad".to_string(),
+        "rad".to_owned(),
         BaseUnit {
-            symbol: "rad".to_string(),
-            name: "radian".to_string(),
+            symbol: "rad".to_owned(),
+            name: "radian".to_owned(),
             dimension: Dimension::new(), // Dimensionless
             si_factor: 1.0,
         },
     );
 
     units.insert(
-        "deg".to_string(),
+        "deg".to_owned(),
         BaseUnit {
-            symbol: "deg".to_string(),
-            name: "degree".to_string(),
+            symbol: "deg".to_owned(),
+            name: "degree".to_owned(),
             dimension: Dimension::new(), // Dimensionless
-            si_factor: std::f64::consts::PI / 180.0,
+            si_factor: PI / 180.0,
         },
     );
 
     units.insert(
-        "°".to_string(),
+        "\u{b0}".to_owned(),
         BaseUnit {
-            symbol: "°".to_string(),
-            name: "degree".to_string(),
+            symbol: "\u{b0}".to_owned(),
+            name: "degree".to_owned(),
             dimension: Dimension::new(), // Dimensionless
-            si_factor: std::f64::consts::PI / 180.0,
+            si_factor: PI / 180.0,
         },
     );
 
     units.insert(
-        "arcmin".to_string(),
+        "arcmin".to_owned(),
         BaseUnit {
-            symbol: "arcmin".to_string(),
-            name: "arcminute".to_string(),
+            symbol: "arcmin".to_owned(),
+            name: "arcminute".to_owned(),
             dimension: Dimension::new(), // Dimensionless
-            si_factor: std::f64::consts::PI / 10800.0,
+            si_factor: PI / 10800.0,
         },
     );
 
     units.insert(
-        "arcsec".to_string(),
+        "arcsec".to_owned(),
         BaseUnit {
-            symbol: "arcsec".to_string(),
-            name: "arcsecond".to_string(),
+            symbol: "arcsec".to_owned(),
+            name: "arcsecond".to_owned(),
             dimension: Dimension::new(), // Dimensionless
-            si_factor: std::f64::consts::PI / 648_000.0,
+            si_factor: PI / 648_000.0,
         },
     );
 
     units.insert(
-        "grad".to_string(),
+        "grad".to_owned(),
         BaseUnit {
-            symbol: "grad".to_string(),
-            name: "gradian".to_string(),
+            symbol: "grad".to_owned(),
+            name: "gradian".to_owned(),
             dimension: Dimension::new(), // Dimensionless
-            si_factor: std::f64::consts::PI / 200.0,
+            si_factor: PI / 200.0,
         },
     );
 
     units.insert(
-        "turn".to_string(),
+        "turn".to_owned(),
         BaseUnit {
-            symbol: "turn".to_string(),
-            name: "full turn".to_string(),
+            symbol: "turn".to_owned(),
+            name: "full turn".to_owned(),
             dimension: Dimension::new(), // Dimensionless
-            si_factor: 2.0 * std::f64::consts::PI,
+            si_factor: 2.0 * PI,
         },
     );
 }
@@ -1231,10 +1236,10 @@ fn register_angle_units(units: &mut HashMap<String, BaseUnit>) {
 )]
 fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "m²".to_string(),
+        "m\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "m²".to_string(),
-            name: "square meter".to_string(),
+            symbol: "m\u{b2}".to_owned(),
+            name: "square meter".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1244,10 +1249,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "km²".to_string(),
+        "km\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "km²".to_string(),
-            name: "square kilometer".to_string(),
+            symbol: "km\u{b2}".to_owned(),
+            name: "square kilometer".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1257,10 +1262,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "cm²".to_string(),
+        "cm\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "cm²".to_string(),
-            name: "square centimeter".to_string(),
+            symbol: "cm\u{b2}".to_owned(),
+            name: "square centimeter".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1270,10 +1275,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mm²".to_string(),
+        "mm\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "mm²".to_string(),
-            name: "square millimeter".to_string(),
+            symbol: "mm\u{b2}".to_owned(),
+            name: "square millimeter".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1283,10 +1288,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "in²".to_string(),
+        "in\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "in²".to_string(),
-            name: "square inch".to_string(),
+            symbol: "in\u{b2}".to_owned(),
+            name: "square inch".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1296,10 +1301,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ft²".to_string(),
+        "ft\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "ft²".to_string(),
-            name: "square foot".to_string(),
+            symbol: "ft\u{b2}".to_owned(),
+            name: "square foot".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1309,10 +1314,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "yd²".to_string(),
+        "yd\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "yd²".to_string(),
-            name: "square yard".to_string(),
+            symbol: "yd\u{b2}".to_owned(),
+            name: "square yard".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1322,10 +1327,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mi²".to_string(),
+        "mi\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "mi²".to_string(),
-            name: "square mile".to_string(),
+            symbol: "mi\u{b2}".to_owned(),
+            name: "square mile".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1335,10 +1340,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ha".to_string(),
+        "ha".to_owned(),
         BaseUnit {
-            symbol: "ha".to_string(),
-            name: "hectare".to_string(),
+            symbol: "ha".to_owned(),
+            name: "hectare".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1348,10 +1353,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "acre".to_string(),
+        "acre".to_owned(),
         BaseUnit {
-            symbol: "acre".to_string(),
-            name: "acre".to_string(),
+            symbol: "acre".to_owned(),
+            name: "acre".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1361,10 +1366,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "perch".to_string(),
+        "perch".to_owned(),
         BaseUnit {
-            symbol: "perch".to_string(),
-            name: "perch".to_string(),
+            symbol: "perch".to_owned(),
+            name: "perch".to_owned(),
             dimension: Dimension {
                 length: 2,
                 ..Dimension::new()
@@ -1381,10 +1386,10 @@ fn register_area_units(units: &mut HashMap<String, BaseUnit>) {
 )]
 fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "m³".to_string(),
+        "m\u{b3}".to_owned(),
         BaseUnit {
-            symbol: "m³".to_string(),
-            name: "cubic meter".to_string(),
+            symbol: "m\u{b3}".to_owned(),
+            name: "cubic meter".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1394,10 +1399,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "L".to_string(),
+        "L".to_owned(),
         BaseUnit {
-            symbol: "L".to_string(),
-            name: "liter".to_string(),
+            symbol: "L".to_owned(),
+            name: "liter".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1407,10 +1412,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mL".to_string(),
+        "mL".to_owned(),
         BaseUnit {
-            symbol: "mL".to_string(),
-            name: "milliliter".to_string(),
+            symbol: "mL".to_owned(),
+            name: "milliliter".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1420,10 +1425,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "cm³".to_string(),
+        "cm\u{b3}".to_owned(),
         BaseUnit {
-            symbol: "cm³".to_string(),
-            name: "cubic centimeter".to_string(),
+            symbol: "cm\u{b3}".to_owned(),
+            name: "cubic centimeter".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1433,10 +1438,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "in³".to_string(),
+        "in\u{b3}".to_owned(),
         BaseUnit {
-            symbol: "in³".to_string(),
-            name: "cubic inch".to_string(),
+            symbol: "in\u{b3}".to_owned(),
+            name: "cubic inch".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1446,10 +1451,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ft³".to_string(),
+        "ft\u{b3}".to_owned(),
         BaseUnit {
-            symbol: "ft³".to_string(),
-            name: "cubic foot".to_string(),
+            symbol: "ft\u{b3}".to_owned(),
+            name: "cubic foot".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1459,10 +1464,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "yd³".to_string(),
+        "yd\u{b3}".to_owned(),
         BaseUnit {
-            symbol: "yd³".to_string(),
-            name: "cubic yard".to_string(),
+            symbol: "yd\u{b3}".to_owned(),
+            name: "cubic yard".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1473,10 +1478,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
 
     // US Liquid volume
     units.insert(
-        "gal".to_string(),
+        "gal".to_owned(),
         BaseUnit {
-            symbol: "gal".to_string(),
-            name: "gallon".to_string(),
+            symbol: "gal".to_owned(),
+            name: "gallon".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1486,10 +1491,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "qt".to_string(),
+        "qt".to_owned(),
         BaseUnit {
-            symbol: "qt".to_string(),
-            name: "quart".to_string(),
+            symbol: "qt".to_owned(),
+            name: "quart".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1499,10 +1504,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "pt".to_string(),
+        "pt".to_owned(),
         BaseUnit {
-            symbol: "pt".to_string(),
-            name: "pint".to_string(),
+            symbol: "pt".to_owned(),
+            name: "pint".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1512,10 +1517,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "cup".to_string(),
+        "cup".to_owned(),
         BaseUnit {
-            symbol: "cup".to_string(),
-            name: "cup".to_string(),
+            symbol: "cup".to_owned(),
+            name: "cup".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1525,10 +1530,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "fl_oz".to_string(),
+        "fl_oz".to_owned(),
         BaseUnit {
-            symbol: "fl_oz".to_string(),
-            name: "fluid ounce".to_string(),
+            symbol: "fl_oz".to_owned(),
+            name: "fluid ounce".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1538,10 +1543,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "tbsp".to_string(),
+        "tbsp".to_owned(),
         BaseUnit {
-            symbol: "tbsp".to_string(),
-            name: "tablespoon".to_string(),
+            symbol: "tbsp".to_owned(),
+            name: "tablespoon".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1551,10 +1556,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "tsp".to_string(),
+        "tsp".to_owned(),
         BaseUnit {
-            symbol: "tsp".to_string(),
-            name: "teaspoon".to_string(),
+            symbol: "tsp".to_owned(),
+            name: "teaspoon".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1564,10 +1569,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "bbl".to_string(),
+        "bbl".to_owned(),
         BaseUnit {
-            symbol: "bbl".to_string(),
-            name: "barrel".to_string(),
+            symbol: "bbl".to_owned(),
+            name: "barrel".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1577,10 +1582,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "bushel".to_string(),
+        "bushel".to_owned(),
         BaseUnit {
-            symbol: "bushel".to_string(),
-            name: "bushel".to_string(),
+            symbol: "bushel".to_owned(),
+            name: "bushel".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1591,10 +1596,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Imperial volume
     units.insert(
-        "imp_gal".to_string(),
+        "imp_gal".to_owned(),
         BaseUnit {
-            symbol: "imp_gal".to_string(),
-            name: "imperial gallon".to_string(),
+            symbol: "imp_gal".to_owned(),
+            name: "imperial gallon".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1604,10 +1609,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "imp_qt".to_string(),
+        "imp_qt".to_owned(),
         BaseUnit {
-            symbol: "imp_qt".to_string(),
-            name: "imperial quart".to_string(),
+            symbol: "imp_qt".to_owned(),
+            name: "imperial quart".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1617,10 +1622,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "imp_pt".to_string(),
+        "imp_pt".to_owned(),
         BaseUnit {
-            symbol: "imp_pt".to_string(),
-            name: "imperial pint".to_string(),
+            symbol: "imp_pt".to_owned(),
+            name: "imperial pint".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1630,10 +1635,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "imp_fl_oz".to_string(),
+        "imp_fl_oz".to_owned(),
         BaseUnit {
-            symbol: "imp_fl_oz".to_string(),
-            name: "imperial fluid ounce".to_string(),
+            symbol: "imp_fl_oz".to_owned(),
+            name: "imperial fluid ounce".to_owned(),
             dimension: Dimension {
                 length: 3,
                 ..Dimension::new()
@@ -1646,10 +1651,10 @@ fn register_volume_units(units: &mut HashMap<String, BaseUnit>) {
 // === VELOCITY UNITS ===
 fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "m/s".to_string(),
+        "m/s".to_owned(),
         BaseUnit {
-            symbol: "m/s".to_string(),
-            name: "meter per second".to_string(),
+            symbol: "m/s".to_owned(),
+            name: "meter per second".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -1,
@@ -1660,10 +1665,10 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "km/h".to_string(),
+        "km/h".to_owned(),
         BaseUnit {
-            symbol: "km/h".to_string(),
-            name: "kilometer per hour".to_string(),
+            symbol: "km/h".to_owned(),
+            name: "kilometer per hour".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -1,
@@ -1674,10 +1679,10 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mph".to_string(),
+        "mph".to_owned(),
         BaseUnit {
-            symbol: "mph".to_string(),
-            name: "mile per hour".to_string(),
+            symbol: "mph".to_owned(),
+            name: "mile per hour".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -1,
@@ -1688,10 +1693,10 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "fps".to_string(),
+        "fps".to_owned(),
         BaseUnit {
-            symbol: "fps".to_string(),
-            name: "foot per second".to_string(),
+            symbol: "fps".to_owned(),
+            name: "foot per second".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -1,
@@ -1702,10 +1707,10 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "c".to_string(),
+        "c".to_owned(),
         BaseUnit {
-            symbol: "c".to_string(),
-            name: "speed of light".to_string(),
+            symbol: "c".to_owned(),
+            name: "speed of light".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -1,
@@ -1716,10 +1721,10 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kn".to_string(),
+        "kn".to_owned(),
         BaseUnit {
-            symbol: "kn".to_string(),
-            name: "knot".to_string(),
+            symbol: "kn".to_owned(),
+            name: "knot".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -1,
@@ -1733,10 +1738,10 @@ fn register_velocity_units(units: &mut HashMap<String, BaseUnit>) {
 // === ACCELERATION UNITS ===
 fn register_acceleration_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "m/s²".to_string(),
+        "m/s\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "m/s²".to_string(),
-            name: "meter per second squared".to_string(),
+            symbol: "m/s\u{b2}".to_owned(),
+            name: "meter per second squared".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -2,
@@ -1747,10 +1752,10 @@ fn register_acceleration_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ft/s²".to_string(),
+        "ft/s\u{b2}".to_owned(),
         BaseUnit {
-            symbol: "ft/s²".to_string(),
-            name: "foot per second squared".to_string(),
+            symbol: "ft/s\u{b2}".to_owned(),
+            name: "foot per second squared".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -2,
@@ -1762,10 +1767,10 @@ fn register_acceleration_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Note: 'g₀' for standard gravity acceleration (to avoid conflict with gram 'g')
     units.insert(
-        "g₀".to_string(),
+        "g\u{2080}".to_owned(),
         BaseUnit {
-            symbol: "g₀".to_string(),
-            name: "standard gravity".to_string(),
+            symbol: "g\u{2080}".to_owned(),
+            name: "standard gravity".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -2,
@@ -1777,10 +1782,10 @@ fn register_acceleration_units(units: &mut HashMap<String, BaseUnit>) {
 
     // Alternative notation for standard gravity
     units.insert(
-        "g_0".to_string(),
+        "g_0".to_owned(),
         BaseUnit {
-            symbol: "g_0".to_string(),
-            name: "standard gravity".to_string(),
+            symbol: "g_0".to_owned(),
+            name: "standard gravity".to_owned(),
             dimension: Dimension {
                 length: 1,
                 time: -2,
@@ -1794,10 +1799,10 @@ fn register_acceleration_units(units: &mut HashMap<String, BaseUnit>) {
 // === FORCE UNITS ===
 fn register_force_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "N".to_string(),
+        "N".to_owned(),
         BaseUnit {
-            symbol: "N".to_string(),
-            name: "newton".to_string(),
+            symbol: "N".to_owned(),
+            name: "newton".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 1,
@@ -1809,10 +1814,10 @@ fn register_force_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "lbf".to_string(),
+        "lbf".to_owned(),
         BaseUnit {
-            symbol: "lbf".to_string(),
-            name: "pound-force".to_string(),
+            symbol: "lbf".to_owned(),
+            name: "pound-force".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 1,
@@ -1824,10 +1829,10 @@ fn register_force_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kgf".to_string(),
+        "kgf".to_owned(),
         BaseUnit {
-            symbol: "kgf".to_string(),
-            name: "kilogram-force".to_string(),
+            symbol: "kgf".to_owned(),
+            name: "kilogram-force".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 1,
@@ -1839,10 +1844,10 @@ fn register_force_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "dyn".to_string(),
+        "dyn".to_owned(),
         BaseUnit {
-            symbol: "dyn".to_string(),
-            name: "dyne".to_string(),
+            symbol: "dyn".to_owned(),
+            name: "dyne".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 1,
@@ -1861,10 +1866,10 @@ fn register_force_units(units: &mut HashMap<String, BaseUnit>) {
 )]
 fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "Pa".to_string(),
+        "Pa".to_owned(),
         BaseUnit {
-            symbol: "Pa".to_string(),
-            name: "pascal".to_string(),
+            symbol: "Pa".to_owned(),
+            name: "pascal".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1876,10 +1881,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kPa".to_string(),
+        "kPa".to_owned(),
         BaseUnit {
-            symbol: "kPa".to_string(),
-            name: "kilopascal".to_string(),
+            symbol: "kPa".to_owned(),
+            name: "kilopascal".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1891,10 +1896,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MPa".to_string(),
+        "MPa".to_owned(),
         BaseUnit {
-            symbol: "MPa".to_string(),
-            name: "megapascal".to_string(),
+            symbol: "MPa".to_owned(),
+            name: "megapascal".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1906,10 +1911,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "GPa".to_string(),
+        "GPa".to_owned(),
         BaseUnit {
-            symbol: "GPa".to_string(),
-            name: "gigapascal".to_string(),
+            symbol: "GPa".to_owned(),
+            name: "gigapascal".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1921,10 +1926,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "bar".to_string(),
+        "bar".to_owned(),
         BaseUnit {
-            symbol: "bar".to_string(),
-            name: "bar".to_string(),
+            symbol: "bar".to_owned(),
+            name: "bar".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1936,10 +1941,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "atm".to_string(),
+        "atm".to_owned(),
         BaseUnit {
-            symbol: "atm".to_string(),
-            name: "atmosphere".to_string(),
+            symbol: "atm".to_owned(),
+            name: "atmosphere".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1951,10 +1956,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "psi".to_string(),
+        "psi".to_owned(),
         BaseUnit {
-            symbol: "psi".to_string(),
-            name: "pound per square inch".to_string(),
+            symbol: "psi".to_owned(),
+            name: "pound per square inch".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1966,10 +1971,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mmHg".to_string(),
+        "mmHg".to_owned(),
         BaseUnit {
-            symbol: "mmHg".to_string(),
-            name: "millimeter of mercury".to_string(),
+            symbol: "mmHg".to_owned(),
+            name: "millimeter of mercury".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1981,10 +1986,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "torr".to_string(),
+        "torr".to_owned(),
         BaseUnit {
-            symbol: "torr".to_string(),
-            name: "torr".to_string(),
+            symbol: "torr".to_owned(),
+            name: "torr".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -1996,10 +2001,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "hPa".to_string(),
+        "hPa".to_owned(),
         BaseUnit {
-            symbol: "hPa".to_string(),
-            name: "hectopascal".to_string(),
+            symbol: "hPa".to_owned(),
+            name: "hectopascal".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -2011,10 +2016,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mbar".to_string(),
+        "mbar".to_owned(),
         BaseUnit {
-            symbol: "mbar".to_string(),
-            name: "millibar".to_string(),
+            symbol: "mbar".to_owned(),
+            name: "millibar".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -2026,10 +2031,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "inHg".to_string(),
+        "inHg".to_owned(),
         BaseUnit {
-            symbol: "inHg".to_string(),
-            name: "inch of mercury".to_string(),
+            symbol: "inHg".to_owned(),
+            name: "inch of mercury".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -2041,10 +2046,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "bar_abs".to_string(),
+        "bar_abs".to_owned(),
         BaseUnit {
-            symbol: "bar_abs".to_string(),
-            name: "bar absolute".to_string(),
+            symbol: "bar_abs".to_owned(),
+            name: "bar absolute".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -2063,10 +2068,10 @@ fn register_pressure_units(units: &mut HashMap<String, BaseUnit>) {
 )]
 fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "J".to_string(),
+        "J".to_owned(),
         BaseUnit {
-            symbol: "J".to_string(),
-            name: "joule".to_string(),
+            symbol: "J".to_owned(),
+            name: "joule".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2078,10 +2083,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kJ".to_string(),
+        "kJ".to_owned(),
         BaseUnit {
-            symbol: "kJ".to_string(),
-            name: "kilojoule".to_string(),
+            symbol: "kJ".to_owned(),
+            name: "kilojoule".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2093,10 +2098,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MJ".to_string(),
+        "MJ".to_owned(),
         BaseUnit {
-            symbol: "MJ".to_string(),
-            name: "megajoule".to_string(),
+            symbol: "MJ".to_owned(),
+            name: "megajoule".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2108,10 +2113,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "GJ".to_string(),
+        "GJ".to_owned(),
         BaseUnit {
-            symbol: "GJ".to_string(),
-            name: "gigajoule".to_string(),
+            symbol: "GJ".to_owned(),
+            name: "gigajoule".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2123,10 +2128,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "cal".to_string(),
+        "cal".to_owned(),
         BaseUnit {
-            symbol: "cal".to_string(),
-            name: "calorie".to_string(),
+            symbol: "cal".to_owned(),
+            name: "calorie".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2138,10 +2143,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kcal".to_string(),
+        "kcal".to_owned(),
         BaseUnit {
-            symbol: "kcal".to_string(),
-            name: "kilocalorie".to_string(),
+            symbol: "kcal".to_owned(),
+            name: "kilocalorie".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2153,10 +2158,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "BTU".to_string(),
+        "BTU".to_owned(),
         BaseUnit {
-            symbol: "BTU".to_string(),
-            name: "british thermal unit".to_string(),
+            symbol: "BTU".to_owned(),
+            name: "british thermal unit".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2168,10 +2173,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kWh".to_string(),
+        "kWh".to_owned(),
         BaseUnit {
-            symbol: "kWh".to_string(),
-            name: "kilowatt-hour".to_string(),
+            symbol: "kWh".to_owned(),
+            name: "kilowatt-hour".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2183,10 +2188,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "Wh".to_string(),
+        "Wh".to_owned(),
         BaseUnit {
-            symbol: "Wh".to_string(),
-            name: "watt-hour".to_string(),
+            symbol: "Wh".to_owned(),
+            name: "watt-hour".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2198,10 +2203,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "eV".to_string(),
+        "eV".to_owned(),
         BaseUnit {
-            symbol: "eV".to_string(),
-            name: "electron volt".to_string(),
+            symbol: "eV".to_owned(),
+            name: "electron volt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2213,10 +2218,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "keV".to_string(),
+        "keV".to_owned(),
         BaseUnit {
-            symbol: "keV".to_string(),
-            name: "kiloelectron volt".to_string(),
+            symbol: "keV".to_owned(),
+            name: "kiloelectron volt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2228,10 +2233,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MeV".to_string(),
+        "MeV".to_owned(),
         BaseUnit {
-            symbol: "MeV".to_string(),
-            name: "megaelectron volt".to_string(),
+            symbol: "MeV".to_owned(),
+            name: "megaelectron volt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2243,10 +2248,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "GeV".to_string(),
+        "GeV".to_owned(),
         BaseUnit {
-            symbol: "GeV".to_string(),
-            name: "gigaelectron volt".to_string(),
+            symbol: "GeV".to_owned(),
+            name: "gigaelectron volt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2258,10 +2263,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "erg".to_string(),
+        "erg".to_owned(),
         BaseUnit {
-            symbol: "erg".to_string(),
-            name: "erg".to_string(),
+            symbol: "erg".to_owned(),
+            name: "erg".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2273,10 +2278,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "dyne_cm".to_string(),
+        "dyne_cm".to_owned(),
         BaseUnit {
-            symbol: "dyne_cm".to_string(),
-            name: "dyne centimeter".to_string(),
+            symbol: "dyne_cm".to_owned(),
+            name: "dyne centimeter".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2295,10 +2300,10 @@ fn register_energy_units(units: &mut HashMap<String, BaseUnit>) {
 )]
 fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "W".to_string(),
+        "W".to_owned(),
         BaseUnit {
-            symbol: "W".to_string(),
-            name: "watt".to_string(),
+            symbol: "W".to_owned(),
+            name: "watt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2310,10 +2315,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kW".to_string(),
+        "kW".to_owned(),
         BaseUnit {
-            symbol: "kW".to_string(),
-            name: "kilowatt".to_string(),
+            symbol: "kW".to_owned(),
+            name: "kilowatt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2325,10 +2330,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MW".to_string(),
+        "MW".to_owned(),
         BaseUnit {
-            symbol: "MW".to_string(),
-            name: "megawatt".to_string(),
+            symbol: "MW".to_owned(),
+            name: "megawatt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2340,10 +2345,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "GW".to_string(),
+        "GW".to_owned(),
         BaseUnit {
-            symbol: "GW".to_string(),
-            name: "gigawatt".to_string(),
+            symbol: "GW".to_owned(),
+            name: "gigawatt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2355,10 +2360,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mW".to_string(),
+        "mW".to_owned(),
         BaseUnit {
-            symbol: "mW".to_string(),
-            name: "milliwatt".to_string(),
+            symbol: "mW".to_owned(),
+            name: "milliwatt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2370,10 +2375,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "hp".to_string(),
+        "hp".to_owned(),
         BaseUnit {
-            symbol: "hp".to_string(),
-            name: "horsepower".to_string(),
+            symbol: "hp".to_owned(),
+            name: "horsepower".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2385,10 +2390,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "PS".to_string(),
+        "PS".to_owned(),
         BaseUnit {
-            symbol: "PS".to_string(),
-            name: "metric horsepower".to_string(),
+            symbol: "PS".to_owned(),
+            name: "metric horsepower".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2400,10 +2405,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "erg/s".to_string(),
+        "erg/s".to_owned(),
         BaseUnit {
-            symbol: "erg/s".to_string(),
-            name: "erg per second".to_string(),
+            symbol: "erg/s".to_owned(),
+            name: "erg per second".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2415,10 +2420,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ft.lbf/min".to_string(),
+        "ft.lbf/min".to_owned(),
         BaseUnit {
-            symbol: "ft.lbf/min".to_string(),
-            name: "foot-pound per minute".to_string(),
+            symbol: "ft.lbf/min".to_owned(),
+            name: "foot-pound per minute".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2430,10 +2435,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "BTU/h".to_string(),
+        "BTU/h".to_owned(),
         BaseUnit {
-            symbol: "BTU/h".to_string(),
-            name: "BTU per hour".to_string(),
+            symbol: "BTU/h".to_owned(),
+            name: "BTU per hour".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2448,10 +2453,10 @@ fn register_power_units(units: &mut HashMap<String, BaseUnit>) {
 // === CURRENT UNITS ===
 fn register_current_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "mA".to_string(),
+        "mA".to_owned(),
         BaseUnit {
-            symbol: "mA".to_string(),
-            name: "milliampere".to_string(),
+            symbol: "mA".to_owned(),
+            name: "milliampere".to_owned(),
             dimension: Dimension {
                 current: 1,
                 ..Dimension::new()
@@ -2461,10 +2466,10 @@ fn register_current_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μA".to_string(),
+        "\u{3bc}A".to_owned(),
         BaseUnit {
-            symbol: "μA".to_string(),
-            name: "microampere".to_string(),
+            symbol: "\u{3bc}A".to_owned(),
+            name: "microampere".to_owned(),
             dimension: Dimension {
                 current: 1,
                 ..Dimension::new()
@@ -2474,10 +2479,10 @@ fn register_current_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kA".to_string(),
+        "kA".to_owned(),
         BaseUnit {
-            symbol: "kA".to_string(),
-            name: "kiloampere".to_string(),
+            symbol: "kA".to_owned(),
+            name: "kiloampere".to_owned(),
             dimension: Dimension {
                 current: 1,
                 ..Dimension::new()
@@ -2490,10 +2495,10 @@ fn register_current_units(units: &mut HashMap<String, BaseUnit>) {
 // === AMOUNT UNITS ===
 fn register_amount_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "mmol".to_string(),
+        "mmol".to_owned(),
         BaseUnit {
-            symbol: "mmol".to_string(),
-            name: "millimole".to_string(),
+            symbol: "mmol".to_owned(),
+            name: "millimole".to_owned(),
             dimension: Dimension {
                 amount: 1,
                 ..Dimension::new()
@@ -2503,10 +2508,10 @@ fn register_amount_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μmol".to_string(),
+        "\u{3bc}mol".to_owned(),
         BaseUnit {
-            symbol: "μmol".to_string(),
-            name: "micromole".to_string(),
+            symbol: "\u{3bc}mol".to_owned(),
+            name: "micromole".to_owned(),
             dimension: Dimension {
                 amount: 1,
                 ..Dimension::new()
@@ -2516,10 +2521,10 @@ fn register_amount_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kmol".to_string(),
+        "kmol".to_owned(),
         BaseUnit {
-            symbol: "kmol".to_string(),
-            name: "kilomole".to_string(),
+            symbol: "kmol".to_owned(),
+            name: "kilomole".to_owned(),
             dimension: Dimension {
                 amount: 1,
                 ..Dimension::new()
@@ -2532,10 +2537,10 @@ fn register_amount_units(units: &mut HashMap<String, BaseUnit>) {
 // === LUMINOUS INTENSITY UNITS ===
 fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "cd".to_string(),
+        "cd".to_owned(),
         BaseUnit {
-            symbol: "cd".to_string(),
-            name: "candela".to_string(),
+            symbol: "cd".to_owned(),
+            name: "candela".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 ..Dimension::new()
@@ -2545,10 +2550,10 @@ fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mcd".to_string(),
+        "mcd".to_owned(),
         BaseUnit {
-            symbol: "mcd".to_string(),
-            name: "millicandela".to_string(),
+            symbol: "mcd".to_owned(),
+            name: "millicandela".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 ..Dimension::new()
@@ -2558,10 +2563,10 @@ fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kcd".to_string(),
+        "kcd".to_owned(),
         BaseUnit {
-            symbol: "kcd".to_string(),
-            name: "kilocandela".to_string(),
+            symbol: "kcd".to_owned(),
+            name: "kilocandela".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 ..Dimension::new()
@@ -2571,10 +2576,10 @@ fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "Mcd".to_string(),
+        "Mcd".to_owned(),
         BaseUnit {
-            symbol: "Mcd".to_string(),
-            name: "megacandela".to_string(),
+            symbol: "Mcd".to_owned(),
+            name: "megacandela".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 ..Dimension::new()
@@ -2584,10 +2589,10 @@ fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "cp".to_string(),
+        "cp".to_owned(),
         BaseUnit {
-            symbol: "cp".to_string(),
-            name: "candlepower".to_string(),
+            symbol: "cp".to_owned(),
+            name: "candlepower".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 ..Dimension::new()
@@ -2597,10 +2602,10 @@ fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "hk".to_string(),
+        "hk".to_owned(),
         BaseUnit {
-            symbol: "hk".to_string(),
-            name: "Hefnerkerze".to_string(),
+            symbol: "hk".to_owned(),
+            name: "Hefnerkerze".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 ..Dimension::new()
@@ -2613,10 +2618,10 @@ fn register_luminous_intensity_units(units: &mut HashMap<String, BaseUnit>) {
 // === FREQUENCY UNITS ===
 fn register_frequency_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "Hz".to_string(),
+        "Hz".to_owned(),
         BaseUnit {
-            symbol: "Hz".to_string(),
-            name: "hertz".to_string(),
+            symbol: "Hz".to_owned(),
+            name: "hertz".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -2626,10 +2631,10 @@ fn register_frequency_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kHz".to_string(),
+        "kHz".to_owned(),
         BaseUnit {
-            symbol: "kHz".to_string(),
-            name: "kilohertz".to_string(),
+            symbol: "kHz".to_owned(),
+            name: "kilohertz".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -2639,10 +2644,10 @@ fn register_frequency_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MHz".to_string(),
+        "MHz".to_owned(),
         BaseUnit {
-            symbol: "MHz".to_string(),
-            name: "megahertz".to_string(),
+            symbol: "MHz".to_owned(),
+            name: "megahertz".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -2652,10 +2657,10 @@ fn register_frequency_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "GHz".to_string(),
+        "GHz".to_owned(),
         BaseUnit {
-            symbol: "GHz".to_string(),
-            name: "gigahertz".to_string(),
+            symbol: "GHz".to_owned(),
+            name: "gigahertz".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -2668,10 +2673,10 @@ fn register_frequency_units(units: &mut HashMap<String, BaseUnit>) {
 // === VOLTAGE UNITS ===
 fn register_voltage_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "V".to_string(),
+        "V".to_owned(),
         BaseUnit {
-            symbol: "V".to_string(),
-            name: "volt".to_string(),
+            symbol: "V".to_owned(),
+            name: "volt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2684,10 +2689,10 @@ fn register_voltage_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mV".to_string(),
+        "mV".to_owned(),
         BaseUnit {
-            symbol: "mV".to_string(),
-            name: "millivolt".to_string(),
+            symbol: "mV".to_owned(),
+            name: "millivolt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2700,10 +2705,10 @@ fn register_voltage_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kV".to_string(),
+        "kV".to_owned(),
         BaseUnit {
-            symbol: "kV".to_string(),
-            name: "kilovolt".to_string(),
+            symbol: "kV".to_owned(),
+            name: "kilovolt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2716,10 +2721,10 @@ fn register_voltage_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MV".to_string(),
+        "MV".to_owned(),
         BaseUnit {
-            symbol: "MV".to_string(),
-            name: "megavolt".to_string(),
+            symbol: "MV".to_owned(),
+            name: "megavolt".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2735,10 +2740,10 @@ fn register_voltage_units(units: &mut HashMap<String, BaseUnit>) {
 // === RESISTANCE UNITS ===
 fn register_resistance_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "Ω".to_string(),
+        "\u{3a9}".to_owned(),
         BaseUnit {
-            symbol: "Ω".to_string(),
-            name: "ohm".to_string(),
+            symbol: "\u{3a9}".to_owned(),
+            name: "ohm".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2751,10 +2756,10 @@ fn register_resistance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mΩ".to_string(),
+        "m\u{3a9}".to_owned(),
         BaseUnit {
-            symbol: "mΩ".to_string(),
-            name: "milliohm".to_string(),
+            symbol: "m\u{3a9}".to_owned(),
+            name: "milliohm".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2767,10 +2772,10 @@ fn register_resistance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kΩ".to_string(),
+        "k\u{3a9}".to_owned(),
         BaseUnit {
-            symbol: "kΩ".to_string(),
-            name: "kiloohm".to_string(),
+            symbol: "k\u{3a9}".to_owned(),
+            name: "kiloohm".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2783,10 +2788,10 @@ fn register_resistance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MΩ".to_string(),
+        "M\u{3a9}".to_owned(),
         BaseUnit {
-            symbol: "MΩ".to_string(),
-            name: "megaohm".to_string(),
+            symbol: "M\u{3a9}".to_owned(),
+            name: "megaohm".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2802,10 +2807,10 @@ fn register_resistance_units(units: &mut HashMap<String, BaseUnit>) {
 // === CAPACITANCE UNITS ===
 fn register_capacitance_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "F".to_string(),
+        "F".to_owned(),
         BaseUnit {
-            symbol: "F".to_string(),
-            name: "farad".to_string(),
+            symbol: "F".to_owned(),
+            name: "farad".to_owned(),
             dimension: Dimension {
                 mass: -1,
                 length: -2,
@@ -2818,10 +2823,10 @@ fn register_capacitance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μF".to_string(),
+        "\u{3bc}F".to_owned(),
         BaseUnit {
-            symbol: "μF".to_string(),
-            name: "microfarad".to_string(),
+            symbol: "\u{3bc}F".to_owned(),
+            name: "microfarad".to_owned(),
             dimension: Dimension {
                 mass: -1,
                 length: -2,
@@ -2834,10 +2839,10 @@ fn register_capacitance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "nF".to_string(),
+        "nF".to_owned(),
         BaseUnit {
-            symbol: "nF".to_string(),
-            name: "nanofarad".to_string(),
+            symbol: "nF".to_owned(),
+            name: "nanofarad".to_owned(),
             dimension: Dimension {
                 mass: -1,
                 length: -2,
@@ -2850,10 +2855,10 @@ fn register_capacitance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "pF".to_string(),
+        "pF".to_owned(),
         BaseUnit {
-            symbol: "pF".to_string(),
-            name: "picofarad".to_string(),
+            symbol: "pF".to_owned(),
+            name: "picofarad".to_owned(),
             dimension: Dimension {
                 mass: -1,
                 length: -2,
@@ -2869,10 +2874,10 @@ fn register_capacitance_units(units: &mut HashMap<String, BaseUnit>) {
 // === INDUCTANCE UNITS ===
 fn register_inductance_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "H".to_string(),
+        "H".to_owned(),
         BaseUnit {
-            symbol: "H".to_string(),
-            name: "henry".to_string(),
+            symbol: "H".to_owned(),
+            name: "henry".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2885,10 +2890,10 @@ fn register_inductance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mH".to_string(),
+        "mH".to_owned(),
         BaseUnit {
-            symbol: "mH".to_string(),
-            name: "millihenry".to_string(),
+            symbol: "mH".to_owned(),
+            name: "millihenry".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2901,10 +2906,10 @@ fn register_inductance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μH".to_string(),
+        "\u{3bc}H".to_owned(),
         BaseUnit {
-            symbol: "μH".to_string(),
-            name: "microhenry".to_string(),
+            symbol: "\u{3bc}H".to_owned(),
+            name: "microhenry".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2917,10 +2922,10 @@ fn register_inductance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "nH".to_string(),
+        "nH".to_owned(),
         BaseUnit {
-            symbol: "nH".to_string(),
-            name: "nanohenry".to_string(),
+            symbol: "nH".to_owned(),
+            name: "nanohenry".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -2936,10 +2941,10 @@ fn register_inductance_units(units: &mut HashMap<String, BaseUnit>) {
 // === CONDUCTANCE UNITS ===
 fn register_conductance_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "S".to_string(),
+        "S".to_owned(),
         BaseUnit {
-            symbol: "S".to_string(),
-            name: "siemens".to_string(),
+            symbol: "S".to_owned(),
+            name: "siemens".to_owned(),
             dimension: Dimension {
                 mass: -1,
                 length: -2,
@@ -2952,10 +2957,10 @@ fn register_conductance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mS".to_string(),
+        "mS".to_owned(),
         BaseUnit {
-            symbol: "mS".to_string(),
-            name: "millisiemens".to_string(),
+            symbol: "mS".to_owned(),
+            name: "millisiemens".to_owned(),
             dimension: Dimension {
                 mass: -1,
                 length: -2,
@@ -2968,10 +2973,10 @@ fn register_conductance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μS".to_string(),
+        "\u{3bc}S".to_owned(),
         BaseUnit {
-            symbol: "μS".to_string(),
-            name: "microsiemens".to_string(),
+            symbol: "\u{3bc}S".to_owned(),
+            name: "microsiemens".to_owned(),
             dimension: Dimension {
                 mass: -1,
                 length: -2,
@@ -2987,10 +2992,10 @@ fn register_conductance_units(units: &mut HashMap<String, BaseUnit>) {
 // === MAGNETIC FLUX DENSITY UNITS ===
 fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "T".to_string(),
+        "T".to_owned(),
         BaseUnit {
-            symbol: "T".to_string(),
-            name: "tesla".to_string(),
+            symbol: "T".to_owned(),
+            name: "tesla".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 time: -2,
@@ -3002,10 +3007,10 @@ fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mT".to_string(),
+        "mT".to_owned(),
         BaseUnit {
-            symbol: "mT".to_string(),
-            name: "millitesla".to_string(),
+            symbol: "mT".to_owned(),
+            name: "millitesla".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 time: -2,
@@ -3017,10 +3022,10 @@ fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μT".to_string(),
+        "\u{3bc}T".to_owned(),
         BaseUnit {
-            symbol: "μT".to_string(),
-            name: "microtesla".to_string(),
+            symbol: "\u{3bc}T".to_owned(),
+            name: "microtesla".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 time: -2,
@@ -3032,10 +3037,10 @@ fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "G".to_string(),
+        "G".to_owned(),
         BaseUnit {
-            symbol: "G".to_string(),
-            name: "gauss".to_string(),
+            symbol: "G".to_owned(),
+            name: "gauss".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 time: -2,
@@ -3047,10 +3052,10 @@ fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "gamma".to_string(),
+        "gamma".to_owned(),
         BaseUnit {
-            symbol: "gamma".to_string(),
-            name: "gamma".to_string(),
+            symbol: "gamma".to_owned(),
+            name: "gamma".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 time: -2,
@@ -3065,10 +3070,10 @@ fn register_magnetic_flux_density_units(units: &mut HashMap<String, BaseUnit>) {
 // === MAGNETIC FLUX UNITS ===
 fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "Wb".to_string(),
+        "Wb".to_owned(),
         BaseUnit {
-            symbol: "Wb".to_string(),
-            name: "weber".to_string(),
+            symbol: "Wb".to_owned(),
+            name: "weber".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -3081,10 +3086,10 @@ fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mWb".to_string(),
+        "mWb".to_owned(),
         BaseUnit {
-            symbol: "mWb".to_string(),
-            name: "milliweber".to_string(),
+            symbol: "mWb".to_owned(),
+            name: "milliweber".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -3097,10 +3102,10 @@ fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "Mx".to_string(),
+        "Mx".to_owned(),
         BaseUnit {
-            symbol: "Mx".to_string(),
-            name: "maxwell".to_string(),
+            symbol: "Mx".to_owned(),
+            name: "maxwell".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -3113,10 +3118,10 @@ fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "unit_pole".to_string(),
+        "unit_pole".to_owned(),
         BaseUnit {
-            symbol: "unit_pole".to_string(),
-            name: "unit pole".to_string(),
+            symbol: "unit_pole".to_owned(),
+            name: "unit pole".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -3129,10 +3134,10 @@ fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "statWb".to_string(),
+        "statWb".to_owned(),
         BaseUnit {
-            symbol: "statWb".to_string(),
-            name: "statweber".to_string(),
+            symbol: "statWb".to_owned(),
+            name: "statweber".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: 2,
@@ -3148,10 +3153,10 @@ fn register_magnetic_flux_units(units: &mut HashMap<String, BaseUnit>) {
 // === ELECTRIC CHARGE UNITS ===
 fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "C".to_string(),
+        "C".to_owned(),
         BaseUnit {
-            symbol: "C".to_string(),
-            name: "coulomb".to_string(),
+            symbol: "C".to_owned(),
+            name: "coulomb".to_owned(),
             dimension: Dimension {
                 time: 1,
                 current: 1,
@@ -3162,10 +3167,10 @@ fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "mC".to_string(),
+        "mC".to_owned(),
         BaseUnit {
-            symbol: "mC".to_string(),
-            name: "millicoulomb".to_string(),
+            symbol: "mC".to_owned(),
+            name: "millicoulomb".to_owned(),
             dimension: Dimension {
                 time: 1,
                 current: 1,
@@ -3176,10 +3181,10 @@ fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "μC".to_string(),
+        "\u{3bc}C".to_owned(),
         BaseUnit {
-            symbol: "μC".to_string(),
-            name: "microcoulomb".to_string(),
+            symbol: "\u{3bc}C".to_owned(),
+            name: "microcoulomb".to_owned(),
             dimension: Dimension {
                 time: 1,
                 current: 1,
@@ -3190,10 +3195,10 @@ fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "nC".to_string(),
+        "nC".to_owned(),
         BaseUnit {
-            symbol: "nC".to_string(),
-            name: "nanocoulomb".to_string(),
+            symbol: "nC".to_owned(),
+            name: "nanocoulomb".to_owned(),
             dimension: Dimension {
                 time: 1,
                 current: 1,
@@ -3204,10 +3209,10 @@ fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "pC".to_string(),
+        "pC".to_owned(),
         BaseUnit {
-            symbol: "pC".to_string(),
-            name: "picocoulomb".to_string(),
+            symbol: "pC".to_owned(),
+            name: "picocoulomb".to_owned(),
             dimension: Dimension {
                 time: 1,
                 current: 1,
@@ -3218,10 +3223,10 @@ fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "kC".to_string(),
+        "kC".to_owned(),
         BaseUnit {
-            symbol: "kC".to_string(),
-            name: "kilocoulomb".to_string(),
+            symbol: "kC".to_owned(),
+            name: "kilocoulomb".to_owned(),
             dimension: Dimension {
                 time: 1,
                 current: 1,
@@ -3232,10 +3237,10 @@ fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MC".to_string(),
+        "MC".to_owned(),
         BaseUnit {
-            symbol: "MC".to_string(),
-            name: "megacoulomb".to_string(),
+            symbol: "MC".to_owned(),
+            name: "megacoulomb".to_owned(),
             dimension: Dimension {
                 time: 1,
                 current: 1,
@@ -3249,10 +3254,10 @@ fn register_electric_charge_units(units: &mut HashMap<String, BaseUnit>) {
 // === RADIATION ACTIVITY UNITS ===
 fn register_radiation_activity_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "Bq".to_string(),
+        "Bq".to_owned(),
         BaseUnit {
-            symbol: "Bq".to_string(),
-            name: "becquerel".to_string(),
+            symbol: "Bq".to_owned(),
+            name: "becquerel".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -3262,10 +3267,10 @@ fn register_radiation_activity_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "Ci".to_string(),
+        "Ci".to_owned(),
         BaseUnit {
-            symbol: "Ci".to_string(),
-            name: "curie".to_string(),
+            symbol: "Ci".to_owned(),
+            name: "curie".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -3278,10 +3283,10 @@ fn register_radiation_activity_units(units: &mut HashMap<String, BaseUnit>) {
 // === RADIATION DOSE UNITS ===
 fn register_radiation_dose_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "Gy".to_string(),
+        "Gy".to_owned(),
         BaseUnit {
-            symbol: "Gy".to_string(),
-            name: "gray".to_string(),
+            symbol: "Gy".to_owned(),
+            name: "gray".to_owned(),
             dimension: Dimension {
                 length: 2,
                 time: -2,
@@ -3292,10 +3297,10 @@ fn register_radiation_dose_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "Sv".to_string(),
+        "Sv".to_owned(),
         BaseUnit {
-            symbol: "Sv".to_string(),
-            name: "sievert".to_string(),
+            symbol: "Sv".to_owned(),
+            name: "sievert".to_owned(),
             dimension: Dimension {
                 length: 2,
                 time: -2,
@@ -3306,10 +3311,10 @@ fn register_radiation_dose_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "rem".to_string(),
+        "rem".to_owned(),
         BaseUnit {
-            symbol: "rem".to_string(),
-            name: "roentgen equivalent man".to_string(),
+            symbol: "rem".to_owned(),
+            name: "roentgen equivalent man".to_owned(),
             dimension: Dimension {
                 length: 2,
                 time: -2,
@@ -3320,10 +3325,10 @@ fn register_radiation_dose_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "rd".to_string(),
+        "rd".to_owned(),
         BaseUnit {
-            symbol: "rd".to_string(),
-            name: "radiation absorbed dose".to_string(),
+            symbol: "rd".to_owned(),
+            name: "radiation absorbed dose".to_owned(),
             dimension: Dimension {
                 length: 2,
                 time: -2,
@@ -3337,10 +3342,10 @@ fn register_radiation_dose_units(units: &mut HashMap<String, BaseUnit>) {
 // === ILLUMINANCE UNITS ===
 fn register_illuminance_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "lx".to_string(),
+        "lx".to_owned(),
         BaseUnit {
-            symbol: "lx".to_string(),
-            name: "lux".to_string(),
+            symbol: "lx".to_owned(),
+            name: "lux".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 length: -2,
@@ -3351,10 +3356,10 @@ fn register_illuminance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "fc".to_string(),
+        "fc".to_owned(),
         BaseUnit {
-            symbol: "fc".to_string(),
-            name: "foot-candle".to_string(),
+            symbol: "fc".to_owned(),
+            name: "foot-candle".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 length: -2,
@@ -3365,10 +3370,10 @@ fn register_illuminance_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "ph".to_string(),
+        "ph".to_owned(),
         BaseUnit {
-            symbol: "ph".to_string(),
-            name: "phot".to_string(),
+            symbol: "ph".to_owned(),
+            name: "phot".to_owned(),
             dimension: Dimension {
                 luminosity: 1,
                 length: -2,
@@ -3386,130 +3391,130 @@ fn register_illuminance_units(units: &mut HashMap<String, BaseUnit>) {
 )]
 fn register_data_storage_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "byte".to_string(),
+        "byte".to_owned(),
         BaseUnit {
-            symbol: "byte".to_string(),
-            name: "byte".to_string(),
+            symbol: "byte".to_owned(),
+            name: "byte".to_owned(),
             dimension: Dimension::new(), // Dimensionless information
             si_factor: 8.0,              // 1 byte = 8 bits
         },
     );
 
     units.insert(
-        "kB".to_string(),
+        "kB".to_owned(),
         BaseUnit {
-            symbol: "kB".to_string(),
-            name: "kilobyte".to_string(),
+            symbol: "kB".to_owned(),
+            name: "kilobyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8000.0,
         },
     );
 
     units.insert(
-        "MB".to_string(),
+        "MB".to_owned(),
         BaseUnit {
-            symbol: "MB".to_string(),
-            name: "megabyte".to_string(),
+            symbol: "MB".to_owned(),
+            name: "megabyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8e6,
         },
     );
 
     units.insert(
-        "GB".to_string(),
+        "GB".to_owned(),
         BaseUnit {
-            symbol: "GB".to_string(),
-            name: "gigabyte".to_string(),
+            symbol: "GB".to_owned(),
+            name: "gigabyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8e9,
         },
     );
 
     units.insert(
-        "TB".to_string(),
+        "TB".to_owned(),
         BaseUnit {
-            symbol: "TB".to_string(),
-            name: "terabyte".to_string(),
+            symbol: "TB".to_owned(),
+            name: "terabyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8e12,
         },
     );
 
     units.insert(
-        "PB".to_string(),
+        "PB".to_owned(),
         BaseUnit {
-            symbol: "PB".to_string(),
-            name: "petabyte".to_string(),
+            symbol: "PB".to_owned(),
+            name: "petabyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8e15,
         },
     );
 
     units.insert(
-        "bit".to_string(),
+        "bit".to_owned(),
         BaseUnit {
-            symbol: "bit".to_string(),
-            name: "bit".to_string(),
+            symbol: "bit".to_owned(),
+            name: "bit".to_owned(),
             dimension: Dimension::new(),
             si_factor: 1.0,
         },
     );
 
     units.insert(
-        "Kibit".to_string(),
+        "Kibit".to_owned(),
         BaseUnit {
-            symbol: "Kibit".to_string(),
-            name: "kibibit".to_string(),
+            symbol: "Kibit".to_owned(),
+            name: "kibibit".to_owned(),
             dimension: Dimension::new(),
             si_factor: 1024.0,
         },
     );
 
     units.insert(
-        "Mibit".to_string(),
+        "Mibit".to_owned(),
         BaseUnit {
-            symbol: "Mibit".to_string(),
-            name: "mebibit".to_string(),
+            symbol: "Mibit".to_owned(),
+            name: "mebibit".to_owned(),
             dimension: Dimension::new(),
             si_factor: 1_048_576.0,
         },
     );
 
     units.insert(
-        "Gibit".to_string(),
+        "Gibit".to_owned(),
         BaseUnit {
-            symbol: "Gibit".to_string(),
-            name: "gibibit".to_string(),
+            symbol: "Gibit".to_owned(),
+            name: "gibibit".to_owned(),
             dimension: Dimension::new(),
             si_factor: 1_073_741_824.0,
         },
     );
 
     units.insert(
-        "KiB".to_string(),
+        "KiB".to_owned(),
         BaseUnit {
-            symbol: "KiB".to_string(),
-            name: "kibibyte".to_string(),
+            symbol: "KiB".to_owned(),
+            name: "kibibyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8192.0,
         },
     );
 
     units.insert(
-        "MiB".to_string(),
+        "MiB".to_owned(),
         BaseUnit {
-            symbol: "MiB".to_string(),
-            name: "mebibyte".to_string(),
+            symbol: "MiB".to_owned(),
+            name: "mebibyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8_388_608.0,
         },
     );
 
     units.insert(
-        "GiB".to_string(),
+        "GiB".to_owned(),
         BaseUnit {
-            symbol: "GiB".to_string(),
-            name: "gibibyte".to_string(),
+            symbol: "GiB".to_owned(),
+            name: "gibibyte".to_owned(),
             dimension: Dimension::new(),
             si_factor: 8_589_934_592.0,
         },
@@ -3519,10 +3524,10 @@ fn register_data_storage_units(units: &mut HashMap<String, BaseUnit>) {
 // === COMPUTING UNITS ===
 fn register_computing_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "FLOPS".to_string(),
+        "FLOPS".to_owned(),
         BaseUnit {
-            symbol: "FLOPS".to_string(),
-            name: "floating point operations per second".to_string(),
+            symbol: "FLOPS".to_owned(),
+            name: "floating point operations per second".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -3532,10 +3537,10 @@ fn register_computing_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "MIPS".to_string(),
+        "MIPS".to_owned(),
         BaseUnit {
-            symbol: "MIPS".to_string(),
-            name: "million instructions per second".to_string(),
+            symbol: "MIPS".to_owned(),
+            name: "million instructions per second".to_owned(),
             dimension: Dimension {
                 time: -1,
                 ..Dimension::new()
@@ -3548,10 +3553,10 @@ fn register_computing_units(units: &mut HashMap<String, BaseUnit>) {
 // === TEXTILE UNITS ===
 fn register_textile_units(units: &mut HashMap<String, BaseUnit>) {
     units.insert(
-        "tex".to_string(),
+        "tex".to_owned(),
         BaseUnit {
-            symbol: "tex".to_string(),
-            name: "tex".to_string(),
+            symbol: "tex".to_owned(),
+            name: "tex".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,
@@ -3562,10 +3567,10 @@ fn register_textile_units(units: &mut HashMap<String, BaseUnit>) {
     );
 
     units.insert(
-        "denier".to_string(),
+        "denier".to_owned(),
         BaseUnit {
-            symbol: "denier".to_string(),
-            name: "denier".to_string(),
+            symbol: "denier".to_owned(),
+            name: "denier".to_owned(),
             dimension: Dimension {
                 mass: 1,
                 length: -1,

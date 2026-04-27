@@ -25,33 +25,6 @@ export interface SequenceStatistics {
   has_uncertainties: boolean;
 }
 
-export interface SaveSequenceRequest {
-  name: string;
-  description: string;
-  tags: string[];
-  unit: string;
-  source: string;
-  data: number[];
-  uncertainties?: number[];
-  is_pinned: boolean;
-}
-
-export interface BatchImportRequest {
-  sequences: SaveSequenceRequest[];
-}
-
-export interface BatchImportResponse {
-  version: string;
-  successful_imports: number;
-  failed_imports: number;
-  errors: Array<{
-    index: number;
-    sequence_name: string;
-    error: string;
-  }>;
-  imported_ids: string[];
-}
-
 export interface UpdateSequenceRequest {
   id: string;
   name?: string;
@@ -61,8 +34,8 @@ export interface UpdateSequenceRequest {
   is_pinned?: boolean;
 }
 
-export type SortBy = 'name' | 'date_created' | 'date_modified' | 'size';
-export type SortOrder = 'ascending' | 'descending';
+type SortBy = 'name' | 'date_created' | 'date_modified' | 'size';
+type SortOrder = 'ascending' | 'descending';
 
 export interface SearchRequest {
   query?: string;

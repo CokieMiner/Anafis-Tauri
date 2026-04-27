@@ -3,16 +3,16 @@ import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useDataLibrary } from '@/shared/dataLibrary/managers/useDataLibraryManager';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
-import AxisSettingsSection from './components/AxisSettingsSection';
-import BindingsSection from './components/BindingsSection';
-import DataSourceSection from './components/DataSourceSection';
-import FitSettingsSection from './components/FitSettingsSection';
-import FitVisualization from './components/FitVisualization';
-import ModelSection from './components/ModelSection';
-import ResidualsPanel from './components/ResidualsPanel';
-import ResultsPanel from './components/ResultsPanel';
-import { useFitState } from './hooks/useFitState';
-import { parseFormula } from './utils/requestBuilder';
+import AxisSettingsSection from '@/tabs/fitting/components/AxisSettingsSection';
+import BindingsSection from '@/tabs/fitting/components/BindingsSection';
+import DataSourceSection from '@/tabs/fitting/components/DataSourceSection';
+import FitSettingsSection from '@/tabs/fitting/components/FitSettingsSection';
+import FitVisualization from '@/tabs/fitting/components/FitVisualization';
+import ModelSection from '@/tabs/fitting/components/ModelSection';
+import ResidualsPanel from '@/tabs/fitting/components/ResidualsPanel';
+import ResultsPanel from '@/tabs/fitting/components/ResultsPanel';
+import { useFitState } from '@/tabs/fitting/hooks/useFitState';
+import { parseFormula } from '@/tabs/fitting/utils/requestBuilder';
 
 const PANEL_GAP = 2;
 

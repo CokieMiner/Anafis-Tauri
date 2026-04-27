@@ -19,17 +19,12 @@ export interface Variable {
   confidence: number;
 }
 
-export interface ValidationError {
-  message: string;
-  code?: string;
-}
-
-export interface PropagationResult {
+interface PropagationResult {
   valueFormulas?: string[];
   uncertaintyFormulas?: string[];
 }
 
-export interface PropagationError {
+interface PropagationError {
   message: string;
   code?: string;
 }

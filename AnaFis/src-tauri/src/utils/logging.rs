@@ -1,13 +1,13 @@
-// src-tauri/src/logging.rs
+use std::env::temp_dir;
 use std::fs::OpenOptions;
-use std::io::Result;
+use std::io::{Result, stderr};
 use tracing::info;
-use tracing_subscriber::{EnvFilter, fmt, prelude::*};
+use tracing_subscriber::{EnvFilter, fmt::layer, prelude::*, registry};
 
 /// Initialize structured logging with file and console output
 pub fn init_logging() -> Result<()> {
-    let temp_dir = std::env::temp_dir();
-    let log_path = temp_dir.join("anafis_debug.log");
+    let log_temp_dir = temp_dir();
+    let log_path = log_temp_dir.join("anafis_debug.log");
 
     // Create a file appender
     let file = OpenOptions::new()
@@ -16,10 +16,10 @@ pub fn init_logging() -> Result<()> {
         .open(&log_path)?;
 
     // Setup tracing with both file and console output
-    let file_layer = fmt::layer().with_writer(file).with_ansi(false);
+    let file_layer = layer().with_writer(file).with_ansi(false);
 
-    let console_layer = fmt::layer().with_writer(std::io::stderr);
-    tracing_subscriber::registry()
+    let console_layer = layer().with_writer(stderr);
+    registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
         .with(file_layer)
         .with(console_layer)

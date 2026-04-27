@@ -12,13 +12,13 @@ import type {
 } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import { extractStartCell } from '@/tabs/spreadsheet/utils/rangeUtils';
 
-export interface ConversionResult {
+interface ConversionResult {
   value: number;
   formatted_result: string;
   conversion_factor: number;
 }
 
-export interface UnitConversionOptions {
+interface UnitConversionOptions {
   spreadsheetRef: React.RefObject<SpreadsheetRef | null> | undefined;
   fromUnit: string;
   toUnit: string;

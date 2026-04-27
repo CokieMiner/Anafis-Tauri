@@ -1,9 +1,9 @@
 // ValidationPipeline.ts - Unified validation pipeline for spreadsheet operations
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { RangeValidator } from './RangeValidator';
+import { RangeValidator } from '@/tabs/spreadsheet/univer/utils/RangeValidator';
 
 // Types for validation context and results
-export interface ValidationContext {
+interface ValidationContext {
   variables: Variable[];
   outputRanges: {
     value: string;
@@ -19,20 +19,20 @@ export interface Variable {
   confidence: number;
 }
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   errors: ValidationError[];
   warnings: ValidationWarning[];
 }
 
-export interface ValidationError {
+interface ValidationError {
   code: string;
   message: string;
   field?: string;
   value?: number | string;
 }
 
-export interface ValidationWarning {
+interface ValidationWarning {
   code: string;
   message: string;
   field?: string;
@@ -137,7 +137,7 @@ const VALIDATION_WARNINGS = {
 } as const;
 
 // Validator interface
-export interface Validator {
+interface Validator {
   validate(context: ValidationContext): Promise<ValidationResult>;
 }
 

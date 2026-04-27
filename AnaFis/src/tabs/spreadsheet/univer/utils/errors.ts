@@ -8,7 +8,7 @@ import {
   PERMISSION_ERROR_PATTERNS,
   POTENTIALLY_RETRYABLE_CLIENT_ERRORS,
   VALIDATION_ERROR_PATTERNS,
-} from './constants';
+} from '@/tabs/spreadsheet/univer/utils/constants';
 
 // ============================================================================
 // ERROR CODES AND TYPES

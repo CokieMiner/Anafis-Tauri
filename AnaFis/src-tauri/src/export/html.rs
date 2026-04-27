@@ -4,23 +4,24 @@
 
 use super::ExportConfig;
 use serde_json::Value;
-use std::fmt::Write as FmtWrite;
+use std::fmt::Write;
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{BufWriter, Write as IoWrite};
+use tauri::command;
 
 /// Export data to HTML format (simplified - expects 2D array)
-#[tauri::command]
+#[command]
 #[allow(
     clippy::needless_pass_by_value,
     reason = "Tauri commands require owned types for arguments"
 )]
 pub fn export_to_html(
-    data: Vec<serde_json::Value>,
+    data: Vec<Value>,
     file_path: String,
     _config: ExportConfig,
 ) -> Result<(), String> {
     if data.is_empty() {
-        return Err("No data to export".to_string());
+        return Err("No data to export".to_owned());
     }
 
     // Build HTML content
@@ -64,7 +65,7 @@ pub fn export_to_html(
                 _ => cell.to_string(),
             };
 
-            let _ = writeln!(html, "<td>{cell_content}</td>");
+            writeln!(html, "<td>{cell_content}</td>").expect("String writing never fails");
         }
 
         html.push_str("</tr>\n");

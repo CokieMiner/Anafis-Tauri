@@ -2,7 +2,6 @@
 
 import {
   Autocomplete,
-  type AutocompleteRenderInputParams,
   Box,
   MenuItem,
   Paper,
@@ -16,7 +15,7 @@ import type {
   DependentBinding,
   ImportedData,
   VariableBinding,
-} from '../types/fittingTypes';
+} from '@/tabs/fitting/types/fittingTypes';
 
 interface BindingsSectionProps {
   importedData: ImportedData | null;
@@ -155,15 +154,13 @@ function BindingRow({
         options={columnNames}
         value={dataColumn}
         onChange={(_, value) => onDataChange(value)}
-        renderInput={(params: AutocompleteRenderInputParams) => (
+        renderInput={(params) => (
           <TextField
+            {...params}
             fullWidth
             size="small"
             placeholder="Select..."
             variant="outlined"
-            inputRef={params.InputProps.ref}
-            InputProps={params.InputProps}
-            inputProps={params.inputProps}
             sx={amberInputSx}
           />
         )}
@@ -178,15 +175,13 @@ function BindingRow({
         options={columnNames}
         value={uncColumn}
         onChange={(_, value) => onUncChange(value)}
-        renderInput={(params: AutocompleteRenderInputParams) => (
+        renderInput={(params) => (
           <TextField
+            {...params}
             fullWidth
             size="small"
             placeholder="Select..."
             variant="outlined"
-            inputRef={params.InputProps.ref}
-            InputProps={params.InputProps}
-            inputProps={params.inputProps}
             sx={amberInputSx}
           />
         )}
@@ -203,10 +198,12 @@ function BindingRow({
           onUncertaintyTypeChange(event.target.value as 'typeA' | 'typeB');
         }}
         MenuProps={{
-          PaperProps: {
-            sx: {
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-              overflowY: 'auto',
+          slotProps: {
+            paper: {
+              sx: {
+                maxHeight: DROPDOWN_MAX_HEIGHT,
+                overflowY: 'auto',
+              },
             },
           },
         }}
@@ -262,10 +259,12 @@ function BindingRow({
             onAxisChange?.(event.target.value);
           }}
           MenuProps={{
-            PaperProps: {
-              sx: {
-                maxHeight: DROPDOWN_MAX_HEIGHT,
-                overflowY: 'auto',
+            slotProps: {
+              paper: {
+                sx: {
+                  maxHeight: DROPDOWN_MAX_HEIGHT,
+                  overflowY: 'auto',
+                },
               },
             },
           }}

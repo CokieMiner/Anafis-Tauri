@@ -62,11 +62,7 @@ impl ExcelRange {
     #[must_use]
     pub fn cell_at(&self, offset: usize) -> Option<String> {
         let row = self.start_row + offset;
-        if row <= self.end_row {
-            Some(format!("{}{}", self.column, row))
-        } else {
-            None
-        }
+        (row <= self.end_row).then(|| format!("{}{}", self.column, row))
     }
 }
 
@@ -76,15 +72,15 @@ mod tests {
 
     #[test]
     fn test_excel_range_row_count() {
-        let range = ExcelRange::new("A".to_string(), 1, 10);
+        let range = ExcelRange::new("A".to_owned(), 1, 10);
         assert_eq!(range.row_count(), 10);
     }
 
     #[test]
     fn test_excel_range_cell_at() {
-        let range = ExcelRange::new("B".to_string(), 5, 10);
-        assert_eq!(range.cell_at(0), Some("B5".to_string()));
-        assert_eq!(range.cell_at(5), Some("B10".to_string()));
+        let range = ExcelRange::new("B".to_owned(), 5, 10);
+        assert_eq!(range.cell_at(0), Some("B5".to_owned()));
+        assert_eq!(range.cell_at(5), Some("B10".to_owned()));
         assert_eq!(range.cell_at(6), None);
     }
 }

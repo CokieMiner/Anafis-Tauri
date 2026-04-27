@@ -15,10 +15,6 @@
 // The code in adapters can still support sync handlers for backward
 // compatibility by checking whether the returned value is a Promise.
 
-import type { ExportService } from '@/core/types/export';
-import type { ImportService } from '@/core/types/import';
-
-// ============================================================================
 // ABSTRACT STYLE TYPES (Library-Independent)
 // ============================================================================
 
@@ -70,7 +66,7 @@ export interface SpreadsheetStyle {
 /**
  * Border style specification
  */
-export interface BorderStyle {
+interface BorderStyle {
   style:
     | 'none'
     | 'thin'
@@ -87,26 +83,6 @@ export interface BorderStyle {
     | 'mediumDashDotDot'
     | 'slantDashDot';
   color?: string;
-}
-
-export interface SpreadsheetCapabilities {
-  // Feature support flags
-  supportsFormulas: boolean;
-  supportsMultipleSheets: boolean;
-  supportsFormatting: boolean;
-  supportsMergedCells: boolean;
-  supportsCharts: boolean;
-  supportsComments: boolean;
-
-  // Performance characteristics
-  maxRows: number;
-  maxColumns: number;
-  maxSheets: number;
-
-  // Implementation metadata
-  libraryName: string;
-  libraryVersion: string;
-  adapterVersion: string;
 }
 
 export interface CellValue {
@@ -188,10 +164,6 @@ export interface SpreadsheetRef {
     protectionData: Array<{ name: string; data: string }>,
     sheetIdMapping?: Map<string, string>
   ) => Promise<void>;
-
-  // Service access (required for import/export operations)
-  getExportService: () => ExportService;
-  getImportService: () => ImportService;
 }
 
 export interface SpreadsheetProps {
@@ -222,7 +194,7 @@ export interface WorkbookData {
   [key: string]: unknown;
 }
 
-export interface SheetData {
+interface SheetData {
   id: string;
   name: string;
   cellData?: Record<string, CellValue>; // key is like "A1", "B2", etc.
@@ -255,14 +227,4 @@ export interface SheetSnapshot {
   columnCount?: number;
   // Allow additional properties for different snapshot formats
   [key: string]: unknown;
-}
-
-// Cell data structure used in snapshots
-export interface CellData {
-  v?: string | number | boolean | null; // Value
-  f?: string; // Formula
-  s?: unknown; // Style - keep flexible for various formats
-  t?: unknown; // Type - keep flexible for various formats
-  p?: unknown; // Custom properties - keep flexible for various formats
-  [key: string]: unknown; // Allow additional properties
 }

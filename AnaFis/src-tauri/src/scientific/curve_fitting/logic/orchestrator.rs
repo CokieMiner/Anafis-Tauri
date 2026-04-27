@@ -1,10 +1,16 @@
 use super::engine::{
-    get_or_compile_model, normalize_identifiers, prepare_data, solve_odr, validate_identifier,
-    validate_symbol_sets, DEFAULT_DAMPING, DEFAULT_MAX_ITERATIONS, DEFAULT_TOLERANCE,
+    DEFAULT_DAMPING, DEFAULT_MAX_ITERATIONS, DEFAULT_TOLERANCE, get_or_compile_model,
+    normalize_identifiers, prepare_data, solve_odr, validate_identifier, validate_symbol_sets,
 };
 use super::response_builder::build_response;
 use crate::scientific::curve_fitting::types::{OdrError, OdrFitRequest, OdrFitResponse, OdrResult};
 
+/// Orchestrates the execution of a curve-fitting request.
+///
+/// This function validates the input request, prepares the data, and runs the ODR solver.
+///
+/// # Errors
+/// Returns `OdrError` if validation fails or the solver encounters a numerical issue.
 pub fn run_fit_request(request: &OdrFitRequest) -> OdrResult<OdrFitResponse> {
     // Future extension point: route by solver mode (profiled vs. simultaneous augmented-state)
     // once a full ODRPACK-style backend is introduced.

@@ -135,7 +135,7 @@ export function useQuickPlot({
       const xValues = await spreadsheetAPI.getRange(xRange);
       const xFlat = xValues
         .flat()
-        .map((v: unknown) => {
+        .map((v) => {
           const num = typeof v === 'number' ? v : parseFloat(String(v));
           return Math.round(num * 1e10) / 1e10;
         })
@@ -145,7 +145,7 @@ export function useQuickPlot({
       const yValues = await spreadsheetAPI.getRange(yRange);
       const yFlat = yValues
         .flat()
-        .map((v: unknown) => {
+        .map((v) => {
           const num = typeof v === 'number' ? v : parseFloat(String(v));
           return Math.round(num * 1e10) / 1e10;
         })
@@ -170,7 +170,7 @@ export function useQuickPlot({
         const errorValues = await spreadsheetAPI.getRange(errorRange);
         errorFlat = errorValues
           .flat()
-          .map((v: unknown) => {
+          .map((v) => {
             const num = typeof v === 'number' ? v : parseFloat(String(v));
             return Math.round(Math.abs(num) * 1e10) / 1e10;
           })

@@ -1,11 +1,12 @@
 use super::logic::engine::{
     evaluate_model_expr_batch, get_or_compile_model, normalize_identifiers,
 };
-use super::logic::orchestrator::run_fit_request;
+use super::run_fit_request;
 use super::types::{
     CurveEvaluationRequest, CurveEvaluationResponse, GridEvaluationRequest, GridEvaluationResponse,
     OdrError, OdrFitRequest, OdrFitResponse, OdrResult,
 };
+use std::slice::from_ref;
 use tauri;
 
 const MAX_GRID_RESOLUTION: usize = 2_000;
@@ -51,10 +52,8 @@ fn evaluate_model_curve_inner(
     request: &CurveEvaluationRequest,
 ) -> OdrResult<CurveEvaluationResponse> {
     let normalized_parameter_names = normalize_identifiers(&request.parameter_names, "parameter")?;
-    let normalized_independent_names = normalize_identifiers(
-        std::slice::from_ref(&request.independent_name),
-        "independent variable",
-    )?;
+    let normalized_independent_names =
+        normalize_identifiers(from_ref(&request.independent_name), "independent variable")?;
 
     if request.parameter_values.len() != normalized_parameter_names.len() {
         return Err(OdrError::Validation(format!(
@@ -66,7 +65,7 @@ fn evaluate_model_curve_inner(
 
     if request.resolution < 2 {
         return Err(OdrError::Validation(
-            "Curve resolution must be at least 2".to_string(),
+            "Curve resolution must be at least 2".to_owned(),
         ));
     }
     if request.resolution > MAX_GRID_RESOLUTION {
@@ -79,12 +78,12 @@ fn evaluate_model_curve_inner(
     let x_max = request.x_range.1;
     if !x_min.is_finite() || !x_max.is_finite() {
         return Err(OdrError::Validation(
-            "Curve range must contain finite values".to_string(),
+            "Curve range must contain finite values".to_owned(),
         ));
     }
     if (x_max - x_min).abs() <= f64::EPSILON {
         return Err(OdrError::Validation(
-            "Curve range must span a non-zero interval".to_string(),
+            "Curve range must span a non-zero interval".to_owned(),
         ));
     }
 
@@ -138,7 +137,6 @@ fn evaluate_model_curve_inner(
         &compiled_model.independent_names,
         &compiled_model.parameter_names,
         &columns,
-        point_count,
         "curve evaluation",
     )?;
 
@@ -175,7 +173,7 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
 
     if request.resolution < 2 {
         return Err(OdrError::Validation(
-            "Grid resolution must be at least 2".to_string(),
+            "Grid resolution must be at least 2".to_owned(),
         ));
     }
     if request.resolution > MAX_GRID_RESOLUTION {
@@ -193,7 +191,7 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
 
     let res = request.resolution;
     let point_count = res.checked_mul(res).ok_or_else(|| {
-        OdrError::Validation("Grid resolution overflow while computing point count".to_string())
+        OdrError::Validation("Grid resolution overflow while computing point count".to_owned())
     })?;
     let mut grid_x = Vec::with_capacity(point_count);
     let mut grid_y = Vec::with_capacity(point_count);
@@ -204,12 +202,12 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
     let y_max = request.y_range.1;
     if !x_min.is_finite() || !x_max.is_finite() || !y_min.is_finite() || !y_max.is_finite() {
         return Err(OdrError::Validation(
-            "Grid ranges must contain finite values".to_string(),
+            "Grid ranges must contain finite values".to_owned(),
         ));
     }
     if (x_max - x_min).abs() <= f64::EPSILON || (y_max - y_min).abs() <= f64::EPSILON {
         return Err(OdrError::Validation(
-            "Grid ranges must span a non-zero interval".to_string(),
+            "Grid ranges must span a non-zero interval".to_owned(),
         ));
     }
 
@@ -277,7 +275,6 @@ fn evaluate_model_grid_inner(request: &GridEvaluationRequest) -> OdrResult<GridE
         &compiled_model.independent_names,
         &compiled_model.parameter_names,
         &columns,
-        point_count,
         "grid evaluation",
     )?;
 

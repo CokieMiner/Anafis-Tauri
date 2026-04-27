@@ -54,7 +54,7 @@ pub fn sigma_to_confidence(sigma: f64) -> Result<f64, ConfidenceError> {
     let tail_prob = 1.0 - normal.cdf(sigma);
 
     // Convert to two-sided confidence level
-    let confidence = 2.0f64.mul_add(-tail_prob, 1.0) * 100.0;
+    let confidence = 2.0_f64.mul_add(-tail_prob, 1.0) * 100.0;
 
     Ok(confidence)
 }
@@ -72,6 +72,7 @@ pub fn validate_confidence_level(confidence: f64) -> Result<(), ConfidenceError>
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, reason = "Tests use unwrap for brevity")]
 mod tests {
     use super::*;
 

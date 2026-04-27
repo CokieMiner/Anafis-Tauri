@@ -5,6 +5,8 @@
 // frontend error handling and user experience.
 
 use serde::{Deserialize, Serialize};
+use serde_json::to_string;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 /// API version information
 pub const API_VERSION: &str = "1.0.0";
@@ -71,12 +73,12 @@ pub struct ErrorResponse {
     pub field: Option<String>,
 }
 
-impl std::fmt::Display for ErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for ErrorResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
             "{}: {}",
-            serde_json::to_string(&self.code).unwrap_or_else(|_| "UNKNOWN_ERROR".to_string()),
+            to_string(&self.code).unwrap_or_else(|_| "UNKNOWN_ERROR".to_owned()),
             self.message
         )
     }
@@ -87,7 +89,7 @@ pub type CommandResult<T> = Result<T, ErrorResponse>;
 
 pub fn file_not_found(path: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::FileNotFound,
         message: format!("File not found: {}", path.into()),
         details: None,
@@ -97,7 +99,7 @@ pub fn file_not_found(path: impl Into<String>) -> ErrorResponse {
 
 pub fn validation_error(message: impl Into<String>, field: Option<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::ValidationError,
         message: message.into(),
         details: None,
@@ -107,7 +109,7 @@ pub fn validation_error(message: impl Into<String>, field: Option<String>) -> Er
 
 pub fn internal_error(message: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::InternalError,
         message: message.into(),
         details: None,
@@ -117,7 +119,7 @@ pub fn internal_error(message: impl Into<String>) -> ErrorResponse {
 
 pub fn database_error(message: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::DatabaseError,
         message: message.into(),
         details: None,
@@ -127,7 +129,7 @@ pub fn database_error(message: impl Into<String>) -> ErrorResponse {
 
 pub fn conversion_error(message: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::ConversionFailed,
         message: message.into(),
         details: None,
@@ -137,7 +139,7 @@ pub fn conversion_error(message: impl Into<String>) -> ErrorResponse {
 
 pub fn import_error(message: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::ImportFailed,
         message: message.into(),
         details: None,
@@ -147,7 +149,7 @@ pub fn import_error(message: impl Into<String>) -> ErrorResponse {
 
 pub fn export_error(message: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::ExportFailed,
         message: message.into(),
         details: None,
@@ -157,7 +159,7 @@ pub fn export_error(message: impl Into<String>) -> ErrorResponse {
 
 pub fn window_error(message: impl Into<String>) -> ErrorResponse {
     ErrorResponse {
-        version: API_VERSION.to_string(),
+        version: API_VERSION.to_owned(),
         code: ErrorCode::WindowError,
         message: message.into(),
         details: None,

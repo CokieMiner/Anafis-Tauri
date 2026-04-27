@@ -4,7 +4,7 @@
 // Error responses include error codes, messages, and optional details for better
 // frontend error handling and user experience.
 
-export enum ErrorCode {
+enum ErrorCode {
   // Generic errors
   InternalError = 'INTERNAL_ERROR',
   InvalidInput = 'INVALID_INPUT',
@@ -51,7 +51,7 @@ export interface ErrorResponse {
 }
 
 // Type alias for command results using standardized errors
-export type CommandResult<T> = T | ErrorResponse;
+type CommandResult<T> = T | ErrorResponse;
 
 // Helper functions for error handling
 export function isErrorResponse<T>(

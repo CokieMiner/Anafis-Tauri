@@ -1,6 +1,9 @@
 // src-tauri/src/window_manager.rs
 use crate::error::{CommandResult, window_error};
-use tauri::{AppHandle, Listener, Manager, WebviewUrl, WebviewWindowBuilder};
+use std::thread::{sleep, spawn};
+use std::time::Duration;
+use tauri::webview::Color;
+use tauri::{AppHandle, Listener, Manager, PhysicalSize, Size, WebviewUrl, WebviewWindowBuilder};
 
 #[allow(
     clippy::struct_excessive_bools,
@@ -25,8 +28,8 @@ pub struct WindowConfig {
 impl Default for WindowConfig {
     fn default() -> Self {
         Self {
-            title: "AnaFis Window".to_string(),
-            url: "index.html".to_string(),
+            title: "AnaFis Window".to_owned(),
+            url: "index.html".to_owned(),
             width: 800.0,
             height: 600.0,
             resizable: true,
@@ -34,7 +37,7 @@ impl Default for WindowConfig {
             transparent: true,
             always_on_top: false,
             skip_taskbar: true,
-            parent: Some("main".to_string()),
+            parent: Some("main".to_owned()),
             min_width: None,
             min_height: None,
             focus_on_create: true,
@@ -73,7 +76,7 @@ pub fn create_or_focus_window(
         .focused(false) // Don't focus initially
         .closable(true)
         .visible(false) // Initially hidden to prevent white flash
-        .background_color(tauri::webview::Color(0, 0, 0, 0)); // Set transparent background in builder
+        .background_color(Color(0, 0, 0, 0)); // Set transparent background in builder
 
     // Apply minimum size constraints if specified
     if let (Some(min_width), Some(min_height)) = (config.min_width, config.min_height) {
@@ -96,7 +99,7 @@ pub fn create_or_focus_window(
     let window = builder.build().map_err(|e| window_error(e.to_string()))?;
 
     // Ensure transparent background is set (redundant but safe)
-    drop(window.set_background_color(Some(tauri::webview::Color(0, 0, 0, 0))));
+    drop(window.set_background_color(Some(Color(0, 0, 0, 0))));
 
     // Show only after the frontend has rendered at least one frame.
     // This avoids white/blank flashes on WebView2 during window startup.
@@ -111,9 +114,9 @@ pub fn create_or_focus_window(
 
     // Fallback: if the ready signal is not emitted, still show the window.
     let app_handle = app.clone();
-    let fallback_window_id = window_id.to_string();
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(2200));
+    let fallback_window_id = window_id.to_owned();
+    spawn(move || {
+        sleep(Duration::from_millis(2200));
         if let Some(fallback_window) = app_handle.get_webview_window(&fallback_window_id)
             && matches!(fallback_window.is_visible(), Ok(false))
         {
@@ -144,7 +147,7 @@ pub fn resize_window(
 ) -> CommandResult<()> {
     if let Some(window) = app.get_webview_window(window_id) {
         window
-            .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            .set_size(Size::Physical(PhysicalSize {
                 #[allow(
                     clippy::cast_possible_truncation,
                     reason = "Screen coordinates fit in u32"

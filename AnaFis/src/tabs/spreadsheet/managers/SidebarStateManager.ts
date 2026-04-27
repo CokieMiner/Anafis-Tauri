@@ -2,7 +2,7 @@
 import { useCallback, useReducer } from 'react';
 import type { ExportService } from '@/core/types/export';
 import type { ImportService } from '@/core/types/import';
-import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
+import { SpreadsheetManager } from '@/tabs/spreadsheet/managers/SpreadsheetManager';
 import type { Variable } from '@/tabs/spreadsheet/univer/operations/uncertaintyOperations';
 
 export type SidebarType =
@@ -79,7 +79,7 @@ export interface ImportSidebarState {
   libraryUncertaintyRange: string;
 }
 
-export interface SidebarState {
+interface SidebarState {
   activeSidebar: SidebarType;
   unitConversion: {
     category: string;
@@ -97,7 +97,7 @@ export interface SidebarState {
   };
 }
 
-export type SidebarAction =
+type SidebarAction =
   | { type: 'SET_ACTIVE_SIDEBAR'; payload: SidebarType }
   | { type: 'SET_UNIT_CONVERSION_CATEGORY'; payload: string }
   | { type: 'SET_UNIT_CONVERSION_FROM_UNIT'; payload: string }
@@ -763,17 +763,12 @@ export function useSidebarState() {
     }, []),
 
     // Convenience method to initialize services
-    initializeServices: useCallback(
-      (spreadsheetRef: React.RefObject<SpreadsheetRef | null>) => {
-        if (spreadsheetRef.current) {
-          const expSvc = spreadsheetRef.current.getExportService();
-          const impSvc = spreadsheetRef.current.getImportService();
-          dispatch({ type: 'SET_EXPORT_SERVICE', payload: expSvc });
-          dispatch({ type: 'SET_IMPORT_SERVICE', payload: impSvc });
-        }
-      },
-      []
-    ),
+    initializeServices: useCallback(() => {
+      const expSvc = SpreadsheetManager.getExportService();
+      const impSvc = SpreadsheetManager.getImportService();
+      dispatch({ type: 'SET_EXPORT_SERVICE', payload: expSvc });
+      dispatch({ type: 'SET_IMPORT_SERVICE', payload: impSvc });
+    }, []),
   };
 
   return {

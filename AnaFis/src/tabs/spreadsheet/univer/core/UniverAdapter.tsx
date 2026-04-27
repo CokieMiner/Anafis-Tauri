@@ -1,20 +1,8 @@
-// UniverAdapter.tsx - Improved Facade API approach with proper plugin mode integration
-
-import {
-  type ICellData,
-  ICommandService,
-  IPermissionService,
-  IUniverInstanceService,
-  type Univer,
-} from '@univerjs/core';
+import type { ICellData, IWorkbookData, Univer } from '@univerjs/core';
 import { FUniver } from '@univerjs/core/facade';
-import {
-  AddRangeProtectionMutation,
-  AddWorksheetProtectionMutation,
-  RangeProtectionPermissionEditPoint,
-  RemoveSheetMutation,
-  WorksheetEditPermission,
-} from '@univerjs/sheets';
+import type { FWorksheet } from '@univerjs/sheets/facade';
+import '@univerjs/sheets/facade'; // Side effect import for type augmentations
+
 import {
   forwardRef,
   useCallback,
@@ -30,23 +18,17 @@ import type {
 } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 // Import type augmentations
 import '@/tabs/spreadsheet/types/univer-augmentations';
-import UniverSpreadsheet from '@/tabs/spreadsheet/univer/core//UniverSpreadsheet';
+import UniverSpreadsheet from '@/tabs/spreadsheet/univer/core/UniverSpreadsheet';
 import {
   // Import utilities
-  columnToLetter,
   convertFromUniverCellData,
-  convertToUniverCellValue,
   convertToUniverData,
-  convertToUniverDataMultiSheet,
   determineUsedRange,
   // Import services
-  ExportService,
   getCellValue,
   getRange,
   getRangeFull,
   getSelection,
-  ImportService,
-  letterToColumn,
   parseCellRef,
   safeSpreadsheetOperation,
   UniverErrorBoundary,
@@ -59,6 +41,7 @@ import {
 } from '@/tabs/spreadsheet/univer/utils/constants';
 import { SequentialSpreadsheetQueue } from '@/tabs/spreadsheet/univer/utils/SequentialSpreadsheetQueue';
 import { getSheetNameSafely } from '@/tabs/spreadsheet/univer/utils/sheetUtils';
+import { GlobalDataMapper } from '@/tabs/spreadsheet/univer/workers/DataMapperClient';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -171,7 +154,7 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
               throw new Error('Facade API not ready for range updates');
             }
 
-            return safeSpreadsheetOperation(() => {
+            return safeSpreadsheetOperation(async () => {
               const workbook = univerAPIRef.current?.getActiveWorkbook();
               if (!workbook) return;
               const sheet = workbook.getActiveSheet();
@@ -187,15 +170,14 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
               if (!startCoords) {
                 throw new Error(`Invalid range reference: ${rangeRef}`);
               }
-              const startCol = columnToLetter(startCoords.col);
-              const startRow = startCoords.row + 1; // Convert to 1-based
-              const endColIndex = columnToLetter(
-                letterToColumn(startCol) + numCols - 1
-              );
-              const endRow = startRow + numRows - 1;
-              const endCell = `${endColIndex}${endRow}`;
 
-              const range = sheet.getRange(`${rangeRef}:${endCell}`);
+              // Use numeric getRange instead of manually building A1 string ranges
+              const range = sheet.getRange(
+                startCoords.row,
+                startCoords.col,
+                numRows,
+                numCols
+              );
 
               // PERFORMANCE OPTIMIZATION: Determine the best insertion strategy
               // Formula-only cells can use direct insertion, mixed cells need full conversion
@@ -227,10 +209,9 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
                 );
                 range.setFormulas(formulaGrid);
               } else {
-                // SLOW PATH: Full conversion (handles mixed data types)
-                const univerValues = values.map((row) =>
-                  row.map((cell) => convertToUniverCellValue(cell))
-                );
+                // SLOW PATH: Send data to Web Worker to avoid freezing the UI thread
+                const univerValues =
+                  await GlobalDataMapper.convertToUniverCellValueBatch(values);
                 range.setValues(univerValues);
               }
             }, 'update range');
@@ -364,7 +345,9 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
           const uniqueName = (() => {
             const existingSheets = workbook.getSheets();
             const existingNames = new Set(
-              existingSheets.map((s) => getSheetNameSafely(s, existingSheets))
+              existingSheets.map((s: FWorksheet) =>
+                getSheetNameSafely(s, existingSheets)
+              )
             );
 
             let sheetName = name;
@@ -384,7 +367,9 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
             const checkReady = () => {
               const sheet = workbook
                 .getSheets()
-                .find((s) => s.getSheetId() === newSheet.getSheetId());
+                .find(
+                  (s: FWorksheet) => s.getSheetId() === newSheet.getSheetId()
+                );
               if (sheet?.getSheetName() === uniqueName) {
                 resolve(newSheet.getSheetId());
               } else {
@@ -406,55 +391,39 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
 
           const sheets = workbook.getSheets();
           return Promise.resolve(
-            sheets.map((sheet) => ({
+            sheets.map((sheet: FWorksheet) => ({
               id: sheet.getSheetId(),
               name: getSheetNameSafely(sheet, sheets),
             }))
           );
         },
 
-        deleteSheet: async (sheetId: string) => {
-          if (!univerInstanceRef.current || !univerAPIRef.current) {
-            throw new Error('Univer instance not initialized');
+        deleteSheet: (sheetId: string): Promise<void> => {
+          if (!univerAPIRef.current) {
+            return Promise.reject(new Error('Univer instance not initialized'));
           }
 
           try {
-            const univer = univerInstanceRef.current as {
-              __getInjector: () => { get: (token: unknown) => unknown };
-            };
-            const injector = univer.__getInjector();
-            const commandService = injector.get(ICommandService) as {
-              executeCommand: (
-                commandId: string,
-                params: unknown
-              ) => Promise<boolean>;
-            };
-            const instanceService = injector.get(IUniverInstanceService) as {
-              getFocusedUnit: () => { getUnitId: () => string } | null;
-            };
-
-            const focusedUnit = instanceService.getFocusedUnit();
-            if (!focusedUnit) {
-              throw new Error('No focused unit found');
+            const workbook = univerAPIRef.current.getActiveWorkbook();
+            if (!workbook) {
+              return Promise.reject(new Error('No active workbook found'));
             }
 
-            const unitId = focusedUnit.getUnitId();
-            const success = await commandService.executeCommand(
-              RemoveSheetMutation.id,
-              {
-                unitId,
-                subUnitId: sheetId,
-              }
-            );
-
+            const success = workbook.deleteSheet(sheetId);
             if (!success) {
-              throw new Error(`Failed to delete sheet ${sheetId}`);
+              return Promise.reject(
+                new Error(`Failed to delete sheet ${sheetId}`)
+              );
             }
+
+            return Promise.resolve();
           } catch (error) {
             console.error('Failed to delete sheet:', error);
-            throw new Error(
-              `Failed to delete sheet: ${error instanceof Error ? error.message : String(error)}`,
-              { cause: error }
+            return Promise.reject(
+              new Error(
+                `Failed to delete sheet: ${error instanceof Error ? error.message : String(error)}`,
+                { cause: error }
+              )
             );
           }
         },
@@ -474,11 +443,11 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
           return Promise.resolve(workbook.save());
         },
 
-        loadWorkbookSnapshot: (snapshot: unknown) => {
+        loadWorkbookSnapshot: async (snapshot: unknown) => {
           if (!operationQueueRef.current) {
             throw new Error('Operation queue not initialized');
           }
-          return operationQueueRef.current.enqueue(() => {
+          return operationQueueRef.current.enqueue(async () => {
             if (!univerAPIRef.current) {
               throw new Error('Facade API not ready for snapshot import');
             }
@@ -491,7 +460,13 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
             const currentWorkbook = univerAPI.getActiveWorkbook();
 
             if (currentWorkbook) {
-              univerAPI.disposeUnit(currentWorkbook.getId());
+              // Instead of disposing, let's keep the workbook and overwrite its sheets
+              // if disposing the unit completely breaks the UI binding in v0.20
+              if (typeof currentWorkbook.dispose === 'function') {
+                currentWorkbook.dispose();
+              } else {
+                univerAPI.disposeUnit(currentWorkbook.getId());
+              }
             }
 
             const snapshotObj = snapshot as Record<string, unknown>;
@@ -518,12 +493,13 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
 
             let snapshotToLoad = snapshot;
             if (isAbstractFormat) {
-              snapshotToLoad = convertToUniverDataMultiSheet(
-                snapshot as WorkbookData
-              );
+              snapshotToLoad =
+                await GlobalDataMapper.convertToUniverDataMultiSheet(
+                  snapshot as WorkbookData
+                );
             }
 
-            univerAPI.createWorkbook(snapshotToLoad);
+            univerAPI.createWorkbook(snapshotToLoad as IWorkbookData);
 
             const snapshotWithResources = snapshotToLoad as {
               resources?: Array<{ name: string; data: string }>;
@@ -595,7 +571,9 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
           }
 
           const sheet = sheetId
-            ? workbook.getSheets().find((s) => s.getSheetId() === sheetId)
+            ? workbook
+                .getSheets()
+                .find((s: FWorksheet) => s.getSheetId() === sheetId)
             : workbook.getActiveSheet();
           if (!sheet) {
             return Promise.reject(new Error('Sheet not found'));
@@ -625,7 +603,9 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
             return Promise.reject(new Error('No active workbook'));
           }
           const sheets = workbook.getSheets();
-          const sheet = sheets.find((s) => s.getSheetName() === sheetName);
+          const sheet = sheets.find(
+            (s: FWorksheet) => s.getSheetName() === sheetName
+          );
           if (!sheet) {
             return Promise.reject(new Error(`Sheet "${sheetName}" not found`));
           }
@@ -653,7 +633,7 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
             }
             const sheet = workbook
               .getSheets()
-              .find((s) => s.getSheetId() === sheetId);
+              .find((s: FWorksheet) => s.getSheetId() === sheetId);
             if (!sheet) {
               throw new Error(`Sheet with ID "${sheetId}" not found`);
             }
@@ -671,7 +651,7 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
           protectionData: Array<{ name: string; data: string }>,
           sheetIdMapping?: Map<string, string>
         ) => {
-          if (!univerInstanceRef.current || !univerAPIRef.current) {
+          if (!univerAPIRef.current) {
             return Promise.reject(new Error('Univer instance not initialized'));
           }
 
@@ -684,7 +664,7 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
 
             const sheet = workbook
               .getSheets()
-              .find((s) => s.getSheetId() === sheetId);
+              .find((s: FWorksheet) => s.getSheetId() === sheetId);
             if (!sheet) {
               console.warn(
                 `Sheet with ID "${sheetId}" not found for protection`
@@ -694,35 +674,6 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
 
             return (async () => {
               try {
-                const univer = univerInstanceRef.current as {
-                  __getInjector: () => { get: (token: unknown) => unknown };
-                };
-                const injector = univer.__getInjector();
-                const commandService = injector.get(ICommandService) as {
-                  executeCommand: (
-                    commandId: string,
-                    params: unknown
-                  ) => Promise<boolean>;
-                };
-                const instanceService = injector.get(
-                  IUniverInstanceService
-                ) as {
-                  getFocusedUnit: () => { getUnitId: () => string } | null;
-                };
-                const permissionService = injector.get(IPermissionService) as {
-                  updatePermissionPoint: (
-                    pointId: string,
-                    value: boolean
-                  ) => void;
-                };
-
-                const focusedUnit = instanceService.getFocusedUnit();
-                if (!focusedUnit) {
-                  return;
-                }
-
-                const unitId = focusedUnit.getUnitId();
-
                 for (const resource of protectionData) {
                   if (
                     !resource.name.includes('PROTECTION') &&
@@ -753,11 +704,17 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
                           continue;
                         }
 
+                        // Facade mapping
                         const protectionObj = protection as {
                           unitType?: number;
                           subUnitId?: string;
-                          permissionId?: string;
                           name?: string;
+                          ranges?: Array<{
+                            startRow: number;
+                            startColumn: number;
+                            endRow: number;
+                            endColumn: number;
+                          }>;
                         };
 
                         let targetSubUnitId = protectionObj.subUnitId;
@@ -772,61 +729,29 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
                           continue;
                         }
 
-                        const protectionToApply = {
-                          ...(protection as Record<string, unknown>),
-                          subUnitId: sheetId,
-                          unitId,
-                        };
-
                         const isWorksheetProtection =
                           protectionObj.unitType === 2;
                         const isRangeProtection = protectionObj.unitType === 3;
 
+                        // Use cleanly encapsulated Facade APIs instead of raw internal mutations
                         if (isWorksheetProtection) {
-                          const success = await commandService.executeCommand(
-                            AddWorksheetProtectionMutation.id,
-                            {
-                              unitId,
-                              subUnitId: sheetId,
-                              rule: protectionToApply,
-                            }
+                          const options = protectionObj.name
+                            ? { name: protectionObj.name }
+                            : undefined;
+                          await sheet.getWorksheetPermission().protect(options);
+                        } else if (isRangeProtection && protectionObj.ranges) {
+                          const fRanges = protectionObj.ranges.map((r) =>
+                            sheet.getRange(r)
                           );
-
-                          if (success) {
-                            const editPermission = new WorksheetEditPermission(
-                              unitId,
-                              sheetId
-                            );
-                            permissionService.updatePermissionPoint(
-                              editPermission.id,
-                              false
-                            );
-                          }
-                        } else if (isRangeProtection) {
-                          const success = await commandService.executeCommand(
-                            AddRangeProtectionMutation.id,
+                          const options = protectionObj.name
+                            ? { name: protectionObj.name }
+                            : undefined;
+                          await sheet.getWorksheetPermission().protectRanges([
                             {
-                              unitId,
-                              subUnitId: sheetId,
-                              rules: [protectionToApply],
-                            }
-                          );
-
-                          if (
-                            success &&
-                            protectionObj.permissionId !== undefined
-                          ) {
-                            const editPermission =
-                              new RangeProtectionPermissionEditPoint(
-                                unitId,
-                                sheetId,
-                                protectionObj.permissionId
-                              );
-                            permissionService.updatePermissionPoint(
-                              editPermission.id,
-                              false
-                            );
-                          }
+                              ranges: fRanges,
+                              ...(options ? { options } : {}),
+                            },
+                          ]);
                         }
                       }
                     }
@@ -846,20 +771,6 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
             return Promise.resolve();
           }
         },
-
-        // ========================================================================
-        // SERVICE ACCESS (Singleton Pattern)
-        // ========================================================================
-
-        getExportService: (() => {
-          let instance: ExportService | null = null;
-          return () => (instance ??= new ExportService());
-        })(),
-
-        getImportService: (() => {
-          let instance: ImportService | null = null;
-          return () => (instance ??= new ImportService());
-        })(),
       }),
       []
     );

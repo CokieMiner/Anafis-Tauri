@@ -1,6 +1,9 @@
 // ValidationService.ts - Consolidated validation service with caching
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
-import { ValidationPipeline, type Variable } from './ValidationPipeline';
+import {
+  ValidationPipeline,
+  type Variable,
+} from '@/tabs/spreadsheet/univer/utils/ValidationPipeline';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -8,7 +11,7 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-export interface ValidationCache {
+interface ValidationCache {
   [key: string]: {
     result: ValidationResult;
     timestamp: number;

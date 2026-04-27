@@ -13,8 +13,8 @@ import {
   RangeProtectionPermissionEditPoint,
   WorksheetEditPermission,
 } from '@univerjs/sheets';
-import { ERROR_MESSAGES } from './constants';
-import { SpreadsheetOperationError } from './errors';
+import { ERROR_MESSAGES } from '@/tabs/spreadsheet/univer/utils/constants';
+import { SpreadsheetOperationError } from '@/tabs/spreadsheet/univer/utils/errors';
 export interface ProtectionResource {
   name: string;
   data: string;
@@ -194,7 +194,7 @@ export async function applyProtectionRules(
           if (protectionCount > 0) {
             // Successfully applied protection rules
           } else {
-            console.warn(`⚠️ No protection rules applied from ${resource.name}`);
+            console.debug(`[Protection] No rules found in ${resource.name}`);
           }
         } catch (error) {
           console.warn(
@@ -206,8 +206,8 @@ export async function applyProtectionRules(
     }
 
     if (protectionCount === 0) {
-      console.warn(
-        '⚠️ No protection rules were successfully applied from any resource'
+      console.debug(
+        '[Protection] Finished processing. No protection rules found in any resource.'
       );
     }
   } catch (error) {

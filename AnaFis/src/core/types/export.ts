@@ -44,37 +44,14 @@ export interface ExportOptions {
 /**
  * Export result
  */
-export interface ExportResult {
+interface ExportResult {
   message?: string;
   filePath?: string;
 }
 
-export interface ExportError {
+interface ExportError {
   message: string;
   code?: string;
-}
-
-/**
- * Streamlined export sidebar props - simplified state management
- */
-export interface ExportSidebarProps {
-  open: boolean;
-  onClose: () => void;
-  spreadsheetRef?: React.RefObject<SpreadsheetRef | null>;
-  onSelectionChange?: (selection: string) => void;
-
-  // Dependency injection for export service (abstraction)
-  exportService: ExportService;
-
-  // Simplified state management - only essential options
-  exportFormat: ExportFormat;
-  setExportFormat: (format: ExportFormat) => void;
-  rangeMode: ExportRangeMode;
-  setRangeMode: (mode: ExportRangeMode) => void;
-  customRange: string;
-  setCustomRange: (range: string) => void;
-  customDelimiter: string;
-  setCustomDelimiter: (delimiter: string) => void;
 }
 
 /**

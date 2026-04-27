@@ -82,7 +82,7 @@ const DataLibraryToolbar = memo(
     onSelectNone,
   }: DataLibraryToolbarProps) => (
     <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
         <TextField
           size="small"
           placeholder="Search sequences..."

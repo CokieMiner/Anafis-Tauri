@@ -1,35 +1,38 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>AnaFis - Advanced Numerical Analysis and Fitting Interface System</title>
-    <link rel="stylesheet" href="/src/shared-styles.css" />
-    <style>
-      /* Paint dark immediately, before external CSS/JS initialize */
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        background-color: #0a0a0a;
-        color: #ffffff;
-        overflow: hidden;
-      }
 
-      /* Main window specific styles */
-      #root {
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
-        background-color: #0a0a0a;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root" class="window-fullscreen"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AnaFis - Advanced Numerical Analysis and Fitting Interface System</title>
+  <link rel="stylesheet" href="/src/shared-styles.css" />
+  <style>
+    /* Paint dark immediately, before external CSS/JS initialize */
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #0a0a0a;
+      color: #ffffff;
+      overflow: hidden;
+    }
+
+    /* Main window specific styles */
+    #root {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #0a0a0a;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root" class="window-fullscreen"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

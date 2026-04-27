@@ -33,14 +33,14 @@ import type {
   ImportedData,
   OdrFitResponse,
   VariableBinding,
-} from '../types/fittingTypes';
+} from '@/tabs/fitting/types/fittingTypes';
 import {
   build2DChart,
   build3DChart,
   buildEmptyChart,
   buildPredictedChart,
   buildResidualsChart,
-} from '../utils/chartBuilders';
+} from '@/tabs/fitting/utils/chartBuilders';
 
 interface FitVisualizationProps {
   importedData: ImportedData | null;

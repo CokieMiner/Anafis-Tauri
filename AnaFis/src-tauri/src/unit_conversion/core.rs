@@ -4,6 +4,7 @@ use super::units::{get_unit_categories, register_all_units};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConversionRequest {
@@ -146,56 +147,56 @@ impl UnitConverter {
     }
 
     fn initialize_prefixes(&mut self) {
-        self.prefixes.insert("Y".to_string(), 1e24); // yotta
-        self.prefixes.insert("Z".to_string(), 1e21); // zetta
-        self.prefixes.insert("E".to_string(), 1e18); // exa
-        self.prefixes.insert("P".to_string(), 1e15); // peta
-        self.prefixes.insert("T".to_string(), 1e12); // tera
-        self.prefixes.insert("G".to_string(), 1e9); // giga
-        self.prefixes.insert("M".to_string(), 1e6); // mega
-        self.prefixes.insert("k".to_string(), 1e3); // kilo
-        self.prefixes.insert("h".to_string(), 1e2); // hecto
-        self.prefixes.insert("da".to_string(), 1e1); // deka
-        self.prefixes.insert("d".to_string(), 1e-1); // deci
-        self.prefixes.insert("c".to_string(), 1e-2); // centi
-        self.prefixes.insert("m".to_string(), 1e-3); // milli
-        self.prefixes.insert("μ".to_string(), 1e-6); // micro
-        self.prefixes.insert("u".to_string(), 1e-6); // micro (alternative)
-        self.prefixes.insert("n".to_string(), 1e-9); // nano
-        self.prefixes.insert("p".to_string(), 1e-12); // pico
-        self.prefixes.insert("f".to_string(), 1e-15); // femto
-        self.prefixes.insert("a".to_string(), 1e-18); // atto
-        self.prefixes.insert("z".to_string(), 1e-21); // zepto
-        self.prefixes.insert("y".to_string(), 1e-24); // yocto
+        self.prefixes.insert("Y".to_owned(), 1e24); // yotta
+        self.prefixes.insert("Z".to_owned(), 1e21); // zetta
+        self.prefixes.insert("E".to_owned(), 1e18); // exa
+        self.prefixes.insert("P".to_owned(), 1e15); // peta
+        self.prefixes.insert("T".to_owned(), 1e12); // tera
+        self.prefixes.insert("G".to_owned(), 1e9); // giga
+        self.prefixes.insert("M".to_owned(), 1e6); // mega
+        self.prefixes.insert("k".to_owned(), 1e3); // kilo
+        self.prefixes.insert("h".to_owned(), 1e2); // hecto
+        self.prefixes.insert("da".to_owned(), 1e1); // deka
+        self.prefixes.insert("d".to_owned(), 1e-1); // deci
+        self.prefixes.insert("c".to_owned(), 1e-2); // centi
+        self.prefixes.insert("m".to_owned(), 1e-3); // milli
+        self.prefixes.insert("\u{3bc}".to_owned(), 1e-6); // micro
+        self.prefixes.insert("u".to_owned(), 1e-6); // micro (alternative)
+        self.prefixes.insert("n".to_owned(), 1e-9); // nano
+        self.prefixes.insert("p".to_owned(), 1e-12); // pico
+        self.prefixes.insert("f".to_owned(), 1e-15); // femto
+        self.prefixes.insert("a".to_owned(), 1e-18); // atto
+        self.prefixes.insert("z".to_owned(), 1e-21); // zepto
+        self.prefixes.insert("y".to_owned(), 1e-24); // yocto
     }
 
     fn initialize_quick_conversions(&mut self) {
         // For fast menu button conversions - pre-calculated common conversions
         let mut length_conversions = HashMap::new();
-        length_conversions.insert("cm_to_in".to_string(), 0.393_701);
-        length_conversions.insert("in_to_cm".to_string(), 2.54);
-        length_conversions.insert("ft_to_m".to_string(), 0.3048);
-        length_conversions.insert("m_to_ft".to_string(), 3.28084);
-        length_conversions.insert("mi_to_km".to_string(), 1.60934);
-        length_conversions.insert("km_to_mi".to_string(), 0.621_371);
+        length_conversions.insert("cm_to_in".to_owned(), 0.393_701);
+        length_conversions.insert("in_to_cm".to_owned(), 2.54);
+        length_conversions.insert("ft_to_m".to_owned(), 0.3048);
+        length_conversions.insert("m_to_ft".to_owned(), 3.28084);
+        length_conversions.insert("mi_to_km".to_owned(), 1.60934);
+        length_conversions.insert("km_to_mi".to_owned(), 0.621_371);
 
         let mut mass_conversions = HashMap::new();
-        mass_conversions.insert("lb_to_kg".to_string(), 0.453_592);
-        mass_conversions.insert("kg_to_lb".to_string(), 2.20462);
-        mass_conversions.insert("oz_to_g".to_string(), 28.3495);
-        mass_conversions.insert("g_to_oz".to_string(), 0.035_274);
+        mass_conversions.insert("lb_to_kg".to_owned(), 0.453_592);
+        mass_conversions.insert("kg_to_lb".to_owned(), 2.20462);
+        mass_conversions.insert("oz_to_g".to_owned(), 28.3495);
+        mass_conversions.insert("g_to_oz".to_owned(), 0.035_274);
 
         self.quick_conversions
-            .insert("length".to_string(), length_conversions);
+            .insert("length".to_owned(), length_conversions);
         self.quick_conversions
-            .insert("mass".to_string(), mass_conversions);
+            .insert("mass".to_owned(), mass_conversions);
     }
 
     /// Parse a unit string into its dimensional components
     pub fn parse_unit(&self, unit_str: &str) -> Result<ParsedUnit, String> {
         // Updated regex to support: ^ (caret), ** (double asterisk), and Unicode superscript (⁻, ⁰-⁹)
-        static UNIT_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
-            Regex::new(r"^([a-zA-Zμ°]+)((?:\*\*|\^)[⁻⁰¹²³⁴⁵⁶⁷⁸⁹\-\d]+|[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?$").unwrap()
+        static UNIT_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"^([a-zA-Z\u{3bc}\u{b0}]+)((?:\*\*|\^)[\u{207b}\u{2070}\u{b9}\u{b2}\u{b3}\u{2074}\u{2075}\u{2076}\u{2077}\u{2078}\u{2079}\-\d]+|[\u{207b}\u{2070}\u{b9}\u{b2}\u{b3}\u{2074}\u{2075}\u{2076}\u{2077}\u{2078}\u{2079}]+)?$").expect("Valid static unit parsing regex")
         });
 
         let mut total_dimension = Dimension::new();
@@ -206,7 +207,7 @@ impl UnitConverter {
             return Ok(ParsedUnit {
                 dimension: base_unit.dimension.clone(),
                 si_factor: base_unit.si_factor,
-                original: unit_str.to_string(),
+                original: unit_str.to_owned(),
             });
         }
 
@@ -215,10 +216,10 @@ impl UnitConverter {
         // Replace ** with a temporary placeholder to protect it, then replace single * and restore **
         let normalized = unit_str
             .replace(['(', ')'], "")
-            .replace("**", "§§") // Temporary placeholder for **
+            .replace("**", "\u{a7}\u{a7}") // Temporary placeholder for **
             .replace('*', " ")
-            .replace("·", " ")
-            .replace("§§", "**") // Restore **
+            .replace("\u{b7}", " ")
+            .replace("\u{a7}\u{a7}", "**") // Restore **
             .replace('/', " / ");
         let parts: Vec<&str> = normalized.split_whitespace().collect();
 
@@ -234,7 +235,10 @@ impl UnitConverter {
                 return Err(format!("Invalid unit token: {part}"));
             };
 
-            let unit_part = captures.get(1).unwrap().as_str();
+            let unit_part = captures
+                .get(1)
+                .expect("Regex group 1 is guaranteed by capture")
+                .as_str();
             let power_part = captures.get(2).map(|m| m.as_str());
 
             let power = power_part.map_or(1, |pow_str| {
@@ -245,17 +249,17 @@ impl UnitConverter {
 
                 // Convert Unicode superscript to regular digits
                 let normalized_pow = clean_pow
-                    .replace('⁰', "0")
-                    .replace('¹', "1")
-                    .replace('²', "2")
-                    .replace('³', "3")
-                    .replace('⁴', "4")
-                    .replace('⁵', "5")
-                    .replace('⁶', "6")
-                    .replace('⁷', "7")
-                    .replace('⁸', "8")
-                    .replace('⁹', "9")
-                    .replace('⁻', "-");
+                    .replace('\u{2070}', "0")
+                    .replace('\u{b9}', "1")
+                    .replace('\u{b2}', "2")
+                    .replace('\u{b3}', "3")
+                    .replace('\u{2074}', "4")
+                    .replace('\u{2075}', "5")
+                    .replace('\u{2076}', "6")
+                    .replace('\u{2077}', "7")
+                    .replace('\u{2078}', "8")
+                    .replace('\u{2079}', "9")
+                    .replace('\u{207b}', "-");
 
                 normalized_pow.parse::<i32>().unwrap_or(1)
             });
@@ -274,7 +278,7 @@ impl UnitConverter {
         Ok(ParsedUnit {
             dimension: total_dimension,
             si_factor: total_factor,
-            original: unit_str.to_string(),
+            original: unit_str.to_owned(),
         })
     }
 
@@ -292,6 +296,7 @@ impl UnitConverter {
 
         for (prefix, prefix_factor) in prefixes {
             if unit_str.starts_with(prefix) {
+                #[allow(clippy::string_slice, reason = "Safe boundary after starts_with check")]
                 let base_unit_str = &unit_str[prefix.len()..];
                 if let Some(base_unit) = self.base_units.get(base_unit_str) {
                     return Some((base_unit, base_unit.si_factor * prefix_factor));
@@ -411,8 +416,8 @@ impl UnitConverter {
 
         let dummy_request = ConversionRequest {
             value: 1.0,
-            from_unit: from_unit.to_string(),
-            to_unit: to_unit.to_string(),
+            from_unit: from_unit.to_owned(),
+            to_unit: to_unit.to_owned(),
         };
 
         match self.convert(&dummy_request) {
@@ -457,7 +462,7 @@ impl UnitConverter {
                 let category = category_map
                     .get(symbol)
                     .cloned()
-                    .unwrap_or_else(|| "other".to_string());
+                    .unwrap_or_else(|| "other".to_owned());
                 (
                     symbol.clone(),
                     UnitInfo {
@@ -483,12 +488,12 @@ impl UnitConverter {
             format!("{output_value:.6}")
                 .trim_end_matches('0')
                 .trim_end_matches('.')
-                .to_string()
+                .to_owned()
         } else if output_value.abs() >= 0.000_001 {
             format!("{output_value:.8}")
                 .trim_end_matches('0')
                 .trim_end_matches('.')
-                .to_string()
+                .to_owned()
         } else {
             format!("{output_value:.6e}")
         };
@@ -498,7 +503,5 @@ impl UnitConverter {
 }
 
 // Global converter instance
-use std::sync::Mutex;
-
-pub static UNIT_CONVERTER: std::sync::LazyLock<Mutex<UnitConverter>> =
-    std::sync::LazyLock::new(|| Mutex::new(UnitConverter::new()));
+pub static UNIT_CONVERTER: LazyLock<Mutex<UnitConverter>> =
+    LazyLock::new(|| Mutex::new(UnitConverter::new()));

@@ -16,7 +16,7 @@
  * should be handled in separate adapter utilities.
  */
 
-export interface CellCoordinates {
+interface CellCoordinates {
   /** 0-based row index */
   row: number;
   /** 0-based column index */
@@ -34,7 +34,7 @@ export interface RangeBounds {
   endRow: number;
 }
 
-export interface ParsedRange {
+interface ParsedRange {
   /** Start cell coordinates */
   start: CellCoordinates;
   /** End cell coordinates */

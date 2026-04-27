@@ -10,14 +10,14 @@ const LAST_DIR_KEY = 'anafis_last_directory';
 /**
  * Gets the last used directory path from local storage
  */
-export function getLastDirectory(): string | undefined {
+function getLastDirectory(): string | undefined {
   return localStorage.getItem(LAST_DIR_KEY) || undefined;
 }
 
 /**
  * Saves a directory path to local storage
  */
-export function setLastDirectory(path: string | null | undefined): void {
+function setLastDirectory(path: string | null | undefined): void {
   if (!path) return;
 
   try {

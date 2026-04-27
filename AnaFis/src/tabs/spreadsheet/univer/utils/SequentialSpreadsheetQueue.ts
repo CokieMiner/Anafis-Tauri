@@ -1,7 +1,7 @@
 // SequentialSpreadsheetQueue.ts - Simple sequential queue for spreadsheet operations
 // Prevents race conditions by processing operations one at a time with debouncing
 
-export interface QueuedOperation<T = void> {
+interface QueuedOperation<T = void> {
   id: string;
   operation: () => Promise<T>;
   resolve: (value: T | PromiseLike<T>) => void;
@@ -17,7 +17,7 @@ export interface QueuedOperation<T = void> {
 export class SequentialSpreadsheetQueue {
   private queue: QueuedOperation<unknown>[] = [];
   private isProcessing = false;
-  private debounceTimer: number | undefined = undefined;
+  private debounceTimer: ReturnType<typeof setTimeout> | undefined = undefined;
   private readonly debounceDelay: number;
 
   constructor(debounceDelay = 50) {

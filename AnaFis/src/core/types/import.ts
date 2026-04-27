@@ -89,19 +89,6 @@ export interface ImportService {
 }
 
 /**
- * Streamlined import sidebar props - file-first workflow
- */
-export interface ImportSidebarProps {
-  open: boolean;
-  onClose: () => void;
-  spreadsheetRef: React.RefObject<SpreadsheetRef | null>;
-  onSelectionChange?: (selection: string) => void;
-
-  // Dependency injection for import service
-  importService: ImportService;
-}
-
-/**
  * Import result
  */
 export interface ImportResult {
@@ -142,14 +129,14 @@ export interface WorkbookData {
   sheetOrder?: string[];
 }
 
-export interface MergeData {
+interface MergeData {
   startRow: number;
   startColumn: number;
   endRow: number;
   endColumn: number;
 }
 
-export interface SheetData {
+interface SheetData {
   id: string;
   name: string;
   cellData?: Record<string, CellData>;
@@ -158,7 +145,7 @@ export interface SheetData {
   mergeData?: MergeData[];
 }
 
-export interface CellData {
+interface CellData {
   v?: string | number | boolean | null;
   f?: string;
   s?: Record<string, unknown>; // Style data - flexible object structure

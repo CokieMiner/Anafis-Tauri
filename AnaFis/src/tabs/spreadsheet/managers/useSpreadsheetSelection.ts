@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useSelectionContext } from '@/tabs/spreadsheet/managers/useSelectionContext';
 import { CellReference } from '@/tabs/spreadsheet/utils/CellReference';
-import { useSelectionContext } from './useSelectionContext';
 
 // Simplified cache interfaces
 interface ParsedCell {

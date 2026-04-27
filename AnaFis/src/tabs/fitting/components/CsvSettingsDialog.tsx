@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { UnifiedButton } from '@/shared/components/UnifiedButton';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
-import type { CsvImportSettings } from '../types/fittingTypes';
+import type { CsvImportSettings } from '@/tabs/fitting/types/fittingTypes';
 
 interface CsvSettingsDialogProps {
   open: boolean;
@@ -88,25 +88,27 @@ export default function CsvSettingsDialog({
             value={settings.separator}
             label="Separator"
             MenuProps={{
-              PaperProps: {
-                sx: {
-                  maxHeight: DROPDOWN_MAX_HEIGHT,
-                  overflowY: 'auto',
-                  backgroundColor: `${anafisTheme.colors.background.elevated} !important`,
-                  backgroundImage: 'none !important',
-                  opacity: 1,
-                  backdropFilter: 'none !important',
-                  mixBlendMode: 'normal',
-                  color: anafisTheme.colors.text.primary,
-                  '& .MuiMenuItem-root': { color: 'inherit' },
-                  '& .MuiMenuItem-root:hover': {
-                    backgroundColor: `${anafisTheme.colors.tabs.fitting.main}0F`,
-                  },
-                  '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
-                    {
-                      backgroundColor: `${anafisTheme.colors.tabs.fitting.main}1F !important`,
-                      color: 'inherit',
+              slotProps: {
+                paper: {
+                  sx: {
+                    maxHeight: DROPDOWN_MAX_HEIGHT,
+                    overflowY: 'auto',
+                    backgroundColor: `${anafisTheme.colors.background.elevated} !important`,
+                    backgroundImage: 'none !important',
+                    opacity: 1,
+                    backdropFilter: 'none !important',
+                    mixBlendMode: 'normal',
+                    color: anafisTheme.colors.text.primary,
+                    '& .MuiMenuItem-root': { color: 'inherit' },
+                    '& .MuiMenuItem-root:hover': {
+                      backgroundColor: `${anafisTheme.colors.tabs.fitting.main}0F`,
                     },
+                    '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
+                      {
+                        backgroundColor: `${anafisTheme.colors.tabs.fitting.main}1F !important`,
+                        color: 'inherit',
+                      },
+                  },
                 },
               },
             }}
@@ -131,25 +133,27 @@ export default function CsvSettingsDialog({
             value={settings.decimalFormat}
             label="Decimal"
             MenuProps={{
-              PaperProps: {
-                sx: {
-                  maxHeight: DROPDOWN_MAX_HEIGHT,
-                  overflowY: 'auto',
-                  backgroundColor: `${anafisTheme.colors.background.elevated} !important`,
-                  backgroundImage: 'none !important',
-                  opacity: 1,
-                  backdropFilter: 'none !important',
-                  mixBlendMode: 'normal',
-                  color: anafisTheme.colors.text.primary,
-                  '& .MuiMenuItem-root': { color: 'inherit' },
-                  '& .MuiMenuItem-root:hover': {
-                    backgroundColor: `${anafisTheme.colors.tabs.fitting.main}0F`,
-                  },
-                  '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
-                    {
-                      backgroundColor: `${anafisTheme.colors.tabs.fitting.main}1F !important`,
-                      color: 'inherit',
+              slotProps: {
+                paper: {
+                  sx: {
+                    maxHeight: DROPDOWN_MAX_HEIGHT,
+                    overflowY: 'auto',
+                    backgroundColor: `${anafisTheme.colors.background.elevated} !important`,
+                    backgroundImage: 'none !important',
+                    opacity: 1,
+                    backdropFilter: 'none !important',
+                    mixBlendMode: 'normal',
+                    color: anafisTheme.colors.text.primary,
+                    '& .MuiMenuItem-root': { color: 'inherit' },
+                    '& .MuiMenuItem-root:hover': {
+                      backgroundColor: `${anafisTheme.colors.tabs.fitting.main}0F`,
                     },
+                    '& .MuiMenuItem-root.Mui-selected, & .MuiMenuItem-root.Mui-selected:hover':
+                      {
+                        backgroundColor: `${anafisTheme.colors.tabs.fitting.main}1F !important`,
+                        color: 'inherit',
+                      },
+                  },
                 },
               },
             }}

@@ -4,7 +4,7 @@ import type {
   AxisConfig,
   AxisScale,
   AxisSettings,
-} from '../types/fittingTypes';
+} from '@/tabs/fitting/types/fittingTypes';
 
 type AxisSettingsMode = 'empty' | '2d' | '3d' | 'predicted';
 
@@ -87,10 +87,12 @@ function AxisRow({
           onUpdate({ scale: event.target.value as AxisScale });
         }}
         MenuProps={{
-          PaperProps: {
-            sx: {
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-              overflowY: 'auto',
+          slotProps: {
+            paper: {
+              sx: {
+                maxHeight: DROPDOWN_MAX_HEIGHT,
+                overflowY: 'auto',
+              },
             },
           },
         }}

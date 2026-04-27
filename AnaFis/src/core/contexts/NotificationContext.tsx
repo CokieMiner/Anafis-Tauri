@@ -4,7 +4,7 @@ import { Alert, type AlertColor, Snackbar } from '@mui/material';
 import type React from 'react';
 import { createContext, type ReactNode, useCallback, useState } from 'react';
 
-export interface NotificationData {
+interface NotificationData {
   type: AlertColor;
   message: string;
   duration?: number;

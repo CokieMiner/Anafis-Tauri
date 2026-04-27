@@ -11,8 +11,8 @@ import type {
   ImportedData,
   OdrFitResponse,
   VariableBinding,
-} from '../types/fittingTypes';
-import { buildResidualsChart } from '../utils/chartBuilders';
+} from '@/tabs/fitting/types/fittingTypes';
+import { buildResidualsChart } from '@/tabs/fitting/utils/chartBuilders';
 
 interface ResidualsPanelProps {
   fitResult: OdrFitResponse | null;

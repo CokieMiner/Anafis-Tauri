@@ -1,5 +1,6 @@
 // Statistical calculations for data sequences
 use super::models::{DataSequence, SequenceStatistics};
+use std::cmp::Ordering;
 
 /// Calculate statistics for a data sequence
 pub fn calculate_statistics(sequence: &DataSequence) -> SequenceStatistics {
@@ -48,7 +49,11 @@ pub fn calculate_statistics(sequence: &DataSequence) -> SequenceStatistics {
 
     // Calculate median
     let mut sorted_data = data.clone();
-    sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+    #[allow(
+        clippy::integer_division,
+        reason = "Intentional integer division for median index"
+    )]
     let median = if count.is_multiple_of(2) {
         f64::midpoint(sorted_data[count / 2 - 1], sorted_data[count / 2])
     } else {

@@ -1,6 +1,6 @@
-// Tauri commands for Data Library
+use std::fs::create_dir_all;
 use std::sync::Mutex;
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State, command};
 
 use super::database::DataLibraryDatabase;
 use super::models::{
@@ -24,13 +24,13 @@ fn with_db<T>(
 }
 
 /// Initialize the Data Library database
-pub fn init_data_library(app_handle: &tauri::AppHandle) -> Result<DataLibraryState, String> {
+pub fn init_data_library(app_handle: &AppHandle) -> Result<DataLibraryState, String> {
     let app_dir = app_handle
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data dir: {e}"))?;
 
-    std::fs::create_dir_all(&app_dir).map_err(|e| format!("Failed to create app data dir: {e}"))?;
+    create_dir_all(&app_dir).map_err(|e| format!("Failed to create app data dir: {e}"))?;
 
     let db_path = app_dir.join("data_library.db");
     let db_path_str = db_path
@@ -42,7 +42,7 @@ pub fn init_data_library(app_handle: &tauri::AppHandle) -> Result<DataLibrarySta
     Ok(DataLibraryState(Mutex::new(db)))
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn save_sequence(
     request: SaveSequenceRequest,
@@ -54,7 +54,7 @@ pub fn save_sequence(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn get_sequences(
     search: SearchRequest,
@@ -66,7 +66,7 @@ pub fn get_sequences(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn get_sequence(
     id: String,
@@ -78,7 +78,7 @@ pub fn get_sequence(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn update_sequence(
     request: UpdateSequenceRequest,
@@ -90,7 +90,7 @@ pub fn update_sequence(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn delete_sequence(id: String, state: State<DataLibraryState>) -> CommandResult<()> {
     with_db(&state, move |db| {
@@ -99,7 +99,7 @@ pub fn delete_sequence(id: String, state: State<DataLibraryState>) -> CommandRes
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn get_sequence_stats(
     id: String,
@@ -113,7 +113,7 @@ pub fn get_sequence_stats(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn pin_sequence(
     id: String,
@@ -133,7 +133,7 @@ pub fn pin_sequence(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn duplicate_sequence(
     id: String,
@@ -146,7 +146,7 @@ pub fn duplicate_sequence(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn get_all_tags(state: State<DataLibraryState>) -> CommandResult<Vec<String>> {
     with_db(&state, |db| {
@@ -155,7 +155,7 @@ pub fn get_all_tags(state: State<DataLibraryState>) -> CommandResult<Vec<String>
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn export_sequences_csv(
     sequence_ids: Vec<String>,
@@ -168,7 +168,7 @@ pub fn export_sequences_csv(
     })
 }
 
-#[tauri::command]
+#[command]
 #[allow(clippy::needless_pass_by_value, reason = "Tauri command")]
 pub fn batch_import_sequences(
     request: BatchImportRequest,

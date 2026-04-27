@@ -6,5 +6,6 @@
     "src/windows/uncertaintyCalculator/components/LatexPreviewWindow.tsx",
     "src/windows/DataLibraryWindow.tsx"
   ],
-  "project": ["src/**/*.{ts,tsx}"]
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignoreDependencies": ["@types/katex", "vite-bundle-analyzer"]
 }

@@ -1,4 +1,4 @@
-import { BugReport, ErrorOutline, Refresh } from '@mui/icons-material';
+import { BugReport, ErrorOutlined, Refresh } from '@mui/icons-material';
 import {
   Alert,
   AlertTitle,
@@ -128,7 +128,7 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
             }}
           >
             <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <ErrorOutline
+              <ErrorOutlined
                 sx={{
                   fontSize: 64,
                   color: anafisColors.buttons.close,
