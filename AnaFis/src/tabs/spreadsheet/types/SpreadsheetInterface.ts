@@ -11,7 +11,7 @@
 // names but make the handler implementors return a Promise. That allows the
 // UI adapter to await a computed value and then apply it back into the grid.
 // Example pattern (JS/TS pseudo-signature):
-//   async function onFormulaIntercept(cellRef: string, formula: string): Promise<string | number | null> { ... }
+
 // The code in adapters can still support sync handlers for backward
 // compatibility by checking whether the returned value is a Promise.
 
@@ -168,14 +168,6 @@ export interface SpreadsheetRef {
 
 export interface SpreadsheetProps {
   initialData: WorkbookData;
-  // Fired when a cell's raw value (not a leading '=' formula) has changed in
-  // the UI. Keep this synchronous for simple use cases; adapters may call it
-  // from their command hooks.
-  onCellChange: (cellRef: string, value: CellValue) => void;
-  // Called when the user enters a value that looks like a formula
-  // (typically starting with '='). Implementations can keep this synchronous
-  // or return a Promise to support async evaluation via backend/Rust/WASM.
-  onFormulaIntercept: (cellRef: string, formula: string) => void;
   onSelectionChange?: (cellRef: string) => void;
   onReady?: () => void; // Called when the spreadsheet adapter is fully initialized and ready
   tabId?: string; // Optional tab ID for instance tracking

@@ -22,7 +22,6 @@ export {
 
 // Data Conversion (Abstract ↔ Univer formats)
 export {
-  convertFromUniverCellData,
   convertSimpleArrayToCellValues,
   convertToUniverData,
 } from '@/tabs/spreadsheet/univer/utils/dataConversion';
@@ -34,7 +33,4 @@ export {
 } from '@/tabs/spreadsheet/univer/utils/errors';
 
 // A1 Notation & Column Conversion
-export {
-  determineUsedRange,
-  rangeToA1,
-} from '@/tabs/spreadsheet/univer/utils/univerUtils';
+export { determineUsedRange } from '@/tabs/spreadsheet/univer/utils/univerUtils';

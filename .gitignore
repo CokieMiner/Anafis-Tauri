@@ -87,3 +87,4 @@ AnaFis/.tsbuildinfo
 # Project-specific local files
 external/
 AnaFis/package-lock.json
+Docs/univer_repos/

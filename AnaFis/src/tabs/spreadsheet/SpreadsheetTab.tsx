@@ -22,7 +22,6 @@ import {
 import { SpreadsheetManager } from '@/tabs/spreadsheet/managers/SpreadsheetManager';
 import { useSelectionContext } from '@/tabs/spreadsheet/managers/useSelectionContext';
 import type {
-  CellValue,
   SpreadsheetRef,
   WorkbookData,
 } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
@@ -111,25 +110,6 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
     };
   });
 
-  // NOTE: Backend data persistence removed - spreadsheet data is now local-only
-
-  const handleCellChange = useCallback(
-    (_cellRef: string, _value: CellValue) => {
-      // Cell change handler - Univer manages all data internally
-      // NOTE: Backend persistence removed - cell data is now local-only
-    },
-    []
-  );
-
-  const handleFormulaIntercept = useCallback(
-    (_cellRef: string, _formula: string) => {
-      // Formula interception is no longer needed - Univer handles all formulas
-      // Custom functions are registered directly with Univer's formula engine
-      // This handler is kept for potential future use (e.g., formula validation)
-    },
-    []
-  );
-
   const handleSelectionChange = useCallback(
     (cellRef: string) => {
       // Emit selection change event to all interested subscribers (sidebars)
@@ -197,8 +177,6 @@ const SpreadsheetContent: React.FC<SpreadsheetTabProps> = ({ tabId }) => {
                 <SpreadsheetAdapter
                   ref={spreadsheetRef}
                   initialData={spreadsheetData}
-                  onCellChange={handleCellChange}
-                  onFormulaIntercept={handleFormulaIntercept}
                   onSelectionChange={handleSelectionChange}
                   onReady={handleSpreadsheetReady}
                   tabId={tabId}

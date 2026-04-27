@@ -1,4 +1,4 @@
-import type { ICellData, IWorkbookData, Univer } from '@univerjs/core';
+import type { IWorkbookData, Univer } from '@univerjs/core';
 import { FUniver } from '@univerjs/core/facade';
 import type { FWorksheet } from '@univerjs/sheets/facade';
 import '@univerjs/sheets/facade'; // Side effect import for type augmentations
@@ -21,7 +21,6 @@ import '@/tabs/spreadsheet/types/univer-augmentations';
 import UniverSpreadsheet from '@/tabs/spreadsheet/univer/core/UniverSpreadsheet';
 import {
   // Import utilities
-  convertFromUniverCellData,
   convertToUniverData,
   determineUsedRange,
   // Import services
@@ -72,17 +71,7 @@ const convertCellValueToFacade = (
 // ============================================================================
 
 const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
-  (
-    {
-      initialData,
-      onCellChange,
-      onFormulaIntercept,
-      onSelectionChange,
-      onReady,
-      tabId,
-    },
-    ref
-  ) => {
+  ({ initialData, onSelectionChange, onReady, tabId }, ref) => {
     const univerAPIRef = useRef<ReturnType<typeof FUniver.newAPI> | null>(null);
     const univerInstanceRef = useRef<Univer | null>(null);
     const operationQueueRef = useRef<SequentialSpreadsheetQueue | null>(null);
@@ -777,15 +766,6 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
 
     useImperativeHandle(ref, () => memoizedOperations, [memoizedOperations]);
 
-    // Memoized callback to handle type conversion
-    const handleCellChange = useCallback(
-      (cellRef: string, univerCellData: ICellData) => {
-        const abstractCellData = convertFromUniverCellData(univerCellData);
-        onCellChange(cellRef, abstractCellData);
-      },
-      [onCellChange]
-    );
-
     // Memoized the converted data to prevent unnecessary re-initialization
     const univerData = useMemo(
       () => convertToUniverData(initialData),
@@ -795,8 +775,6 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
     return (
       <UniverSpreadsheet
         initialData={univerData}
-        onCellChange={handleCellChange}
-        onFormulaIntercept={onFormulaIntercept}
         onSelectionChange={onSelectionChange ?? (() => {})}
         onUniverReady={handleUniverReady}
         {...(tabId && { tabId })}
