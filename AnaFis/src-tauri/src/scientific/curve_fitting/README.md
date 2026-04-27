@@ -221,7 +221,7 @@ The coverage factor requires effective degrees of freedom. The engine computes t
 
 $$\nu_{\text{input}} = \frac{\left(\sum_i c_i^2 \sigma_i^2\right)^2}{\sum_i \frac{(c_i^2 \sigma_i^2)^2}{\nu_i}}$$
 
-where the summation runs over all measured variables (both independent and dependent) across all data points and layers. `c_i` are the model sensitivities (`∂f/∂x` for independent variables, 1 for dependent variables), `σ_i²` are the input variances, and `ν_i` are per-variable DOF (user-specified or auto-inferred).
+where the summation runs over all variables with finite DOF and their corresponding model sensitivities, accumulated across all data points and layers. `c_i` are the model sensitivities (`∂f/∂x` for independent variables, 1 for dependent variables), `σ_i²` are the input variances (clamped to `MIN_VARIANCE`), and `ν_i` are per-variable DOF (user-specified or auto-inferred as `n−1` for Type A). Variables without explicit DOF metadata do not contribute to the W-S denominator and are excluded from the summation.
 
 **Fit-side DOF**: `ν_fit = N·L − P_eff` (the residual degrees of freedom).
 
