@@ -258,4 +258,36 @@ mod tests {
             Err(err) => assert!(err.contains("unique ignoring case")),
         }
     }
+    #[test]
+    fn test_alphanumeric_variable_names() {
+        let result = calculate_uncertainty(
+            "a1+b1".to_owned(),
+            vec![
+                CalculatorVariable {
+                    name: "a1".to_owned(),
+                    value: 5.0,
+                    uncertainty: 0.3,
+                },
+                CalculatorVariable {
+                    name: "b1".to_owned(),
+                    value: 4.0,
+                    uncertainty: 0.2,
+                },
+            ],
+        )
+        .unwrap();
+
+        assert!(
+            (result.value - 9.0).abs() < 1e-9,
+            "value wrong: {}",
+            result.value
+        );
+        let expected_unc = 0.3_f64.hypot(0.2_f64);
+        assert!(
+            (result.uncertainty - expected_unc).abs() < 1e-9,
+            "uncertainty wrong: {}, expected: {}",
+            result.uncertainty,
+            expected_unc
+        );
+    }
 }

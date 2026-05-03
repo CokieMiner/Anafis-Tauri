@@ -17,12 +17,12 @@ name = "anafis_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.6", features = [] }
+tauri-build = { version = "2.6.0", features = [] }
 
 [dependencies]
 # ===== CORE FRAMEWORK =====
-tauri = { version = "2.10.3", features = [] }
-tauri-plugin-dialog = "2.7.0"
+tauri = { version = "2.11.0", features = [] }
+tauri-plugin-dialog = "2.7.1"
 
 # ===== SERIALIZATION =====
 serde = { version = "1.0.228", features = ["derive"] }
@@ -51,8 +51,8 @@ flate2 = "1.1.9"
 encoding_rs = "0.8.35"
 
 # ===== DATA PROCESSING =====
-parquet = { version = "58.1.0", features = ["arrow"] }
-arrow = { version = "58.1.0", features = ["prettyprint"] }
+parquet = { version = "58.2.0", features = ["arrow"] }
+arrow = { version = "58.2.0", features = ["prettyprint"] }
 
 # ===== DATABASE =====
 rusqlite = { version = "0.39.0", features = ["bundled", "serde_json"] }

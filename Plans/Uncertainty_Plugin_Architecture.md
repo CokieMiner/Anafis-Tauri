@@ -66,18 +66,17 @@ For dynamic, auto-updating uncertainty bounds, we register a custom function `=U
 ### Standard Error Propagation (AST)
 When the user types `=A1*B1`:
 1. The formula engine computes the nominal math.
-2. A calculation listener sends the AST to the Rust backend (Tauri IPC).
-3. Rust calculates the propagated error using partial derivatives.
-4. The result cell is updated with `custom.upperSource = 'propagated'` (and `lowerSource = 'propagated'` if asymmetric).
+2. The propagation is registered as a feature in the `IFeatureCalculationManagerService`, with the source uncertainty cells set as the dependency range.
+3. During the recalculation lifecycle, the `getDirtyData` method sends the AST to the Rust backend (Tauri IPC).
+4. Rust calculates the propagated error using partial derivatives.
+5. The result cell is updated with `custom.upperSource = 'propagated'` (and `lowerSource = 'propagated'` if asymmetric).
 
 **Statistical Limitations & CAS Compatibility:** 
+- **Web Worker Boundary:** Univer executes formulas in a Web Worker by default, but Tauri IPC is only available in the main thread. The propagation handler (and its Rust IPC calls) must therefore be executed on the main thread, rather than inside the worker.
 - **Correlated Inputs:** The propagation engine currently assumes statistical independence between variables. Formulas referencing the same cell multiple times (e.g., `=A1+A1`) or aggregations (`=SUM(A1:A10)`) where inputs are correlated will incorrectly sum errors in quadrature (underestimating the true error), currently without a warning to the user.
 - **Asymmetric Multi-Variable Propagation:** The parallel upper/lower chains method may be mathematically incorrect for general multi-variable or non-monotonic functions, as the maximum deviation could occur at mixed combinations of bounds.
 - **Non-Differentiable Functions:** Functions like `=IF()` or `=ABS()` lack a defined analytical derivative at their discontinuities. 
 - **Fallback Behavior:** If an AST contains functions that are non-differentiable or generally incompatible with the Rust CAS (Computer Algebra System), the engine will not perform propagation (or will attempt to transform it into a compatible form).
-
-### Manual Overrides on Formulas
-To inject manual uncertainty into a formula, the `|` syntax (`=A1*B1 | +- 0.5`) may be rejected by Univer's initial formula parser. Instead, we provide the `=UNCERT_MANUAL(formula, upperBound, [lowerBound])` function. This explicitly sets `upperSource = 'manual'` (and `lowerSource = 'manual'` if a third argument is provided), ignoring automatic propagation from dependencies.
 
 ---
 
@@ -86,7 +85,7 @@ To inject manual uncertainty into a formula, the `|` syntax (`=A1*B1 | +- 0.5`) 
 When a user double-clicks an uncertainty cell:
 1. `SheetInterceptorService` intercepts the `BEFORE_CELL_EDIT` hook.
 2. For simple values, the plugin reconstructs the string by appending the delimiter (e.g., `5 ± 0.1`).
-3. For formulas with manual uncertainty, the plugin reconstructs the `=UNCERT_MANUAL(...)` wrapper to ensure valid syntax.
+3. For formulas with manual uncertainty, the plugin reconstructs the `=UNCERT(...)` wrapper to ensure valid syntax.
 4. The user edits this string naturally in the text cursor box.
 5. On Enter, the Input Interceptor (Step 2) catches the string (or formula parser catches the function) and commits the split values.
 
@@ -97,6 +96,18 @@ When a user double-clicks an uncertainty cell:
 A global UI Tool scales the numeric uncertainty column-wide via a Student's t-distribution calculator.
 - **Direct Overwrite:** The scaling operation is a destructive edit that directly multiplies and overwrites the `upperBound` (and `lowerBound` if present) with the calculated t-factor. It functions similarly to a "Paste Special -> Multiply" action in traditional spreadsheets.
 - **Reversion & Workflow Limitation:** If a user wishes to change the confidence level again (e.g., from 95% to 99%), they must rely on the native Undo (Ctrl+Z) functionality to revert to the 1-sigma baseline. Because Undo operates sequentially, applying confidence scaling should ideally be the **final operation before export**, as any intermediate data entry between scaling steps would be lost upon reverting.
+- **Sync:** The format string is explicitly regenerated after scaling.
+
+---
+
+## 6. Export Serialization
+
+When exporting the workbook out of the native `.anafispread` ecosystem (which is lossless for `custom` metadata):
+- **CSV Export:** Exposes user-configurable options:
+  - *Option A (Scientific standard):* Split into two columns `value` and `uncertainty` (easiest for Pandas/Numpy).
+  - *Option B (Concise GUM):* Single column as `5.0(1)`.
+  - *Option C (Literal String):* Single column as `5 ± 0.1`.
+o operates sequentially, applying confidence scaling should ideally be the **final operation before export**, as any intermediate data entry between scaling steps would be lost upon reverting.
 - **Sync:** The format string is explicitly regenerated after scaling.
 
 ---

@@ -12,6 +12,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "experimentalDecorators": true,
     /* Performance optimizations */
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",

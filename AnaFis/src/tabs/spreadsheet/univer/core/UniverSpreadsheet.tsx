@@ -58,6 +58,7 @@ import '@univerjs/engine-formula/facade';
 import { ICommandService } from '@univerjs/core';
 import { IRegisterFunctionService } from '@univerjs/sheets-formula';
 import { registerCustomFunctions } from '@/tabs/spreadsheet/univer/index';
+// import { UncertaintyPlugin } from '@/tabs/spreadsheet/univer/plugins/uncertainty/UncertaintyPlugin';
 import { rangeToA1 } from '@/tabs/spreadsheet/univer/utils/univerUtils';
 
 interface Props {
@@ -132,7 +133,7 @@ const UniverSpreadsheet = ({
               sheetsHyperLinkEnUs
             ),
           },
-          logLevel: LogLevel.VERBOSE,
+          logLevel: LogLevel.WARN,
           presets: [
             UniverSheetsCorePreset({
               container: containerId,
@@ -149,6 +150,7 @@ const UniverSpreadsheet = ({
         });
 
         univerRef.current = univer;
+        // univer.registerPlugin(UncertaintyPlugin); // TODO: re-enable after stabilization
         univer.createUnit(UniverInstanceType.UNIVER_SHEET, initialData);
 
         // Formula Engine Setup
@@ -157,6 +159,8 @@ const UniverSpreadsheet = ({
 
         // Global Command Listener for robust Cell Changes across all sheets
         const commandService = injector.get(ICommandService);
+        let lastSelectionA1: string | null = null;
+
         const commandDisposable = commandService.onCommandExecuted(
           (command: ICommandInfo) => {
             if (isDisposed) return;
@@ -168,7 +172,11 @@ const UniverSpreadsheet = ({
               };
               const range = params?.selections?.[0]?.range;
               if (range) {
-                callbacks.current.onSelectionChange?.(rangeToA1(range));
+                const a1 = rangeToA1(range);
+                if (a1 !== lastSelectionA1) {
+                  lastSelectionA1 = a1;
+                  callbacks.current.onSelectionChange?.(a1);
+                }
               }
             }
           }

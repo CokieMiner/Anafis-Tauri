@@ -173,4 +173,12 @@ export function registerCustomFunctions(svc: IRegisterFunctionService) {
     'Lambert W function: W(x) * exp(W(x)) = x'
   );
   reg1(svc, 'CBRT', 'math_cbrt', 'Cube root: cbrt(x) = x^(1/3)');
+
+  // ── Uncertainty Plugin ──────────────────────────────────────────────────
+  //svc.registerAsyncFunction({
+  //  name: 'UNCERT',
+  //  func: async (...args: unknown[]) => num(args, 0), // Returns nominal; metadata handled by propagation controller
+  //  description:
+  //    'Manual uncertainty override: UNCERT(value, upperBound, [lowerBound])',
+  //});
 }
