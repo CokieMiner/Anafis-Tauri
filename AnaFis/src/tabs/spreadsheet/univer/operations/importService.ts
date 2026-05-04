@@ -558,6 +558,7 @@ class TransactionalImportManager {
         s?: unknown;
         t?: unknown;
         p?: unknown;
+        custom?: unknown;
       }
       interface ImportMergeDataItem {
         startRow: number;

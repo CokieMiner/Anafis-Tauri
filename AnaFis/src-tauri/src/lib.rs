@@ -27,7 +27,10 @@ use crate::import::{get_file_metadata, import_anafis_spread_direct, import_sprea
 use crate::scientific::curve_fitting::commands as curve_commands;
 use crate::scientific::math_functions as math_commands;
 use crate::scientific::uncertainty_propagation::calculator as uncertainty_calc;
-use crate::scientific::uncertainty_propagation::generate_uncertainty_formulas;
+use crate::scientific::uncertainty_propagation::{
+    convert_confidence_to_sigma, convert_sigma_to_confidence,
+    generate_uncertainty_formulas,
+};
 use crate::unit_conversion::commands as unit_commands;
 use crate::utils::file_operations as file_ops;
 use crate::utils::{init_logging, log_info};
@@ -60,6 +63,8 @@ pub fn run() {
             uncertainty_calc::calculate_uncertainty,
             uncertainty_calc::generate_latex,
             generate_uncertainty_formulas,
+            convert_confidence_to_sigma,
+            convert_sigma_to_confidence,
             // Math Function Commands (pre-compiled symb_anafis evaluators)
             // Only functions NOT natively supported by Univer
             math_commands::math_asec,

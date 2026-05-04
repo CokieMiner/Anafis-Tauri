@@ -25,15 +25,27 @@ export class UncertaintyInputController extends Disposable {
   }
 
   private _init(): void {
-    // Intercept SetRangeValuesCommand to intercept data entry
+    // Intercept SetRangeValuesCommand BEFORE execution to mutate the params
+    // inline.  Although the CommandListener type declares commandInfo as
+    // Readonly<ICommandInfo>, at runtime the same object reference is passed
+    // to the command handler — nested mutations to params.value therefore
+    // take effect.  This is the only hook that allows injecting uncertainty
+    // metadata into the same Undo/Redo mutation as the user's data entry.
     this.disposeWithMe(
       this._commandService.beforeCommandExecuted((command, _options) => {
         if (command.id !== SetRangeValuesCommand.id) {
           return;
         }
 
-        const params = command.params as ISetRangeValuesCommandParams;
+        const params = command.params as ISetRangeValuesCommandParams & {
+          _skipCustomCleanup?: boolean;
+        };
         if (!params?.value) return;
+
+        // Imports, propagation writes, and undo/redo restores carry their own
+        // custom metadata alongside the value.  Skip the parser and clearing
+        // logic entirely — the incoming data is authoritative.
+        if (params._skipCustomCleanup) return;
 
         const value = params.value;
         const unitId = params.unitId ?? '';
@@ -132,6 +144,8 @@ export class UncertaintyInputController extends Disposable {
 
     // If parsing fails (e.g. user typed a plain string / number) or the cell
     // was cleared entirely, ensure we clear any existing uncertainty.
+    // (Import/propagation writes are already skipped at the command level
+    // via _skipCustomCleanup — this path only runs for genuine user input.)
     if (!isUncertaintyParsed) {
       if (!cell.custom) {
         cell.custom = { uncertainty: null };

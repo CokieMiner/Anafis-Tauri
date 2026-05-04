@@ -175,10 +175,17 @@ export function registerCustomFunctions(svc: IRegisterFunctionService) {
   reg1(svc, 'CBRT', 'math_cbrt', 'Cube root: cbrt(x) = x^(1/3)');
 
   // ── Uncertainty Plugin ──────────────────────────────────────────────────
-  //svc.registerAsyncFunction({
-  //  name: 'UNCERT',
-  //  func: async (...args: unknown[]) => num(args, 0), // Returns nominal; metadata handled by propagation controller
-  //  description:
-  //    'Manual uncertainty override: UNCERT(value, upperBound, [lowerBound])',
-  //});
+  svc.registerAsyncFunction({
+    name: 'UNCERT',
+    func: async (...args: unknown[]) => {
+      // Access all arguments so the formula engine registers dependencies
+      // on the uncertainty bound cells, not just the nominal value cell.
+      // Without this, =UNCERT(A1, B2) would not re-evaluate when B2 changes.
+      void args[1];
+      void args[2];
+      return num(args, 0);
+    },
+    description:
+      'Manual uncertainty override: UNCERT(value, upperBound, [lowerBound])',
+  });
 }

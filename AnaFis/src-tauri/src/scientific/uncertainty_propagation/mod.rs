@@ -83,6 +83,38 @@ pub fn generate_uncertainty_formulas(
     }
 }
 
+/// Convert a confidence percentage to its corresponding sigma (z-score)
+/// using the two-sided normal distribution.
+///
+/// Example: 95% → 1.96 sigma
+///
+/// # Errors
+/// Returns an error message if the confidence level is not in [0, 100].
+#[tauri::command]
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
+pub fn convert_confidence_to_sigma(confidence_percent: f64) -> Result<f64, String> {
+    confidence::confidence_to_sigma(confidence_percent).map_err(|e| e.to_string())
+}
+
+/// Convert a sigma value (z-score) to its corresponding two-sided
+/// confidence percentage using the normal distribution.
+///
+/// Example: 1.96 → ~95%
+///
+/// # Errors
+/// Returns an error message if sigma is not positive or finite.
+#[tauri::command]
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "Tauri commands require owned types for arguments"
+)]
+pub fn convert_sigma_to_confidence(sigma: f64) -> Result<f64, String> {
+    confidence::sigma_to_confidence(sigma).map_err(|e| e.to_string())
+}
+
 fn generate_uncertainty_formulas_inner(
     variables: &[Variable],
     formula: &str,

@@ -24,7 +24,9 @@ import {
   type IInsertSheetCommandParams,
   InsertSheetCommand,
   type ISetRangeValuesCommandParams,
+  type ISetRangeValuesMutationParams,
   SetRangeValuesCommand,
+  SetRangeValuesMutation,
 } from '@univerjs/sheets';
 import type { UncertaintyMetadata } from '@/tabs/spreadsheet/univer/plugins/uncertainty/types';
 
@@ -40,11 +42,289 @@ interface PropagationTask {
   dirtyData: IFormulaDirtyData;
 }
 
+const KNOWN_FUNCTION_NAMES = new Set([
+  'ABS',
+  'ACOS',
+  'ACOSH',
+  'ACOT',
+  'ACOTH',
+  'AND',
+  'ARABIC',
+  'ASIN',
+  'ASINH',
+  'ATAN',
+  'ATAN2',
+  'ATANH',
+  'AVEDEV',
+  'AVERAGE',
+  'AVERAGEA',
+  'AVERAGEIF',
+  'AVERAGEIFS',
+  'CEILING',
+  'CHAR',
+  'CHOOSE',
+  'CLEAN',
+  'CODE',
+  'COLUMN',
+  'COLUMNS',
+  'COMBIN',
+  'COMBINA',
+  'CONCAT',
+  'CONCATENATE',
+  'CONFIDENCE',
+  'CORREL',
+  'COS',
+  'COSH',
+  'COT',
+  'COTH',
+  'COUNT',
+  'COUNTA',
+  'COUNTBLANK',
+  'COUNTIF',
+  'COUNTIFS',
+  'COVAR',
+  'CSC',
+  'CSCH',
+  'DATE',
+  'DATEDIF',
+  'DAY',
+  'DAYS',
+  'DDB',
+  'DECIMAL',
+  'DEGREES',
+  'DELTA',
+  'DEVSQ',
+  'DOLLAR',
+  'EDATE',
+  'EOMONTH',
+  'ERF',
+  'ERFC',
+  'EVEN',
+  'EXACT',
+  'EXP',
+  'EXPONDIST',
+  'FACT',
+  'FACTDOUBLE',
+  'FALSE',
+  'FIND',
+  'FINV',
+  'FISHER',
+  'FISHERINV',
+  'FIXED',
+  'FLOOR',
+  'FORECAST',
+  'FV',
+  'GCD',
+  'GEOMEAN',
+  'GROWTH',
+  'HARMEAN',
+  'HLOOKUP',
+  'HOUR',
+  'HYPERLINK',
+  'IF',
+  'IFERROR',
+  'IFNA',
+  'IFS',
+  'IMAGINARY',
+  'IMREAL',
+  'INDEX',
+  'INDIRECT',
+  'INT',
+  'INTERCEPT',
+  'IRR',
+  'ISBLANK',
+  'ISERR',
+  'ISERROR',
+  'ISEVEN',
+  'ISLOGICAL',
+  'ISNA',
+  'ISNONTEXT',
+  'ISNUMBER',
+  'ISODD',
+  'ISREF',
+  'ISTEXT',
+  'KURT',
+  'LARGE',
+  'LCM',
+  'LEFT',
+  'LEN',
+  'LINEST',
+  'LN',
+  'LOG',
+  'LOG10',
+  'LOGEST',
+  'LOGINV',
+  'LOGNORMDIST',
+  'LOOKUP',
+  'LOWER',
+  'MATCH',
+  'MAX',
+  'MAXA',
+  'MEDIAN',
+  'MID',
+  'MIN',
+  'MINA',
+  'MINUTE',
+  'MIRR',
+  'MOD',
+  'MODE',
+  'MONTH',
+  'MROUND',
+  'MULTINOMIAL',
+  'N',
+  'NA',
+  'NEGBINOMDIST',
+  'NORMDIST',
+  'NORMINV',
+  'NORMSDIST',
+  'NORMSINV',
+  'NOT',
+  'NOW',
+  'NPER',
+  'NPV',
+  'ODD',
+  'OFFSET',
+  'OR',
+  'PEARSON',
+  'PERCENTILE',
+  'PERCENTRANK',
+  'PERMUT',
+  'PI',
+  'PMT',
+  'POISSON',
+  'POWER',
+  'PPMT',
+  'PROB',
+  'PRODUCT',
+  'PROPER',
+  'PV',
+  'QUARTILE',
+  'QUOTIENT',
+  'RADIANS',
+  'RAND',
+  'RANK',
+  'RATE',
+  'REPLACE',
+  'REPT',
+  'RIGHT',
+  'ROMAN',
+  'ROUND',
+  'ROUNDDOWN',
+  'ROUNDUP',
+  'ROW',
+  'ROWS',
+  'RSQ',
+  'SEARCH',
+  'SEC',
+  'SECH',
+  'SECOND',
+  'SIGN',
+  'SIN',
+  'SINH',
+  'SKEW',
+  'SLN',
+  'SLOPE',
+  'SMALL',
+  'SQRT',
+  'STANDARDIZE',
+  'STDEV',
+  'STDEVA',
+  'STDEVP',
+  'STDEVPA',
+  'STEYX',
+  'SUBSTITUTE',
+  'SUBTOTAL',
+  'SUM',
+  'SUMIF',
+  'SUMIFS',
+  'SUMPRODUCT',
+  'SUMSQ',
+  'SUMX2MY2',
+  'SUMX2PY2',
+  'SUMXMY2',
+  'SWITCH',
+  'SYD',
+  'T',
+  'TAN',
+  'TANH',
+  'TBILLEQ',
+  'TBILLPRICE',
+  'TBILLYIELD',
+  'TDIST',
+  'TEXT',
+  'TEXTJOIN',
+  'TIME',
+  'TINV',
+  'TODAY',
+  'TRANSPOSE',
+  'TREND',
+  'TRIM',
+  'TRIMMEAN',
+  'TRUE',
+  'TRUNC',
+  'TTEST',
+  'TYPE',
+  'UPPER',
+  'VALUE',
+  'VAR',
+  'VARA',
+  'VARP',
+  'VARPA',
+  'VDB',
+  'VLOOKUP',
+  'WEEKDAY',
+  'WEIBULL',
+  'XIRR',
+  'XNPV',
+  'XOR',
+  'YEAR',
+  'E',
+  'EQ',
+  'GE',
+  'GT',
+  'LE',
+  'LT',
+  'NE',
+  'UNICODE',
+  'UNICHAR',
+  'LAMBDA',
+  'LET',
+  'BYROW',
+  'BYCOL',
+  'MAKEARRAY',
+  'MAP',
+  'REDUCE',
+  'SCAN',
+  'SORT',
+  'SORTBY',
+  'FILTER',
+  'UNIQUE',
+  'SEQUENCE',
+  'RANDARRAY',
+  'XLOOKUP',
+  'XMATCH',
+  'TOCOL',
+  'TOROW',
+  'WRAPCOLS',
+  'WRAPROWS',
+  'CHOOSECOLS',
+  'CHOOSEROWS',
+  'DROP',
+  'EXPAND',
+  'TAKE',
+  'HSTACK',
+  'VSTACK',
+]);
+
+const MAX_FORMULA_EVALUATION_WAIT_MS = 3000;
+const FORMULA_POLL_INTERVAL_MS = 15;
+
 export class UncertaintyPropagationController extends Disposable {
   private _dependencyRangesBySheet: Map<string, IUnitRange[]> = new Map();
   private _isPropagating = false;
   private _propagationQueue: PropagationTask[] = [];
   private _isProcessingQueue = false;
+  private _activeProcessingSheets = new Set<string>();
 
   constructor(
     private readonly _featureCalculationManagerService: IFeatureCalculationManagerService,
@@ -112,6 +392,7 @@ export class UncertaintyPropagationController extends Disposable {
 
           const value = params.value;
           const formulaCells: Array<{ r: number; c: number; f: string }> = [];
+          const staleMetadataCells: Array<{ r: number; c: number }> = [];
 
           if (isICellData(value)) {
             if (params.range) {
@@ -128,6 +409,20 @@ export class UncertaintyPropagationController extends Disposable {
                   r: params.range.startRow,
                   c: params.range.startColumn,
                   f: value.f,
+                });
+              } else if (
+                value.custom &&
+                (value.custom as Record<string, unknown>).uncertainty &&
+                (
+                  (value.custom as Record<string, unknown>)
+                    .uncertainty as UncertaintyMetadata
+                ).upperSource === 'propagated'
+              ) {
+                // Bug 3: Formula was replaced with a non-formula value but
+                // propagated uncertainty metadata hasn't been cleared yet.
+                staleMetadataCells.push({
+                  r: params.range.startRow,
+                  c: params.range.startColumn,
                 });
               }
             }
@@ -154,6 +449,18 @@ export class UncertaintyPropagationController extends Disposable {
                       c: startCol + c,
                       f: cell.f,
                     });
+                  } else if (
+                    cell.custom &&
+                    (cell.custom as Record<string, unknown>).uncertainty &&
+                    (
+                      (cell.custom as Record<string, unknown>)
+                        .uncertainty as UncertaintyMetadata
+                    ).upperSource === 'propagated'
+                  ) {
+                    staleMetadataCells.push({
+                      r: startRow + r,
+                      c: startCol + c,
+                    });
                   }
                 }
               }
@@ -170,10 +477,49 @@ export class UncertaintyPropagationController extends Disposable {
                   this._updateDependency(unitId, subUnitId, r, c, cell, ranges);
                   if (cell.f) {
                     formulaCells.push({ r, c, f: cell.f });
+                  } else if (
+                    cell.custom &&
+                    (cell.custom as Record<string, unknown>).uncertainty &&
+                    (
+                      (cell.custom as Record<string, unknown>)
+                        .uncertainty as UncertaintyMetadata
+                    ).upperSource === 'propagated'
+                  ) {
+                    staleMetadataCells.push({ r, c });
                   }
                 }
               }
             }
+          }
+
+          // Bug 3: Clean up stale propagated uncertainty metadata on cells
+          // that no longer have a formula (e.g. formula replaced by plain value).
+          if (staleMetadataCells.length > 0) {
+            void (async () => {
+              this._isPropagating = true;
+              try {
+                const cleanupMutations: Record<
+                  string,
+                  Record<string, ICellData>
+                > = {};
+                for (const { r, c } of staleMetadataCells) {
+                  if (!cleanupMutations[r]) cleanupMutations[r] = {};
+                  cleanupMutations[r][c] = {
+                    custom: { uncertainty: null },
+                  };
+                }
+                await this._commandService.executeCommand(
+                  SetRangeValuesCommand.id,
+                  {
+                    unitId,
+                    subUnitId,
+                    value: cleanupMutations,
+                  } as ISetRangeValuesCommandParams
+                );
+              } finally {
+                this._isPropagating = false;
+              }
+            })();
           }
 
           // Trigger propagation for newly created/modified formula cells.
@@ -182,9 +528,180 @@ export class UncertaintyPropagationController extends Disposable {
           if (formulaCells.length > 0) {
             void this._handleFormulaCreation(unitId, subUnitId, formulaCells);
           }
+
+          // Enqueue propagation for affected formulas on this sheet so that
+          // UNCERT metadata is re-parsed when the uncertainty arguments' cells
+          // change.  The formula engine tracks dependencies on ALL args, but
+          // our feature's getDirtyData only fires for cells in dependencyRanges.
+          // UNCERT's uncertainty args may reference plain-number cells not in
+          // those ranges, yet we must re-parse the UNCERT metadata when they
+          // change.  Enqueuing here bridges that gap.
+          const dirtyRanges = this._buildDirtyRanges(
+            value,
+            params.range,
+            unitId,
+            subUnitId
+          );
+          if (dirtyRanges.length > 0) {
+            this._enqueuePropagation(unitId, subUnitId, {
+              forceCalculation: false,
+              dirtyRanges,
+              dirtyNameMap: {},
+              dirtyDefinedNameMap: {},
+              dirtyUnitFeatureMap: {},
+              dirtyUnitOtherFormulaMap: {},
+              clearDependencyTreeCache: {},
+            });
+          }
         }
       })
     );
+
+    // 4. Auto-fill / formula engine result apply — these dispatch
+    // SetRangeValuesMutation directly (bypassing SetRangeValuesCommand),
+    // so our command listener never fires.  We catch formula cells from
+    // the mutation and trigger propagation + dependency updates here.
+    this.disposeWithMe(
+      this._commandService.onCommandExecuted((command: ICommandInfo) => {
+        if (this._isPropagating) return;
+
+        if (command.id === SetRangeValuesMutation.id) {
+          const params = command.params as ISetRangeValuesMutationParams;
+          const cellValue = params.cellValue;
+          if (!cellValue) return;
+
+          const unitId = params.unitId || '';
+          const subUnitId = params.subUnitId || '';
+          const ranges = this._dependencyRangesBySheet.get(subUnitId);
+          if (!ranges) return;
+
+          const formulaCells: Array<{ r: number; c: number; f: string }> = [];
+          const dirtyRanges: IUnitRange[] = [];
+
+          for (const rStr in cellValue) {
+            const r = parseInt(rStr, 10);
+            if (Number.isNaN(r)) continue;
+            const row = cellValue[rStr];
+            if (!row) continue;
+            for (const cStr in row) {
+              const c = parseInt(cStr, 10);
+              if (Number.isNaN(c)) continue;
+              const cell = row[cStr];
+              if (!cell) continue;
+
+              // Keep dependency ranges in sync when cells are modified
+              // via mutations (auto-fill, formula engine results, etc.)
+              this._updateDependency(unitId, subUnitId, r, c, cell, ranges);
+
+              // Formula engine writes results (v only) through mutations —
+              // those have no f, so they're naturally skipped here.
+              if (cell.f) {
+                formulaCells.push({ r, c, f: cell.f });
+              }
+
+              dirtyRanges.push({
+                unitId,
+                sheetId: subUnitId,
+                range: {
+                  startRow: r,
+                  endRow: r,
+                  startColumn: c,
+                  endColumn: c,
+                },
+              });
+            }
+          }
+
+          if (formulaCells.length > 0) {
+            void this._handleFormulaCreation(unitId, subUnitId, formulaCells);
+          }
+
+          if (dirtyRanges.length > 0) {
+            this._enqueuePropagation(unitId, subUnitId, {
+              forceCalculation: false,
+              dirtyRanges,
+              dirtyNameMap: {},
+              dirtyDefinedNameMap: {},
+              dirtyUnitFeatureMap: {},
+              dirtyUnitOtherFormulaMap: {},
+              clearDependencyTreeCache: {},
+            });
+          }
+        }
+      })
+    );
+  }
+
+  /** Build IUnitRange[] from a SetRangeValuesCommand value shape. */
+  private _buildDirtyRanges(
+    value: ISetRangeValuesCommandParams['value'],
+    baseRange: ISetRangeValuesCommandParams['range'],
+    unitId: string,
+    subUnitId: string
+  ): IUnitRange[] {
+    if (isICellData(value)) {
+      return baseRange
+        ? [{ unitId, sheetId: subUnitId, range: { ...baseRange } }]
+        : [];
+    }
+
+    if (Array.isArray(value) && baseRange) {
+      const maxR = baseRange.startRow + Math.max(0, value.length - 1);
+      const maxC =
+        baseRange.startColumn +
+        Math.max(0, ...value.filter(Boolean).map((r) => r.length)) -
+        1;
+      return [
+        {
+          unitId,
+          sheetId: subUnitId,
+          range: {
+            startRow: baseRange.startRow,
+            endRow: maxR,
+            startColumn: baseRange.startColumn,
+            endColumn: Math.max(baseRange.startColumn, maxC),
+          },
+        },
+      ];
+    }
+
+    // Object matrix — compute bounding box from keys
+    let minR = Number.POSITIVE_INFINITY;
+    let maxR = Number.NEGATIVE_INFINITY;
+    let minC = Number.POSITIVE_INFINITY;
+    let maxC = Number.NEGATIVE_INFINITY;
+
+    for (const rStr in value) {
+      const r = parseInt(rStr, 10);
+      if (Number.isNaN(r)) continue;
+      minR = Math.min(minR, r);
+      maxR = Math.max(maxR, r);
+      const row = value[rStr];
+      if (!row) continue;
+      for (const cStr in row) {
+        const c = parseInt(cStr, 10);
+        if (Number.isNaN(c)) continue;
+        minC = Math.min(minC, c);
+        maxC = Math.max(maxC, c);
+      }
+    }
+
+    if (Number.isFinite(minR)) {
+      return [
+        {
+          unitId,
+          sheetId: subUnitId,
+          range: {
+            startRow: minR,
+            endRow: maxR,
+            startColumn: minC,
+            endColumn: maxC,
+          },
+        },
+      ];
+    }
+
+    return [];
   }
 
   private _updateDependency(
@@ -280,8 +797,17 @@ export class UncertaintyPropagationController extends Disposable {
     subUnitId: string,
     dirtyData: IFormulaDirtyData
   ) {
-    // DEDUPLICATION: If a task for the same sheet is already in the queue,
-    // it will be replaced because the newer task will process the most recent sheet state anyway.
+    // DEDUPLICATION: If a task for the same sheet is already queued OR currently
+    // being processed, replace it — the newer task carries more up-to-date state.
+    const sheetKey = `${unitId}|${subUnitId}`;
+
+    if (this._activeProcessingSheets.has(sheetKey)) {
+      // A task for this sheet is being processed right now; push a replacement
+      // that will be picked up on the next loop iteration.
+      this._propagationQueue.push({ unitId, subUnitId, dirtyData });
+      return;
+    }
+
     const existingIdx = this._propagationQueue.findIndex(
       (task) => task.unitId === unitId && task.subUnitId === subUnitId
     );
@@ -303,16 +829,42 @@ export class UncertaintyPropagationController extends Disposable {
       while (this._propagationQueue.length > 0) {
         const task = this._propagationQueue.shift();
         if (task) {
-          await this._schedulePropagation(
-            task.unitId,
-            task.subUnitId,
-            task.dirtyData
-          );
+          const sheetKey = `${task.unitId}|${task.subUnitId}`;
+          this._activeProcessingSheets.add(sheetKey);
+          try {
+            await this._schedulePropagation(
+              task.unitId,
+              task.subUnitId,
+              task.dirtyData
+            );
+          } finally {
+            this._activeProcessingSheets.delete(sheetKey);
+          }
         }
       }
     } finally {
       this._isProcessingQueue = false;
     }
+  }
+
+  /**
+   * Poll the cell matrix until the formula engine has written the nominal
+   * value for the given cell (v becomes a number), or until the timeout.
+   * Returns the cell value or null on timeout.
+   */
+  private async _waitForCellValue(
+    worksheet: Worksheet,
+    row: number,
+    col: number
+  ): Promise<Nullable<ICellData>> {
+    const started = Date.now();
+    let cell: Nullable<ICellData> = null;
+    while (Date.now() - started < MAX_FORMULA_EVALUATION_WAIT_MS) {
+      cell = worksheet.getCellMatrix().getValue(row, col);
+      if (typeof cell?.v === 'number') return cell;
+      await new Promise<void>((r) => setTimeout(r, FORMULA_POLL_INTERVAL_MS));
+    }
+    return cell;
   }
 
   private async _schedulePropagation(
@@ -378,26 +930,18 @@ export class UncertaintyPropagationController extends Disposable {
 
     if (affectedFormulas.length === 0) return;
 
-    // Yield to the microtask queue so the formula engine's web worker
-    // can flush its results into the cell matrix before we read.
-    await new Promise<void>((resolve) => setTimeout(resolve, 50));
-
     // 2. Process formulas
     for (const { r, c, f } of affectedFormulas) {
-      // Re-read cell to ensure we have the latest evaluated nominal value.
-      const freshWorksheet = workbook.getSheetBySheetId(subUnitId);
-      const freshMatrix = freshWorksheet?.getCellMatrix();
-      const cell = freshMatrix?.getValue(r, c);
-
-      const custom = cell?.custom as Record<string, unknown> | undefined;
-      const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
       const formulaClean = f.replace(/^=/, '').trim();
 
       // ── Handle =UNCERT(expression, uncertainty) ──────────────────────
       const uncertMeta = this._parseUncertFormula(formulaClean, worksheet);
       if (uncertMeta) {
-        // If it's an UNCERT formula, we update the metadata from the formula string
-        // (which might reference a cell like B2 that just changed).
+        // Wait for the formula engine to write the nominal value before
+        // applying metadata and triggering the format controller.
+        const cell = await this._waitForCellValue(worksheet, r, c);
+        const custom = cell?.custom as Record<string, unknown> | undefined;
+
         if (!mutations[r]) mutations[r] = {};
         mutations[r][c] = {
           v: cell?.v,
@@ -409,6 +953,11 @@ export class UncertaintyPropagationController extends Disposable {
         };
         continue;
       }
+
+      // Read cell to check for manual overrides
+      const cell = worksheet.getCellMatrix().getValue(r, c);
+      const custom = cell?.custom as Record<string, unknown> | undefined;
+      const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
 
       // Skip manual overrides
       if (metadata?.upperSource === 'manual') continue;
@@ -433,9 +982,13 @@ export class UncertaintyPropagationController extends Disposable {
           variables,
         })) as { value: number; uncertainty: number };
 
+        // Use the nominal value computed by the Rust CAS directly, rather
+        // than waiting for the formula engine's Web Worker to flush results
+        // into the cell matrix.  This avoids the unreliable setTimeout(50)
+        // race and guarantees we always have the correct nominal.
         if (!mutations[r]) mutations[r] = {};
         mutations[r][c] = {
-          v: cell?.v,
+          v: result.value,
           f,
           custom: {
             ...custom,
@@ -461,7 +1014,8 @@ export class UncertaintyPropagationController extends Disposable {
           unitId,
           subUnitId,
           value: mutations,
-        };
+          _skipCustomCleanup: true,
+        } as ISetRangeValuesCommandParams;
         await this._commandService.executeCommand(
           SetRangeValuesCommand.id,
           params
@@ -562,46 +1116,49 @@ export class UncertaintyPropagationController extends Disposable {
     const worksheet = workbook.getSheetBySheetId(subUnitId);
     if (!worksheet) return;
 
-    const cellMatrix = worksheet.getCellMatrix();
     const mutations: Record<string, Record<string, ICellData>> = {};
 
     for (const { r, c, f } of formulaCells) {
-      const cell = cellMatrix.getValue(r, c);
-      const custom = cell?.custom as Record<string, unknown> | undefined;
-      const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
-
-      // Skip cells with manual uncertainty — the user explicitly set it
-      if (metadata?.upperSource === 'manual') continue;
-
       const formulaClean = f.replace(/^=/, '').trim();
 
       // ── Handle =UNCERT(expression, uncertainty) ──────────────────────
-      const uncertMeta = this._parseUncertFormula(formulaClean, worksheet);
-      if (uncertMeta) {
-        // Yield to the formula engine so custom metadata is up-to-date.
-        await new Promise<void>((resolve) => setTimeout(resolve, 50));
-
-        // Re-read cell to get the latest custom metadata.
+      // Process UNCERT formulas BEFORE the manual-source guard because the
+      // formula string itself is the authority for the uncertainty value.
+      // Skipping would cause stale metadata to persist when the user edits
+      // an UNCERT formula or drag-fills it to adjacent cells.
+      const isUncertFormula = /^UNCERT\s*\(/i.test(formulaClean);
+      if (isUncertFormula) {
+        const cell = await this._waitForCellValue(worksheet, r, c);
         const freshWorksheet = workbook.getSheetBySheetId(subUnitId);
-        const freshMatrix = freshWorksheet?.getCellMatrix();
-        const currentCell = freshMatrix?.getValue(r, c);
+        const uncertMeta = freshWorksheet
+          ? this._parseUncertFormula(formulaClean, freshWorksheet)
+          : this._parseUncertFormula(formulaClean, worksheet);
 
-        if (!mutations[r]) mutations[r] = {};
-        mutations[r][c] = {
-          v: currentCell?.v,
-          f,
-          custom: {
-            ...(currentCell?.custom as Record<string, unknown> | undefined),
-            uncertainty: uncertMeta,
-          },
-        };
+        if (uncertMeta) {
+          if (!mutations[r]) mutations[r] = {};
+          mutations[r][c] = {
+            v: cell?.v,
+            f,
+            custom: {
+              ...(cell?.custom as Record<string, unknown> | undefined),
+              uncertainty: uncertMeta,
+            },
+          };
+        }
         continue;
       }
+
+      const cell = worksheet.getCellMatrix().getValue(r, c);
+      const custom = cell?.custom as Record<string, unknown> | undefined;
+      const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
+
+      // Skip non-UNCERT cells with manual uncertainty — the user explicitly set it
+      if (metadata?.upperSource === 'manual') continue;
 
       // ── Regular formula: propagate uncertainty via Rust CAS ──────────
       const refs = this._extractCellRefsFromFormula(formulaClean);
       if (refs.length === 0) {
-        // No cell refs → can't propagate. Clear any stale manual UNCERT metadata.
+        // No cell refs → can't propagate. Clear any stale UNCERT metadata.
         if (metadata) {
           if (!mutations[r]) mutations[r] = {};
           mutations[r][c] = {
@@ -617,7 +1174,7 @@ export class UncertaintyPropagationController extends Disposable {
       const seen = new Set<string>();
 
       for (const ref of refs) {
-        const refCell = cellMatrix.getValue(ref.row, ref.col);
+        const refCell = worksheet.getCellMatrix().getValue(ref.row, ref.col);
         if (!refCell) continue;
 
         const varName = `${this._numberToABC(ref.col)}${ref.row + 1}`;
@@ -659,21 +1216,15 @@ export class UncertaintyPropagationController extends Disposable {
           variables,
         })) as { value: number; uncertainty: number };
 
-        // Yield to the microtask queue so the formula engine's web worker
-        // can flush its results into the cell matrix before we read.
-        await new Promise<void>((resolve) => setTimeout(resolve, 50));
-
-        // Re-read cell to get the latest custom metadata.
-        const freshWorksheet = workbook.getSheetBySheetId(subUnitId);
-        const freshMatrix = freshWorksheet?.getCellMatrix();
-        const currentCell = freshMatrix?.getValue(r, c);
-
+        // Use the nominal value computed by the Rust CAS directly.
+        // This avoids waiting for the formula engine's Web Worker to flush
+        // results and removes the unreliable setTimeout(50) race.
         if (!mutations[r]) mutations[r] = {};
         mutations[r][c] = {
-          v: currentCell?.v,
+          v: result.value,
           f,
           custom: {
-            ...(currentCell?.custom as Record<string, unknown> | undefined),
+            ...custom,
             uncertainty: {
               upperBound: result.uncertainty,
               upperType: 'abs',
@@ -696,6 +1247,7 @@ export class UncertaintyPropagationController extends Disposable {
           unitId,
           subUnitId,
           value: mutations,
+          _skipCustomCleanup: true,
         } as ISetRangeValuesCommandParams);
       } finally {
         this._isPropagating = false;
@@ -717,7 +1269,14 @@ export class UncertaintyPropagationController extends Disposable {
     while (match !== null) {
       const colStr = (match[1] as string).toUpperCase();
       const rowNum = parseInt(match[2] as string, 10);
-      if (!Number.isNaN(rowNum) && rowNum > 0) {
+
+      // Bug 4: Skip known function names that the regex would misinterpret
+      // as cell references (e.g. SIN, COS, LOG, PI would match /[A-Z]+\d+/).
+      if (
+        !KNOWN_FUNCTION_NAMES.has(colStr) &&
+        !Number.isNaN(rowNum) &&
+        rowNum > 0
+      ) {
         refs.push({ col: this._ABCToNumber(colStr), row: rowNum - 1 });
       }
       match = regex.exec(formula);

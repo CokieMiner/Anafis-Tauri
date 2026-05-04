@@ -11,19 +11,22 @@ export class UncertaintyEditController extends Disposable {
   }
 
   private _init(): void {
-    // Intercept edit initialization to reconstruct the string
     this.disposeWithMe(
       this._sheetInterceptorService.writeCellInterceptor.intercept(
         BEFORE_CELL_EDIT,
         {
-          priority: 1000, // High priority to run before formula editor
+          priority: 1000,
           handler: (cell, _context, next) => {
             if (cell?.custom?.uncertainty) {
               const u = cell.custom.uncertainty as UncertaintyMetadata;
+
+              if (cell.f && /^=UNCERT\s*\(/i.test(cell.f)) {
+                return { ...cell, v: cell.f };
+              }
+
               const nominal = Number(cell.v) || 0;
               let editString = `${cell.v}`;
 
-              // Prevent appending the uncertainty multiple times if the interceptor is called more than once
               const isAlreadyFormatted =
                 typeof cell.v === 'string' &&
                 (cell.v.includes('±') ||
@@ -50,15 +53,13 @@ export class UncertaintyEditController extends Disposable {
                 }
               }
 
-              // Return directly WITHOUT calling next() — this is intentional.
-              // The reconstructed uncertainty string (e.g. "5 ± 0.1") must be
-              // presented as-is in the editor. Calling next() would pass it to
-              // downstream interceptors (formula editor, rich text) which could
-              // misinterpret the ± delimiters or re-parse the string.
-              return {
-                ...cell,
-                v: editString,
-              };
+              // Strip `custom` so the InputController treats the commit as
+              // fresh user input rather than an import write.  Known
+              // limitation: editing "5 ± 0.4" to just "5" keeps the
+              // uncertainty — Univer skips SetRangeValuesCommand when the
+              // nominal value does not change.
+              const { custom: _, ...rest } = cell;
+              return { ...rest, v: editString };
             }
 
             return next(cell);
@@ -70,7 +71,7 @@ export class UncertaintyEditController extends Disposable {
 
   private _toAbsoluteBound(
     bound: number,
-    type: UncertaintyMetadata['upperType'],
+    type: 'abs' | 'rel',
     nominal: number
   ): number {
     return type === 'rel' ? Math.abs(nominal) * bound * 0.01 : bound;

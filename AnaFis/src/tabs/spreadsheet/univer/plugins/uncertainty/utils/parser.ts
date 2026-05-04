@@ -207,6 +207,39 @@ export function parseUncertaintyInput(
   return null;
 }
 
+/**
+ * Extract the absolute uncertainty from a cell that has uncertainty metadata.
+ *
+ * Works with cells in Univer ICellData format (reads `custom.uncertainty`) or
+ * the abstract CellValue format (reads `meta.customFields.uncertainty`).
+ *
+ * Returns the absolute uncertainty value, or null if the cell has no
+ * uncertainty metadata or the stored uncertainty is not a number.
+ *
+ * @example
+ * // Cell stores 5 ± 0.1 → getUncertaintyFromCell(cell) → 0.1
+ */
+export function getUncertaintyFromCell(
+  cell: Record<string, unknown> | null | undefined
+): number | null {
+  if (!cell) return null;
+
+  const custom =
+    (cell.custom as Record<string, unknown> | undefined) ??
+    (cell as { meta?: { customFields?: Record<string, unknown> } }).meta
+      ?.customFields;
+
+  if (!custom || typeof custom !== 'object') return null;
+
+  const u = (custom as Record<string, unknown>).uncertainty as
+    | { upperBound: number; upperType: string }
+    | undefined;
+
+  if (!u || typeof u.upperBound !== 'number') return null;
+
+  return u.upperBound;
+}
+
 function normalizeUncertaintyInput(input: string): string {
   return input
     .trim()

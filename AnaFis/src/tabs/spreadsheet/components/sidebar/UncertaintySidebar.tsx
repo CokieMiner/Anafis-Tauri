@@ -16,10 +16,12 @@ import {
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 import { anafisColors } from '@/shared/theme';
+import ConfidenceConversionSection from '@/tabs/spreadsheet/components/sidebar/ConfidenceConversionSection';
 import { useUncertaintyPropagation } from '@/tabs/spreadsheet/components/sidebar/logic/useUncertaintyPropagation';
 import SidebarCard from '@/tabs/spreadsheet/components/sidebar/SidebarCard';
 import { sidebarStyles } from '@/tabs/spreadsheet/components/sidebar/utils/sidebarStyles';
 import type { UncertaintyState } from '@/tabs/spreadsheet/managers/SidebarStateManager';
+import { useSelectionContext } from '@/tabs/spreadsheet/managers/useSelectionContext';
 import { useSpreadsheetSelection } from '@/tabs/spreadsheet/managers/useSpreadsheetSelection';
 import type { SpreadsheetRef } from '@/tabs/spreadsheet/types/SpreadsheetInterface';
 import type { Variable } from '@/tabs/spreadsheet/univer/operations/uncertaintyOperations';
@@ -91,6 +93,23 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
     });
 
     const [selectedVariable, setSelectedVariable] = useState<number>(0);
+    const [currentSelection, setCurrentSelection] = useState<string>('');
+
+    // Register a handler with SelectionContext to track ALL selection changes
+    // (not just when an input is focused).  useSpreadsheetSelection guards
+    // against unfocused updates, which is fine for that hook's purpose but
+    // blocks the confidence conversion section from seeing selections.
+    const selectionContext = useSelectionContext();
+    React.useEffect(() => {
+      const handler = (cellRef: string) => {
+        setCurrentSelection(cellRef);
+        onSelectionChange?.(cellRef);
+      };
+      return selectionContext.registerHandler(
+        'data-uncertainty-sidebar-tracker',
+        handler
+      );
+    }, [selectionContext, onSelectionChange]);
 
     // Adjust selectedVariable when variables are removed
     React.useEffect(() => {
@@ -333,7 +352,14 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
           </SidebarCard>
           {/* Variable Configuration */}
           <Box
-            sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              overflowY: 'auto',
+              minHeight: 0,
+            }}
           >
             {/* Variable Details */}
             {currentVariable && (
@@ -654,6 +680,11 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
             </SidebarCard>
           </Box>
         </Box>
+
+        <ConfidenceConversionSection
+          spreadsheetRef={spreadsheetRef}
+          selection={currentSelection}
+        />
       </Box>
     );
   }

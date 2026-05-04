@@ -12,25 +12,31 @@ export {
   getSelection,
   updateCell,
 } from '@/tabs/spreadsheet/univer/operations/facadeOperations';
-
+export type {
+  ParsedUncertainty,
+  UncertaintyMetadata,
+} from '@/tabs/spreadsheet/univer/plugins/uncertainty/types';
+// Uncertainty Plugin
+export { UncertaintyPlugin } from '@/tabs/spreadsheet/univer/plugins/uncertainty/UncertaintyPlugin';
+export {
+  getUncertaintyFromCell,
+  parseUncertaintyInput,
+} from '@/tabs/spreadsheet/univer/plugins/uncertainty/utils/parser';
 // Cell reference utilities
 export {
   letterToColumn,
   parseCellRef,
   parseRange,
 } from '@/tabs/spreadsheet/univer/utils/cellUtils';
-
 // Data Conversion (Abstract ↔ Univer formats)
 export {
   convertSimpleArrayToCellValues,
   convertToUniverData,
 } from '@/tabs/spreadsheet/univer/utils/dataConversion';
-
 export {
   SpreadsheetValidationError,
   safeSpreadsheetOperation,
   safeSpreadsheetOperationSync,
 } from '@/tabs/spreadsheet/univer/utils/errors';
-
 // A1 Notation & Column Conversion
 export { determineUsedRange } from '@/tabs/spreadsheet/univer/utils/univerUtils';

@@ -58,7 +58,7 @@ import '@univerjs/engine-formula/facade';
 import { ICommandService } from '@univerjs/core';
 import { IRegisterFunctionService } from '@univerjs/sheets-formula';
 import { registerCustomFunctions } from '@/tabs/spreadsheet/univer/index';
-// import { UncertaintyPlugin } from '@/tabs/spreadsheet/univer/plugins/uncertainty/UncertaintyPlugin';
+import { UncertaintyPlugin } from '@/tabs/spreadsheet/univer/plugins/uncertainty/UncertaintyPlugin';
 import { rangeToA1 } from '@/tabs/spreadsheet/univer/utils/univerUtils';
 
 interface Props {
@@ -150,7 +150,7 @@ const UniverSpreadsheet = ({
         });
 
         univerRef.current = univer;
-        // univer.registerPlugin(UncertaintyPlugin); // TODO: re-enable after stabilization
+        univer.registerPlugin(UncertaintyPlugin); // TODO: re-enable after stabilization
         univer.createUnit(UniverInstanceType.UNIVER_SHEET, initialData);
 
         // Formula Engine Setup

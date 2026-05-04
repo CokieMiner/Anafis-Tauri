@@ -23,6 +23,7 @@ interface ImportCellData {
   s?: unknown;
   t?: unknown;
   p?: unknown;
+  custom?: unknown;
 }
 
 /**
@@ -154,7 +155,8 @@ async function unifiedBulkLoadSheetData(
     includeFormatting,
   });
 
-  // Execute bulk command
+  // Execute bulk command — mark with _preserveCustom so the uncertainty
+  // input controller skips its cleanup logic for import operations.
   await commandService.executeCommand('sheet.command.set-range-values', {
     unitId,
     subUnitId: sheetId,
@@ -165,6 +167,7 @@ async function unifiedBulkLoadSheetData(
       endColumn: maxCol + colOffset,
     },
     value,
+    _skipCustomCleanup: true,
   });
 
   // Load merge data if present
@@ -250,6 +253,12 @@ function convertMatrixTo2DArray(
         }
         if (cellData.t) {
           cellValue.t = cellData.t;
+        }
+        if (cellData.p) {
+          cellValue.p = cellData.p;
+        }
+        if (cellData.custom) {
+          cellValue.custom = cellData.custom;
         }
 
         rowData.push(cellValue);
