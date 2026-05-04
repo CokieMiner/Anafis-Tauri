@@ -1,9 +1,42 @@
 import type { ParsedUncertainty } from '@/tabs/spreadsheet/univer/plugins/uncertainty/types';
 
 // Non-capturing group for numbers to simplify outer capture groups
-const NUM_PART = /[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/;
+const NUM_PART = /[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/;
 
 const DELIMITERS = /(?:\+-|\+\/-|-\+|-?\/\+|±)/;
+
+// ── Pre-compiled regex patterns ────────────────────────────────────────
+const ASYM_REGEX_1 = new RegExp(
+  `^(${NUM_PART.source})\\s*\\+\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*-\\s*(${NUM_PART.source})(%?)$`
+);
+const ASYM_REGEX_2 = new RegExp(
+  `^(${NUM_PART.source})\\s*-\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*\\+\\s*(${NUM_PART.source})(%?)$`
+);
+const ADJACENT_ASYM_REGEX_1 = new RegExp(
+  `^(${NUM_PART.source})\\s*\\+\\s*(${NUM_PART.source})(%?)\\s*-\\s*(${NUM_PART.source})(%?)$`
+);
+const ADJACENT_ASYM_REGEX_2 = new RegExp(
+  `^(${NUM_PART.source})\\s*-\\s*(${NUM_PART.source})(%?)\\s*\\+\\s*(${NUM_PART.source})(%?)$`
+);
+const BOUNDS_ONLY_ASYM_REGEX_1 = new RegExp(
+  `^\\+\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*-\\s*(${NUM_PART.source})(%?)$`
+);
+const BOUNDS_ONLY_ASYM_REGEX_2 = new RegExp(
+  `^-\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*\\+\\s*(${NUM_PART.source})(%?)$`
+);
+const BOUNDS_ONLY_ADJACENT_REGEX_1 = new RegExp(
+  `^\\+\\s*(${NUM_PART.source})(%?)\\s*-\\s*(${NUM_PART.source})(%?)$`
+);
+const BOUNDS_ONLY_ADJACENT_REGEX_2 = new RegExp(
+  `^-\\s*(${NUM_PART.source})(%?)\\s*\\+\\s*(${NUM_PART.source})(%?)$`
+);
+const STD_REGEX = new RegExp(
+  `^(${NUM_PART.source})\\s*${DELIMITERS.source}\\s*(${NUM_PART.source})(%?)$`
+);
+const BOUNDS_ONLY_STD_REGEX = new RegExp(
+  `^${DELIMITERS.source}\\s*(${NUM_PART.source})(%?)$`
+);
+const CONCISE_REGEX = /^([-+]?\d+(?:\.\d+)?)\s*\((\d+)\)$/;
 
 export function parseUncertaintyInput(
   input: string,
@@ -12,18 +45,10 @@ export function parseUncertaintyInput(
   const str = normalizeUncertaintyInput(input);
 
   // 1. Asymmetric Bounds (+upper/-lower OR -lower/+upper)
-  const asymMatch1 = new RegExp(
-    `^(${NUM_PART.source})\\s*\\+\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*-\\s*(${NUM_PART.source})(%?)$`
-  ).exec(str);
-  const asymMatch2 = new RegExp(
-    `^(${NUM_PART.source})\\s*-\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*\\+\\s*(${NUM_PART.source})(%?)$`
-  ).exec(str);
-  const adjacentAsymMatch1 = new RegExp(
-    `^(${NUM_PART.source})\\s*\\+\\s*(${NUM_PART.source})(%?)\\s*-\\s*(${NUM_PART.source})(%?)$`
-  ).exec(str);
-  const adjacentAsymMatch2 = new RegExp(
-    `^(${NUM_PART.source})\\s*-\\s*(${NUM_PART.source})(%?)\\s*\\+\\s*(${NUM_PART.source})(%?)$`
-  ).exec(str);
+  const asymMatch1 = ASYM_REGEX_1.exec(str);
+  const asymMatch2 = ASYM_REGEX_2.exec(str);
+  const adjacentAsymMatch1 = ADJACENT_ASYM_REGEX_1.exec(str);
+  const adjacentAsymMatch2 = ADJACENT_ASYM_REGEX_2.exec(str);
 
   if (asymMatch1 || asymMatch2 || adjacentAsymMatch1 || adjacentAsymMatch2) {
     const match = (asymMatch1 ||
@@ -71,28 +96,16 @@ export function parseUncertaintyInput(
   }
 
   const boundsOnlyAsymMatch1 =
-    fallbackNominal !== undefined
-      ? new RegExp(
-          `^\\+\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*-\\s*(${NUM_PART.source})(%?)$`
-        ).exec(str)
-      : null;
+    fallbackNominal !== undefined ? BOUNDS_ONLY_ASYM_REGEX_1.exec(str) : null;
   const boundsOnlyAsymMatch2 =
-    fallbackNominal !== undefined
-      ? new RegExp(
-          `^-\\s*(${NUM_PART.source})(%?)\\s*\\/\\s*\\+\\s*(${NUM_PART.source})(%?)$`
-        ).exec(str)
-      : null;
+    fallbackNominal !== undefined ? BOUNDS_ONLY_ASYM_REGEX_2.exec(str) : null;
   const boundsOnlyAdjacentAsymMatch1 =
     fallbackNominal !== undefined
-      ? new RegExp(
-          `^\\+\\s*(${NUM_PART.source})(%?)\\s*-\\s*(${NUM_PART.source})(%?)$`
-        ).exec(str)
+      ? BOUNDS_ONLY_ADJACENT_REGEX_1.exec(str)
       : null;
   const boundsOnlyAdjacentAsymMatch2 =
     fallbackNominal !== undefined
-      ? new RegExp(
-          `^-\\s*(${NUM_PART.source})(%?)\\s*\\+\\s*(${NUM_PART.source})(%?)$`
-        ).exec(str)
+      ? BOUNDS_ONLY_ADJACENT_REGEX_2.exec(str)
       : null;
 
   if (
@@ -138,9 +151,7 @@ export function parseUncertaintyInput(
   }
 
   // 2. Standard Delimiters (e.g., 5 ± 0.1 or 5 ± 2%)
-  const stdMatch = new RegExp(
-    `^(${NUM_PART.source})\\s*${DELIMITERS.source}\\s*(${NUM_PART.source})(%?)$`
-  ).exec(str);
+  const stdMatch = STD_REGEX.exec(str);
 
   if (stdMatch?.[1] && stdMatch[2]) {
     const nominal = parseFloat(stdMatch[1]);
@@ -160,11 +171,7 @@ export function parseUncertaintyInput(
   }
 
   const boundsOnlyStdMatch =
-    fallbackNominal !== undefined
-      ? new RegExp(`^${DELIMITERS.source}\\s*(${NUM_PART.source})(%?)$`).exec(
-          str
-        )
-      : null;
+    fallbackNominal !== undefined ? BOUNDS_ONLY_STD_REGEX.exec(str) : null;
 
   if (boundsOnlyStdMatch?.[1]) {
     const rawErr = parseFloat(boundsOnlyStdMatch[1]);
@@ -182,7 +189,7 @@ export function parseUncertaintyInput(
   }
 
   // 3. Concise Scientific Notation (e.g. 5.00(12) or 5(1))
-  const conciseMatch = /^([-+]?\d+(?:\.\d+)?)\s*\((\d+)\)$/.exec(str);
+  const conciseMatch = CONCISE_REGEX.exec(str);
   if (conciseMatch?.[1] && conciseMatch[2]) {
     const nominalStr = conciseMatch[1];
     const errStr = conciseMatch[2];
@@ -205,39 +212,6 @@ export function parseUncertaintyInput(
   }
 
   return null;
-}
-
-/**
- * Extract the absolute uncertainty from a cell that has uncertainty metadata.
- *
- * Works with cells in Univer ICellData format (reads `custom.uncertainty`) or
- * the abstract CellValue format (reads `meta.customFields.uncertainty`).
- *
- * Returns the absolute uncertainty value, or null if the cell has no
- * uncertainty metadata or the stored uncertainty is not a number.
- *
- * @example
- * // Cell stores 5 ± 0.1 → getUncertaintyFromCell(cell) → 0.1
- */
-export function getUncertaintyFromCell(
-  cell: Record<string, unknown> | null | undefined
-): number | null {
-  if (!cell) return null;
-
-  const custom =
-    (cell.custom as Record<string, unknown> | undefined) ??
-    (cell as { meta?: { customFields?: Record<string, unknown> } }).meta
-      ?.customFields;
-
-  if (!custom || typeof custom !== 'object') return null;
-
-  const u = (custom as Record<string, unknown>).uncertainty as
-    | { upperBound: number; upperType: string }
-    | undefined;
-
-  if (!u || typeof u.upperBound !== 'number') return null;
-
-  return u.upperBound;
 }
 
 function normalizeUncertaintyInput(input: string): string {

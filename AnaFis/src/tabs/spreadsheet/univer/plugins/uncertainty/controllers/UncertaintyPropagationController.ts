@@ -44,14 +44,28 @@ interface PropagationTask {
 
 const KNOWN_FUNCTION_NAMES = new Set([
   'ABS',
+  'ACCRINT',
+  'ACCRINTM',
   'ACOS',
   'ACOSH',
   'ACOT',
   'ACOTH',
+  'ACSC',
+  'ACSCH',
+  'ADDRESS',
+  'AGGREGATE',
+  'AMORDEGRC',
+  'AMORLINC',
   'AND',
   'ARABIC',
+  'AREAS',
+  'ARRAYTOTEXT',
+  'ASC',
+  'ASEC',
+  'ASECH',
   'ASIN',
   'ASINH',
+  'ASSOC_LEGENDRE',
   'ATAN',
   'ATAN2',
   'ATANH',
@@ -60,18 +74,47 @@ const KNOWN_FUNCTION_NAMES = new Set([
   'AVERAGEA',
   'AVERAGEIF',
   'AVERAGEIFS',
+  'BAHTTEXT',
+  'BASE',
+  'BESSELI',
+  'BESSELJ',
+  'BESSELK',
+  'BESSELY',
+  'BETA',
+  'BETADIST',
+  'BETAINV',
+  'BIN2DEC',
+  'BIN2HEX',
+  'BIN2OCT',
+  'BINOMDIST',
+  'BITAND',
+  'BITLSHIFT',
+  'BITOR',
+  'BITRSHIFT',
+  'BITXOR',
+  'BYCOL',
+  'BYROW',
+  'CBRT',
   'CEILING',
+  'CELL',
   'CHAR',
+  'CHIDIST',
+  'CHIINV',
+  'CHITEST',
   'CHOOSE',
+  'CHOOSECOLS',
+  'CHOOSEROWS',
   'CLEAN',
   'CODE',
   'COLUMN',
   'COLUMNS',
   'COMBIN',
   'COMBINA',
+  'COMPLEX',
   'CONCAT',
   'CONCATENATE',
   'CONFIDENCE',
+  'CONVERT',
   'CORREL',
   'COS',
   'COSH',
@@ -82,72 +125,185 @@ const KNOWN_FUNCTION_NAMES = new Set([
   'COUNTBLANK',
   'COUNTIF',
   'COUNTIFS',
+  'COUPDAYBS',
+  'COUPDAYS',
+  'COUPDAYSNC',
+  'COUPNCD',
+  'COUPNUM',
+  'COUPPCD',
   'COVAR',
+  'CRITBINOM',
   'CSC',
   'CSCH',
+  'CUBEKPIMEMBER',
+  'CUBEMEMBER',
+  'CUBEMEMBERPROPERTY',
+  'CUBERANKEDMEMBER',
+  'CUBESET',
+  'CUBESETCOUNT',
+  'CUBEVALUE',
+  'CUMIPMT',
+  'CUMPRINC',
   'DATE',
   'DATEDIF',
+  'DATEVALUE',
+  'DAVERAGE',
   'DAY',
   'DAYS',
+  'DAYS360',
+  'DB',
+  'DBCS',
+  'DCOUNT',
+  'DCOUNTA',
   'DDB',
+  'DIGAMMA',
+  'DEC2BIN',
+  'DEC2HEX',
+  'DEC2OCT',
   'DECIMAL',
   'DEGREES',
   'DELTA',
   'DEVSQ',
+  'DGET',
+  'DISC',
+  'DMAX',
+  'DMIN',
   'DOLLAR',
+  'DOLLARDE',
+  'DOLLARFR',
+  'DPRODUCT',
+  'DROP',
+  'DSTDEV',
+  'DSTDEVP',
+  'DSUM',
+  'DURATION',
+  'DVAR',
+  'DVARP',
   'EDATE',
+  'EFFECT',
+  'ENCODEURL',
   'EOMONTH',
+  'ELLIPTIC_E',
+  'ELLIPTIC_K',
+  'EPOCHTODATE',
   'ERF',
   'ERFC',
+  'EUROCONVERT',
   'EVEN',
   'EXACT',
   'EXP',
+  'EXPAND',
   'EXPONDIST',
   'FACT',
   'FACTDOUBLE',
   'FALSE',
+  'FDIST',
+  'FILTER',
+  'FILTERXML',
   'FIND',
+  'FINDB',
   'FINV',
   'FISHER',
   'FISHERINV',
   'FIXED',
   'FLOOR',
   'FORECAST',
+  'FORMULATEXT',
+  'FREQUENCY',
+  'FTEST',
   'FV',
+  'FVSCHEDULE',
+  'GAMMA',
+  'GAMMADIST',
+  'GAMMAINV',
+  'GAMMALN',
+  'GAUSS',
   'GCD',
   'GEOMEAN',
+  'GESTEP',
+  'GETPIVOTDATA',
   'GROWTH',
   'HARMEAN',
+  'HEX2BIN',
+  'HEX2DEC',
+  'HEX2OCT',
+  'HERMITE',
   'HLOOKUP',
   'HOUR',
+  'HSTACK',
   'HYPERLINK',
+  'HYPGEOMDIST',
   'IF',
   'IFERROR',
   'IFNA',
   'IFS',
+  'IMABS',
+  'IMAGE',
   'IMAGINARY',
+  'IMARGUMENT',
+  'IMCONJUGATE',
+  'IMCOS',
+  'IMCOSH',
+  'IMCOT',
+  'IMCOTH',
+  'IMCSC',
+  'IMCSCH',
+  'IMDIV',
+  'IMEXP',
+  'IMLN',
+  'IMLOG',
+  'IMLOG10',
+  'IMLOG2',
+  'IMPOWER',
+  'IMPRODUCT',
   'IMREAL',
+  'IMSEC',
+  'IMSECH',
+  'IMSIN',
+  'IMSINH',
+  'IMSQRT',
+  'IMSUB',
+  'IMSUM',
+  'IMTAN',
+  'IMTANH',
   'INDEX',
   'INDIRECT',
+  'INFO',
   'INT',
   'INTERCEPT',
+  'INTRATE',
+  'IPMT',
   'IRR',
+  'ISBETWEEN',
   'ISBLANK',
+  'ISDATE',
+  'ISEMAIL',
   'ISERR',
   'ISERROR',
   'ISEVEN',
+  'ISFORMULA',
   'ISLOGICAL',
   'ISNA',
   'ISNONTEXT',
   'ISNUMBER',
+  'ISO',
   'ISODD',
+  'ISOMITTED',
+  'ISOWEEKNUM',
+  'ISPMT',
   'ISREF',
   'ISTEXT',
+  'ISURL',
   'KURT',
+  'LAMBDA',
+  'LAMBERTW',
   'LARGE',
   'LCM',
   'LEFT',
+  'LEFTB',
   'LEN',
+  'LENB',
+  'LET',
   'LINEST',
   'LN',
   'LOG',
@@ -157,23 +313,36 @@ const KNOWN_FUNCTION_NAMES = new Set([
   'LOGNORMDIST',
   'LOOKUP',
   'LOWER',
+  'MAKEARRAY',
+  'MAP',
+  'MARGINOFERROR',
   'MATCH',
   'MAX',
   'MAXA',
+  'MAXIFS',
+  'MDETERM',
+  'MDURATION',
   'MEDIAN',
   'MID',
+  'MIDB',
   'MIN',
   'MINA',
+  'MINIFS',
   'MINUTE',
+  'MINVERSE',
   'MIRR',
+  'MMULT',
   'MOD',
   'MODE',
   'MONTH',
   'MROUND',
   'MULTINOMIAL',
+  'MUNIT',
   'N',
   'NA',
   'NEGBINOMDIST',
+  'NETWORKDAYS',
+  'NOMINAL',
   'NORMDIST',
   'NORMINV',
   'NORMSDIST',
@@ -182,18 +351,35 @@ const KNOWN_FUNCTION_NAMES = new Set([
   'NOW',
   'NPER',
   'NPV',
+  'NUMBERSTRING',
+  'NUMBERVALUE',
+  'OCT2BIN',
+  'OCT2DEC',
+  'OCT2HEX',
   'ODD',
+  'ODDFPRICE',
+  'ODDFYIELD',
+  'ODDLPRICE',
+  'ODDLYIELD',
   'OFFSET',
   'OR',
+  'PDURATION',
   'PEARSON',
   'PERCENTILE',
   'PERCENTRANK',
   'PERMUT',
+  'PERMUTATIONA',
+  'PHI',
+  'PHONETIC',
   'PI',
+  'POLYGAMMA',
   'PMT',
   'POISSON',
   'POWER',
   'PPMT',
+  'PRICE',
+  'PRICEDISC',
+  'PRICEMAT',
   'PROB',
   'PRODUCT',
   'PROPER',
@@ -202,30 +388,54 @@ const KNOWN_FUNCTION_NAMES = new Set([
   'QUOTIENT',
   'RADIANS',
   'RAND',
+  'RANDARRAY',
+  'RANDBETWEEN',
   'RANK',
   'RATE',
+  'RECEIVED',
+  'REDUCE',
+  'REGEXEXTRACT',
+  'REGEXMATCH',
+  'REGEXREPLACE',
+  'REGISTER',
   'REPLACE',
+  'REPLACEB',
   'REPT',
   'RIGHT',
+  'RIGHTB',
   'ROMAN',
   'ROUND',
+  'ROUNDBANK',
   'ROUNDDOWN',
   'ROUNDUP',
   'ROW',
   'ROWS',
+  'RRI',
   'RSQ',
+  'RTD',
+  'SCAN',
   'SEARCH',
+  'SEARCHB',
   'SEC',
   'SECH',
   'SECOND',
+  'SEQUENCE',
+  'SERIESSUM',
+  'SHEET',
+  'SHEETS',
   'SIGN',
+  'SINC',
   'SIN',
   'SINH',
   'SKEW',
   'SLN',
   'SLOPE',
   'SMALL',
+  'SORT',
+  'SORTBY',
   'SQRT',
+  'SQRTPI',
+  'SPHERICAL_HARMONIC',
   'STANDARDIZE',
   'STDEV',
   'STDEVA',
@@ -245,6 +455,7 @@ const KNOWN_FUNCTION_NAMES = new Set([
   'SWITCH',
   'SYD',
   'T',
+  'TAKE',
   'TAN',
   'TANH',
   'TBILLEQ',
@@ -252,68 +463,60 @@ const KNOWN_FUNCTION_NAMES = new Set([
   'TBILLYIELD',
   'TDIST',
   'TEXT',
+  'TEXTAFTER',
+  'TEXTBEFORE',
   'TEXTJOIN',
+  'TEXTSPLIT',
+  'TETRAGAMMA',
   'TIME',
+  'TIMEVALUE',
   'TINV',
   'TODAY',
+  'TOCOL',
+  'TOROW',
   'TRANSPOSE',
   'TREND',
   'TRIM',
+  'TRIGAMMA',
   'TRIMMEAN',
   'TRUE',
   'TRUNC',
   'TTEST',
   'TYPE',
+  'UNCERT',
+  'UNICHAR',
+  'UNICODE',
+  'UNIQUE',
   'UPPER',
   'VALUE',
+  'VALUETOTEXT',
   'VAR',
   'VARA',
   'VARP',
   'VARPA',
   'VDB',
   'VLOOKUP',
+  'VSTACK',
+  'WEBSERVICE',
   'WEEKDAY',
+  'WEEKNUM',
   'WEIBULL',
+  'WORKDAY',
+  'WRAPCOLS',
+  'WRAPROWS',
   'XIRR',
+  'XLOOKUP',
+  'XMATCH',
   'XNPV',
   'XOR',
   'YEAR',
-  'E',
-  'EQ',
-  'GE',
-  'GT',
-  'LE',
-  'LT',
-  'NE',
-  'UNICODE',
-  'UNICHAR',
-  'LAMBDA',
-  'LET',
-  'BYROW',
-  'BYCOL',
-  'MAKEARRAY',
-  'MAP',
-  'REDUCE',
-  'SCAN',
-  'SORT',
-  'SORTBY',
-  'FILTER',
-  'UNIQUE',
-  'SEQUENCE',
-  'RANDARRAY',
-  'XLOOKUP',
-  'XMATCH',
-  'TOCOL',
-  'TOROW',
-  'WRAPCOLS',
-  'WRAPROWS',
-  'CHOOSECOLS',
-  'CHOOSEROWS',
-  'DROP',
-  'EXPAND',
-  'TAKE',
-  'HSTACK',
-  'VSTACK',
+  'YEARFRAC',
+  'YIELD',
+  'YIELDDISC',
+  'YIELDMAT',
+  'ZTEST',
+  'ZETA',
+  'ZETA_DERIV',
 ]);
 
 const MAX_FORMULA_EVALUATION_WAIT_MS = 3000;
@@ -977,8 +1180,33 @@ export class UncertaintyPropagationController extends Disposable {
       }
 
       try {
+        // Substitute cell references: cells WITH uncertainty get safe
+        // variable names (__v0__, __v1__, ...); cells WITHOUT uncertainty
+        // get substituted with their numeric value so symb_anafis never
+        // sees raw column letters that could be misinterpreted (E12 → e12
+        // as scientific notation, E → e as Euler's number).
+        let subFormula = formulaClean;
+        const allRefs = this._extractCellRefsFromFormula(formulaClean);
+
+        for (let vi = 0; vi < variables.length; vi++) {
+          const v = variables[vi] as PropagationVariable;
+          const safe = `__v${vi}__`;
+          subFormula = subFormula.replace(new RegExp(v.name, 'gi'), safe);
+          (variables[vi] as { name: string }).name = safe;
+        }
+
+        for (const ref of allRefs) {
+          const cellRef = `${this._numberToABC(ref.col)}${ref.row + 1}`;
+          const refCell = worksheet.getCellMatrix().getValue(ref.row, ref.col);
+          const val = typeof refCell?.v === 'number' ? refCell.v : 0;
+          subFormula = subFormula.replace(
+            new RegExp(cellRef, 'gi'),
+            String(val)
+          );
+        }
+
         const result = (await invoke('calculate_uncertainty', {
-          formula: formulaClean,
+          formula: subFormula,
           variables,
         })) as { value: number; uncertainty: number };
 
@@ -1107,151 +1335,168 @@ export class UncertaintyPropagationController extends Disposable {
     subUnitId: string,
     formulaCells: Array<{ r: number; c: number; f: string }>
   ) {
-    const workbook = this._univerInstanceService.getUnit<Workbook>(
-      unitId,
-      UniverInstanceType.UNIVER_SHEET
-    );
-    if (!workbook) return;
+    if (this._isPropagating) return;
+    this._isPropagating = true;
 
-    const worksheet = workbook.getSheetBySheetId(subUnitId);
-    if (!worksheet) return;
+    try {
+      const workbook = this._univerInstanceService.getUnit<Workbook>(
+        unitId,
+        UniverInstanceType.UNIVER_SHEET
+      );
+      if (!workbook) return;
 
-    const mutations: Record<string, Record<string, ICellData>> = {};
+      const worksheet = workbook.getSheetBySheetId(subUnitId);
+      if (!worksheet) return;
 
-    for (const { r, c, f } of formulaCells) {
-      const formulaClean = f.replace(/^=/, '').trim();
+      const mutations: Record<string, Record<string, ICellData>> = {};
 
-      // ── Handle =UNCERT(expression, uncertainty) ──────────────────────
-      // Process UNCERT formulas BEFORE the manual-source guard because the
-      // formula string itself is the authority for the uncertainty value.
-      // Skipping would cause stale metadata to persist when the user edits
-      // an UNCERT formula or drag-fills it to adjacent cells.
-      const isUncertFormula = /^UNCERT\s*\(/i.test(formulaClean);
-      if (isUncertFormula) {
+      for (const { r, c, f } of formulaCells) {
+        const formulaClean = f.replace(/^=/, '').trim();
+
+        // ── Handle =UNCERT(expression, uncertainty) ──────────────────────
+        // Process UNCERT formulas BEFORE the manual-source guard because the
+        // formula string itself is the authority for the uncertainty value.
+        // Skipping would cause stale metadata to persist when the user edits
+        // an UNCERT formula or drag-fills it to adjacent cells.
+        const isUncertFormula = /^UNCERT\s*\(/i.test(formulaClean);
+        if (isUncertFormula) {
+          const cell = await this._waitForCellValue(worksheet, r, c);
+          const freshWorksheet = workbook.getSheetBySheetId(subUnitId);
+          const uncertMeta = freshWorksheet
+            ? this._parseUncertFormula(formulaClean, freshWorksheet)
+            : this._parseUncertFormula(formulaClean, worksheet);
+
+          if (uncertMeta) {
+            if (!mutations[r]) mutations[r] = {};
+            mutations[r][c] = {
+              v: cell?.v,
+              f,
+              custom: {
+                ...(cell?.custom as Record<string, unknown> | undefined),
+                uncertainty: uncertMeta,
+              },
+            };
+          }
+          continue;
+        }
+
         const cell = await this._waitForCellValue(worksheet, r, c);
-        const freshWorksheet = workbook.getSheetBySheetId(subUnitId);
-        const uncertMeta = freshWorksheet
-          ? this._parseUncertFormula(formulaClean, freshWorksheet)
-          : this._parseUncertFormula(formulaClean, worksheet);
+        const custom = cell?.custom as Record<string, unknown> | undefined;
+        const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
 
-        if (uncertMeta) {
+        // Skip non-UNCERT cells with manual uncertainty — the user explicitly set it
+        if (metadata?.upperSource === 'manual') continue;
+
+        // ── Regular formula: propagate uncertainty via Rust CAS ──────────
+        const refs = this._extractCellRefsFromFormula(formulaClean);
+        if (refs.length === 0) {
+          if (metadata) {
+            if (!mutations[r]) mutations[r] = {};
+            mutations[r][c] = {
+              v: cell?.v,
+              f,
+              custom: { ...custom, uncertainty: null },
+            };
+          }
+          continue;
+        }
+
+        const variables: PropagationVariable[] = [];
+        const seen = new Set<string>();
+        const varSubs: Map<string, string> = new Map();
+        let varIdx = 0;
+
+        for (const ref of refs) {
+          const refCell = worksheet.getCellMatrix().getValue(ref.row, ref.col);
+          const cellRef = `${this._numberToABC(ref.col)}${ref.row + 1}`;
+          if (seen.has(cellRef)) continue;
+          seen.add(cellRef);
+
+          const value = typeof refCell?.v === 'number' ? refCell.v : 0;
+          const refCustom = refCell?.custom as
+            | Record<string, unknown>
+            | undefined;
+
+          if (refCustom?.uncertainty) {
+            const u = refCustom.uncertainty as UncertaintyMetadata;
+            const safeName = `__v${varIdx}__`;
+            varSubs.set(cellRef, safeName);
+            variables.push({
+              name: safeName,
+              value,
+              uncertainty: this._toAbsoluteBound(
+                u.upperBound || 0,
+                u.upperType,
+                value
+              ),
+            });
+            varIdx++;
+          } else {
+            // Cell has no uncertainty — substitute with its numeric value.
+            varSubs.set(cellRef, String(value));
+          }
+        }
+
+        if (variables.length === 0) {
+          // Refs exist but none have uncertainty → clear any stale metadata.
+          if (metadata) {
+            if (!mutations[r]) mutations[r] = {};
+            mutations[r][c] = {
+              v: cell?.v,
+              f,
+              custom: { ...custom, uncertainty: null },
+            };
+          }
+          continue;
+        }
+
+        try {
+          // Substitute cell references with safe variable names so
+          // symb_anafis doesn't misinterpret column letters (e.g. E12
+          // lowercased to e12 is parsed as scientific notation).
+          let subFormula = formulaClean;
+          for (const [ref, safe] of varSubs) {
+            subFormula = subFormula.replace(new RegExp(ref, 'gi'), safe);
+          }
+          const result = (await invoke('calculate_uncertainty', {
+            formula: subFormula,
+            variables,
+          })) as { value: number; uncertainty: number };
+
+          // Use the nominal value computed by the Rust CAS directly.
+          // This avoids waiting for the formula engine's Web Worker to flush
+          // results and removes the unreliable setTimeout(50) race.
           if (!mutations[r]) mutations[r] = {};
           mutations[r][c] = {
-            v: cell?.v,
+            v: result.value,
             f,
             custom: {
-              ...(cell?.custom as Record<string, unknown> | undefined),
-              uncertainty: uncertMeta,
+              ...custom,
+              uncertainty: {
+                upperBound: result.uncertainty,
+                upperType: 'abs',
+                upperSource: 'propagated',
+              } as UncertaintyMetadata,
             },
           };
-        }
-        continue;
-      }
-
-      const cell = worksheet.getCellMatrix().getValue(r, c);
-      const custom = cell?.custom as Record<string, unknown> | undefined;
-      const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
-
-      // Skip non-UNCERT cells with manual uncertainty — the user explicitly set it
-      if (metadata?.upperSource === 'manual') continue;
-
-      // ── Regular formula: propagate uncertainty via Rust CAS ──────────
-      const refs = this._extractCellRefsFromFormula(formulaClean);
-      if (refs.length === 0) {
-        // No cell refs → can't propagate. Clear any stale UNCERT metadata.
-        if (metadata) {
-          if (!mutations[r]) mutations[r] = {};
-          mutations[r][c] = {
-            v: cell?.v,
-            f,
-            custom: { ...custom, uncertainty: null },
-          };
-        }
-        continue;
-      }
-
-      const variables: PropagationVariable[] = [];
-      const seen = new Set<string>();
-
-      for (const ref of refs) {
-        const refCell = worksheet.getCellMatrix().getValue(ref.row, ref.col);
-        if (!refCell) continue;
-
-        const varName = `${this._numberToABC(ref.col)}${ref.row + 1}`;
-        if (seen.has(varName)) continue;
-
-        const refCustom = refCell.custom as Record<string, unknown> | undefined;
-        if (refCustom?.uncertainty) {
-          const u = refCustom.uncertainty as UncertaintyMetadata;
-          const value = Number(refCell.v) || 0;
-          variables.push({
-            name: varName,
-            value,
-            uncertainty: this._toAbsoluteBound(
-              u.upperBound || 0,
-              u.upperType,
-              value
-            ),
-          });
-          seen.add(varName);
+        } catch (error) {
+          console.warn(
+            `[Uncertainty] Propagation failed for ${this._numberToABC(c)}${r + 1} (${f}):`,
+            error
+          );
         }
       }
 
-      if (variables.length === 0) {
-        // Refs exist but none have uncertainty → clear any stale metadata.
-        if (metadata) {
-          if (!mutations[r]) mutations[r] = {};
-          mutations[r][c] = {
-            v: cell?.v,
-            f,
-            custom: { ...custom, uncertainty: null },
-          };
-        }
-        continue;
-      }
-
-      try {
-        const result = (await invoke('calculate_uncertainty', {
-          formula: formulaClean,
-          variables,
-        })) as { value: number; uncertainty: number };
-
-        // Use the nominal value computed by the Rust CAS directly.
-        // This avoids waiting for the formula engine's Web Worker to flush
-        // results and removes the unreliable setTimeout(50) race.
-        if (!mutations[r]) mutations[r] = {};
-        mutations[r][c] = {
-          v: result.value,
-          f,
-          custom: {
-            ...custom,
-            uncertainty: {
-              upperBound: result.uncertainty,
-              upperType: 'abs',
-              upperSource: 'propagated',
-            } as UncertaintyMetadata,
-          },
-        };
-      } catch (error) {
-        console.warn(
-          `[Uncertainty] Propagation failed for ${this._numberToABC(c)}${r + 1} (${f}):`,
-          error
-        );
-      }
-    }
-
-    if (Object.keys(mutations).length > 0) {
-      this._isPropagating = true;
-      try {
+      if (Object.keys(mutations).length > 0) {
         await this._commandService.executeCommand(SetRangeValuesCommand.id, {
           unitId,
           subUnitId,
           value: mutations,
           _skipCustomCleanup: true,
         } as ISetRangeValuesCommandParams);
-      } finally {
-        this._isPropagating = false;
       }
+    } finally {
+      this._isPropagating = false;
     }
   }
 
@@ -1269,14 +1514,31 @@ export class UncertaintyPropagationController extends Disposable {
     while (match !== null) {
       const colStr = (match[1] as string).toUpperCase();
       const rowNum = parseInt(match[2] as string, 10);
+      const charAfter = formula[regex.lastIndex] ?? '';
 
-      // Bug 4: Skip known function names that the regex would misinterpret
-      // as cell references (e.g. SIN, COS, LOG, PI would match /[A-Z]+\d+/).
-      if (
-        !KNOWN_FUNCTION_NAMES.has(colStr) &&
-        !Number.isNaN(rowNum) &&
-        rowNum > 0
-      ) {
+      // Skip if followed by '(' — it's a function call (e.g. T(A1),
+      // N(A1), SIN(0.5)), not a cell reference.
+      if (charAfter === '(') {
+        match = regex.exec(formula);
+        continue;
+      }
+
+      // Skip matches embedded in longer alphanumeric identifiers
+      // (e.g. SUMX2PY2 would yield phantom SUMX row 2 + PY row 2).
+      const charBefore = formula[match.index - 1] ?? '';
+      if (/[A-Z]/i.test(charAfter) || /[A-Z0-9]/i.test(charBefore)) {
+        match = regex.exec(formula);
+        continue;
+      }
+
+      // Skip known function names that the regex would misinterpret
+      // as cell references (SIN, COS, LOG, etc.).
+      if (KNOWN_FUNCTION_NAMES.has(colStr)) {
+        match = regex.exec(formula);
+        continue;
+      }
+
+      if (!Number.isNaN(rowNum) && rowNum > 0) {
         refs.push({ col: this._ABCToNumber(colStr), row: rowNum - 1 });
       }
       match = regex.exec(formula);

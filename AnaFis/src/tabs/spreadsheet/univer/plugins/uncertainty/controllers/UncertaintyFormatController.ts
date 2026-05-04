@@ -103,9 +103,13 @@ export class UncertaintyFormatController extends Disposable {
           }
 
           if (numfmtValues.length > 0) {
+            const unitId = params.unitId;
+            const subUnitId = params.subUnitId;
+            if (!unitId || !subUnitId) return;
+
             const numfmtParams: ISetNumfmtCommandParams = {
-              unitId: params.unitId || '',
-              subUnitId: params.subUnitId || '',
+              unitId,
+              subUnitId,
               values: numfmtValues,
             };
 

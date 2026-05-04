@@ -102,20 +102,22 @@ A global UI Tool scales the numeric uncertainty column-wide via a Student's t-di
 
 ## 6. Export Serialization
 
-When exporting the workbook out of the native `.anafispread` ecosystem (which is lossless for `custom` metadata):
-- **CSV Export:** Exposes user-configurable options:
-  - *Option A (Scientific standard):* Split into two columns `value` and `uncertainty` (easiest for Pandas/Numpy).
-  - *Option B (Concise GUM):* Single column as `5.0(1)`.
-  - *Option C (Literal String):* Single column as `5 ± 0.1`.
-o operates sequentially, applying confidence scaling should ideally be the **final operation before export**, as any intermediate data entry between scaling steps would be lost upon reverting.
-- **Sync:** The format string is explicitly regenerated after scaling.
+### Current implementation status
 
----
+| Format | Export | Import | Uncertainty |
+|---|---|---|---|
+| `.anafispread` | Full `IWorkbookData` snapshot | Full snapshot restore | **Preserved** (lossless round-trip) |
+| CSV / TSV / TXT | `getRange()` returns `(string\|number)[][]` — plain scalars | Flat `CellValue` objects with `v` only | **Lost** |
+| Parquet | Same scalar extraction path as CSV | Same scalar conversion | **Lost** |
+| HTML / Markdown / LaTeX | Same scalar extraction path | Not supported | **Lost** |
 
-## 6. Export Serialization
+**Root cause (export):** `exportService.ts:185` calls `spreadsheetAPI.getRange(range)` which returns only nominal values. To expose uncertainty metadata the export pipeline would need to use `spreadsheetAPI.getRangeFull(range)` (returns `CellValue[][]` including `meta.customFields.uncertainty`) and encode the uncertainty into the output format.
 
-When exporting the workbook out of the native `.anafispread` ecosystem (which is lossless for `custom` metadata):
-- **CSV Export:** Exposes user-configurable options:
-  - *Option A (Scientific standard):* Split into two columns `value` and `uncertainty` (easiest for Pandas/Numpy).
-  - *Option B (Concise GUM):* Single column as `5.0(1)`.
-  - *Option C (Literal String):* Single column as `5 ± 0.1`.
+**Root cause (import):** Non-`.anafispread` imports parse flat 2D arrays of scalars. No `custom` metadata is ever constructed during import. Cells are created with `{ v: <scalar> }` only.
+
+### Planned CSV export options (not yet implemented)
+
+When exporting the workbook out of the native `.anafispread` ecosystem:
+- **Option A (Scientific standard):** Split into two columns `value` and `uncertainty` (easiest for Pandas/Numpy).
+- **Option B (Concise GUM):** Single column as `5.0(1)`.
+- **Option C (Literal String):** Single column as `5 ± 0.1`.
