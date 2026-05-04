@@ -9,6 +9,7 @@ import {
 import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
 import { UniverSheetsPlugin } from '@univerjs/sheets';
 import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
+import { UncertaintyAutoFillController } from '@/tabs/spreadsheet/univer/plugins/uncertainty/controllers/UncertaintyAutoFillController';
 import { UncertaintyEditController } from '@/tabs/spreadsheet/univer/plugins/uncertainty/controllers/UncertaintyEditController';
 import { UncertaintyFormatController } from '@/tabs/spreadsheet/univer/plugins/uncertainty/controllers/UncertaintyFormatController';
 import { UncertaintyInputController } from '@/tabs/spreadsheet/univer/plugins/uncertainty/controllers/UncertaintyInputController';
@@ -36,6 +37,7 @@ export class UncertaintyPlugin extends Plugin {
       [UncertaintyFormatController],
       [UncertaintyEditController],
       [UncertaintyPropagationController],
+      [UncertaintyAutoFillController],
     ];
 
     dependencies.forEach((d) => {
@@ -44,11 +46,11 @@ export class UncertaintyPlugin extends Plugin {
   }
 
   override onReady(): void {
-    // Explicitly instantiate controllers to ensure their _init() methods run
     this._injector.get(UncertaintyInputController);
     this._injector.get(UncertaintyFormatController);
     this._injector.get(UncertaintyEditController);
     this._injector.get(UncertaintyPropagationController);
+    this._injector.get(UncertaintyAutoFillController);
   }
 }
 

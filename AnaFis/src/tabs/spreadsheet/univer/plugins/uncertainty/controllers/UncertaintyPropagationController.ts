@@ -34,6 +34,7 @@ interface PropagationVariable {
   name: string;
   value: number;
   uncertainty: number;
+  lowerBound?: number;
 }
 
 interface PropagationTask {
@@ -524,10 +525,10 @@ const FORMULA_POLL_INTERVAL_MS = 15;
 
 export class UncertaintyPropagationController extends Disposable {
   private _dependencyRangesBySheet: Map<string, IUnitRange[]> = new Map();
-  private _isPropagating = false;
   private _propagationQueue: PropagationTask[] = [];
   private _isProcessingQueue = false;
   private _activeProcessingSheets = new Set<string>();
+  private _pendingSkipMutations = new Map<string, number>();
 
   constructor(
     private readonly _featureCalculationManagerService: IFeatureCalculationManagerService,
@@ -538,6 +539,22 @@ export class UncertaintyPropagationController extends Disposable {
   ) {
     super();
     this._init();
+  }
+
+  private _enterSkipRegion(sheetKey: string): void {
+    this._pendingSkipMutations.set(
+      sheetKey,
+      (this._pendingSkipMutations.get(sheetKey) || 0) + 1
+    );
+  }
+
+  private _leaveSkipRegion(sheetKey: string): void {
+    const count = this._pendingSkipMutations.get(sheetKey) || 0;
+    if (count <= 1) {
+      this._pendingSkipMutations.delete(sheetKey);
+    } else {
+      this._pendingSkipMutations.set(sheetKey, count - 1);
+    }
   }
 
   private _init(): void {
@@ -581,14 +598,15 @@ export class UncertaintyPropagationController extends Disposable {
     // 3. Dynamically update dependency ranges AND detect formula cell creation
     this.disposeWithMe(
       this._commandService.onCommandExecuted((command: ICommandInfo) => {
-        if (this._isPropagating) return;
-
         if (command.id === SetRangeValuesCommand.id) {
-          const params = command.params as ISetRangeValuesCommandParams;
+          const params = command.params as ISetRangeValuesCommandParams & {
+            _skipCustomCleanup?: boolean;
+          };
           if (!params?.value) return;
 
           const unitId = params.unitId || '';
           const subUnitId = params.subUnitId || '';
+
           const ranges = this._dependencyRangesBySheet.get(subUnitId);
 
           if (!ranges) return;
@@ -607,13 +625,14 @@ export class UncertaintyPropagationController extends Disposable {
                 value,
                 ranges
               );
-              if (value.f) {
+              if (!params._skipCustomCleanup && value.f) {
                 formulaCells.push({
                   r: params.range.startRow,
                   c: params.range.startColumn,
                   f: value.f,
                 });
               } else if (
+                !params._skipCustomCleanup &&
                 value.custom &&
                 (value.custom as Record<string, unknown>).uncertainty &&
                 (
@@ -646,13 +665,14 @@ export class UncertaintyPropagationController extends Disposable {
                     cell,
                     ranges
                   );
-                  if (cell.f) {
+                  if (!params._skipCustomCleanup && cell.f) {
                     formulaCells.push({
                       r: startRow + r,
                       c: startCol + c,
                       f: cell.f,
                     });
                   } else if (
+                    !params._skipCustomCleanup &&
                     cell.custom &&
                     (cell.custom as Record<string, unknown>).uncertainty &&
                     (
@@ -678,9 +698,10 @@ export class UncertaintyPropagationController extends Disposable {
                 const cell = row[colStr];
                 if (cell) {
                   this._updateDependency(unitId, subUnitId, r, c, cell, ranges);
-                  if (cell.f) {
+                  if (!params._skipCustomCleanup && cell.f) {
                     formulaCells.push({ r, c, f: cell.f });
                   } else if (
+                    !params._skipCustomCleanup &&
                     cell.custom &&
                     (cell.custom as Record<string, unknown>).uncertainty &&
                     (
@@ -699,7 +720,6 @@ export class UncertaintyPropagationController extends Disposable {
           // that no longer have a formula (e.g. formula replaced by plain value).
           if (staleMetadataCells.length > 0) {
             void (async () => {
-              this._isPropagating = true;
               try {
                 const cleanupMutations: Record<
                   string,
@@ -717,44 +737,39 @@ export class UncertaintyPropagationController extends Disposable {
                     unitId,
                     subUnitId,
                     value: cleanupMutations,
+                    _skipCustomCleanup: true,
                   } as ISetRangeValuesCommandParams
                 );
-              } finally {
-                this._isPropagating = false;
+              } catch {
+                // Best-effort cleanup; ignore failures.
               }
             })();
           }
 
           // Trigger propagation for newly created/modified formula cells.
-          // getDirtyData only fires when SOURCE cells change, not when a new
-          // formula referencing them is created — so we handle that here.
           if (formulaCells.length > 0) {
             void this._handleFormulaCreation(unitId, subUnitId, formulaCells);
           }
 
-          // Enqueue propagation for affected formulas on this sheet so that
-          // UNCERT metadata is re-parsed when the uncertainty arguments' cells
-          // change.  The formula engine tracks dependencies on ALL args, but
-          // our feature's getDirtyData only fires for cells in dependencyRanges.
-          // UNCERT's uncertainty args may reference plain-number cells not in
-          // those ranges, yet we must re-parse the UNCERT metadata when they
-          // change.  Enqueuing here bridges that gap.
-          const dirtyRanges = this._buildDirtyRanges(
-            value,
-            params.range,
-            unitId,
-            subUnitId
-          );
-          if (dirtyRanges.length > 0) {
-            this._enqueuePropagation(unitId, subUnitId, {
-              forceCalculation: false,
-              dirtyRanges,
-              dirtyNameMap: {},
-              dirtyDefinedNameMap: {},
-              dirtyUnitFeatureMap: {},
-              dirtyUnitOtherFormulaMap: {},
-              clearDependencyTreeCache: {},
-            });
+          // Enqueue propagation for affected formulas.
+          if (!params._skipCustomCleanup) {
+            const dirtyRanges = this._buildDirtyRanges(
+              value,
+              params.range,
+              unitId,
+              subUnitId
+            );
+            if (dirtyRanges.length > 0) {
+              this._enqueuePropagation(unitId, subUnitId, {
+                forceCalculation: false,
+                dirtyRanges,
+                dirtyNameMap: {},
+                dirtyDefinedNameMap: {},
+                dirtyUnitFeatureMap: {},
+                dirtyUnitOtherFormulaMap: {},
+                clearDependencyTreeCache: {},
+              });
+            }
           }
         }
       })
@@ -766,8 +781,6 @@ export class UncertaintyPropagationController extends Disposable {
     // the mutation and trigger propagation + dependency updates here.
     this.disposeWithMe(
       this._commandService.onCommandExecuted((command: ICommandInfo) => {
-        if (this._isPropagating) return;
-
         if (command.id === SetRangeValuesMutation.id) {
           const params = command.params as ISetRangeValuesMutationParams;
           const cellValue = params.cellValue;
@@ -775,11 +788,20 @@ export class UncertaintyPropagationController extends Disposable {
 
           const unitId = params.unitId || '';
           const subUnitId = params.subUnitId || '';
+          const sheetKey = `${unitId}|${subUnitId}`;
+
+          if (this._pendingSkipMutations.has(sheetKey)) return;
+
           const ranges = this._dependencyRangesBySheet.get(subUnitId);
           if (!ranges) return;
 
           const formulaCells: Array<{ r: number; c: number; f: string }> = [];
           const dirtyRanges: IUnitRange[] = [];
+          const siAnchors = new Map<
+            string,
+            { row: number; col: number; f: string }
+          >();
+          const siOnlyCells: Array<{ r: number; c: number; si: string }> = [];
 
           for (const rStr in cellValue) {
             const r = parseInt(rStr, 10);
@@ -792,14 +814,16 @@ export class UncertaintyPropagationController extends Disposable {
               const cell = row[cStr];
               if (!cell) continue;
 
-              // Keep dependency ranges in sync when cells are modified
-              // via mutations (auto-fill, formula engine results, etc.)
               this._updateDependency(unitId, subUnitId, r, c, cell, ranges);
 
-              // Formula engine writes results (v only) through mutations —
-              // those have no f, so they're naturally skipped here.
+              if (cell.si && cell.f) {
+                siAnchors.set(cell.si, { row: r, col: c, f: cell.f });
+              }
+
               if (cell.f) {
                 formulaCells.push({ r, c, f: cell.f });
+              } else if (cell.si) {
+                siOnlyCells.push({ r, c, si: cell.si });
               }
 
               dirtyRanges.push({
@@ -812,6 +836,29 @@ export class UncertaintyPropagationController extends Disposable {
                   endColumn: c,
                 },
               });
+            }
+          }
+
+          for (const siCell of siOnlyCells) {
+            const anchor = siAnchors.get(siCell.si);
+            if (!anchor) continue;
+            const offsetX = siCell.c - anchor.col;
+            const offsetY = siCell.r - anchor.row;
+            if (offsetX === 0 && offsetY === 0) {
+              formulaCells.push({
+                r: siCell.r,
+                c: siCell.c,
+                f: anchor.f,
+              });
+              continue;
+            }
+            try {
+              const shifted = this._shiftCellRefs(anchor.f, offsetX, offsetY);
+              if (shifted) {
+                formulaCells.push({ r: siCell.r, c: siCell.c, f: shifted });
+              }
+            } catch {
+              // Formula is unparseable; skip.
             }
           }
 
@@ -1084,160 +1131,167 @@ export class UncertaintyPropagationController extends Disposable {
     const worksheet = workbook.getSheetBySheetId(subUnitId);
     if (!worksheet) return;
 
-    const formulaData = this._formulaCurrentConfigService.getFormulaData();
-    const sheetFormulaData = formulaData[unitId]?.[subUnitId];
-    if (!sheetFormulaData) return;
+    const sheetKey = `${unitId}|${subUnitId}`;
+    if (this._pendingSkipMutations.has(sheetKey)) return;
+    this._enterSkipRegion(sheetKey);
 
-    const mutations: Record<string, Record<string, ICellData>> = {};
+    try {
+      const formulaData = this._formulaCurrentConfigService.getFormulaData();
+      const sheetFormulaData = formulaData[unitId]?.[subUnitId];
+      if (!sheetFormulaData) return;
 
-    // 1. Identify affected formulas using DependencyManagerService
-    const affectedTreeIds = this._dependencyManagerService.searchDependency(
-      dirtyData.dirtyRanges
-    );
-    const affectedFormulas: Array<{ r: number; c: number; f: string }> = [];
+      const mutations: Record<string, Record<string, ICellData>> = {};
 
-    if (dirtyData.forceCalculation) {
-      // If force, iterate all formulas in sheet
-      for (const rStr in sheetFormulaData) {
-        const r = parseInt(rStr, 10);
-        const row = sheetFormulaData[r];
-        if (!row) continue;
-        for (const cStr in row) {
-          const c = parseInt(cStr, 10);
-          const formulaItem = row[c];
-          if (formulaItem) {
-            affectedFormulas.push({ r, c, f: formulaItem.f });
+      // 1. Identify affected formulas using DependencyManagerService
+      const affectedTreeIds = this._dependencyManagerService.searchDependency(
+        dirtyData.dirtyRanges
+      );
+      const affectedFormulas: Array<{ r: number; c: number; f: string }> = [];
+
+      if (dirtyData.forceCalculation) {
+        // If force, iterate all formulas in sheet
+        for (const rStr in sheetFormulaData) {
+          const r = parseInt(rStr, 10);
+          const row = sheetFormulaData[r];
+          if (!row) continue;
+          for (const cStr in row) {
+            const c = parseInt(cStr, 10);
+            const formulaItem = row[c];
+            if (formulaItem) {
+              affectedFormulas.push({ r, c, f: formulaItem.f });
+            }
+          }
+        }
+      } else {
+        for (const treeId of affectedTreeIds) {
+          const tree = this._dependencyManagerService.getTreeById(treeId);
+          if (
+            tree &&
+            tree.unitId === unitId &&
+            tree.subUnitId === subUnitId &&
+            !tree.isVirtual
+          ) {
+            const formulaItem = sheetFormulaData[tree.row]?.[tree.column];
+            if (formulaItem) {
+              affectedFormulas.push({
+                r: tree.row,
+                c: tree.column,
+                f: formulaItem.f,
+              });
+            }
           }
         }
       }
-    } else {
-      for (const treeId of affectedTreeIds) {
-        const tree = this._dependencyManagerService.getTreeById(treeId);
-        if (
-          tree &&
-          tree.unitId === unitId &&
-          tree.subUnitId === subUnitId &&
-          !tree.isVirtual
-        ) {
-          const formulaItem = sheetFormulaData[tree.row]?.[tree.column];
-          if (formulaItem) {
-            affectedFormulas.push({
-              r: tree.row,
-              c: tree.column,
-              f: formulaItem.f,
-            });
-          }
-        }
-      }
-    }
 
-    if (affectedFormulas.length === 0) return;
+      if (affectedFormulas.length === 0) return;
 
-    // 2. Process formulas
-    for (const { r, c, f } of affectedFormulas) {
-      const formulaClean = f.replace(/^=/, '').trim();
+      // 2. Process formulas
+      for (const { r, c, f } of affectedFormulas) {
+        const formulaClean = f.replace(/^=/, '').trim();
 
-      // ── Handle =UNCERT(expression, uncertainty) ──────────────────────
-      const uncertMeta = this._parseUncertFormula(formulaClean, worksheet);
-      if (uncertMeta) {
-        // Wait for the formula engine to write the nominal value before
-        // applying metadata and triggering the format controller.
-        const cell = await this._waitForCellValue(worksheet, r, c);
-        const custom = cell?.custom as Record<string, unknown> | undefined;
+        // ── Handle =UNCERT(expression, uncertainty) ──────────────────────
+        const uncertMeta = this._parseUncertFormula(formulaClean, worksheet);
+        if (uncertMeta) {
+          // Wait for the formula engine to write the nominal value before
+          // applying metadata and triggering the format controller.
+          const cell = await this._waitForCellValue(worksheet, r, c);
+          const custom = cell?.custom as Record<string, unknown> | undefined;
 
-        if (!mutations[r]) mutations[r] = {};
-        mutations[r][c] = {
-          v: cell?.v,
-          f,
-          custom: {
-            ...custom,
-            uncertainty: uncertMeta,
-          },
-        };
-        continue;
-      }
-
-      // Read cell to check for manual overrides
-      const cell = worksheet.getCellMatrix().getValue(r, c);
-      const custom = cell?.custom as Record<string, unknown> | undefined;
-      const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
-
-      // Skip manual overrides
-      if (metadata?.upperSource === 'manual') continue;
-
-      // Extract only used variables for this specific formula
-      const variables = this._getVariablesForFormula(unitId, subUnitId, r, c);
-      if (variables.length === 0) {
-        if (metadata?.upperSource === 'propagated') {
           if (!mutations[r]) mutations[r] = {};
           mutations[r][c] = {
             v: cell?.v,
             f,
-            custom: { ...custom, uncertainty: null },
+            custom: {
+              ...custom,
+              uncertainty: uncertMeta,
+            },
           };
-        }
-        continue;
-      }
-
-      try {
-        // Substitute cell references: cells WITH uncertainty get safe
-        // variable names (__v0__, __v1__, ...); cells WITHOUT uncertainty
-        // get substituted with their numeric value so symb_anafis never
-        // sees raw column letters that could be misinterpreted (E12 → e12
-        // as scientific notation, E → e as Euler's number).
-        let subFormula = formulaClean;
-        const allRefs = this._extractCellRefsFromFormula(formulaClean);
-
-        for (let vi = 0; vi < variables.length; vi++) {
-          const v = variables[vi] as PropagationVariable;
-          const safe = `__v${vi}__`;
-          subFormula = subFormula.replace(new RegExp(v.name, 'gi'), safe);
-          (variables[vi] as { name: string }).name = safe;
+          continue;
         }
 
-        for (const ref of allRefs) {
-          const cellRef = `${this._numberToABC(ref.col)}${ref.row + 1}`;
-          const refCell = worksheet.getCellMatrix().getValue(ref.row, ref.col);
-          const val = typeof refCell?.v === 'number' ? refCell.v : 0;
-          subFormula = subFormula.replace(
-            new RegExp(cellRef, 'gi'),
-            String(val)
+        // Read cell to check for manual overrides
+        const cell = worksheet.getCellMatrix().getValue(r, c);
+        const custom = cell?.custom as Record<string, unknown> | undefined;
+        const metadata = custom?.uncertainty as UncertaintyMetadata | undefined;
+
+        // Skip manual overrides
+        if (metadata?.upperSource === 'manual') continue;
+
+        // Extract only used variables for this specific formula
+        const variables = this._getVariablesForFormula(unitId, subUnitId, r, c);
+        if (variables.length === 0) {
+          if (metadata?.upperSource === 'propagated') {
+            this._clearCellUncertainty(mutations, r, c, f, cell);
+          }
+          continue;
+        }
+
+        try {
+          // Substitute cell references: cells WITH uncertainty get safe
+          // variable names (__v0__, __v1__, ...); cells WITHOUT uncertainty
+          // get substituted with their numeric value so symb_anafis never
+          // sees raw column letters that could be misinterpreted (E12 → e12
+          // as scientific notation, E → e as Euler's number).
+          let subFormula = formulaClean;
+          const allRefs = this._extractCellRefsFromFormula(formulaClean);
+
+          for (let vi = 0; vi < variables.length; vi++) {
+            const v = variables[vi] as PropagationVariable;
+            const safe = `__v${vi}__`;
+            subFormula = subFormula.replace(new RegExp(v.name, 'gi'), safe);
+            (variables[vi] as { name: string }).name = safe;
+          }
+
+          for (const ref of allRefs) {
+            const cellRef = `${this._numberToABC(ref.col)}${ref.row + 1}`;
+            const refCell = worksheet
+              .getCellMatrix()
+              .getValue(ref.row, ref.col);
+            const val = typeof refCell?.v === 'number' ? refCell.v : 0;
+            subFormula = subFormula.replace(
+              new RegExp(cellRef, 'gi'),
+              String(val)
+            );
+          }
+
+          const result = (await invoke('calculate_uncertainty', {
+            formula: subFormula,
+            variables,
+          })) as { value: number; uncertainty: number };
+
+          const hasAsymmetric = variables.some(
+            (v: PropagationVariable) => v.lowerBound !== undefined
+          );
+          if (hasAsymmetric) {
+            const lowerResult = (await invoke('calculate_uncertainty', {
+              formula: subFormula,
+              variables: variables.map((v: PropagationVariable) => ({
+                name: v.name,
+                value: v.value,
+                uncertainty: v.lowerBound ?? v.uncertainty,
+              })),
+            })) as { value: number; uncertainty: number };
+            this._writePropagated(
+              mutations,
+              r,
+              c,
+              f,
+              cell,
+              result,
+              lowerResult.uncertainty
+            );
+          } else {
+            this._writePropagated(mutations, r, c, f, cell, result);
+          }
+        } catch (error) {
+          console.warn(
+            `[Uncertainty] Calculation failed for ${this._numberToABC(c)}${r + 1} (${f}):`,
+            error
           );
         }
-
-        const result = (await invoke('calculate_uncertainty', {
-          formula: subFormula,
-          variables,
-        })) as { value: number; uncertainty: number };
-
-        // Use the nominal value computed by the Rust CAS directly, rather
-        // than waiting for the formula engine's Web Worker to flush results
-        // into the cell matrix.  This avoids the unreliable setTimeout(50)
-        // race and guarantees we always have the correct nominal.
-        if (!mutations[r]) mutations[r] = {};
-        mutations[r][c] = {
-          v: result.value,
-          f,
-          custom: {
-            ...custom,
-            uncertainty: {
-              upperBound: result.uncertainty,
-              upperType: 'abs',
-              upperSource: 'propagated',
-            } as UncertaintyMetadata,
-          },
-        };
-      } catch (error) {
-        console.warn(
-          `[Uncertainty] Calculation failed for ${this._numberToABC(c)}${r + 1} (${f}):`,
-          error
-        );
       }
-    }
 
-    if (Object.keys(mutations).length > 0) {
-      this._isPropagating = true;
-      try {
+      if (Object.keys(mutations).length > 0) {
         const params: ISetRangeValuesCommandParams = {
           unitId,
           subUnitId,
@@ -1248,9 +1302,9 @@ export class UncertaintyPropagationController extends Disposable {
           SetRangeValuesCommand.id,
           params
         );
-      } finally {
-        this._isPropagating = false;
       }
+    } finally {
+      this._leaveSkipRegion(sheetKey);
     }
   }
 
@@ -1306,7 +1360,7 @@ export class UncertaintyPropagationController extends Disposable {
           if (custom?.uncertainty) {
             const u = custom.uncertainty as UncertaintyMetadata;
             const value = Number(cell?.v) || 0;
-            variables.push({
+            const v: PropagationVariable = {
               name: varName,
               value,
               uncertainty: this._toAbsoluteBound(
@@ -1314,7 +1368,15 @@ export class UncertaintyPropagationController extends Disposable {
                 u.upperType,
                 value
               ),
-            });
+            };
+            if (u.lowerBound !== undefined) {
+              v.lowerBound = this._toAbsoluteBound(
+                u.lowerBound,
+                u.lowerType ?? u.upperType,
+                value
+              );
+            }
+            variables.push(v);
             seen.add(varName);
           }
         }
@@ -1335,8 +1397,10 @@ export class UncertaintyPropagationController extends Disposable {
     subUnitId: string,
     formulaCells: Array<{ r: number; c: number; f: string }>
   ) {
-    if (this._isPropagating) return;
-    this._isPropagating = true;
+    const sheetKey = `${unitId}|${subUnitId}`;
+    if (this._pendingSkipMutations.has(sheetKey)) return;
+
+    this._enterSkipRegion(sheetKey);
 
     try {
       const workbook = this._univerInstanceService.getUnit<Workbook>(
@@ -1391,12 +1455,7 @@ export class UncertaintyPropagationController extends Disposable {
         const refs = this._extractCellRefsFromFormula(formulaClean);
         if (refs.length === 0) {
           if (metadata) {
-            if (!mutations[r]) mutations[r] = {};
-            mutations[r][c] = {
-              v: cell?.v,
-              f,
-              custom: { ...custom, uncertainty: null },
-            };
+            this._clearCellUncertainty(mutations, r, c, f, cell);
           }
           continue;
         }
@@ -1421,7 +1480,7 @@ export class UncertaintyPropagationController extends Disposable {
             const u = refCustom.uncertainty as UncertaintyMetadata;
             const safeName = `__v${varIdx}__`;
             varSubs.set(cellRef, safeName);
-            variables.push({
+            const v: PropagationVariable = {
               name: safeName,
               value,
               uncertainty: this._toAbsoluteBound(
@@ -1429,7 +1488,15 @@ export class UncertaintyPropagationController extends Disposable {
                 u.upperType,
                 value
               ),
-            });
+            };
+            if (u.lowerBound !== undefined) {
+              v.lowerBound = this._toAbsoluteBound(
+                u.lowerBound,
+                u.lowerType ?? u.upperType,
+                value
+              );
+            }
+            variables.push(v);
             varIdx++;
           } else {
             // Cell has no uncertainty — substitute with its numeric value.
@@ -1440,12 +1507,7 @@ export class UncertaintyPropagationController extends Disposable {
         if (variables.length === 0) {
           // Refs exist but none have uncertainty → clear any stale metadata.
           if (metadata) {
-            if (!mutations[r]) mutations[r] = {};
-            mutations[r][c] = {
-              v: cell?.v,
-              f,
-              custom: { ...custom, uncertainty: null },
-            };
+            this._clearCellUncertainty(mutations, r, c, f, cell);
           }
           continue;
         }
@@ -1460,25 +1522,37 @@ export class UncertaintyPropagationController extends Disposable {
           }
           const result = (await invoke('calculate_uncertainty', {
             formula: subFormula,
-            variables,
+            variables: variables.map((v) => ({
+              name: v.name,
+              value: v.value,
+              uncertainty: v.uncertainty,
+            })),
           })) as { value: number; uncertainty: number };
 
-          // Use the nominal value computed by the Rust CAS directly.
-          // This avoids waiting for the formula engine's Web Worker to flush
-          // results and removes the unreliable setTimeout(50) race.
-          if (!mutations[r]) mutations[r] = {};
-          mutations[r][c] = {
-            v: result.value,
-            f,
-            custom: {
-              ...custom,
-              uncertainty: {
-                upperBound: result.uncertainty,
-                upperType: 'abs',
-                upperSource: 'propagated',
-              } as UncertaintyMetadata,
-            },
-          };
+          const hasAsymmetric = variables.some(
+            (v) => v.lowerBound !== undefined
+          );
+          if (hasAsymmetric) {
+            const lowerResult = (await invoke('calculate_uncertainty', {
+              formula: subFormula,
+              variables: variables.map((v) => ({
+                name: v.name,
+                value: v.value,
+                uncertainty: v.lowerBound ?? v.uncertainty,
+              })),
+            })) as { value: number; uncertainty: number };
+            this._writePropagated(
+              mutations,
+              r,
+              c,
+              f,
+              cell,
+              result,
+              lowerResult.uncertainty
+            );
+          } else {
+            this._writePropagated(mutations, r, c, f, cell, result);
+          }
         } catch (error) {
           console.warn(
             `[Uncertainty] Propagation failed for ${this._numberToABC(c)}${r + 1} (${f}):`,
@@ -1496,7 +1570,7 @@ export class UncertaintyPropagationController extends Disposable {
         } as ISetRangeValuesCommandParams);
       }
     } finally {
-      this._isPropagating = false;
+      this._leaveSkipRegion(sheetKey);
     }
   }
 
@@ -1555,7 +1629,7 @@ export class UncertaintyPropagationController extends Disposable {
   }
 
   /**
-   * Parse an UNCERT(expression, uncertainty) formula string.
+   * Parse an UNCERT(expression, upperBound, [lowerBound]) formula string.
    * Returns uncertainty metadata if successful, null otherwise.
    */
   private _parseUncertFormula(
@@ -1565,23 +1639,51 @@ export class UncertaintyPropagationController extends Disposable {
     const match = formula.match(/^UNCERT\s*\(/i);
     if (!match) return null;
 
-    // Strip "UNCERT(" prefix and trailing ")"
     const inner = formula.slice(match[0].length, -1).trim();
 
-    const splitIdx = this._findTopLevelComma(inner);
-    if (splitIdx === -1) return null;
+    const firstComma = this._findTopLevelComma(inner);
+    if (firstComma === -1) return null;
 
-    const uncPart = inner.slice(splitIdx + 1).trim();
+    const rest = inner.slice(firstComma + 1).trim();
 
-    // Check if uncPart is a percentage literal
-    const isPercent = uncPart.endsWith('%');
-    const uncStr = isPercent ? uncPart.slice(0, -1).trim() : uncPart;
+    // Try 3-arg form: UNCERT(expr, upper, lower)
+    const secondComma = this._findTopLevelComma(rest);
+    if (secondComma !== -1) {
+      const upperPart = rest.slice(0, secondComma).trim();
+      const lowerPart = rest.slice(secondComma + 1).trim();
+      const upper = this._evalUncertArg(upperPart, worksheet);
+      const lower = this._evalUncertArg(lowerPart, worksheet);
+      if (upper === null || lower === null) return null;
+      return {
+        upperBound: upper.value,
+        upperType: upper.isPercent ? 'rel' : 'abs',
+        upperSource: 'manual',
+        lowerBound: lower.value,
+        lowerType: lower.isPercent ? 'rel' : 'abs',
+        lowerSource: 'manual',
+      };
+    }
 
-    // Resolve all cell references in the uncertainty part
-    const refs = this._extractCellRefsFromFormula(uncStr);
-    let resolvedExpr = uncStr;
+    // 2-arg form: UNCERT(expr, uncertainty)
+    const unc = this._evalUncertArg(rest, worksheet);
+    if (unc === null) return null;
+    return {
+      upperBound: unc.value,
+      upperType: unc.isPercent ? 'rel' : 'abs',
+      upperSource: 'manual',
+    };
+  }
 
-    // Sort refs by length descending to avoid partial replacements (e.g., A10 before A1)
+  private _evalUncertArg(
+    expr: string,
+    worksheet: Worksheet
+  ): { value: number; isPercent: boolean } | null {
+    const isPercent = expr.endsWith('%');
+    const trimmed = isPercent ? expr.slice(0, -1).trim() : expr;
+
+    const refs = this._extractCellRefsFromFormula(trimmed);
+    let resolved = trimmed;
+
     const sortedRefs = [...refs].sort((a, b) => {
       const aStr = `${this._numberToABC(a.col)}${a.row + 1}`;
       const bStr = `${this._numberToABC(b.col)}${b.row + 1}`;
@@ -1595,36 +1697,82 @@ export class UncertaintyPropagationController extends Disposable {
         typeof refCell?.v === 'number'
           ? refCell.v
           : parseFloat(String(refCell?.v)) || 0;
-      resolvedExpr = resolvedExpr.replace(
-        new RegExp(refStr, 'gi'),
-        String(val)
-      );
+      resolved = resolved.replace(new RegExp(refStr, 'gi'), String(val));
     }
 
-    // Now evaluate the expression (only simple arithmetic allowed for safety)
-    let uncValue: number;
+    const safeExpr = resolved.replace(/[^0-9.\s+\-*/()]/g, '');
+    let value: number;
     try {
-      // Remove all cell references already resolved to numbers
-      // safeExpr should only contain numbers and operators now
-      const safeExpr = resolvedExpr.replace(/[^0-9.\s+\-*/()]/g, '');
-
-      // Simple recursive-descent or just use a basic eval-like logic
-      // For simplicity and safety, we can use a basic regex-based evaluator
-      // or just keep the Function constructor but with even stricter cleaning.
-      // Given the environment, a simple Function constructor on a strictly sanitized
-      // string is the most practical way to handle nested parentheses.
-      uncValue = Number(new Function(`"use strict"; return (${safeExpr})`)());
+      value = Number(new Function(`"use strict"; return (${safeExpr})`)());
     } catch {
-      uncValue = NaN;
+      value = NaN;
     }
 
-    if (Number.isNaN(uncValue) || typeof uncValue !== 'number') return null;
+    if (Number.isNaN(value) || typeof value !== 'number') return null;
+    return { value, isPercent };
+  }
 
-    return {
-      upperBound: uncValue,
-      upperType: isPercent ? 'rel' : 'abs',
-      upperSource: 'manual',
-    };
+  /**
+   * Shift all cell references in a formula string by the given offsets.
+   * Used for resolving si-only formula cells during auto-fill.
+   */
+  private _shiftCellRefs(
+    formula: string,
+    offsetX: number,
+    offsetY: number
+  ): string {
+    const refRegex = /([A-Z]+)(\d+)/gi;
+    const replacements: Array<{
+      index: number;
+      length: number;
+      newRef: string;
+    }> = [];
+
+    let m = refRegex.exec(formula);
+    while (m !== null) {
+      const colStr = (m[1] as string).toUpperCase();
+      const rowNum = parseInt(m[2] as string, 10);
+      const charAfter = formula[refRegex.lastIndex] ?? '';
+
+      if (charAfter === '(') {
+        m = refRegex.exec(formula);
+        continue;
+      }
+
+      const charBefore = formula[m.index - 1] ?? '';
+      if (/[A-Z]/i.test(charAfter) || /[A-Z0-9]/i.test(charBefore)) {
+        m = refRegex.exec(formula);
+        continue;
+      }
+
+      if (KNOWN_FUNCTION_NAMES.has(colStr)) {
+        m = refRegex.exec(formula);
+        continue;
+      }
+
+      if (!Number.isNaN(rowNum) && rowNum > 0) {
+        const newCol = this._ABCToNumber(colStr) + offsetX;
+        const newRow = rowNum - 1 + offsetY;
+        if (newCol >= 0 && newRow >= 0) {
+          replacements.push({
+            index: m.index,
+            length: m[0].length,
+            newRef: `${this._numberToABC(newCol)}${newRow + 1}`,
+          });
+        }
+      }
+      m = refRegex.exec(formula);
+    }
+
+    // Apply replacements in reverse order to preserve indices
+    let result = formula;
+    for (let i = replacements.length - 1; i >= 0; i--) {
+      const r = replacements[i];
+      if (!r) continue;
+      result =
+        result.slice(0, r.index) + r.newRef + result.slice(r.index + r.length);
+    }
+    return result;
   }
 
   /**
@@ -1658,6 +1806,53 @@ export class UncertaintyPropagationController extends Disposable {
     nominal: number
   ): number {
     return type === 'rel' ? Math.abs(nominal) * bound * 0.01 : bound;
+  }
+
+  private _writePropagated(
+    mutations: Record<string, Record<string, ICellData>>,
+    r: number,
+    c: number,
+    f: string,
+    cell: Nullable<ICellData>,
+    result: { value: number; uncertainty: number },
+    lowerUnc?: number
+  ): void {
+    const custom = cell?.custom as Record<string, unknown> | undefined;
+    const meta: UncertaintyMetadata = {
+      upperBound: result.uncertainty,
+      upperType: 'abs',
+      upperSource: 'propagated',
+    };
+    if (lowerUnc !== undefined) {
+      meta.lowerBound = lowerUnc;
+      meta.lowerType = 'abs';
+      meta.lowerSource = 'propagated';
+    }
+    if (!mutations[r]) mutations[r] = {};
+    mutations[r][c] = {
+      v: result.value,
+      f,
+      custom: {
+        ...custom,
+        uncertainty: meta,
+      },
+    };
+  }
+
+  private _clearCellUncertainty(
+    mutations: Record<string, Record<string, ICellData>>,
+    r: number,
+    c: number,
+    f: string,
+    cell: Nullable<ICellData>
+  ): void {
+    const custom = cell?.custom as Record<string, unknown> | undefined;
+    if (!mutations[r]) mutations[r] = {};
+    mutations[r][c] = {
+      v: cell?.v,
+      f,
+      custom: { ...custom, uncertainty: null },
+    };
   }
 }
 

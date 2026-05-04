@@ -1,0 +1,22 @@
+diff --git a/node_modules/@univerjs/sheets-data-validation/lib/es/index.js b/node_modules/@univerjs/sheets-data-validation/lib/es/index.js
+index 792b0ba..ffe45f8 100644
+--- a/node_modules/@univerjs/sheets-data-validation/lib/es/index.js
++++ b/node_modules/@univerjs/sheets-data-validation/lib/es/index.js
+@@ -2,7 +2,7 @@ import { CellValueType, CommandType, DataValidationOperator, DataValidationRende
+ import { AddDataValidationMutation, BaseDataValidator, DataValidationModel, DataValidatorRegistryService, RemoveDataValidationMutation, TextLengthErrorTitleMap, UniverDataValidationPlugin, UpdateDataValidationMutation, UpdateRuleType, getRuleOptions, getRuleSetting } from "@univerjs/data-validation";
+ import { ERROR_TYPE_SET, LexerTreeBuilder, OtherFormulaBizType, RegisterOtherFormulaService, deserializeRangeWithSheet, deserializeRangeWithSheetWithCache, isReferenceString, operatorToken, sequenceNodeType } from "@univerjs/engine-formula";
+ import { ClearSelectionAllCommand, CopySheetCommand, RefRangeService, RemoveSheetCommand, RemoveSheetMutation, SetRangeValuesMutation, SetRangeValuesUndoMutationFactory, SheetInterceptorService, SheetsSelectionsService, WorksheetViewPermission, getSheetCommandTarget, handleCommonDefaultRangeChangeWithEffectRefCommands } from "@univerjs/sheets";
+-import { Subject, bufferWhen, filter } from "rxjs";
++import { Subject, bufferWhen, filter, skip } from "rxjs";
+ import { UnitAction } from "@univerjs/protocol";
+ import { FormulaRefRangeService, UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
+ 
+@@ -3047,7 +3047,7 @@ let SheetsDataValidationValidatorService = class SheetsDataValidationValidatorSe
+ 				});
+ 			});
+ 		};
+-		this.disposeWithMe(this._dataValidationCacheService.dirtyRanges$.pipe(bufferWhen(() => this._lifecycleService.lifecycle$.pipe(filter((stage) => stage === LifecycleStages.Rendered)))).subscribe(handleDirtyRanges));
++		this.disposeWithMe(this._dataValidationCacheService.dirtyRanges$.pipe(bufferWhen(() => this._lifecycleService.lifecycle$.pipe(skip(1), filter((stage) => stage === LifecycleStages.Rendered)))).subscribe(handleDirtyRanges));
+ 		this.disposeWithMe(this._dataValidationCacheService.dirtyRanges$.pipe(filter(() => this._lifecycleService.stage >= LifecycleStages.Rendered), bufferDebounceTime(20)).subscribe(handleDirtyRanges));
+ 	}
+ 	async _validatorByCell(workbook, worksheet, row, col) {

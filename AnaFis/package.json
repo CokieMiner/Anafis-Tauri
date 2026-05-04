@@ -18,7 +18,8 @@
     "tauri:build": "tauri build --out-dir ../Installer/BuildOutputs",
     "tauri:dev": "tauri dev",
     "deps:check": "bun outdated",
-    "deps:update": "bun update"
+    "deps:update": "bun update",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
@@ -60,6 +61,7 @@
     "@types/react-plotly.js": "2.6.4",
     "@vitejs/plugin-react": "6.0.1",
     "knip": "6.11.0",
+    "patch-package": "^8.0.1",
     "terser": "5.46.2",
     "typescript": "6.0.3",
     "vite": "8.0.10",

@@ -80,7 +80,6 @@ tramp
 *.orig
 *.rej
 *.diff
-*.patch
 *.tsbuildinfo
 AnaFis/.tsbuildinfo
 
