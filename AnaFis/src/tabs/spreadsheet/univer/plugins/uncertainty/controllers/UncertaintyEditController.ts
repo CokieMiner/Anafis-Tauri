@@ -1,5 +1,9 @@
 import { Disposable, setDependencies } from '@univerjs/core';
-import { BEFORE_CELL_EDIT, SheetInterceptorService } from '@univerjs/sheets';
+import {
+  AFTER_CELL_EDIT,
+  BEFORE_CELL_EDIT,
+  SheetInterceptorService,
+} from '@univerjs/sheets';
 import type { UncertaintyMetadata } from '@/tabs/spreadsheet/univer/plugins/uncertainty/types';
 
 export class UncertaintyEditController extends Disposable {
@@ -60,6 +64,34 @@ export class UncertaintyEditController extends Disposable {
               // nominal value does not change.
               const { custom: _, ...rest } = cell;
               return { ...rest, v: editString };
+            }
+
+            return next(cell);
+          },
+        }
+      )
+    );
+
+    // Add AFTER_CELL_EDIT interceptor to handle cleared uncertainty
+    this.disposeWithMe(
+      this._sheetInterceptorService.writeCellInterceptor.intercept(
+        AFTER_CELL_EDIT,
+        {
+          priority: 1000,
+          handler: (cell, context, next) => {
+            // Check if the cell has uncertainty that was manually cleared in the editor
+            const rawEditorCellData = context.rawEditorCellData;
+            const origin = context.origin;
+
+            if (origin?.custom?.uncertainty && !rawEditorCellData?.custom) {
+              const { custom: _, ...rest } = cell || {};
+              return next({
+                ...rest,
+                custom: {
+                  ...(cell?.custom || {}),
+                  uncertainty: null,
+                },
+              });
             }
 
             return next(cell);
