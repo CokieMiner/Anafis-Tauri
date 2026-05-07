@@ -1,0 +1,23 @@
+diff --git a/node_modules/@univerjs/sheets/lib/es/index.js b/node_modules/@univerjs/sheets/lib/es/index.js
+index 0000000..1111111 100644
+--- a/node_modules/@univerjs/sheets/lib/es/index.js
++++ b/node_modules/@univerjs/sheets/lib/es/index.js
+@@ -404,7 +404,7 @@
+ 			redos: infos.map((i) => i.redos).flat()
+ 		};
+ 	}
+-	onWriteCell(workbook, worksheet, row, col, cellData) {
++	onWriteCell(workbook, worksheet, row, col, cellData, rawEditorCellData) {
+ 		const context = {
+ 			subUnitId: worksheet.getSheetId(),
+ 			unitId: workbook.getUnitId(),
+@@ -412,7 +412,8 @@
+ 			worksheet,
+ 			row,
+ 			col,
+-			origin: Tools.deepClone(cellData)
++			origin: Tools.deepClone(cellData),
++			rawEditorCellData
+ 		};
+ 		return this.writeCellInterceptor.fetchThroughInterceptors(AFTER_CELL_EDIT)(cellData, context);
+ 	}
