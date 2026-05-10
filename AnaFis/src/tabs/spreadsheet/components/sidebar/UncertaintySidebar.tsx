@@ -161,16 +161,6 @@ const UncertaintySidebar = React.memo<UncertaintySidebarProps>(
         sidebarDataAttribute: 'data-uncertainty-sidebar',
       });
 
-    // Subscribe to spreadsheet selection events via event bus
-    React.useEffect(() => {
-      if (!open) {
-        return;
-      }
-
-      // No longer needed - selection is handled via context in the hook
-      return;
-    }, [open]);
-
     if (!open) {
       return null;
     }

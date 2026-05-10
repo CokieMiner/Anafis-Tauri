@@ -159,16 +159,6 @@ const QuickPlotSidebar = React.memo<QuickPlotSidebarProps>(
         sidebarDataAttribute: 'data-quick-plot-sidebar',
       });
 
-    // Subscribe to spreadsheet selection events via event bus
-    React.useEffect(() => {
-      if (!open) {
-        return;
-      }
-
-      // No longer needed - selection is handled via context in the hook
-      return;
-    }, [open]);
-
     // Handle save to library
     const handleSaveToLibraryClick = () => {
       // Pre-fill with labels if available

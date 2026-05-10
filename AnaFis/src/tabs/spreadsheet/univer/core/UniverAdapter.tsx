@@ -352,7 +352,12 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
           const newSheet = workbook.create(uniqueName, rows, cols);
           workbook.setActiveSheet(newSheet);
 
-          return new Promise<string>((resolve) => {
+          return new Promise<string>((resolve, reject) => {
+            // The sheet is created synchronously above, so this loop almost
+            // never iterates. A cap of 50 retries (500 ms) prevents an
+            // infinite spin if Univer ever transforms the name internally.
+            const MAX_RETRIES = 50;
+            let retries = 0;
             const checkReady = () => {
               const sheet = workbook
                 .getSheets()
@@ -361,6 +366,12 @@ const UniverAdapterInner = forwardRef<SpreadsheetRef, SpreadsheetProps>(
                 );
               if (sheet?.getSheetName() === uniqueName) {
                 resolve(newSheet.getSheetId());
+              } else if (retries++ >= MAX_RETRIES) {
+                reject(
+                  new Error(
+                    `Sheet "${uniqueName}" was not ready after ${MAX_RETRIES * 10} ms`
+                  )
+                );
               } else {
                 setTimeout(checkReady, 10);
               }

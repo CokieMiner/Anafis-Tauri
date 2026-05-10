@@ -79,7 +79,10 @@ export class UncertaintyEditController extends Disposable {
         {
           priority: 1000,
           handler: (cell, context, next) => {
-            // Check if the cell has uncertainty that was manually cleared in the editor
+            // `rawEditorCellData` is injected at runtime by the AnaFis patch to
+            // @univerjs/sheets-ui (_submitEdit). ISheetLocationForEditor is not
+            // exported upstream so we cannot extend it — suppress the type error.
+            // @ts-expect-error: rawEditorCellData added by AnaFis sheets-ui patch
             const rawEditorCellData = context.rawEditorCellData;
             const origin = context.origin;
 

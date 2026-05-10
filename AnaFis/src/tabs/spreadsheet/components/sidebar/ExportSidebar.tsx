@@ -18,7 +18,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import React, { useEffect } from 'react';
+import React from 'react';
 import type { ExportService } from '@/core/types/export';
 import { anafisColors } from '@/shared/theme';
 import { anafisTheme } from '@/shared/theme/unifiedTheme';
@@ -129,15 +129,7 @@ const ExportSidebar = React.memo<ExportSidebarProps>(
           [setCustomRange, setDataRange, setUncertaintyRange]
         ),
         sidebarDataAttribute: 'data-export-sidebar',
-      }); // Subscribe to spreadsheet selection events via event bus
-    useEffect(() => {
-      if (!open) {
-        return;
-      }
-
-      // No longer needed - selection is handled via context in the hook
-      return;
-    }, [open]);
+      });
 
     // File extension and filter utilities moved to exportService
     // Export service is now injected via props for better abstraction

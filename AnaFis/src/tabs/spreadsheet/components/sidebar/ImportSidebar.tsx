@@ -8,7 +8,7 @@ import {
   RadioGroup,
   Typography,
 } from '@mui/material';
-import React, { useEffect } from 'react';
+import React from 'react';
 import type { ImportService } from '@/core/types/import';
 import { anafisColors } from '@/shared/theme';
 import { FileImportPanel } from '@/tabs/spreadsheet/components/sidebar/ImportSidebarComponents/FileImportPanel';
@@ -98,16 +98,6 @@ const ImportSidebar = React.memo<ImportSidebarProps>(
         ),
         sidebarDataAttribute: 'data-import-sidebar',
       });
-
-    // Subscribe to spreadsheet selection events
-    useEffect(() => {
-      if (!open) {
-        return;
-      }
-
-      // No longer needed - selection is handled via context in the hook
-      return;
-    }, [open]);
 
     if (!open) {
       return null;

@@ -124,16 +124,6 @@ const UnitConversionSidebar = React.memo<UnitConversionSidebarProps>(
       return filtered.sort((a, b) => a.symbol.localeCompare(b.symbol));
     }, [units, category, searchQuery]);
 
-    // Subscribe to spreadsheet selection events via event bus
-    useEffect(() => {
-      if (!open) {
-        return;
-      }
-
-      // No longer needed - selection is handled via context in the hook
-      return;
-    }, [open]);
-
     // Load categories on mount - handled by useUnitConversion hook
     // Load units when category changes - handled by useUnitConversion hook
 
