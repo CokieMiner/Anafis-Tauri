@@ -57,11 +57,10 @@ export class UncertaintyEditController extends Disposable {
                 }
               }
 
-              // Strip `custom` so the InputController treats the commit as
-              // fresh user input rather than an import write.  Known
-              // limitation: editing "5 ± 0.4" to just "5" keeps the
-              // uncertainty — Univer skips SetRangeValuesCommand when the
-              // nominal value does not change.
+              // Strip `custom` so the editor UI doesn't try to parse or display
+              // raw metadata objects. The final cleanup of uncertainty metadata
+              // when a user clears a cell is handled by the AFTER_CELL_EDIT
+              // interceptor, which forces Univer to detect the change.
               const { custom: _, ...rest } = cell;
               return { ...rest, v: editString };
             }
@@ -79,14 +78,16 @@ export class UncertaintyEditController extends Disposable {
         {
           priority: 1000,
           handler: (cell, context, next) => {
-            // `rawEditorCellData` is injected at runtime by the AnaFis patch to
-            // @univerjs/sheets-ui (_submitEdit). ISheetLocationForEditor is not
-            // exported upstream so we cannot extend it — suppress the type error.
-            // @ts-expect-error: rawEditorCellData added by AnaFis sheets-ui patch
-            const rawEditorCellData = context.rawEditorCellData;
             const origin = context.origin;
 
-            if (origin?.custom?.uncertainty && !rawEditorCellData?.custom) {
+            // We aggressively strip the uncertainty metadata
+            // during AFTER_CELL_EDIT. If we don't, Univer's `diffValue` check
+            // will silently abort the edit when a user overwrites `5 ± 0.1` with `5`,
+            // because the merged cell data and the original cell data will be
+            // identical. By forcing a difference here, we guarantee that 
+            // SetRangeValuesCommand is dispatched, allowing UncertaintyInputController
+            // to correctly parse and reconstruct the final metadata.
+            if (origin?.custom?.uncertainty) {
               const { custom: _, ...rest } = cell || {};
               return next({
                 ...rest,
